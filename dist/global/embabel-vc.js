@@ -31,8 +31,11 @@ var EmbabelVc = (() => {
     compose: () => compose,
     connectedLabels: () => connectedLabels,
     declaredParams: () => declaredParams,
+    describeVcEvent: () => describeVcEvent,
     edgeContext: () => edgeContext,
     esc: () => esc,
+    isFailure: () => isFailure,
+    isTerminal: () => isTerminal,
     labelNames: () => labelNames,
     nodeContext: () => nodeContext,
     propertiesOf: () => propertiesOf,
@@ -320,6 +323,60 @@ var EmbabelVc = (() => {
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     return [columns, ...rows.map((row) => columns.map((column) => row[column]))].map((values) => values.map(csv).join(",")).join("\n");
+  }
+
+  // src/vc/events.ts
+  var isTerminal = (event) => event.type === "query.completed" || event.type === "query.rejected";
+  var isFailure = (event) => event.type === "producer.error" || event.type === "query.rejected";
+  var plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
+  var RETRIEVAL_STEPS = {
+    search_semantic: "Searching by meaning",
+    search_keyword: "Searching by keyword",
+    read_document: "Reading",
+    judged: "Judging",
+    composing: "Composing the answer"
+  };
+  function describeVcEvent(event) {
+    switch (event.type) {
+      case "query.started":
+        return "Planning the query";
+      case "stage.started": {
+        const e = event;
+        return `Stage ${e.stage}: ${e.producer} \u2192 ${e.targetLabel}, from ${plural(e.anchorCount, e.anchorLabel)}`;
+      }
+      case "producer.fetch": {
+        const e = event;
+        return `${e.producer} returned ${plural(e.recordCount, "record")} for ${plural(e.keyCount, "key")} (${e.durationMs} ms)`;
+      }
+      case "nodes.materialized": {
+        const e = event;
+        return `Materialized ${plural(e.count, e.targetLabel)} via ${e.relationship}`;
+      }
+      case "producer.error": {
+        const e = event;
+        return `${e.producer} failed: ${e.detail}`;
+      }
+      case "producer.progress": {
+        const e = event;
+        const of = e.total > 0 ? `${e.current}/${e.total}` : String(e.current);
+        return `${e.producer}: ${of} ${e.unit}${e.key ? ` \xB7 ${e.key}` : ""}`;
+      }
+      case "retrieval.step": {
+        const e = event;
+        const verb = RETRIEVAL_STEPS[e.step] ?? e.step;
+        const found = e.results == null ? "" : ` \u2014 ${plural(e.results, "result")}`;
+        return `${verb}: ${e.detail}${found}`;
+      }
+      case "query.completed": {
+        const e = event;
+        const labels = e.materializedLabels?.length ? ` \xB7 materialized ${e.materializedLabels.join(", ")}` : "";
+        return `Done \u2014 ${plural(e.rowCount, "row")} in ${e.durationMs} ms${labels}`;
+      }
+      case "query.rejected":
+        return `Rejected: ${event.reason}`;
+      default:
+        return event.type;
+    }
   }
   return __toCommonJS(index_exports);
 })();

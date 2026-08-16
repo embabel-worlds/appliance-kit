@@ -8,7 +8,7 @@
  * understanding of what the engine offers.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
+exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
 var targets_ts_1 = require("./targets.js");
 Object.defineProperty(exports, "TARGETS", { enumerable: true, get: function () { return targets_ts_1.TARGETS; } });
 Object.defineProperty(exports, "VIA_VALUES", { enumerable: true, get: function () { return targets_ts_1.VIA_VALUES; } });
@@ -35,4 +35,8 @@ var rows_ts_1 = require("./rows.js");
 Object.defineProperty(exports, "rowColumns", { enumerable: true, get: function () { return rows_ts_1.rowColumns; } });
 Object.defineProperty(exports, "rowsToMarkdown", { enumerable: true, get: function () { return rows_ts_1.rowsToMarkdown; } });
 Object.defineProperty(exports, "rowsToCsv", { enumerable: true, get: function () { return rows_ts_1.rowsToCsv; } });
+var events_ts_1 = require("./events.js");
+Object.defineProperty(exports, "describeVcEvent", { enumerable: true, get: function () { return events_ts_1.describeVcEvent; } });
+Object.defineProperty(exports, "isTerminal", { enumerable: true, get: function () { return events_ts_1.isTerminal; } });
+Object.defineProperty(exports, "isFailure", { enumerable: true, get: function () { return events_ts_1.isFailure; } });
 //# sourceMappingURL=index.js.map

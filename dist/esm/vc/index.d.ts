@@ -6,4 +6,6 @@ export { aliasMap, propertiesOf, labelNames, anchorLabels, relationshipTypes, re
 export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, EdgeDirection } from './schema.ts';
 export { declaredParams, RESERVED_PARAMS } from './params.ts';
 export { rowColumns, rowsToMarkdown, rowsToCsv } from './rows.ts';
+export { describeVcEvent, isTerminal, isFailure } from './events.ts';
+export type { VcEvent, VcEventBase, VcNodesMaterialized, VcProducerError, VcProducerFetch, VcProducerProgress, VcQueryCompleted, VcQueryRejected, VcRetrievalStep, VcStageStarted, VcQueryStarted, } from './events.ts';
 //# sourceMappingURL=index.d.ts.map

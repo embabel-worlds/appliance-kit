@@ -62,7 +62,7 @@ apart from `apk add git`.
 | Import | What |
 | --- | --- |
 | `.` | the appliance REST client — transport-blind, no DOM. `client.kg` and `client.handlers` |
-| `./vc` | virtual-Cypher semantics: compose, schema reading, view params |
+| `./vc` | virtual-Cypher semantics: compose, schema reading, view params, live run events |
 | `./code-surface` | the editor surface |
 | `./studio-kit` | hints, formatting, status, copy |
 | `./backdrop` | the living-graph canvas |
@@ -77,7 +77,7 @@ an error in the consumer's dev server, not a convenience.
 
 ```bash
 npm run build      # esm + cjs + 5 global bundles
-npm test           # 122 checks, no browser, no server
+npm test           # 137 checks, no browser, no server
 npm run typecheck
 npm run check      # build + test
 ```
