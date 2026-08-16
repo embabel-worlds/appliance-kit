@@ -1,0 +1,76 @@
+{
+  "documents-about-default": {
+    "spec": {
+      "target": "documents"
+    },
+    "cypher": "MATCH (:Concept {value:'your search'})-[r:RELEVANT_TO]->(d:Document)\nRETURN d.title AS title, r.score AS score, r.snippet AS snippet, r.mode AS mode\nORDER BY r.score DESC LIMIT 10"
+  },
+  "documents-mentions-tag-dates": {
+    "spec": {
+      "target": "documents",
+      "mode": "mentions",
+      "seed": "O'Brien",
+      "tag": "legal",
+      "dateField": "ingestionTimestamp",
+      "dateFrom": "2026-01-01",
+      "dateTo": "2026-06-01",
+      "minScore": "0.4",
+      "limit": "5"
+    },
+    "cypher": "MATCH (:Concept {value:'O\\'Brien'})-[r:RELEVANT_TO {via:'keyword'}]->(d:Document)\nWHERE 'legal' IN d.tags\n  AND d.ingestionTimestamp >= '2026-01-01'\n  AND d.ingestionTimestamp < '2026-06-01'\n  AND r.score >= 0.4\nRETURN d.title AS title, r.score AS score, r.snippet AS snippet, r.matchedTerms AS matched\nORDER BY r.score DESC LIMIT 5"
+  },
+  "documents-judged-ai": {
+    "spec": {
+      "target": "documents",
+      "mode": "judged",
+      "seed": "renewal",
+      "intent": "is it a risk?",
+      "aiHint": "be strict",
+      "aiModel": "gpt-4o",
+      "aiTemperature": "0.2",
+      "aiConfidence": "0.8",
+      "aiFresh": true,
+      "limit": "3"
+    },
+    "cypher": "// judged retrieval: several LLM calls per anchor — an explicit choice, never a default\nMATCH (:Concept {value:'renewal'})-[r:RELEVANT_TO {via:'agentic-rag', intent:'is it a risk?', ai:{hint:'be strict', model:'gpt-4o', temperature:0.2, confidence:0.8, fresh:true}}]->(d:Document)\nRETURN d.title AS title, r.score AS score, r.snippet AS evidence, r.intent AS intent\nORDER BY r.score DESC LIMIT 3"
+  },
+  "files-mentions": {
+    "spec": {
+      "target": "files",
+      "mode": "mentions",
+      "seed": "Renewal"
+    },
+    "cypher": "MATCH (:Concept {value:'renewal'})-[r:RELEVANT_TO {via:'keyword'}]->(f:File)\nRETURN f.name AS name, f.dir AS dir, f.content AS excerpt, f.modifiedAt AS modified\nORDER BY modified DESC LIMIT 10"
+  },
+  "files-judged": {
+    "spec": {
+      "target": "files",
+      "mode": "judged",
+      "seed": "an idea",
+      "limit": "7"
+    },
+    "cypher": "// judged retrieval over file contents: several LLM calls per anchor\nMATCH (:Concept {value:'an idea'})-[r:RELEVANT_TO {via:'agentic-rag'}]->(f:File)\nRETURN f.name AS name, f.dir AS dir, r.score AS score, r.snippet AS evidence\nORDER BY r.score DESC LIMIT 7"
+  },
+  "threads-topic": {
+    "spec": {
+      "target": "threads"
+    },
+    "cypher": "MATCH (:Concept {value:'the renewal'})-[r:RELEVANT_TO]->(t:RelevantEmailThread)\nWHERE r.score >= 0.6\nRETURN t.subject AS subject, t.snippet AS snippet, r.score AS score\nORDER BY r.score DESC LIMIT 10"
+  },
+  "threads-person-minscore": {
+    "spec": {
+      "target": "threads",
+      "anchor": "person",
+      "seed": "Ada Lovelace",
+      "minScore": "0.9",
+      "limit": "2"
+    },
+    "cypher": "MATCH (:Person {name:'Ada Lovelace'})-[r:RELEVANT_TO]->(t:RelevantEmailThread)\nWHERE r.score >= 0.9\nRETURN t.subject AS subject, t.snippet AS snippet, r.score AS score\nORDER BY r.score DESC LIMIT 2"
+  },
+  "canvas": {
+    "spec": {
+      "target": "canvas"
+    },
+    "cypher": "MATCH (d:Document)\nRETURN d.title AS title, d.tags AS tags, d.uri AS uri\nORDER BY d.ingestionTimestamp DESC LIMIT 25"
+  }
+}
