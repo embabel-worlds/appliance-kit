@@ -34,6 +34,7 @@ export type KgSaveViewResult = Schemas['KgSaveViewResponse']
 export type KgViewInvocation = Schemas['KgViewInvocationResponse']
 export type KgDeleteViewResult = Schemas['KgDeleteViewResponse']
 export type KgRefreshViewResult = Schemas['KgRefreshViewResponse']
+export type KgPropertyValues = Schemas['KgPropertyValuesResponse']
 
 /** The owner's answer to a run that parked awaiting input. */
 export type KgRunChoice = 'proceed' | 'narrow' | 'background' | 'cancel'
@@ -91,6 +92,34 @@ export class KgClient {
       path: `${KG}/generate`,
       body: { question },
       timeoutMs: TIMEOUTS.generate,
+    })
+  }
+
+  /**
+   * Revise existing cypher per an instruction, without running it — "now only the ones since
+   * March". Distinct from {@link generate}, which starts from nothing: the model is given the
+   * query it is changing, so an editor's Refine keeps what the author already had rather than
+   * regenerating around it.
+   */
+  refine(cypher: string, instruction: string): Promise<Outcome<KgGenerated>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${KG}/refine`,
+      body: { cypher, instruction },
+      timeoutMs: TIMEOUTS.generate,
+    })
+  }
+
+  /**
+   * The legal values of a property — the closed set, or the fact that it is too wide, or why it
+   * cannot be enumerated at all. Three outcomes, and completion must tell them apart: `enumerable:
+   * false` means the source cannot be asked, which is NOT an empty set, and `tooMany` present
+   * means the domain is real but wider than the property's declared maximum.
+   */
+  propertyValues(label: string, property: string): Promise<Outcome<KgPropertyValues>> {
+    return this.transport.send({
+      method: 'GET',
+      path: `${KG}/schema/${encodeURIComponent(label)}/${encodeURIComponent(property)}/values`,
     })
   }
 
@@ -180,6 +209,23 @@ export class KgClient {
       method: 'POST',
       path: `${KG}/views/${encodeURIComponent(name)}/invocation`,
       body: { args },
+    })
+  }
+
+  /**
+   * Run a saved view with these arguments and return its rows — the one-call form of
+   * {@link viewInvocation} followed by {@link execute}.
+   *
+   * BOTH ARE WORTH HAVING. This one is for a caller that just wants the answer; the two-step is
+   * for a studio, which puts the expanded cypher in an editable box so the author can see what a
+   * view actually does and adjust it. Neither is a shortcut for the other.
+   */
+  runView(name: string, args: Record<string, unknown> = {}): Promise<Outcome<KgQueryResult>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${KG}/views/${encodeURIComponent(name)}/run`,
+      body: { args },
+      timeoutMs: TIMEOUTS.execute,
     })
   }
 

@@ -1,11 +1,396 @@
 {
   "openapi": "3.1.0",
   "info": {
-    "title": "Embabel appliance — virtual-cypher surface",
-    "description": "Generated from the snapshot `OpenApiKgContractTest` guards in the assistant repo. Do not hand-edit: run `npm run spec` after copying a newer snapshot.",
+    "title": "Embabel appliance — the guarded front-end surface",
+    "description": "Generated from the snapshot `OpenApiClientContractTest` guards in the assistant repo. Do not hand-edit: run `npm run spec` after copying a newer snapshot.",
     "version": "0.0.0"
   },
   "paths": {
+    "/api/v1/admin/handlers/delete": {
+      "post": {
+        "operationId": "delete_1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerMutationResponse"
+                }
+              }
+            },
+            "description": "Whether it was deleted, and the server's own sentence about it"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Delete a user-authored handler (realm handlers can only be disabled)",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/dry-run": {
+      "post": {
+        "operationId": "dryRun_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandlerDryRunRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerDryRunResponse"
+                }
+              }
+            },
+            "description": "What the run saw, logged, and how it ended"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Run a TypeScript handler observe-only against a sample or the most recent matching signal",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/generate": {
+      "post": {
+        "operationId": "generate_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandlerGenerateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerGenerateResponse"
+                }
+              }
+            },
+            "description": "The generated source and whether it type-checks"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Generate (or, with `current`, refine) a TypeScript handler from English, with the tsc verdict",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/list": {
+      "post": {
+        "operationId": "list_3",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerListResponse"
+                }
+              }
+            },
+            "description": "The user's handlers, and the realm ones they could adopt"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "List the user's handlers plus inactive realm-shipped handlers available to adopt",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/open": {
+      "post": {
+        "operationId": "open",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerOpenResponse"
+                }
+              }
+            },
+            "description": "The handler's source and its triggers"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No such handler"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Return one handler's source and metadata",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/save": {
+      "post": {
+        "operationId": "save",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandlerSaveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerMutationResponse"
+                }
+              }
+            },
+            "description": "Whether it was persisted, and the server's own sentence about it"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Create or update a handler, gated on TypeScript compilation",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/set-enabled": {
+      "post": {
+        "operationId": "setEnabled_1",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "enabled",
+            "required": true,
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerEnabledResponse"
+                }
+              }
+            },
+            "description": "The firing state now in force"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Enable (adopt) or disable a handler for this user",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/set-schedule": {
+      "post": {
+        "operationId": "setSchedule",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "schedule",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerScheduleResponse"
+                }
+              }
+            },
+            "description": "The schedule now in force, or null when cleared"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Set or clear a per-user cron schedule for a handler",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
+    "/api/v1/admin/handlers/validate": {
+      "post": {
+        "operationId": "validate_1",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/HandlerValidateRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerValidateResponse"
+                }
+              }
+            },
+            "description": "The tsc verdict, with its errors in source coordinates"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HandlerErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal"
+          }
+        },
+        "summary": "Type-check a handler body without saving or running it",
+        "tags": [
+          "Handlers"
+        ]
+      }
+    },
     "/api/v1/admin/kg/annotations/dry-run": {
       "post": {
         "operationId": "dryRun",
@@ -604,6 +989,67 @@
         ]
       }
     },
+    "/api/v1/admin/kg/refine": {
+      "post": {
+        "operationId": "refine",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KgRefineRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgGenerateResponse"
+                }
+              }
+            },
+            "description": "The revised cypher, its verdict, and what the engine will do"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "Refinement failed"
+          }
+        },
+        "summary": "Revise existing Cypher per an instruction, without running it",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
+    },
     "/api/v1/admin/kg/reproject": {
       "post": {
         "operationId": "reproject",
@@ -893,6 +1339,63 @@
           }
         },
         "summary": "The acting user's graph schema — labels, properties, relationship triples",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/schema/{label}/{property}/values": {
+      "get": {
+        "operationId": "propertyValues",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "label",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "property",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgPropertyValuesResponse"
+                }
+              }
+            },
+            "description": "The value domain in one of its three states"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "The legal values of a property: the set, or its size when too wide, or why it cannot be enumerated",
         "tags": [
           "Virtual Cypher"
         ]
@@ -1237,6 +1740,84 @@
           "Virtual Cypher"
         ]
       }
+    },
+    "/api/v1/admin/kg/views/{name}/run": {
+      "post": {
+        "operationId": "runView",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KgInvokeViewRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgQueryResult"
+                }
+              }
+            },
+            "description": "The view's rows, with any producer warnings"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "Bad view arguments"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "Unknown view"
+          }
+        },
+        "summary": "Run a saved view with the given arguments and return its rows",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
     }
   },
   "components": {
@@ -1254,6 +1835,360 @@
         "required": [
           "params",
           "statement"
+        ],
+        "type": "object"
+      },
+      "HandlerAvailable": {
+        "description": "A realm-shipped handler available to adopt, which this user has not enabled.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "signalType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "signalType"
+        ],
+        "type": "object"
+      },
+      "HandlerDryRunRequest": {
+        "description": "A handler body to run observe-only, and what to run it against.",
+        "properties": {
+          "sample": {
+            "additionalProperties": {},
+            "description": "A sample signal to bind INSTEAD of sampling the graph — for an event not yet received.",
+            "type": "object"
+          },
+          "signalType": {
+            "description": "The signal type to sample a real recent event from. Null or '*' means a cron tick.",
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "type": "object"
+      },
+      "HandlerDryRunResponse": {
+        "description": "The outcome of an observe-only handler run: what it saw, what it logged, and how it ended.",
+        "properties": {
+          "error": {
+            "description": "The failure message when the body threw. Serialized as null otherwise — consumers test for the key.",
+            "type": "string"
+          },
+          "ok": {
+            "description": "False when the body threw; `error` then carries the message.",
+            "type": "boolean"
+          },
+          "ranAgainst": {
+            "$ref": "#/components/schemas/HandlerRanAgainst"
+          },
+          "stdout": {
+            "description": "Everything the body logged. The brief tells a handler to log every effect, so this IS the feedback surface.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "ok",
+          "ranAgainst",
+          "stdout"
+        ],
+        "type": "object"
+      },
+      "HandlerEnabledResponse": {
+        "description": "Acknowledgement of an enable/disable, echoing the state now in force.",
+        "properties": {
+          "enabled": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "enabled",
+          "name",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "HandlerErrorResponse": {
+        "description": "A refusal carrying only a human-readable reason.",
+        "properties": {
+          "error": {
+            "description": "What went wrong, in the terms the caller can act on.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "HandlerGenerateRequest": {
+        "description": "An English description of a handler, optionally as a change to existing source.",
+        "properties": {
+          "current": {
+            "description": "When present, `english` is a CHANGE to this source — the round-trip an editor's Refine drives.",
+            "type": "string"
+          },
+          "english": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "english"
+        ],
+        "type": "object"
+      },
+      "HandlerGenerateResponse": {
+        "description": "Generated (or refined) handler source, with the tsc verdict on it.",
+        "properties": {
+          "attempts": {
+            "description": "1, or 2 when the model was handed its own type errors to fix.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "durationMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "source": {
+            "type": "string"
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "violations": {
+            "description": "The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "attempts",
+          "durationMs",
+          "ok",
+          "source",
+          "valid",
+          "violations"
+        ],
+        "type": "object"
+      },
+      "HandlerListResponse": {
+        "description": "The handlers this user has, and the realm-shipped ones they could adopt.",
+        "properties": {
+          "available": {
+            "items": {
+              "$ref": "#/components/schemas/HandlerAvailable"
+            },
+            "type": "array"
+          },
+          "yours": {
+            "items": {
+              "$ref": "#/components/schemas/HandlerListing"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "available",
+          "yours"
+        ],
+        "type": "object"
+      },
+      "HandlerListing": {
+        "description": "A handler belonging to this user, with its triggers and whether it is live.",
+        "properties": {
+          "active": {
+            "description": "Whether it currently fires. A saved handler that is off changes nothing.",
+            "type": "boolean"
+          },
+          "autonomous": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "description": "Its 6-field cron expression, or null when not scheduled.",
+            "type": "string"
+          },
+          "signalType": {
+            "description": "The signal type that fires it; '*' = none.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "active",
+          "autonomous",
+          "name",
+          "signalType"
+        ],
+        "type": "object"
+      },
+      "HandlerMutationResponse": {
+        "description": "Whether the mutation landed, and what the server has to say about it.",
+        "properties": {
+          "message": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "message",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "HandlerOpenResponse": {
+        "description": "One handler's source and metadata, for round-tripping open → edit → save.",
+        "properties": {
+          "autonomous": {
+            "type": "boolean"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "type": "string"
+          },
+          "signalType": {
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "autonomous",
+          "description",
+          "name",
+          "signalType",
+          "source"
+        ],
+        "type": "object"
+      },
+      "HandlerRanAgainst": {
+        "description": "The signal a dry run bound, as sampled — not as requested.",
+        "properties": {
+          "signalId": {
+            "type": "string"
+          },
+          "signalType": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "signalId",
+          "signalType"
+        ],
+        "type": "object"
+      },
+      "HandlerSaveRequest": {
+        "description": "A handler to create or update, with its triggers.",
+        "properties": {
+          "autonomous": {
+            "type": "boolean"
+          },
+          "name": {
+            "type": "string"
+          },
+          "schedule": {
+            "description": "Optional 6-field cron expression; null = not scheduled.",
+            "type": "string"
+          },
+          "signalType": {
+            "description": "`Signal.typeName` (or simple name) that fires this handler; '*' = none.",
+            "type": "string"
+          },
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "source"
+        ],
+        "type": "object"
+      },
+      "HandlerScheduleResponse": {
+        "description": "Acknowledgement of a schedule change, echoing the schedule now in force.",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "schedule": {
+            "description": "The cron expression now in force, or null when the schedule was cleared.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "name",
+          "ok"
+        ],
+        "type": "object"
+      },
+      "HandlerValidateRequest": {
+        "description": "A handler body to type-check without saving or running it.",
+        "properties": {
+          "source": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "source"
+        ],
+        "type": "object"
+      },
+      "HandlerValidateResponse": {
+        "description": "The tsc verdict on a handler body, without saving or running it.",
+        "properties": {
+          "durationMs": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "ok": {
+            "type": "boolean"
+          },
+          "valid": {
+            "type": "boolean"
+          },
+          "violations": {
+            "description": "The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "durationMs",
+          "ok",
+          "valid",
+          "violations"
         ],
         "type": "object"
       },
@@ -1477,10 +2412,7 @@
           },
           "error": {
             "description": "Why the tick could not complete, or null. Always present.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "failed": {
             "format": "int32",
@@ -1495,7 +2427,6 @@
           "candidates",
           "decorated",
           "decorator",
-          "error",
           "failed",
           "skipped"
         ],
@@ -1691,6 +2622,40 @@
         ],
         "type": "object"
       },
+      "KgPropertyValuesResponse": {
+        "properties": {
+          "enumerable": {
+            "description": "False when the source cannot be asked at all — NOT the same as an empty set.",
+            "type": "boolean"
+          },
+          "label": {
+            "type": "string"
+          },
+          "property": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
+          },
+          "tooMany": {
+            "$ref": "#/components/schemas/KgValueOverflow",
+            "description": "Present when the domain is WIDER than max — its presence IS the signal."
+          },
+          "values": {
+            "description": "The closed set, when it fits within the property's declared max.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "enumerable",
+          "label",
+          "property"
+        ],
+        "type": "object"
+      },
       "KgQueryResult": {
         "description": "The outcome of a virtual-cypher query: rows, the cypher that produced them, and what it cost.",
         "properties": {
@@ -1717,10 +2682,7 @@
           },
           "error": {
             "description": "Why the query failed, or null when it did not.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "hint": {
             "description": "What to try instead. Accompanies an empty result only.",
@@ -1772,12 +2734,26 @@
           "apiCalls",
           "cypher",
           "durationMs",
-          "error",
           "llmCallLog",
           "llmCalls",
           "rowCount",
           "rows",
           "warnings"
+        ],
+        "type": "object"
+      },
+      "KgRefineRequest": {
+        "properties": {
+          "cypher": {
+            "type": "string"
+          },
+          "instruction": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "cypher",
+          "instruction"
         ],
         "type": "object"
       },
@@ -1838,10 +2814,7 @@
         "properties": {
           "detail": {
             "description": "Why it is in that state, when anything was recorded. Null otherwise.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "error": {
             "type": "string"
@@ -1852,7 +2825,6 @@
           }
         },
         "required": [
-          "detail",
           "error",
           "state"
         ],
@@ -1943,10 +2915,7 @@
         "description": "A view was refused: a bad name, an unrunnable body, or a name already taken.",
         "properties": {
           "error": {
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "name": {
             "type": "string"
@@ -1963,7 +2932,6 @@
           }
         },
         "required": [
-          "error",
           "ok"
         ],
         "type": "object"
@@ -2020,6 +2988,14 @@
       "KgSchemaLabel": {
         "description": "A node label and its sampled property shape.",
         "properties": {
+          "anchor": {
+            "description": "True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. Defaults true so an older client reading a newer appliance loses nothing.",
+            "type": "boolean"
+          },
+          "description": {
+            "description": "The declared definition of the type this label names, verbatim from the realm's own registry — for an editor to show on hover. Null for core/introspected labels, which declare none.",
+            "type": "string"
+          },
           "exhaustive": {
             "description": "True when every node carrying this label was inspected, so an absent property genuinely does not exist here. False means the sample was capped — evidence of what exists, and no evidence at all about what does not.",
             "type": "boolean"
@@ -2033,6 +3009,10 @@
             },
             "type": "array"
           },
+          "realm": {
+            "description": "The realm that declared this label's type. Null means core — the world's own types or the host's.",
+            "type": "string"
+          },
           "sampleCount": {
             "description": "How many nodes were sampled when inferring the properties.",
             "format": "int32",
@@ -2040,6 +3020,7 @@
           }
         },
         "required": [
+          "anchor",
           "exhaustive",
           "label",
           "properties",
@@ -2050,6 +3031,10 @@
       "KgSchemaProperty": {
         "description": "A property observed on nodes carrying a label.",
         "properties": {
+          "description": {
+            "description": "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
+            "type": "string"
+          },
           "name": {
             "type": "string"
           },
@@ -2126,10 +3111,7 @@
         "properties": {
           "message": {
             "description": "A single human-readable summary, or null when there is nothing to say.",
-            "type": [
-              "string",
-              "null"
-            ]
+            "type": "string"
           },
           "ok": {
             "type": "boolean"
@@ -2143,9 +3125,34 @@
           }
         },
         "required": [
-          "message",
           "ok",
           "violations"
+        ],
+        "type": "object"
+      },
+      "KgValueOverflow": {
+        "properties": {
+          "count": {
+            "description": "How many distinct values exist. Null when the source could not be counted.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "max": {
+            "description": "The cap that was exceeded — the property's declared `max`.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "sample": {
+            "description": "A few values, to show the SHAPE of the domain. NEVER treat this as the set.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "max",
+          "sample"
         ],
         "type": "object"
       },

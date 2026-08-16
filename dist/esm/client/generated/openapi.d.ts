@@ -3,6 +3,159 @@
  * Do not make direct changes to the file.
  */
 export interface paths {
+    "/api/v1/admin/handlers/delete": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Delete a user-authored handler (realm handlers can only be disabled) */
+        post: operations["delete_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/dry-run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a TypeScript handler observe-only against a sample or the most recent matching signal */
+        post: operations["dryRun_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate (or, with `current`, refine) a TypeScript handler from English, with the tsc verdict */
+        post: operations["generate_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/list": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** List the user's handlers plus inactive realm-shipped handlers available to adopt */
+        post: operations["list_3"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/open": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return one handler's source and metadata */
+        post: operations["open"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/save": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Create or update a handler, gated on TypeScript compilation */
+        post: operations["save"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/set-enabled": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Enable (adopt) or disable a handler for this user */
+        post: operations["setEnabled_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/set-schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Set or clear a per-user cron schedule for a handler */
+        post: operations["setSchedule"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/handlers/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Type-check a handler body without saving or running it */
+        post: operations["validate_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kg/annotations/dry-run": {
         parameters: {
             query?: never;
@@ -176,6 +329,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/kg/refine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revise existing Cypher per an instruction, without running it */
+        post: operations["refine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kg/reproject": {
         parameters: {
             query?: never;
@@ -253,6 +423,23 @@ export interface paths {
         };
         /** The acting user's graph schema — labels, properties, relationship triples */
         get: operations["schema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/schema/{label}/{property}/values": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The legal values of a property: the set, or its size when too wide, or why it cannot be enumerated */
+        get: operations["propertyValues"];
         put?: never;
         post?: never;
         delete?: never;
@@ -347,6 +534,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/kg/views/{name}/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run a saved view with the given arguments and return its rows */
+        post: operations["runView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -356,6 +560,128 @@ export interface components {
                 [key: string]: unknown;
             };
             statement: string;
+        };
+        /** @description A realm-shipped handler available to adopt, which this user has not enabled. */
+        HandlerAvailable: {
+            name: string;
+            signalType: string;
+        };
+        /** @description A handler body to run observe-only, and what to run it against. */
+        HandlerDryRunRequest: {
+            /** @description A sample signal to bind INSTEAD of sampling the graph — for an event not yet received. */
+            sample?: {
+                [key: string]: unknown;
+            };
+            /** @description The signal type to sample a real recent event from. Null or '*' means a cron tick. */
+            signalType?: string;
+            source: string;
+        };
+        /** @description The outcome of an observe-only handler run: what it saw, what it logged, and how it ended. */
+        HandlerDryRunResponse: {
+            /** @description The failure message when the body threw. Serialized as null otherwise — consumers test for the key. */
+            error?: string;
+            /** @description False when the body threw; `error` then carries the message. */
+            ok: boolean;
+            ranAgainst: components["schemas"]["HandlerRanAgainst"];
+            /** @description Everything the body logged. The brief tells a handler to log every effect, so this IS the feedback surface. */
+            stdout: string;
+        };
+        /** @description Acknowledgement of an enable/disable, echoing the state now in force. */
+        HandlerEnabledResponse: {
+            enabled: boolean;
+            name: string;
+            ok: boolean;
+        };
+        /** @description A refusal carrying only a human-readable reason. */
+        HandlerErrorResponse: {
+            /** @description What went wrong, in the terms the caller can act on. */
+            error: string;
+        };
+        /** @description An English description of a handler, optionally as a change to existing source. */
+        HandlerGenerateRequest: {
+            /** @description When present, `english` is a CHANGE to this source — the round-trip an editor's Refine drives. */
+            current?: string;
+            english: string;
+        };
+        /** @description Generated (or refined) handler source, with the tsc verdict on it. */
+        HandlerGenerateResponse: {
+            /**
+             * Format: int32
+             * @description 1, or 2 when the model was handed its own type errors to fix.
+             */
+            attempts: number;
+            /** Format: int64 */
+            durationMs: number;
+            ok: boolean;
+            source: string;
+            valid: boolean;
+            /** @description The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`. */
+            violations: string[];
+        };
+        /** @description The handlers this user has, and the realm-shipped ones they could adopt. */
+        HandlerListResponse: {
+            available: components["schemas"]["HandlerAvailable"][];
+            yours: components["schemas"]["HandlerListing"][];
+        };
+        /** @description A handler belonging to this user, with its triggers and whether it is live. */
+        HandlerListing: {
+            /** @description Whether it currently fires. A saved handler that is off changes nothing. */
+            active: boolean;
+            autonomous: boolean;
+            name: string;
+            /** @description Its 6-field cron expression, or null when not scheduled. */
+            schedule?: string;
+            /** @description The signal type that fires it; '*' = none. */
+            signalType: string;
+        };
+        /** @description Whether the mutation landed, and what the server has to say about it. */
+        HandlerMutationResponse: {
+            message: string;
+            ok: boolean;
+        };
+        /** @description One handler's source and metadata, for round-tripping open → edit → save. */
+        HandlerOpenResponse: {
+            autonomous: boolean;
+            description: string;
+            name: string;
+            schedule?: string;
+            signalType: string;
+            source: string;
+        };
+        /** @description The signal a dry run bound, as sampled — not as requested. */
+        HandlerRanAgainst: {
+            signalId: string;
+            signalType: string;
+        };
+        /** @description A handler to create or update, with its triggers. */
+        HandlerSaveRequest: {
+            autonomous?: boolean;
+            name: string;
+            /** @description Optional 6-field cron expression; null = not scheduled. */
+            schedule?: string;
+            /** @description `Signal.typeName` (or simple name) that fires this handler; '*' = none. */
+            signalType?: string;
+            source: string;
+        };
+        /** @description Acknowledgement of a schedule change, echoing the schedule now in force. */
+        HandlerScheduleResponse: {
+            name: string;
+            ok: boolean;
+            /** @description The cron expression now in force, or null when the schedule was cleared. */
+            schedule?: string;
+        };
+        /** @description A handler body to type-check without saving or running it. */
+        HandlerValidateRequest: {
+            source: string;
+        };
+        /** @description The tsc verdict on a handler body, without saving or running it. */
+        HandlerValidateResponse: {
+            /** Format: int64 */
+            durationMs: number;
+            ok: boolean;
+            valid: boolean;
+            /** @description The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`. */
+            violations: string[];
         };
         /** @description One proposed property change, as it would be written. */
         KgAnnotationDiff: {
@@ -448,7 +774,7 @@ export interface components {
             decorated: number;
             decorator: string;
             /** @description Why the tick could not complete, or null. Always present. */
-            error: string | null;
+            error?: string;
             /** Format: int32 */
             failed: number;
             /** Format: int32 */
@@ -527,6 +853,17 @@ export interface components {
             killed: boolean;
             runId: string;
         };
+        KgPropertyValuesResponse: {
+            /** @description False when the source cannot be asked at all — NOT the same as an empty set. */
+            enumerable: boolean;
+            label: string;
+            property: string;
+            reason?: string;
+            /** @description Present when the domain is WIDER than max — its presence IS the signal. */
+            tooMany?: components["schemas"]["KgValueOverflow"];
+            /** @description The closed set, when it fits within the property's declared max. */
+            values?: string[];
+        };
         /** @description The outcome of a virtual-cypher query: rows, the cypher that produced them, and what it cost. */
         KgQueryResult: {
             /** @description The actual calls as `producer(keys)`, in order — fan-out is visible here. */
@@ -544,7 +881,7 @@ export interface components {
              */
             durationMs: number;
             /** @description Why the query failed, or null when it did not. */
-            error: string | null;
+            error?: string;
             /** @description What to try instead. Accompanies an empty result only. */
             hint?: string;
             /** @description The actual LLM calls (kg-ask and agg-*), in order. */
@@ -565,6 +902,10 @@ export interface components {
             }[];
             run?: components["schemas"]["KgRunRef"];
             warnings: string[];
+        };
+        KgRefineRequest: {
+            cypher: string;
+            instruction: string;
         };
         /** @description Whether a materialised view's cache was recomputed. */
         KgRefreshViewResponse: {
@@ -596,7 +937,7 @@ export interface components {
         /** @description The run was not awaiting input; its actual state travels with the refusal. */
         KgRunConflictResponse: {
             /** @description Why it is in that state, when anything was recorded. Null otherwise. */
-            detail: string | null;
+            detail?: string;
             error: string;
             /** @description The run's real state: RUNNING, COMPLETED, KILLED, FAILED, CANCELLED or EXPIRED. */
             state: string;
@@ -641,7 +982,7 @@ export interface components {
         };
         /** @description A view was refused: a bad name, an unrunnable body, or a name already taken. */
         KgSaveViewRejection: {
-            error: string | null;
+            error?: string;
             name?: string;
             ok: boolean;
             /** @description Preflight defects when the body names shapes the schema contradicts. */
@@ -665,10 +1006,16 @@ export interface components {
         };
         /** @description A node label and its sampled property shape. */
         KgSchemaLabel: {
+            /** @description True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. Defaults true so an older client reading a newer appliance loses nothing. */
+            anchor: boolean;
+            /** @description The declared definition of the type this label names, verbatim from the realm's own registry — for an editor to show on hover. Null for core/introspected labels, which declare none. */
+            description?: string;
             /** @description True when every node carrying this label was inspected, so an absent property genuinely does not exist here. False means the sample was capped — evidence of what exists, and no evidence at all about what does not. */
             exhaustive: boolean;
             label: string;
             properties: components["schemas"]["KgSchemaProperty"][];
+            /** @description The realm that declared this label's type. Null means core — the world's own types or the host's. */
+            realm?: string;
             /**
              * Format: int32
              * @description How many nodes were sampled when inferring the properties.
@@ -677,6 +1024,8 @@ export interface components {
         };
         /** @description A property observed on nodes carrying a label. */
         KgSchemaProperty: {
+            /** @description The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing. */
+            description?: string;
             name: string;
             /** @description True when the property was missing from a non-trivial fraction of the sample. */
             sparse: boolean;
@@ -704,10 +1053,24 @@ export interface components {
         /** @description The result of validating cypher against the schema without executing it. */
         KgValidationResponse: {
             /** @description A single human-readable summary, or null when there is nothing to say. */
-            message: string | null;
+            message?: string;
             ok: boolean;
             /** @description What the schema contradicts, one entry per defect. */
             violations: string[];
+        };
+        KgValueOverflow: {
+            /**
+             * Format: int32
+             * @description How many distinct values exist. Null when the source could not be counted.
+             */
+            count?: number;
+            /**
+             * Format: int32
+             * @description The cap that was exceeded — the property's declared `max`.
+             */
+            max: number;
+            /** @description A few values, to show the SHAPE of the domain. NEVER treat this as the set. */
+            sample: string[];
         };
         /** @description The runnable cypher for a saved view invoked with the given arguments. */
         KgViewInvocationResponse: {
@@ -751,6 +1114,302 @@ export interface components {
 }
 export type $defs = Record<string, never>;
 export interface operations {
+    delete_1: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether it was deleted, and the server's own sentence about it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerMutationResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    dryRun_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandlerDryRunRequest"];
+            };
+        };
+        responses: {
+            /** @description What the run saw, logged, and how it ended */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerDryRunResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    generate_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandlerGenerateRequest"];
+            };
+        };
+        responses: {
+            /** @description The generated source and whether it type-checks */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerGenerateResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    list_3: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The user's handlers, and the realm ones they could adopt */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerListResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    open: {
+        parameters: {
+            query: {
+                name: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The handler's source and its triggers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerOpenResponse"];
+                };
+            };
+            /** @description No such handler */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    save: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandlerSaveRequest"];
+            };
+        };
+        responses: {
+            /** @description Whether it was persisted, and the server's own sentence about it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerMutationResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    setEnabled_1: {
+        parameters: {
+            query: {
+                name: string;
+                enabled: boolean;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The firing state now in force */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerEnabledResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    setSchedule: {
+        parameters: {
+            query: {
+                name: string;
+                schedule?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule now in force, or null when cleared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerScheduleResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
+    validate_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["HandlerValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description The tsc verdict, with its errors in source coordinates */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerValidateResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HandlerErrorResponse"];
+                };
+            };
+        };
+    };
     dryRun: {
         parameters: {
             query?: {
@@ -1174,6 +1833,50 @@ export interface operations {
             };
         };
     };
+    refine: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgRefineRequest"];
+            };
+        };
+        responses: {
+            /** @description The revised cypher, its verdict, and what the engine will do */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgGenerateResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Refinement failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
     reproject: {
         parameters: {
             query: {
@@ -1370,6 +2073,40 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KgSchemaResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    propertyValues: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                label: string;
+                property: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The value domain in one of its three states */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgPropertyValuesResponse"];
                 };
             };
             /** @description No authenticated principal and no resolvable username */
@@ -1614,6 +2351,61 @@ export interface operations {
             };
             /** @description No authenticated principal and no resolvable username */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    runView: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["KgInvokeViewRequest"];
+            };
+        };
+        responses: {
+            /** @description The view's rows, with any producer warnings */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgQueryResult"];
+                };
+            };
+            /** @description Bad view arguments */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Unknown view */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

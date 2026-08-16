@@ -8,15 +8,19 @@
 export { HttpTransport, basicAuth } from "./transport.js";
 export { isOk, expect } from "./outcome.js";
 export { KgClient, isBackgroundHandle } from "./kg.js";
+export { HandlersClient } from "./handlers.js";
+import { HandlersClient } from "./handlers.js";
 import { KgClient } from "./kg.js";
 import { HttpTransport } from "./transport.js";
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
 export class ApplianceClient {
     transport;
     kg;
+    handlers;
     constructor(transport) {
         this.transport = transport;
         this.kg = new KgClient(transport);
+        this.handlers = new HandlersClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {

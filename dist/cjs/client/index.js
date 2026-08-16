@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.isBackgroundHandle = exports.KgClient = exports.expect = exports.isOk = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.isBackgroundHandle = exports.KgClient = exports.expect = exports.isOk = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -17,15 +17,20 @@ Object.defineProperty(exports, "expect", { enumerable: true, get: function () { 
 var kg_ts_1 = require("./kg.js");
 Object.defineProperty(exports, "KgClient", { enumerable: true, get: function () { return kg_ts_1.KgClient; } });
 Object.defineProperty(exports, "isBackgroundHandle", { enumerable: true, get: function () { return kg_ts_1.isBackgroundHandle; } });
+var handlers_ts_1 = require("./handlers.js");
+Object.defineProperty(exports, "HandlersClient", { enumerable: true, get: function () { return handlers_ts_1.HandlersClient; } });
+const handlers_ts_2 = require("./handlers.js");
 const kg_ts_2 = require("./kg.js");
 const transport_ts_2 = require("./transport.js");
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
 class ApplianceClient {
     transport;
     kg;
+    handlers;
     constructor(transport) {
         this.transport = transport;
         this.kg = new kg_ts_2.KgClient(transport);
+        this.handlers = new handlers_ts_2.HandlersClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {

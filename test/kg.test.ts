@@ -148,3 +148,47 @@ describe('the two shapes /execute can answer with', () => {
     assert.equal(result.run?.runId, 'r9', 'the handle is how a UI knows the rows are not an answer')
   })
 })
+
+/*
+ * The three operations the surface gained after this client's first snapshot. Added here rather
+ * than in a new file because they are the same client — and their absence for a while is exactly
+ * the drift the regeneration step exists to catch.
+ */
+describe('KgClient — the later additions', () => {
+  it('refines from the existing cypher rather than regenerating around it', async () => {
+    const { kg, transport } = client()
+    await kg.refine('MATCH (n) RETURN n', 'only since March')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/refine')
+    assert.deepEqual(transport.last.body, { cypher: 'MATCH (n) RETURN n', instruction: 'only since March' })
+    assert.equal(transport.last.timeoutMs, 120_000)
+  })
+
+  it('puts label and property in the PATH, encoded — they are path segments, not query values', async () => {
+    const { kg, transport } = client()
+    await kg.propertyValues('Person', 'role')
+    assert.deepEqual(transport.last, {
+      method: 'GET',
+      path: '/api/v1/admin/kg/schema/Person/role/values',
+    })
+  })
+
+  it('encodes a label that would otherwise open a new path segment', async () => {
+    const { kg, transport } = client()
+    await kg.propertyValues('Odd/Label', 'a b')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/schema/Odd%2FLabel/a%20b/values')
+  })
+
+  it('runs a view in one call, with the execute budget', async () => {
+    const { kg, transport } = client()
+    await kg.runView('recent-prs', { since: '2026-03-01' })
+    assert.equal(transport.last.path, '/api/v1/admin/kg/views/recent-prs/run')
+    assert.deepEqual(transport.last.body, { args: { since: '2026-03-01' } })
+    assert.equal(transport.last.timeoutMs, 180_000)
+  })
+
+  it('defaults a view run to no arguments rather than omitting the key', async () => {
+    const { kg, transport } = client()
+    await kg.runView('recent-prs')
+    assert.deepEqual(transport.last.body, { args: {} })
+  })
+})

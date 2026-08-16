@@ -22,6 +22,7 @@ var EmbabelApplianceClient = (() => {
   var index_exports = {};
   __export(index_exports, {
     ApplianceClient: () => ApplianceClient,
+    HandlersClient: () => HandlersClient,
     HttpTransport: () => HttpTransport,
     KgClient: () => KgClient,
     basicAuth: () => basicAuth,
@@ -183,6 +184,32 @@ var EmbabelApplianceClient = (() => {
         timeoutMs: TIMEOUTS.generate
       });
     }
+    /**
+     * Revise existing cypher per an instruction, without running it — "now only the ones since
+     * March". Distinct from {@link generate}, which starts from nothing: the model is given the
+     * query it is changing, so an editor's Refine keeps what the author already had rather than
+     * regenerating around it.
+     */
+    refine(cypher, instruction) {
+      return this.transport.send({
+        method: "POST",
+        path: `${KG}/refine`,
+        body: { cypher, instruction },
+        timeoutMs: TIMEOUTS.generate
+      });
+    }
+    /**
+     * The legal values of a property — the closed set, or the fact that it is too wide, or why it
+     * cannot be enumerated at all. Three outcomes, and completion must tell them apart: `enumerable:
+     * false` means the source cannot be asked, which is NOT an empty set, and `tooMany` present
+     * means the domain is real but wider than the property's declared maximum.
+     */
+    propertyValues(label, property) {
+      return this.transport.send({
+        method: "GET",
+        path: `${KG}/schema/${encodeURIComponent(label)}/${encodeURIComponent(property)}/values`
+      });
+    }
     /** Answer a natural-language question: generate, then execute, scoped to the acting user. */
     ask(question) {
       return this.transport.send({
@@ -262,6 +289,22 @@ var EmbabelApplianceClient = (() => {
         body: { args }
       });
     }
+    /**
+     * Run a saved view with these arguments and return its rows — the one-call form of
+     * {@link viewInvocation} followed by {@link execute}.
+     *
+     * BOTH ARE WORTH HAVING. This one is for a caller that just wants the answer; the two-step is
+     * for a studio, which puts the expanded cypher in an editable box so the author can see what a
+     * view actually does and adjust it. Neither is a shortcut for the other.
+     */
+    runView(name, args = {}) {
+      return this.transport.send({
+        method: "POST",
+        path: `${KG}/views/${encodeURIComponent(name)}/run`,
+        body: { args },
+        timeoutMs: TIMEOUTS.execute
+      });
+    }
     /** Force-recompute a materialised view's cache now, ignoring its TTL. */
     refreshView(name) {
       return this.transport.send({
@@ -271,13 +314,127 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/handlers.ts
+  var HANDLERS = "/api/v1/admin/handlers";
+  var TIMEOUTS2 = {
+    dryRun: 18e4,
+    generate: 12e4,
+    save: 6e4
+  };
+  var HandlersClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    /** The user's own handlers, plus realm-shipped ones they have not adopted. */
+    list() {
+      return this.transport.send({ method: "POST", path: `${HANDLERS}/list`, body: {} });
+    }
+    /** One handler's source and triggers, for round-tripping open → edit → save. */
+    open(name) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/open`,
+        query: { name },
+        body: {}
+      });
+    }
+    /**
+     * The `tsc` gate WITHOUT saving or running — the editor's as-you-type verdict, and the same gate
+     * the save path enforces, so "valid here" and "rejected there" can never disagree.
+     *
+     * Two booleans come back and they mean different things: `ok` is whether the check ran, `valid`
+     * is its verdict. Validation is best-effort server-side (a missing sandbox skips it), so a
+     * caller that reads only `valid` cannot tell "it compiles" from "nothing checked it".
+     */
+    validate(source) {
+      return this.transport.send({ method: "POST", path: `${HANDLERS}/validate`, body: { source } });
+    }
+    /**
+     * English → handler source, with the compiler's verdict on what came back. With `current`, the
+     * English is a CHANGE to that source — the round-trip an editor's Refine drives.
+     */
+    generate(english, current) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/generate`,
+        body: current === void 0 ? { english } : { english, current },
+        timeoutMs: TIMEOUTS2.generate
+      });
+    }
+    /**
+     * Run a handler OBSERVE-ONLY on the appliance, against a real recent signal of `signalType` (or
+     * a cron tick when nothing matches), or against `sample` when the event has not been received
+     * yet.
+     *
+     * Read `ranAgainst` rather than assuming: a signal type with nothing on record falls back to a
+     * cron tick, so reporting the REQUESTED type would tell an author their handler ran against an
+     * event it never saw.
+     */
+    dryRun(source, signalType, sample) {
+      const body = { source };
+      if (signalType) body["signalType"] = signalType;
+      if (sample) body["sample"] = sample;
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/dry-run`,
+        body,
+        timeoutMs: TIMEOUTS2.dryRun
+      });
+    }
+    /**
+     * Create or update a handler. The appliance type-checks before persisting, so a false `ok` means
+     * the code was rejected, not that the request failed — `message` is the compiler's own words.
+     */
+    save(spec) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/save`,
+        body: spec,
+        timeoutMs: TIMEOUTS2.save
+      });
+    }
+    /** Delete a user-authored handler. A realm-shipped one can only be disabled. */
+    delete(name) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/delete`,
+        query: { name },
+        body: {}
+      });
+    }
+    /** Enable (or, for a realm handler, adopt) — or disable. Until this is true, a handler never fires. */
+    setEnabled(name, enabled) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/set-enabled`,
+        query: { name, enabled },
+        body: {}
+      });
+    }
+    /**
+     * Set a per-user cron schedule, or clear it with a blank. The response echoes what was STORED,
+     * not what was sent — the blank-to-null coercion happens server-side, and a client that trusted
+     * its own input would show a schedule that is not in force.
+     */
+    setSchedule(name, schedule) {
+      return this.transport.send({
+        method: "POST",
+        path: `${HANDLERS}/set-schedule`,
+        query: { name, schedule },
+        body: {}
+      });
+    }
+  };
+
   // src/client/index.ts
   var ApplianceClient = class _ApplianceClient {
     constructor(transport) {
       this.transport = transport;
       this.kg = new KgClient(transport);
+      this.handlers = new HandlersClient(transport);
     }
     kg;
+    handlers;
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {
       return new _ApplianceClient(new HttpTransport({ ...config, baseUrl: "" }));

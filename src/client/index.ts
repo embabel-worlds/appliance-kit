@@ -21,6 +21,7 @@ export type {
   KgGenerated,
   KgInFlightRun,
   KgKillResult,
+  KgPropertyValues,
   KgQueryResult,
   KgRefreshViewResult,
   KgRunChoice,
@@ -34,17 +35,36 @@ export type {
   KgViewParamSpec,
 } from './kg.ts'
 
+export { HandlersClient } from './handlers.ts'
+export type {
+  HandlerAvailable,
+  HandlerDryRunResult,
+  HandlerEnabledResult,
+  HandlerGenerated,
+  HandlerList,
+  HandlerListing,
+  HandlerMutationResult,
+  HandlerRanAgainst,
+  HandlerSaveRequest,
+  HandlerScheduleResult,
+  HandlerSource,
+  HandlerValidation,
+} from './handlers.ts'
+
 export type { components, paths } from './generated/openapi.ts'
 
+import { HandlersClient } from './handlers.ts'
 import { KgClient } from './kg.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
 
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
 export class ApplianceClient {
   readonly kg: KgClient
+  readonly handlers: HandlersClient
 
   constructor(readonly transport: Transport) {
     this.kg = new KgClient(transport)
+    this.handlers = new HandlersClient(transport)
   }
 
   /** The console's configuration: relative URLs, same origin, ambient credentials. */

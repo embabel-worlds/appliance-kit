@@ -1,7 +1,7 @@
 /** The slice of @embabel/vc the completion consumes — structural, injected. */
 export interface VcSemantics {
-    VIA_VALUES: string[];
-    AI_KEYS: string[];
+    VIA_VALUES: readonly string[];
+    AI_KEYS: readonly string[];
     aliasMap(cypher: string): Record<string, string>;
     propertiesOf(schema: unknown, label: string): string[];
     anchorLabels(schema: unknown): string[];
