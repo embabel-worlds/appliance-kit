@@ -77,7 +77,7 @@ an error in the consumer's dev server, not a convenience.
 
 ```bash
 npm run build      # esm + cjs + 5 global bundles
-npm test           # 137 checks, no browser, no server
+npm test           # 147 checks, no browser, no server
 npm run typecheck
 npm run check      # build + test
 ```

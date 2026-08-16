@@ -7,10 +7,12 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.isBackgroundHandle = exports.KgClient = exports.expect = exports.isOk = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.isBackgroundHandle = exports.KgClient = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
+var sse_ts_1 = require("./sse.js");
+Object.defineProperty(exports, "createSseParser", { enumerable: true, get: function () { return sse_ts_1.createSseParser; } });
 var outcome_ts_1 = require("./outcome.js");
 Object.defineProperty(exports, "isOk", { enumerable: true, get: function () { return outcome_ts_1.isOk; } });
 Object.defineProperty(exports, "expect", { enumerable: true, get: function () { return outcome_ts_1.expect; } });

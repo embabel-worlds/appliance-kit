@@ -9,6 +9,9 @@
 export { HttpTransport, basicAuth } from './transport.ts'
 export type { Transport, RequestSpec, HttpTransportConfig } from './transport.ts'
 
+export { createSseParser } from './sse.ts'
+export type { SseEvent, SseParser } from './sse.ts'
+
 export { isOk, expect } from './outcome.ts'
 export type { Outcome, Ok, Failure, FailureKind } from './outcome.ts'
 

@@ -26,6 +26,7 @@ var EmbabelApplianceClient = (() => {
     HttpTransport: () => HttpTransport,
     KgClient: () => KgClient,
     basicAuth: () => basicAuth,
+    createSseParser: () => createSseParser,
     expect: () => expect,
     isBackgroundHandle: () => isBackgroundHandle,
     isOk: () => isOk
@@ -144,6 +145,38 @@ var EmbabelApplianceClient = (() => {
       if (typeof error === "string" && error.length > 0) return error;
     }
     return void 0;
+  }
+
+  // src/client/sse.ts
+  function createSseParser() {
+    let buffer = "";
+    return {
+      push(text) {
+        buffer += text.replace(/\r\n?/g, "\n");
+        const events = [];
+        let cut;
+        while ((cut = buffer.indexOf("\n\n")) >= 0) {
+          const block = buffer.slice(0, cut);
+          buffer = buffer.slice(cut + 2);
+          let event = "message";
+          let id;
+          const data = [];
+          for (const line of block.split("\n")) {
+            if (line.startsWith(":") || line === "") continue;
+            const colon = line.indexOf(":");
+            const field = colon === -1 ? line : line.slice(0, colon);
+            let value = colon === -1 ? "" : line.slice(colon + 1);
+            if (value.startsWith(" ")) value = value.slice(1);
+            if (field === "event") event = value;
+            else if (field === "data") data.push(value);
+            else if (field === "id") id = value;
+          }
+          if (data.length === 0) continue;
+          events.push(id === void 0 ? { event, data: data.join("\n") } : { event, data: data.join("\n"), id });
+        }
+        return events;
+      }
+    };
   }
 
   // src/client/kg.ts

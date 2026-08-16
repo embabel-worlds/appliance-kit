@@ -6,6 +6,7 @@
  * load in either.
  */
 export { HttpTransport, basicAuth } from "./transport.js";
+export { createSseParser } from "./sse.js";
 export { isOk, expect } from "./outcome.js";
 export { KgClient, isBackgroundHandle } from "./kg.js";
 export { HandlersClient } from "./handlers.js";
