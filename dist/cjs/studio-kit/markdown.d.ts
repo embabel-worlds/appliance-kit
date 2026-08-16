@@ -11,9 +11,9 @@ export declare const MARKDOWN_OPTIONS: {
  * after sanitizing, from the href that survived.
  */
 export declare const MARKDOWN_SANITIZE: {
-    readonly ALLOWED_TAGS: readonly ["p", "br", "hr", "strong", "em", "del", "code", "pre", "blockquote", "ul", "ol", "li", "a", "h1", "h2", "h3", "h4", "h5", "h6", "table", "thead", "tbody", "tr", "th", "td"];
-    readonly ALLOWED_ATTR: readonly ["href", "title", "start"];
-    readonly ALLOWED_URI_REGEXP: RegExp;
+    ALLOWED_TAGS: string[];
+    ALLOWED_ATTR: string[];
+    ALLOWED_URI_REGEXP: RegExp;
 };
 /** What a caller injects: their own `marked` and `DOMPurify`, however they were loaded. */
 export interface MarkdownLibraries {

@@ -34,7 +34,11 @@ export const MARKDOWN_OPTIONS = {
  * No `target`/`rel` here because no anchor is trusted to carry them — each surface rewires links
  * after sanitizing, from the href that survived.
  */
-export const MARKDOWN_SANITIZE = {
+export const MARKDOWN_SANITIZE: {
+  ALLOWED_TAGS: string[]
+  ALLOWED_ATTR: string[]
+  ALLOWED_URI_REGEXP: RegExp
+} = {
   ALLOWED_TAGS: [
     'p', 'br', 'hr', 'strong', 'em', 'del', 'code', 'pre', 'blockquote',
     'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
@@ -42,7 +46,7 @@ export const MARKDOWN_SANITIZE = {
   ],
   ALLOWED_ATTR: ['href', 'title', 'start'],
   ALLOWED_URI_REGEXP: /^https?:\/\//i,
-} as const
+}
 
 /** What a caller injects: their own `marked` and `DOMPurify`, however they were loaded. */
 export interface MarkdownLibraries {
