@@ -164,3 +164,40 @@ describe('HttpTransport outcome classification', () => {
     assert.match(!outcome.ok ? outcome.message : '', /1234ms/)
   })
 })
+
+/*
+ * THE BIND. This is a regression test with a real incident behind it: the
+ * transport stored `globalThis.fetch` and called it as `this.doFetch(...)`,
+ * which hands the method its transport as a receiver. Node's fetch does not
+ * care, so every test here passed while the Worlds console — the first browser
+ * to run this client — failed every single call with "Failed to execute 'fetch'
+ * on 'Window': Illegal invocation", surfaced to users as "could not reach the
+ * appliance".
+ *
+ * The double below is a strict-mode function, so an unbound call gives it
+ * `undefined` for `this` and a bound one gives it `globalThis`. That is exactly
+ * the distinction a browser enforces and Node does not.
+ */
+describe('HttpTransport calls fetch with the right receiver', () => {
+  it('binds the global fetch instead of borrowing it as a method', async () => {
+    let receiver: unknown = 'never called'
+    function spy(this: unknown): Promise<Response> {
+      receiver = this
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    const transport = new HttpTransport({ baseUrl: '', fetch: spy as unknown as typeof globalThis.fetch })
+    await transport.send({ method: 'GET', path: '/whatever' })
+    assert.equal(receiver, globalThis, 'fetch must be called on globalThis, never on the transport')
+  })
+
+  it('binds an INJECTED fetch too — a browser-supplied one needs it just as much', async () => {
+    let receiver: unknown = 'never called'
+    function spy(this: unknown): Promise<Response> {
+      receiver = this
+      return Promise.resolve(new Response('{}', { status: 200 }))
+    }
+    const transport = new HttpTransport({ baseUrl: '', fetch: spy as unknown as typeof globalThis.fetch })
+    await transport.send({ method: 'GET', path: '/whatever' })
+    assert.notEqual(receiver, transport)
+  })
+})

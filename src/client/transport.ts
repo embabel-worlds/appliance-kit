@@ -87,7 +87,19 @@ export class HttpTransport implements Transport {
     if (typeof injected !== 'function') {
       throw new Error('No fetch available: pass one in HttpTransportConfig.fetch')
     }
-    this.doFetch = injected
+    /*
+     * BOUND, NOT JUST STORED. `window.fetch` is a method of the global, and
+     * calling it as `this.doFetch(...)` hands it this transport as its receiver —
+     * which a browser rejects outright: "Failed to execute 'fetch' on 'Window':
+     * Illegal invocation". It cost nothing in Node, where the global fetch does
+     * not check, so it survived until the console became the first browser to run
+     * this and every single call failed as "could not reach the appliance".
+     *
+     * An INJECTED fetch is bound to globalThis too, deliberately: a test double
+     * is a plain function that ignores its receiver, and a real fetch passed in
+     * from a browser needs exactly the same treatment as one taken from it.
+     */
+    this.doFetch = injected.bind(globalThis)
     this.defaultTimeoutMs = config.timeoutMs ?? 30_000
   }
 

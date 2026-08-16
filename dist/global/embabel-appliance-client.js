@@ -75,7 +75,7 @@ var EmbabelApplianceClient = (() => {
       if (typeof injected !== "function") {
         throw new Error("No fetch available: pass one in HttpTransportConfig.fetch");
       }
-      this.doFetch = injected;
+      this.doFetch = injected.bind(globalThis);
       this.defaultTimeoutMs = config.timeoutMs ?? 3e4;
     }
     url(spec) {
