@@ -12,9 +12,21 @@ const TIMEOUTS = {
     generate: 120_000,
     saveView: 60_000,
 };
-/** Runtime guard for the one operation with two success shapes: a finished result, or a handle. */
+/**
+ * Runtime guard for the one operation with two success shapes: a finished result, or a handle.
+ *
+ * IDENTIFIES THE HANDLE POSITIVELY, by the `runId` only a handle carries. It used to test for the
+ * ABSENCE of `rowCount`, which is a different question and the wrong one: `rowCount` is documented
+ * as required on a result but is not always sent, and every consumer of the older clients defends
+ * with `rowCount ?? rows.length` for exactly that reason. A result that omitted it was therefore
+ * read as a background handle, and its rows — sitting right there in the payload — were discarded
+ * while the caller reported the run as parked.
+ *
+ * A missing OPTIONAL field must never be what tells two shapes apart. `runId` is required on the
+ * handle and absent from the result, so it is the one field that answers this question.
+ */
 function isBackgroundHandle(outcome) {
-    return !('rowCount' in outcome);
+    return 'runId' in outcome && outcome.runId !== undefined;
 }
 class KgClient {
     transport;

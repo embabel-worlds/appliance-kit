@@ -154,7 +154,7 @@ var EmbabelApplianceClient = (() => {
     saveView: 6e4
   };
   function isBackgroundHandle(outcome) {
-    return !("rowCount" in outcome);
+    return "runId" in outcome && outcome.runId !== void 0;
   }
   var KgClient = class {
     constructor(transport) {

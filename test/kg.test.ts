@@ -192,3 +192,29 @@ describe('KgClient — the later additions', () => {
     assert.deepEqual(transport.last.body, { args: {} })
   })
 })
+
+/*
+ * The discriminator between `/execute`'s two success shapes. This has a real incident behind it:
+ * the guard used to test for the ABSENCE of `rowCount`, so a perfectly good result that omitted
+ * that optional-in-practice field was reported as a background handle and its rows thrown away.
+ * The Worlds console showed "the appliance parked this run in the background" over a payload that
+ * had the answer in it.
+ */
+describe('isBackgroundHandle identifies the handle, not the absence of a result', () => {
+  it('reads a handle as a handle', () => {
+    assert.equal(isBackgroundHandle({ runId: 'r-1', state: 'RUNNING' } as never), true)
+  })
+
+  it('reads a full result as a result', () => {
+    assert.equal(isBackgroundHandle({ rowCount: 2, rows: [{ a: 1 }, { a: 2 }] } as never), false)
+  })
+
+  it('reads a result WITHOUT rowCount as a result — the bug this guard shipped with', () => {
+    // The rows are right there. Anything that calls this a handle loses them.
+    assert.equal(isBackgroundHandle({ rows: [{ a: 1 }], cypher: 'MATCH (n) RETURN n' } as never), false)
+  })
+
+  it('reads an empty result as a result, not a handle', () => {
+    assert.equal(isBackgroundHandle({ rows: [], rowCount: 0 } as never), false)
+  })
+})
