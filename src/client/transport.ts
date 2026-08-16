@@ -22,6 +22,22 @@ export interface RequestSpec {
   path: string
   query?: Record<string, string | number | boolean | undefined>
   body?: unknown
+  /**
+   * MULTIPART, for the one endpoint that is not JSON.
+   *
+   * A document upload is a file, and `JSON.stringify` over a `FormData` yields `{}` — silently,
+   * with a `Content-Type: application/json` header on top of it. So the shape is stated rather than
+   * sniffed: with `form`, the body is handed to `fetch` untouched and NO content type is set, which
+   * is deliberate — the browser and undici both need to write the boundary themselves, and a
+   * `multipart/form-data` header without one produces a request the server cannot parse.
+   */
+  form?: FormData
+  /**
+   * Per-request headers, merged over the transport's own. `X-Embabel-Operation-Id` is the case
+   * this exists for: the appliance echoes it on every progress event of the operation, which is
+   * what lets one window narrate its own retrieval out of a per-USER event stream.
+   */
+  headers?: Record<string, string>
   /** Overrides the transport default. Generation and execution can legitimately take minutes. */
   timeoutMs?: number
 }
@@ -125,11 +141,14 @@ export class HttpTransport implements Transport {
         signal: controller.signal,
         headers: {
           Accept: 'application/json',
-          ...(spec.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+          // A form writes its own content type, boundary and all — see RequestSpec.form.
+          ...(spec.body === undefined || spec.form !== undefined ? {} : { 'Content-Type': 'application/json' }),
           ...this.headers(),
+          ...spec.headers,
         },
       }
-      if (spec.body !== undefined) init.body = JSON.stringify(spec.body)
+      if (spec.form !== undefined) init.body = spec.form
+      else if (spec.body !== undefined) init.body = JSON.stringify(spec.body)
       response = await this.doFetch(this.url(spec), init)
     } catch (cause) {
       const aborted = cause instanceof Error && cause.name === 'AbortError'

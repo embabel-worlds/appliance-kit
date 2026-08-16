@@ -9,7 +9,7 @@
  * a page loads exactly one copy of each.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cypherFragmentCompletions = exports.createCypherHint = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
+exports.cypherFragmentCompletions = exports.createCypherHint = exports.toSafeHtml = exports.MARKDOWN_SANITIZE = exports.MARKDOWN_OPTIONS = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
 var format_ts_1 = require("./format.js");
 Object.defineProperty(exports, "formatDuration", { enumerable: true, get: function () { return format_ts_1.formatDuration; } });
 var status_ts_1 = require("./status.js");
@@ -19,6 +19,10 @@ Object.defineProperty(exports, "copyWithNod", { enumerable: true, get: function 
 var tooltip_ts_1 = require("./tooltip.js");
 Object.defineProperty(exports, "createDefinitionTooltip", { enumerable: true, get: function () { return tooltip_ts_1.createDefinitionTooltip; } });
 Object.defineProperty(exports, "definitionTitle", { enumerable: true, get: function () { return tooltip_ts_1.definitionTitle; } });
+var markdown_ts_1 = require("./markdown.js");
+Object.defineProperty(exports, "MARKDOWN_OPTIONS", { enumerable: true, get: function () { return markdown_ts_1.MARKDOWN_OPTIONS; } });
+Object.defineProperty(exports, "MARKDOWN_SANITIZE", { enumerable: true, get: function () { return markdown_ts_1.MARKDOWN_SANITIZE; } });
+Object.defineProperty(exports, "toSafeHtml", { enumerable: true, get: function () { return markdown_ts_1.toSafeHtml; } });
 var hints_ts_1 = require("./hints.js");
 Object.defineProperty(exports, "createCypherHint", { enumerable: true, get: function () { return hints_ts_1.createCypherHint; } });
 Object.defineProperty(exports, "cypherFragmentCompletions", { enumerable: true, get: function () { return hints_ts_1.cypherFragmentCompletions; } });

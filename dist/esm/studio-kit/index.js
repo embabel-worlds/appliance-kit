@@ -11,5 +11,6 @@ export { formatDuration } from "./format.js";
 export { setStatus } from "./status.js";
 export { copyWithNod } from "./copy.js";
 export { createDefinitionTooltip, definitionTitle } from "./tooltip.js";
+export { MARKDOWN_OPTIONS, MARKDOWN_SANITIZE, toSafeHtml } from "./markdown.js";
 export { createCypherHint, cypherFragmentCompletions } from "./hints.js";
 //# sourceMappingURL=index.js.map

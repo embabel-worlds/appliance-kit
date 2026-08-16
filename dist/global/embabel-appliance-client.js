@@ -22,14 +22,17 @@ var EmbabelApplianceClient = (() => {
   var index_exports = {};
   __export(index_exports, {
     ApplianceClient: () => ApplianceClient,
+    DocumentsClient: () => DocumentsClient,
     HandlersClient: () => HandlersClient,
     HttpTransport: () => HttpTransport,
     KgClient: () => KgClient,
     basicAuth: () => basicAuth,
+    classifySource: () => classifySource,
     createSseParser: () => createSseParser,
     expect: () => expect,
     isBackgroundHandle: () => isBackgroundHandle,
-    isOk: () => isOk
+    isOk: () => isOk,
+    newOperationId: () => newOperationId
   });
 
   // src/client/outcome.ts
@@ -99,11 +102,14 @@ var EmbabelApplianceClient = (() => {
           signal: controller.signal,
           headers: {
             Accept: "application/json",
-            ...spec.body === void 0 ? {} : { "Content-Type": "application/json" },
-            ...this.headers()
+            // A form writes its own content type, boundary and all — see RequestSpec.form.
+            ...spec.body === void 0 || spec.form !== void 0 ? {} : { "Content-Type": "application/json" },
+            ...this.headers(),
+            ...spec.headers
           }
         };
-        if (spec.body !== void 0) init.body = JSON.stringify(spec.body);
+        if (spec.form !== void 0) init.body = spec.form;
+        else if (spec.body !== void 0) init.body = JSON.stringify(spec.body);
         response = await this.doFetch(this.url(spec), init);
       } catch (cause) {
         const aborted = cause instanceof Error && cause.name === "AbortError";
@@ -347,6 +353,101 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/documents.ts
+  var DOCS = "/api/v1/documents";
+  var ASK_TIMEOUT_MS = 18e4;
+  var INGEST_TIMEOUT_MS = 3e5;
+  var DocumentsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    /** Everything ingested, with the chunk total the graph holds for it. */
+    list() {
+      return this.transport.send({ method: "GET", path: DOCS });
+    }
+    /**
+     * Ingest one file: converted, chunked, embedded, answerable once it lands.
+     *
+     * BYTES, NOT A `File`. The console has a `File` from an `<input>`; the Me app has an
+     * `ArrayBuffer` that crossed an IPC bridge, because no file PATH may cross it and a `File` is not
+     * structured-cloneable in the shape that matters. Bytes plus a name is the intersection, so one
+     * method serves both rather than the Me app keeping a private upload path.
+     */
+    upload(filename, bytes, tags = []) {
+      const form = new FormData();
+      const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
+      form.append("file", blob, filename);
+      for (const tag of tags.filter((t) => t.trim())) form.append("tags", tag.trim());
+      return this.transport.send({ method: "POST", path: `${DOCS}/upload`, form, timeoutMs: INGEST_TIMEOUT_MS });
+    }
+    /** Ingest a web page by URL — the appliance fetches and converts it. */
+    ingestUrl(url, tags = []) {
+      return this.transport.send({
+        method: "POST",
+        path: `${DOCS}/url`,
+        body: { url, tags: tags.filter((t) => t.trim()) },
+        timeoutMs: INGEST_TIMEOUT_MS
+      });
+    }
+    /**
+     * Ask the ingested documents, with citations.
+     *
+     * `operationId` is how a surface narrates its OWN retrieval. The progress stream
+     * (`GET /api/v1/virtual-cypher/events`) is per-USER, so every window of every app signed in as
+     * this user sees every event; the appliance echoes this header back on each `retrieval.step`, and
+     * a client that supplies one can ignore everything that is not its own. Without it, asking a
+     * question in one window narrates into another.
+     *
+     * Empty strings are dropped rather than sent: `from: ''` is not a filter, and a server that reads
+     * it as one would exclude every document.
+     */
+    ask(request, options = {}) {
+      const body = {
+        question: request.question,
+        history: request.history ?? [],
+        answer: true
+      };
+      if (request.dateField) body["dateField"] = request.dateField;
+      if (request.from) body["from"] = request.from;
+      if (request.to) body["to"] = request.to;
+      if (request.topK) body["topK"] = request.topK;
+      return this.transport.send({
+        method: "POST",
+        path: `${DOCS}/ask`,
+        body,
+        headers: options.operationId ? { "X-Embabel-Operation-Id": options.operationId } : void 0,
+        timeoutMs: ASK_TIMEOUT_MS
+      });
+    }
+  };
+  function newOperationId(prefix = "ask") {
+    return `${prefix}-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+  }
+
+  // src/client/citations.ts
+  function classifySource(uri) {
+    if (!uri) return { kind: "opaque", label: "unknown source" };
+    if (/^https?:\/\//i.test(uri)) {
+      let label = uri;
+      try {
+        const parsed = new URL(uri);
+        label = parsed.hostname + parsed.pathname;
+      } catch {
+      }
+      return { kind: "web", label, url: uri };
+    }
+    if (uri.startsWith("file://")) {
+      let containerPath;
+      try {
+        containerPath = decodeURIComponent(new URL(uri).pathname);
+      } catch {
+        containerPath = uri.replace(/^file:\/\//, "");
+      }
+      return { kind: "file", label: containerPath, containerPath };
+    }
+    return { kind: "opaque", label: uri };
+  }
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -465,9 +566,11 @@ var EmbabelApplianceClient = (() => {
       this.transport = transport;
       this.kg = new KgClient(transport);
       this.handlers = new HandlersClient(transport);
+      this.documents = new DocumentsClient(transport);
     }
     kg;
     handlers;
+    documents;
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {
       return new _ApplianceClient(new HttpTransport({ ...config, baseUrl: "" }));

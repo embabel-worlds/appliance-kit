@@ -76,11 +76,15 @@ export class HttpTransport {
                 signal: controller.signal,
                 headers: {
                     Accept: 'application/json',
-                    ...(spec.body === undefined ? {} : { 'Content-Type': 'application/json' }),
+                    // A form writes its own content type, boundary and all — see RequestSpec.form.
+                    ...(spec.body === undefined || spec.form !== undefined ? {} : { 'Content-Type': 'application/json' }),
                     ...this.headers(),
+                    ...spec.headers,
                 },
             };
-            if (spec.body !== undefined)
+            if (spec.form !== undefined)
+                init.body = spec.form;
+            else if (spec.body !== undefined)
                 init.body = JSON.stringify(spec.body);
             response = await this.doFetch(this.url(spec), init);
         }

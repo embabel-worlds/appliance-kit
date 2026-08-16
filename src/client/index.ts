@@ -38,6 +38,19 @@ export type {
   KgViewParamSpec,
 } from './kg.ts'
 
+export { DocumentsClient, newOperationId } from './documents.ts'
+export type {
+  Answer,
+  AskRequest,
+  Citation,
+  DateField,
+  DocumentList,
+  IngestedDocument,
+} from './documents.ts'
+
+export { classifySource } from './citations.ts'
+export type { CitedSource, SourceKind } from './citations.ts'
+
 export { HandlersClient } from './handlers.ts'
 export type {
   HandlerAvailable,
@@ -56,6 +69,7 @@ export type {
 
 export type { components, paths } from './generated/openapi.ts'
 
+import { DocumentsClient } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
 import { KgClient } from './kg.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
@@ -64,10 +78,12 @@ import { HttpTransport, type HttpTransportConfig, type Transport } from './trans
 export class ApplianceClient {
   readonly kg: KgClient
   readonly handlers: HandlersClient
+  readonly documents: DocumentsClient
 
   constructor(readonly transport: Transport) {
     this.kg = new KgClient(transport)
     this.handlers = new HandlersClient(transport)
+    this.documents = new DocumentsClient(transport)
   }
 
   /** The console's configuration: relative URLs, same origin, ambient credentials. */

@@ -21,13 +21,16 @@ var EmbabelStudioKit = (() => {
   // src/studio-kit/index.ts
   var index_exports = {};
   __export(index_exports, {
+    MARKDOWN_OPTIONS: () => MARKDOWN_OPTIONS,
+    MARKDOWN_SANITIZE: () => MARKDOWN_SANITIZE,
     copyWithNod: () => copyWithNod,
     createCypherHint: () => createCypherHint,
     createDefinitionTooltip: () => createDefinitionTooltip,
     cypherFragmentCompletions: () => cypherFragmentCompletions,
     definitionTitle: () => definitionTitle,
     formatDuration: () => formatDuration,
-    setStatus: () => setStatus
+    setStatus: () => setStatus,
+    toSafeHtml: () => toSafeHtml
   });
 
   // src/studio-kit/format.ts
@@ -90,6 +93,48 @@ var EmbabelStudioKit = (() => {
         tip.hidden = true;
       }
     };
+  }
+
+  // src/studio-kit/markdown.ts
+  var MARKDOWN_OPTIONS = {
+    gfm: true,
+    breaks: true
+  };
+  var MARKDOWN_SANITIZE = {
+    ALLOWED_TAGS: [
+      "p",
+      "br",
+      "hr",
+      "strong",
+      "em",
+      "del",
+      "code",
+      "pre",
+      "blockquote",
+      "ul",
+      "ol",
+      "li",
+      "a",
+      "h1",
+      "h2",
+      "h3",
+      "h4",
+      "h5",
+      "h6",
+      "table",
+      "thead",
+      "tbody",
+      "tr",
+      "th",
+      "td"
+    ],
+    ALLOWED_ATTR: ["href", "title", "start"],
+    ALLOWED_URI_REGEXP: /^https?:\/\//i
+  };
+  function toSafeHtml(libs, text) {
+    if (text == null || text === "") return "";
+    const parsed = libs.parse(String(text), MARKDOWN_OPTIONS);
+    return String(libs.sanitize(parsed, { ...MARKDOWN_SANITIZE, RETURN_DOM_FRAGMENT: false }));
   }
 
   // src/studio-kit/hints.ts
