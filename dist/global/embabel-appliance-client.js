@@ -407,6 +407,7 @@ var EmbabelApplianceClient = (() => {
         history: request.history ?? [],
         answer: true
       };
+      if (request.tag) body["tag"] = request.tag;
       if (request.dateField) body["dateField"] = request.dateField;
       if (request.from) body["from"] = request.from;
       if (request.to) body["to"] = request.to;

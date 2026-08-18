@@ -44,6 +44,18 @@ describe('DocumentsClient.ask', () => {
     })
   })
 
+  it('sends the corpus tag when one is chosen, and omits it when not', async () => {
+    const { transport, sent } = recordingTransport()
+    const client = new DocumentsClient(transport)
+
+    await client.ask({ question: 'q', tag: 'papers' })
+    assert.equal((sent[0]!.body as Record<string, unknown>)['tag'], 'papers')
+
+    // "" is the all-documents choice in a select, and must not narrow to a tag named "".
+    await client.ask({ question: 'q', tag: '' })
+    assert.equal('tag' in (sent[1]!.body as Record<string, unknown>), false)
+  })
+
   it('carries the operation id as the header the appliance echoes on progress events', async () => {
     const { transport, sent } = recordingTransport()
     await new DocumentsClient(transport).ask({ question: 'q' }, { operationId: 'ask-abc' })

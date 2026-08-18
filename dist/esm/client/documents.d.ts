@@ -4,6 +4,7 @@ export interface IngestedDocument {
     uri: string;
     title?: string | null;
     ingestedAt?: string | null;
+    /** What this document was ingested under. The set of these across the listing IS the corpus list. */
     tags?: string[];
 }
 export interface DocumentList {
@@ -24,6 +25,14 @@ export interface DocumentList {
 export type DateField = 'modified' | 'created' | 'ingested';
 export interface AskRequest {
     question: string;
+    /**
+     * Narrow to documents carrying this TAG — the corpus to ask.
+     *
+     * One tag rather than a set, matching the server: its two retrieval paths combine predicates
+     * differently, so a list would mean "all of these" on one and could mean "any of these" on the
+     * other, and a filter whose meaning depends on whether an LLM was involved is worse than none.
+     */
+    tag?: string;
     dateField?: DateField;
     /** ISO date, inclusive. */
     from?: string;
