@@ -28,9 +28,16 @@ export interface AskRequest {
     /**
      * Narrow to documents carrying this TAG — the corpus to ask.
      *
-     * One tag rather than a set, matching the server: its two retrieval paths combine predicates
-     * differently, so a list would mean "all of these" on one and could mean "any of these" on the
-     * other, and a filter whose meaning depends on whether an LLM was involved is worse than none.
+     * ACCEPTED BUT NOT YET HONOURED BY THE APPLIANCE, and the field is kept so that stays visible:
+     * `PropertyFilter.HasElement` is not translatable by the store, so the server dropped its `tag`
+     * parameter rather than narrow nothing on one retrieval path and fail the ask on the other. See
+     * embabel/me#915. Sending it today is inert; when the operator lands, the server takes it and
+     * nothing here changes.
+     *
+     * One tag rather than a set, matching what the server will do: its two retrieval paths combine
+     * predicates differently, so a list would mean "all of these" on one and could mean "any of
+     * these" on the other, and a filter whose meaning depends on whether an LLM was involved is
+     * worse than none.
      */
     tag?: string;
     dateField?: DateField;
