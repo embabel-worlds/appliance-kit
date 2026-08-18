@@ -23,13 +23,19 @@ var EmbabelStudioKit = (() => {
   __export(index_exports, {
     MARKDOWN_OPTIONS: () => MARKDOWN_OPTIONS,
     MARKDOWN_SANITIZE: () => MARKDOWN_SANITIZE,
+    MAX_LOG_LINES: () => MAX_LOG_LINES,
     copyWithNod: () => copyWithNod,
     createCypherHint: () => createCypherHint,
     createDefinitionTooltip: () => createDefinitionTooltip,
     cypherFragmentCompletions: () => cypherFragmentCompletions,
     definitionTitle: () => definitionTitle,
     formatDuration: () => formatDuration,
+    isAtBottom: () => isAtBottom,
+    matchesFilter: () => matchesFilter,
+    pendingBehind: () => pendingBehind,
     setStatus: () => setStatus,
+    severityOfLevel: () => severityOfLevel,
+    severityOfLine: () => severityOfLine,
     toSafeHtml: () => toSafeHtml
   });
 
@@ -135,6 +141,30 @@ var EmbabelStudioKit = (() => {
     if (text == null || text === "") return "";
     const parsed = libs.parse(String(text), MARKDOWN_OPTIONS);
     return String(libs.sanitize(parsed, { ...MARKDOWN_SANITIZE, RETURN_DOM_FRAGMENT: false }));
+  }
+
+  // src/studio-kit/logs.ts
+  function severityOfLine(line) {
+    if (/\b(ERROR|FATAL|SEVERE)\b/.test(line)) return "error";
+    if (/\bWARN(ING)?\b/.test(line)) return "warn";
+    return "";
+  }
+  function severityOfLevel(level) {
+    const upper = (level ?? "").toUpperCase();
+    if (upper === "ERROR" || upper === "FATAL" || upper === "SEVERE") return "error";
+    if (upper === "WARN" || upper === "WARNING") return "warn";
+    return "";
+  }
+  var MAX_LOG_LINES = 5e3;
+  function matchesFilter(line, needle) {
+    const trimmed = needle.trim().toLowerCase();
+    return !trimmed || line.toLowerCase().includes(trimmed);
+  }
+  function isAtBottom(view) {
+    return view.scrollHeight - view.scrollTop - view.clientHeight < 40;
+  }
+  function pendingBehind(total, shownUpTo) {
+    return Math.max(0, total - shownUpTo);
   }
 
   // src/studio-kit/hints.ts

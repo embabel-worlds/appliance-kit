@@ -12,5 +12,6 @@ export { setStatus } from "./status.js";
 export { copyWithNod } from "./copy.js";
 export { createDefinitionTooltip, definitionTitle } from "./tooltip.js";
 export { MARKDOWN_OPTIONS, MARKDOWN_SANITIZE, toSafeHtml } from "./markdown.js";
+export { MAX_LOG_LINES, isAtBottom, matchesFilter, pendingBehind, severityOfLevel, severityOfLine } from "./logs.js";
 export { createCypherHint, cypherFragmentCompletions } from "./hints.js";
 //# sourceMappingURL=index.js.map
