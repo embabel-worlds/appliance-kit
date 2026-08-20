@@ -3,7 +3,7 @@
   "version": "0.1.0",
   "description": "The shared client, visual language and virtual-Cypher semantics behind the Embabel Me app and the Worlds console.",
   "type": "module",
-  "repository": { "type": "git", "url": "git+https://github.com/johnsonr/appliance-kit.git" },
+  "repository": { "type": "git", "url": "git+https://github.com/embabel-worlds/appliance-kit.git" },
   "license": "Apache-2.0",
   "files": ["dist", "css", "src", "README.md"],
   "exports": {
