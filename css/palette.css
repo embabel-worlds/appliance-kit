@@ -36,8 +36,16 @@
 
   --sb-accent: #625fff;
   --sb-accent-light: #c7d2ff;
-  /* Ink for text sitting on a SOLID accent fill. A theme with a pale accent
-     must set this, or its primary buttons render white-on-white. */
+  /* Ink for text sitting on a SOLID accent fill — a primary button, a hovered
+     button, selected text. White is the FALLBACK for a browser without relative
+     colour; the real value is derived below.
+
+     This used to be a flat #ffffff plus a note saying a theme with a pale accent
+     must override it. Not one of the seven themes the appliance ships did, the
+     DEFAULT theme least of all: Midnight's #38bdf8 carried white text at 2.1:1,
+     so selecting a line in Documents painted it bright blue and erased it. A
+     contract every theme has to remember, that none of them keeps, is not a
+     contract — it is a bug with documentation. */
   --sb-accent-contrast: #ffffff;
 
   --sb-link: #c7d2ff;
@@ -65,4 +73,40 @@
      them. A theme may; these are the defaults. */
   --sb-font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --sb-font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+/*
+ * THE ACCENT'S OWN INK, DERIVED.
+ *
+ * `--sb-accent-contrast` is the one token in the contract that cannot be chosen
+ * independently of another: it is whatever reads on `--sb-accent`, and a theme
+ * that moves the accent without moving this makes text on a solid fill vanish.
+ * Every shipped theme did exactly that, so the value is computed from the accent
+ * instead of asked for — the same reasoning as the derived tints in tokens.css,
+ * applied to the one place where getting it wrong costs legibility rather than
+ * polish.
+ *
+ * Relative colour: take the accent's own lightness, and return black or white.
+ * `l` is the accent's OKLCH lightness, 0–1. `(0.62 / l - 1) * infinity` is
+ * positive below the threshold and negative above it; clamped to 0–1 that is
+ * exactly "white on a dark accent, black on a light one". Chroma 0 keeps the
+ * result neutral rather than a tinted near-white.
+ *
+ * 0.62 is where the two candidates cross. Checked against every accent the
+ * appliance ships: it picks the higher-contrast ink for all of them, turning
+ * Midnight's 2.1:1 into 9.8:1 and Aurora's 1.9:1 into 11.3:1.
+ *
+ * A theme may still state `--sb-accent-contrast` outright — it loads after this
+ * file and wins, which is the right escape hatch for a designer who wants a
+ * specific ink rather than the legible one.
+ *
+ * @supports, because a browser without relative colour would otherwise resolve
+ * this to nothing AT USE and drop the `color` entirely — leaving the selected
+ * text in the page's own ink on a solid accent, which is the bug this fixes.
+ * The flat white above stands in that case.
+ */
+@supports (color: oklch(from white l c h)) {
+  :root {
+    --sb-accent-contrast: oklch(from var(--sb-accent) clamp(0, (0.62 / l - 1) * infinity, 1) 0 h);
+  }
 }
