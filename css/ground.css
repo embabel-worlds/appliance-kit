@@ -72,25 +72,30 @@ body::before {
 }
 
 /*
- * SELECTED TEXT, stated rather than left to the browser.
+ * SELECTED TEXT: a WASH of the accent, with the text left in its own ink.
  *
- * With no rule, a dark ground gets the platform's own highlight — on macOS a
- * translucent system accent that mixes with whatever is under it, and the text
- * keeps its original colour. Over `--ink` on `--paper` that lands as pale-on-pale
- * and the selection is genuinely hard to read, which is worst in the one place it
- * matters most: copying an id, a path or a stack trace out of a panel.
+ * With no rule at all, a dark ground gets the platform's own highlight — on macOS
+ * a translucent system accent that mixes with whatever is under it — and over
+ * `--ink` on `--paper` that lands pale-on-pale. So a rule is needed. The first
+ * one filled the selection with the SOLID accent and painted the text in
+ * `--on-signal`, which is a poster, not a highlight: on Midnight (the appliance's
+ * default) selecting a paragraph turned the page into a sheet of #38bdf8, and
+ * selecting a section of the Documents panel made it unreadable as a page even
+ * once the ink on it was legible as text.
  *
- * So both halves of the pair are set. `--on-signal` exists for exactly this — text
- * sitting on a SOLID accent fill — so a theme with a pale accent stays legible
- * instead of rendering white on white.
+ * A highlight's job is to say WHICH text, not to replace it. So: the accent at a
+ * third strength, and no `color` at all — the words stay the colour they were,
+ * which is the colour chosen to read on this ground. That is what an editor does,
+ * and the reason it is what an editor does.
+ *
+ * No `color` line is not an omission — it is the whole point, and adding one back
+ * reintroduces the bug.
  */
 ::selection {
-  background: var(--signal);
-  color: var(--on-signal);
+  background: color-mix(in srgb, var(--signal) 35%, transparent);
 }
 ::-moz-selection {
-  background: var(--signal);
-  color: var(--on-signal);
+  background: color-mix(in srgb, var(--signal) 35%, transparent);
 }
 
 ::-webkit-scrollbar { width: 8px; height: 8px; }
