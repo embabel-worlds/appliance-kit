@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.newOperationId = exports.DocumentsClient = exports.isBackgroundHandle = exports.KgClient = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.HintsClient = exports.newOperationId = exports.DocumentsClient = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -16,18 +16,22 @@ Object.defineProperty(exports, "createSseParser", { enumerable: true, get: funct
 var outcome_ts_1 = require("./outcome.js");
 Object.defineProperty(exports, "isOk", { enumerable: true, get: function () { return outcome_ts_1.isOk; } });
 Object.defineProperty(exports, "expect", { enumerable: true, get: function () { return outcome_ts_1.expect; } });
+Object.defineProperty(exports, "ok", { enumerable: true, get: function () { return outcome_ts_1.ok; } });
 var kg_ts_1 = require("./kg.js");
 Object.defineProperty(exports, "KgClient", { enumerable: true, get: function () { return kg_ts_1.KgClient; } });
 Object.defineProperty(exports, "isBackgroundHandle", { enumerable: true, get: function () { return kg_ts_1.isBackgroundHandle; } });
 var documents_ts_1 = require("./documents.js");
 Object.defineProperty(exports, "DocumentsClient", { enumerable: true, get: function () { return documents_ts_1.DocumentsClient; } });
 Object.defineProperty(exports, "newOperationId", { enumerable: true, get: function () { return documents_ts_1.newOperationId; } });
+var hints_ts_1 = require("./hints.js");
+Object.defineProperty(exports, "HintsClient", { enumerable: true, get: function () { return hints_ts_1.HintsClient; } });
 var citations_ts_1 = require("./citations.js");
 Object.defineProperty(exports, "classifySource", { enumerable: true, get: function () { return citations_ts_1.classifySource; } });
 var handlers_ts_1 = require("./handlers.js");
 Object.defineProperty(exports, "HandlersClient", { enumerable: true, get: function () { return handlers_ts_1.HandlersClient; } });
 const documents_ts_2 = require("./documents.js");
 const handlers_ts_2 = require("./handlers.js");
+const hints_ts_2 = require("./hints.js");
 const kg_ts_2 = require("./kg.js");
 const transport_ts_2 = require("./transport.js");
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
@@ -36,11 +40,13 @@ class ApplianceClient {
     kg;
     handlers;
     documents;
+    hints;
     constructor(transport) {
         this.transport = transport;
         this.kg = new kg_ts_2.KgClient(transport);
         this.handlers = new handlers_ts_2.HandlersClient(transport);
         this.documents = new documents_ts_2.DocumentsClient(transport);
+        this.hints = new hints_ts_2.HintsClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {

@@ -12,7 +12,7 @@ export type { Transport, RequestSpec, HttpTransportConfig } from './transport.ts
 export { createSseParser } from './sse.ts'
 export type { SseEvent, SseParser } from './sse.ts'
 
-export { isOk, expect } from './outcome.ts'
+export { isOk, expect, ok } from './outcome.ts'
 export type { Outcome, Ok, Failure, FailureKind } from './outcome.ts'
 
 export { KgClient, isBackgroundHandle } from './kg.ts'
@@ -48,6 +48,9 @@ export type {
   IngestedDocument,
 } from './documents.ts'
 
+export { HintsClient } from './hints.ts'
+export type { Hint, HintAction, HintSurface } from './hints.ts'
+
 export { classifySource } from './citations.ts'
 export type { CitedSource, SourceKind } from './citations.ts'
 
@@ -71,6 +74,7 @@ export type { components, paths } from './generated/openapi.ts'
 
 import { DocumentsClient } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
+import { HintsClient } from './hints.ts'
 import { KgClient } from './kg.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
 
@@ -79,11 +83,13 @@ export class ApplianceClient {
   readonly kg: KgClient
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
+  readonly hints: HintsClient
 
   constructor(readonly transport: Transport) {
     this.kg = new KgClient(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport)
+    this.hints = new HintsClient(transport)
   }
 
   /** The console's configuration: relative URLs, same origin, ambient credentials. */

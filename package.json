@@ -12,6 +12,7 @@
     "./code-surface": { "types": "./dist/esm/code-surface/index.d.ts", "import": "./dist/esm/code-surface/index.js", "require": "./dist/cjs/code-surface/index.js" },
     "./studio-kit": { "types": "./dist/esm/studio-kit/index.d.ts", "import": "./dist/esm/studio-kit/index.js", "require": "./dist/cjs/studio-kit/index.js" },
     "./backdrop": { "types": "./dist/esm/backdrop/backdrop.d.ts", "import": "./dist/esm/backdrop/backdrop.js", "require": "./dist/cjs/backdrop/backdrop.js" },
+    "./tips": { "types": "./dist/esm/tips/index.d.ts", "import": "./dist/esm/tips/index.js", "require": "./dist/cjs/tips/index.js" },
     "./css": "./css/index.css",
     "./css/*": "./css/*",
     "./global/*": "./dist/global/*"

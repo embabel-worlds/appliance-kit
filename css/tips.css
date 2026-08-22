@@ -1,0 +1,70 @@
+/* Tip of the day — the shared card `@embabel/appliance-kit/tips` renders. Quiet by
+ * design: a tip is furniture, not a dialog demanding an answer. Tokens only; the
+ * category tints ride the palette's accents rather than inventing hues. */
+
+.tip-card {
+  border: 1px solid var(--panel-edge);
+  border-radius: var(--radius-panel);
+  background: var(--panel-bg);
+  padding: 10px 12px;
+  font-size: 13px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.tip-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+}
+
+.tip-title {
+  font-weight: 600;
+  flex: 1;
+}
+
+.tip-badge {
+  font-size: 10.5px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--faint);
+}
+
+.tip-body {
+  color: var(--ink);
+}
+
+.tip-body code {
+  font-size: 12px;
+}
+
+.tip-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.tip-action {
+  border: 1px solid var(--signal);
+  color: var(--signal-ink);
+  background: transparent;
+  border-radius: 6px;
+  padding: 3px 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tip-next,
+.tip-dismiss {
+  border: none;
+  background: transparent;
+  color: var(--faint);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tip-next:hover,
+.tip-dismiss:hover {
+  color: var(--ink);
+}

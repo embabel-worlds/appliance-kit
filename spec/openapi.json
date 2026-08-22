@@ -1818,6 +1818,139 @@
           "Virtual Cypher"
         ]
       }
+    },
+    "/api/v1/hints": {
+      "get": {
+        "operationId": "all",
+        "parameters": [
+          {
+            "description": "Asking surface: 'me' or 'console'. Omit for every surface's hints.",
+            "in": "query",
+            "name": "surface",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Hint"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "Every hint the caller should see"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Get all hints for the acting user and surface",
+        "tags": [
+          "Hints"
+        ]
+      }
+    },
+    "/api/v1/hints/category": {
+      "get": {
+        "operationId": "byCategory",
+        "parameters": [
+          {
+            "description": "Category name to filter by",
+            "in": "query",
+            "name": "category",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "Asking surface: 'me' or 'console'. Omit for every surface's hints.",
+            "in": "query",
+            "name": "surface",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Hint"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The category's hints"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Get hints by category",
+        "tags": [
+          "Hints"
+        ]
+      }
+    },
+    "/api/v1/hints/random": {
+      "get": {
+        "description": "Returns an empty body when every hint is excluded.",
+        "operationId": "random",
+        "parameters": [
+          {
+            "description": "Hint ids to suppress, so a client can avoid repeating recently shown hints",
+            "in": "query",
+            "name": "exclude",
+            "required": false,
+            "schema": {
+              "items": {
+                "type": "string"
+              },
+              "type": "array"
+            }
+          },
+          {
+            "description": "Asking surface: 'me' or 'console'. Omit for every surface's hints.",
+            "in": "query",
+            "name": "surface",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "*/*": {
+                "schema": {
+                  "$ref": "#/components/schemas/Hint"
+                }
+              }
+            },
+            "description": "One hint, or an empty body when every hint is excluded"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Get a random hint",
+        "tags": [
+          "Hints"
+        ]
+      }
     }
   },
   "components": {
@@ -2189,6 +2322,54 @@
           "ok",
           "valid",
           "violations"
+        ],
+        "type": "object"
+      },
+      "Hint": {
+        "properties": {
+          "action": {
+            "$ref": "#/components/schemas/HintAction"
+          },
+          "body": {
+            "type": "string"
+          },
+          "category": {
+            "type": "string"
+          },
+          "icon": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "surface": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "body",
+          "category",
+          "id",
+          "surface",
+          "title"
+        ],
+        "type": "object"
+      },
+      "HintAction": {
+        "properties": {
+          "chatInput": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "chatInput",
+          "label"
         ],
         "type": "object"
       },
@@ -3228,6 +3409,9 @@
           "description": {
             "description": "What the argument means — rendered verbatim as the field's hint.",
             "type": "string"
+          },
+          "required": {
+            "type": "boolean"
           },
           "type": {
             "default": "string",

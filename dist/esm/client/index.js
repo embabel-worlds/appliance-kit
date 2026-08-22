@@ -7,13 +7,15 @@
  */
 export { HttpTransport, basicAuth } from "./transport.js";
 export { createSseParser } from "./sse.js";
-export { isOk, expect } from "./outcome.js";
+export { isOk, expect, ok } from "./outcome.js";
 export { KgClient, isBackgroundHandle } from "./kg.js";
 export { DocumentsClient, newOperationId } from "./documents.js";
+export { HintsClient } from "./hints.js";
 export { classifySource } from "./citations.js";
 export { HandlersClient } from "./handlers.js";
 import { DocumentsClient } from "./documents.js";
 import { HandlersClient } from "./handlers.js";
+import { HintsClient } from "./hints.js";
 import { KgClient } from "./kg.js";
 import { HttpTransport } from "./transport.js";
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
@@ -22,11 +24,13 @@ export class ApplianceClient {
     kg;
     handlers;
     documents;
+    hints;
     constructor(transport) {
         this.transport = transport;
         this.kg = new KgClient(transport);
         this.handlers = new HandlersClient(transport);
         this.documents = new DocumentsClient(transport);
+        this.hints = new HintsClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config = {}) {

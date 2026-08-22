@@ -552,6 +552,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hints": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get all hints for the acting user and surface */
+        get: operations["all"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hints/category": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Get hints by category */
+        get: operations["byCategory"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/hints/random": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get a random hint
+         * @description Returns an empty body when every hint is excluded.
+         */
+        get: operations["random"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -683,6 +737,19 @@ export interface components {
             valid: boolean;
             /** @description The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`. */
             violations: string[];
+        };
+        Hint: {
+            action?: components["schemas"]["HintAction"];
+            body: string;
+            category: string;
+            icon?: string;
+            id: string;
+            surface: string;
+            title: string;
+        };
+        HintAction: {
+            chatInput: string;
+            label: string;
         };
         /** @description One proposed property change, as it would be written. */
         KgAnnotationDiff: {
@@ -1100,6 +1167,7 @@ export interface components {
             default?: unknown;
             /** @description What the argument means — rendered verbatim as the field's hint. */
             description?: string;
+            required?: boolean;
             /**
              * @description `string`, `int`, `number` or `boolean` — the coercion applied to supplied values.
              * @default string
@@ -2413,6 +2481,100 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
+            };
+        };
+    };
+    all: {
+        parameters: {
+            query?: {
+                /** @description Asking surface: 'me' or 'console'. Omit for every surface's hints. */
+                surface?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every hint the caller should see */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Hint"][];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    byCategory: {
+        parameters: {
+            query: {
+                /** @description Category name to filter by */
+                category: string;
+                /** @description Asking surface: 'me' or 'console'. Omit for every surface's hints. */
+                surface?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The category's hints */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Hint"][];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    random: {
+        parameters: {
+            query?: {
+                /** @description Hint ids to suppress, so a client can avoid repeating recently shown hints */
+                exclude?: string[];
+                /** @description Asking surface: 'me' or 'console'. Omit for every surface's hints. */
+                surface?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description One hint, or an empty body when every hint is excluded */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["Hint"];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
