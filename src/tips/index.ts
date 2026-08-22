@@ -120,7 +120,9 @@ export function renderTipCard(hint: Hint, options: TipCardOptions = {}): HTMLEle
     const next = document.createElement('button')
     next.type = 'button'
     next.className = 'tip-next'
-    next.textContent = 'Another'
+    next.textContent = '\u2192' // an arrow reads as "next"; a word reads as a second action
+    next.setAttribute('aria-label', 'Another tip')
+    next.title = 'Another tip'
     next.addEventListener('click', () => options.onNext?.())
     actions.appendChild(next)
   }

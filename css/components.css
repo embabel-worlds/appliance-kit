@@ -421,6 +421,7 @@ label.check {
 
 .tip-next,
 .tip-dismiss { border: none; background: transparent; color: var(--faint); font-size: 12px; cursor: pointer; }
+.tip-next { font-size: 15px; line-height: 1; }
 .tip-next:hover,
 .tip-dismiss:hover { color: var(--ink); }
 .tip-dismiss { margin-left: auto; font-size: 14px; line-height: 1; }
