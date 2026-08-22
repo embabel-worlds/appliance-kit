@@ -79,7 +79,7 @@ export interface TipCardOptions {
 }
 
 /**
- * One tip as a DOM element, kit-styled (`css/tips.css`). The body goes through
+ * One tip as a DOM element, kit-styled (the tip block in `css/components.css`). The body goes through
  * [TipCardOptions.renderBody] when the host provides one — the host owns sanitization,
  * exactly as it does for every other model-authored or realm-authored string it paints.
  */
