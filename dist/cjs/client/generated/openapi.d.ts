@@ -1124,7 +1124,11 @@ export interface components {
         /** @description A view was saved. */
         KgSaveViewResponse: {
             name: string;
+            /** @description Why the stored query differs from the one sent */
+            note?: string;
             ok: boolean;
+            /** @description The stored query, when promotion inlined captured scopes into it */
+            savedCypher?: string;
         };
         /** @description A node label and its sampled property shape. */
         KgSchemaLabel: {
