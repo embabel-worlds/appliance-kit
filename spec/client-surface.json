@@ -2956,8 +2956,16 @@
         "name" : {
           "type" : "string"
         },
+        "note" : {
+          "description" : "Why the stored query differs from the one sent",
+          "type" : "string"
+        },
         "ok" : {
           "type" : "boolean"
+        },
+        "savedCypher" : {
+          "description" : "The stored query, when promotion inlined captured scopes into it",
+          "type" : "string"
         }
       },
       "required" : [ "name", "ok" ],
