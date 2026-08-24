@@ -19,6 +19,9 @@ export type KgViewInvocation = Schemas['KgViewInvocationResponse'];
 export type KgDeleteViewResult = Schemas['KgDeleteViewResponse'];
 export type KgRefreshViewResult = Schemas['KgRefreshViewResponse'];
 export type KgPropertyValues = Schemas['KgPropertyValuesResponse'];
+export type KgScopeInfo = Schemas['KgScopeInfo'];
+export type KgScopeList = Schemas['KgScopeListResponse'];
+export type KgScopeDeleteResult = Schemas['KgScopeDeleteResponse'];
 /** The owner's answer to a run that parked awaiting input. */
 export type KgRunChoice = 'proceed' | 'narrow' | 'background' | 'cancel';
 /**
@@ -40,6 +43,13 @@ export interface ExecuteOptions {
     background?: boolean;
     /** Watch for at most this long, then take a handle. Ignored when `background` is set. */
     waitSeconds?: number;
+    /**
+     * Capture the result set as this named scope — a REPL binding a later statement references as
+     * `(x:` + backtick + `$name` + backtick + `)`. Synchronous mode only: the appliance answers
+     * 400 when combined with `background` or `waitSeconds`, because a parked run has no result set
+     * to freeze yet. The result's `capturedScope` carries what froze.
+     */
+    captureAs?: string;
 }
 export declare class KgClient {
     private readonly transport;
@@ -81,6 +91,12 @@ export declare class KgClient {
      * the run has not finished, NEVER because the graph is empty.
      */
     execute(cypher: string, options?: ExecuteOptions): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>;
+    /** The acting user's live captured scopes, newest first. An expired scope is already absent. */
+    scopes(): Promise<Outcome<KgScopeList>>;
+    /** Delete a captured scope. `deleted: false` is an honest no-op, not an error. */
+    deleteScope(name: string): Promise<Outcome<KgScopeDeleteResult>>;
+    /** Pin a captured scope: clear its expiry so it survives until explicitly deleted. */
+    pinScope(name: string): Promise<Outcome<KgScopeInfo>>;
     /** The acting user's in-flight runs — for a listing, or a kill button. */
     runs(): Promise<Outcome<KgInFlightRun[]>>;
     /** State and, once settled, the result of a background run. */

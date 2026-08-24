@@ -8,4 +8,5 @@ export { declaredParams, RESERVED_PARAMS } from './params.ts';
 export { rowColumns, rowsToMarkdown, rowsToCsv } from './rows.ts';
 export { describeVcEvent, isTerminal, isFailure } from './events.ts';
 export type { VcEvent, VcEventBase, VcNodesMaterialized, VcProducerError, VcProducerFetch, VcProducerProgress, VcQueryCompleted, VcQueryRejected, VcRetrievalStep, VcStageStarted, VcQueryStarted, } from './events.ts';
+export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from './scopes.ts';
 //# sourceMappingURL=index.d.ts.map

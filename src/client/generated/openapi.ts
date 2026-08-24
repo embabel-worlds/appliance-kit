@@ -233,7 +233,7 @@ export interface paths {
             cookie?: never;
         };
         /** List the registered node decorators and their tick, batch and staleness settings */
-        get: operations["list_5"];
+        get: operations["list_6"];
         put?: never;
         post?: never;
         delete?: never;
@@ -443,6 +443,57 @@ export interface paths {
         get: operations["propertyValues"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the acting user's live captured scopes, newest first */
+        get: operations["list_5"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/scopes/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a captured scope */
+        delete: operations["delete_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/scopes/{name}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin a captured scope: clear its expiry so it survives until explicitly deleted */
+        post: operations["pin"];
         delete?: never;
         options?: never;
         head?: never;
@@ -881,6 +932,8 @@ export interface components {
             error: string;
         };
         KgExecuteRequest: {
+            /** @description Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only. */
+            captureAs?: string;
             cypher: string;
         };
         /** @description Generated cypher and what the engine will do with it, without running it. */
@@ -941,6 +994,8 @@ export interface components {
              * @description External fetches the executor made. 0 means everything was cached or local.
              */
             apiCalls: number;
+            /** @description The scope this result set froze into — present only on a capturing execute. */
+            capturedScope?: components["schemas"]["KgScopeInfo"];
             /** @description The cypher that actually ran, after scope rewriting. */
             cypher: string;
             /**
@@ -1117,6 +1172,32 @@ export interface components {
             /** @description When the snapshot was taken, ISO-8601. Absent when there is no snapshot. */
             refreshedAt?: string;
             relationships: components["schemas"]["KgSchemaRelationship"][];
+        };
+        /** @description The outcome of deleting a captured scope. */
+        KgScopeDeleteResponse: {
+            deleted: boolean;
+            name: string;
+        };
+        /** @description A captured query scope: a frozen result set referenced in a later query as (x:`$name`). */
+        KgScopeInfo: {
+            /** @description When the membership froze, ISO-8601. */
+            capturedAt: string;
+            /** @description When the scope lapses, ISO-8601 — null means PINNED (kept until deleted). */
+            expiresAt?: string;
+            /**
+             * Format: int64
+             * @description How many members the capture froze. Membership is frozen; values stay live.
+             */
+            members: number;
+            name: string;
+            /** @description The node label later references bind with. */
+            outputLabel: string;
+            /** @description The statement that produced the capture — the scope's provenance. */
+            statement: string;
+        };
+        /** @description The acting user's live captured scopes, newest first. */
+        KgScopeListResponse: {
+            scopes: components["schemas"]["KgScopeInfo"][];
         };
         /** @description The result of validating cypher against the schema without executing it. */
         KgValidationResponse: {
@@ -1669,7 +1750,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -2180,6 +2261,112 @@ export interface operations {
             };
             /** @description No authenticated principal and no resolvable username */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    list_5: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scopes; an expired scope is already absent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeListResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    delete_3: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether anything was deleted — false is an honest no-op, not an error */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeDeleteResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    pin: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scope as stored, now with no expiry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeInfo"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No such scope (or it already expired) */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };

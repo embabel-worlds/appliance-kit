@@ -601,7 +601,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "responses" : {
           "200" : {
             "content" : {
@@ -1285,6 +1285,141 @@
         },
         "summary" : "The legal values of a property: the set, or its size when too wide, or why it cannot be enumerated",
         "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/scopes" : {
+      "get" : {
+        "operationId" : "list_5",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeListResponse"
+                }
+              }
+            },
+            "description" : "The scopes; an expired scope is already absent"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "List the acting user's live captured scopes, newest first",
+        "tags" : [ "KG Scopes" ]
+      }
+    },
+    "/api/v1/admin/kg/scopes/{name}" : {
+      "delete" : {
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeDeleteResponse"
+                }
+              }
+            },
+            "description" : "Whether anything was deleted — false is an honest no-op, not an error"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Delete a captured scope",
+        "tags" : [ "KG Scopes" ]
+      }
+    },
+    "/api/v1/admin/kg/scopes/{name}/pin" : {
+      "post" : {
+        "operationId" : "pin",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as stored, now with no expiry"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No such scope (or it already expired)"
+          }
+        },
+        "summary" : "Pin a captured scope: clear its expiry so it survives until explicitly deleted",
+        "tags" : [ "KG Scopes" ]
       }
     },
     "/api/v1/admin/kg/validate" : {
@@ -2419,6 +2554,10 @@
     },
     "KgExecuteRequest" : {
       "properties" : {
+        "captureAs" : {
+          "description" : "Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only.",
+          "type" : "string"
+        },
         "cypher" : {
           "type" : "string"
         }
@@ -2547,6 +2686,10 @@
           "description" : "External fetches the executor made. 0 means everything was cached or local.",
           "format" : "int32",
           "type" : "integer"
+        },
+        "capturedScope" : {
+          "$ref" : "#/components/schemas/KgScopeInfo",
+          "description" : "The scope this result set froze into — present only on a capturing execute."
         },
         "cypher" : {
           "description" : "The cypher that actually ran, after scope rewriting.",
@@ -2921,6 +3064,63 @@
         }
       },
       "required" : [ "labels", "relationships" ],
+      "type" : "object"
+    },
+    "KgScopeDeleteResponse" : {
+      "description" : "The outcome of deleting a captured scope.",
+      "properties" : {
+        "deleted" : {
+          "type" : "boolean"
+        },
+        "name" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "deleted", "name" ],
+      "type" : "object"
+    },
+    "KgScopeInfo" : {
+      "description" : "A captured query scope: a frozen result set referenced in a later query as (x:`$name`).",
+      "properties" : {
+        "capturedAt" : {
+          "description" : "When the membership froze, ISO-8601.",
+          "type" : "string"
+        },
+        "expiresAt" : {
+          "description" : "When the scope lapses, ISO-8601 — null means PINNED (kept until deleted).",
+          "type" : "string"
+        },
+        "members" : {
+          "description" : "How many members the capture froze. Membership is frozen; values stay live.",
+          "format" : "int64",
+          "type" : "integer"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "outputLabel" : {
+          "description" : "The node label later references bind with.",
+          "type" : "string"
+        },
+        "statement" : {
+          "description" : "The statement that produced the capture — the scope's provenance.",
+          "type" : "string"
+        }
+      },
+      "required" : [ "capturedAt", "members", "name", "outputLabel", "statement" ],
+      "type" : "object"
+    },
+    "KgScopeListResponse" : {
+      "description" : "The acting user's live captured scopes, newest first.",
+      "properties" : {
+        "scopes" : {
+          "items" : {
+            "$ref" : "#/components/schemas/KgScopeInfo"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "scopes" ],
       "type" : "object"
     },
     "KgValidationResponse" : {

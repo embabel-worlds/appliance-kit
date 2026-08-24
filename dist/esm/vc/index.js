@@ -12,4 +12,5 @@ export { aliasMap, propertiesOf, labelNames, anchorLabels, relationshipTypes, re
 export { declaredParams, RESERVED_PARAMS } from "./params.js";
 export { rowColumns, rowsToMarkdown, rowsToCsv } from "./rows.js";
 export { describeVcEvent, isTerminal, isFailure } from "./events.js";
+export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from "./scopes.js";
 //# sourceMappingURL=index.js.map

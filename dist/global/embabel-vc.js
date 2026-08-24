@@ -23,6 +23,7 @@ var EmbabelVc = (() => {
   __export(index_exports, {
     AI_KEYS: () => AI_KEYS,
     RESERVED_PARAMS: () => RESERVED_PARAMS,
+    SCOPE_NAME: () => SCOPE_NAME,
     TARGETS: () => TARGETS,
     TIPS: () => TIPS,
     VIA_VALUES: () => VIA_VALUES,
@@ -40,11 +41,14 @@ var EmbabelVc = (() => {
     nodeContext: () => nodeContext,
     propertiesOf: () => propertiesOf,
     propertyMapContext: () => propertyMapContext,
+    referencedScopeNames: () => referencedScopeNames,
     relationshipTypes: () => relationshipTypes,
     relationshipTypesFor: () => relationshipTypesFor,
     rowColumns: () => rowColumns,
     rowsToCsv: () => rowsToCsv,
-    rowsToMarkdown: () => rowsToMarkdown
+    rowsToMarkdown: () => rowsToMarkdown,
+    scopeLabel: () => scopeLabel,
+    scopeReference: () => scopeReference
   });
 
   // src/vc/targets.ts
@@ -377,6 +381,24 @@ var EmbabelVc = (() => {
       default:
         return event.type;
     }
+  }
+
+  // src/vc/scopes.ts
+  var SCOPE_NAME = /^[A-Za-z_][A-Za-z0-9_]*$/;
+  var ANY_REF = /`\$([A-Za-z_]\w*)`/g;
+  function scopeLabel(name) {
+    return "`$" + name + "`";
+  }
+  function scopeReference(name, alias = "x") {
+    return `(${alias}:${scopeLabel(name)})`;
+  }
+  function referencedScopeNames(cypher) {
+    const names = [];
+    for (const m of cypher.matchAll(ANY_REF)) {
+      const name = m[1];
+      if (name !== void 0 && !names.includes(name)) names.push(name);
+    }
+    return names;
   }
   return __toCommonJS(index_exports);
 })();

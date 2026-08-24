@@ -271,13 +271,27 @@ var EmbabelApplianceClient = (() => {
       const query = {};
       if (options.background) query["background"] = true;
       if (options.waitSeconds !== void 0) query["waitSeconds"] = options.waitSeconds;
+      const body = { cypher };
+      if (options.captureAs !== void 0) body["captureAs"] = options.captureAs;
       return this.transport.send({
         method: "POST",
         path: `${KG}/execute`,
         query,
-        body: { cypher },
+        body,
         timeoutMs: TIMEOUTS.execute
       });
+    }
+    /** The acting user's live captured scopes, newest first. An expired scope is already absent. */
+    scopes() {
+      return this.transport.send({ method: "GET", path: `${KG}/scopes` });
+    }
+    /** Delete a captured scope. `deleted: false` is an honest no-op, not an error. */
+    deleteScope(name) {
+      return this.transport.send({ method: "DELETE", path: `${KG}/scopes/${encodeURIComponent(name)}` });
+    }
+    /** Pin a captured scope: clear its expiry so it survives until explicitly deleted. */
+    pinScope(name) {
+      return this.transport.send({ method: "POST", path: `${KG}/scopes/${encodeURIComponent(name)}/pin` });
     }
     /** The acting user's in-flight runs — for a listing, or a kill button. */
     runs() {

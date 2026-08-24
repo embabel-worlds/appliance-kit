@@ -34,3 +34,5 @@ export type {
   VcStageStarted,
   VcQueryStarted,
 } from './events.ts'
+
+export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from './scopes.ts'

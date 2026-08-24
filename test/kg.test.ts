@@ -218,3 +218,35 @@ describe('isBackgroundHandle identifies the handle, not the absence of a result'
     assert.equal(isBackgroundHandle({ rows: [], rowCount: 0 } as never), false)
   })
 })
+
+describe('KgClient captured scopes', () => {
+  it('sends captureAs in the body of a synchronous execute', async () => {
+    const { kg, transport } = client()
+    await kg.execute('MATCH (b:Bill) RETURN b', { captureAs: 'bills' })
+    assert.equal(transport.last.path, '/api/v1/admin/kg/execute')
+    assert.deepEqual(transport.last.body, { cypher: 'MATCH (b:Bill) RETURN b', captureAs: 'bills' })
+    assert.deepEqual(transport.last.query, {})
+  })
+
+  it('omits captureAs entirely when not requested — the appliance treats presence as intent', async () => {
+    const { kg, transport } = client()
+    await kg.execute('MATCH (b:Bill) RETURN b')
+    assert.deepEqual(transport.last.body, { cypher: 'MATCH (b:Bill) RETURN b' })
+  })
+
+  it('lists, deletes and pins scopes on the guarded prefix', async () => {
+    const { kg, transport } = client()
+    await kg.scopes()
+    assert.deepEqual(transport.last, { method: 'GET', path: '/api/v1/admin/kg/scopes' })
+    await kg.deleteScope('overdue')
+    assert.deepEqual(transport.last, { method: 'DELETE', path: '/api/v1/admin/kg/scopes/overdue' })
+    await kg.pinScope('overdue')
+    assert.deepEqual(transport.last, { method: 'POST', path: '/api/v1/admin/kg/scopes/overdue/pin' })
+  })
+
+  it('escapes a scope name in the path', async () => {
+    const { kg, transport } = client()
+    await kg.deleteScope('a b')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/scopes/a%20b')
+  })
+})

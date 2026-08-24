@@ -8,7 +8,7 @@
  * understanding of what the engine offers.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
+exports.referencedScopeNames = exports.scopeReference = exports.scopeLabel = exports.SCOPE_NAME = exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
 var targets_ts_1 = require("./targets.js");
 Object.defineProperty(exports, "TARGETS", { enumerable: true, get: function () { return targets_ts_1.TARGETS; } });
 Object.defineProperty(exports, "VIA_VALUES", { enumerable: true, get: function () { return targets_ts_1.VIA_VALUES; } });
@@ -39,4 +39,9 @@ var events_ts_1 = require("./events.js");
 Object.defineProperty(exports, "describeVcEvent", { enumerable: true, get: function () { return events_ts_1.describeVcEvent; } });
 Object.defineProperty(exports, "isTerminal", { enumerable: true, get: function () { return events_ts_1.isTerminal; } });
 Object.defineProperty(exports, "isFailure", { enumerable: true, get: function () { return events_ts_1.isFailure; } });
+var scopes_ts_1 = require("./scopes.js");
+Object.defineProperty(exports, "SCOPE_NAME", { enumerable: true, get: function () { return scopes_ts_1.SCOPE_NAME; } });
+Object.defineProperty(exports, "scopeLabel", { enumerable: true, get: function () { return scopes_ts_1.scopeLabel; } });
+Object.defineProperty(exports, "scopeReference", { enumerable: true, get: function () { return scopes_ts_1.scopeReference; } });
+Object.defineProperty(exports, "referencedScopeNames", { enumerable: true, get: function () { return scopes_ts_1.referencedScopeNames; } });
 //# sourceMappingURL=index.js.map

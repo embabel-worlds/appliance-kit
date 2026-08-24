@@ -5,7 +5,7 @@ export type { SseEvent, SseParser } from './sse.ts';
 export { isOk, expect, ok } from './outcome.ts';
 export type { Outcome, Ok, Failure, FailureKind } from './outcome.ts';
 export { KgClient, isBackgroundHandle } from './kg.ts';
-export type { ExecuteOptions, KgAnswerAccepted, KgBackgroundHandle, KgDeleteViewResult, KgGenerated, KgInFlightRun, KgKillResult, KgPropertyValues, KgQueryResult, KgRefreshViewResult, KgRunChoice, KgRunState, KgSaveViewRequest, KgSaveViewResult, KgSchema, KgValidation, KgView, KgViewInvocation, KgViewParamSpec, } from './kg.ts';
+export type { ExecuteOptions, KgAnswerAccepted, KgBackgroundHandle, KgDeleteViewResult, KgGenerated, KgInFlightRun, KgKillResult, KgPropertyValues, KgQueryResult, KgRefreshViewResult, KgRunChoice, KgRunState, KgSaveViewRequest, KgSaveViewResult, KgSchema, KgScopeDeleteResult, KgScopeInfo, KgScopeList, KgValidation, KgView, KgViewInvocation, KgViewParamSpec, } from './kg.ts';
 export { DocumentsClient, newOperationId } from './documents.ts';
 export type { Answer, AskRequest, Citation, DateField, DocumentList, IngestedDocument, } from './documents.ts';
 export { HintsClient } from './hints.ts';
