@@ -118,6 +118,9 @@
           "note" : {
             "type" : "string"
           },
+          "raw" : {
+            "type" : "string"
+          },
           "sources" : {
             "items" : {
               "$ref" : "#/components/schemas/Source"
@@ -5482,18 +5485,10 @@
         "tags" : [ "Artifacts" ]
       }
     },
-    "/api/v1/artifacts/serve/{name}" : {
+    "/api/v1/artifacts/serve/**" : {
       "get" : {
-        "description" : "Serves a raw file from the app artifact directories with a content type derived from its extension (html, css, js, json, svg; anything else is octet-stream).",
+        "description" : "Serves a raw file from the app artifact directories — scoped (serve/{scope}/{name}) or by flat-name precedence (serve/{name}) — with a content type derived from its extension (html, css, js, json, svg; anything else is octet-stream).",
         "operationId" : "serve_1",
-        "parameters" : [ {
-          "in" : "path",
-          "name" : "name",
-          "required" : true,
-          "schema" : {
-            "type" : "string"
-          }
-        } ],
         "responses" : {
           "200" : {
             "content" : {
@@ -11171,7 +11166,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41019"
+    "url" : "http://localhost:39213"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
