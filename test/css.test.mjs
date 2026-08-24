@@ -18,6 +18,20 @@ const files = readdirSync(cssDir).filter((f) => f.endsWith('.css'))
 const read = (file) => readFileSync(join(cssDir, file), 'utf8')
 const all = Object.fromEntries(files.map((f) => [f, read(f)]))
 
+/**
+ * The same files with comments removed — what the BROWSER sees.
+ *
+ * The colour rules below scan for raw hexes, and this package explains its
+ * decisions in prose: `ground.css` describes the highlight it rejected, naming
+ * the `#38bdf8` a paragraph turned into. That is a colour being argued AGAINST,
+ * and scanning raw text read it as a colour someone had smuggled in — failing
+ * the build for the documentation that keeps the discipline these rules exist
+ * to enforce. A rule is a declaration; a comment is not.
+ */
+const declarations = Object.fromEntries(
+  files.map((f) => [f, all[f].replace(/\/\*[\s\S]*?\*\//g, '')]),
+)
+
 /** Custom properties DEFINED anywhere in the package. */
 const defined = new Set(
   files.flatMap((f) => [...all[f].matchAll(/^\s*(--[a-z0-9-]+)\s*:/gim)].map((m) => m[1])),
@@ -91,7 +105,7 @@ describe('the shared visual language', () => {
    * differently somewhere, and the discipline is gone.
    */
   it('spells the brand colour exactly once', () => {
-    const offenders = files.filter((f) => f !== 'palette.css' && /#625fff/i.test(all[f]))
+    const offenders = files.filter((f) => f !== 'palette.css' && /#625fff/i.test(declarations[f]))
     assert.deepEqual(offenders, [], 'use var(--signal); the hex belongs in palette.css alone')
   })
 
@@ -102,7 +116,7 @@ describe('the shared visual language', () => {
     const found = files
       .filter((f) => f !== 'palette.css')
       .flatMap((f) =>
-        [...all[f].matchAll(/#[0-9a-f]{3,8}\b/gi)]
+        [...declarations[f].matchAll(/#[0-9a-f]{3,8}\b/gi)]
           .map((m) => m[0])
           .filter((hex) => !allowed.test(hex))
           .map((hex) => `${f}: ${hex}`),
