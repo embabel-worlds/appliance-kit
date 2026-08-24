@@ -298,8 +298,10 @@ var EmbabelVc = (() => {
 
   // src/vc/params.ts
   var RESERVED_PARAMS = ["ai", "realm", "userId", "anchors", "exclude", "want", "hint"];
+  var SCOPE_REFERENCE = /`\$([A-Za-z_][A-Za-z0-9_]*)`/g;
   function declaredParams(cypher) {
-    return [...new Set([...cypher.matchAll(/\$([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]))].filter((p) => !RESERVED_PARAMS.includes(p));
+    const scopes = new Set([...cypher.matchAll(SCOPE_REFERENCE)].map((m) => m[1]));
+    return [...new Set([...cypher.matchAll(/\$([A-Za-z_][A-Za-z0-9_]*)/g)].map((m) => m[1]))].filter((p) => !RESERVED_PARAMS.includes(p)).filter((p) => !scopes.has(p));
   }
 
   // src/vc/rows.ts

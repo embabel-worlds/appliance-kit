@@ -293,6 +293,18 @@ describe('view parameters', () => {
     assert.deepEqual(declaredParams('MATCH (d) WHERE d.x = $since AND d.y < $until RETURN $since'), ['since', 'until'])
   })
 
+  it('does not mistake a captured-scope reference for a parameter', () => {
+    // `(x:`$overdue`)` is a REPL binding consumed as a label, not a value the
+    // caller supplies. Counting it made the save panel say both "saving inlines
+    // $overdue" and "$overdue becomes a parameter" about the same token.
+    assert.deepEqual(declaredParams('MATCH (x:`$overdue`) RETURN x LIMIT 10'), [])
+    // A real parameter alongside a scope reference still counts.
+    assert.deepEqual(
+      declaredParams('MATCH (x:`$overdue`) WHERE x.due < $before RETURN x'),
+      ['before'],
+    )
+  })
+
   it('never offers the engine-owned namespaces as user parameters', () => {
     // A control for `$userId` invites someone to set it, and that is a scoping
     // question rather than a form field.
