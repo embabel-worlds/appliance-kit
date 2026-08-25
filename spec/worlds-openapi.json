@@ -762,6 +762,21 @@
         "required" : [ "count", "max", "total" ],
         "type" : "object"
       },
+      "EdgeRequest" : {
+        "properties" : {
+          "from" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "from", "to", "type" ],
+        "type" : "object"
+      },
       "EngineFieldWire" : {
         "properties" : {
           "default" : {
@@ -829,6 +844,35 @@
           }
         },
         "required" : [ "status" ],
+        "type" : "object"
+      },
+      "ExportRequest" : {
+        "properties" : {
+          "labels" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "limit" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "mode" : {
+            "enum" : [ "SHAPE_ONLY", "WITH_VALUES" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "realm" : {
+            "type" : "string"
+          },
+          "source" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "labels", "limit", "mode", "name", "realm" ],
         "type" : "object"
       },
       "Fact" : {
@@ -2309,6 +2353,25 @@
         "required" : [ "local", "purpose" ],
         "type" : "object"
       },
+      "NodeRequest" : {
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "properties" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          }
+        },
+        "required" : [ "id", "label", "properties" ],
+        "type" : "object"
+      },
       "Notification" : {
         "properties" : {
           "actionKind" : {
@@ -2632,6 +2695,61 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "SampleDataExportResponse" : {
+        "properties" : {
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EdgeRequest"
+            },
+            "type" : "array"
+          },
+          "matched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NodeRequest"
+            },
+            "type" : "array"
+          },
+          "realm" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "edges", "matched", "name", "nodes", "realm", "truncated" ],
+        "type" : "object"
+      },
+      "SampleSetRequest" : {
+        "properties" : {
+          "edges" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EdgeRequest"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "nodes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/NodeRequest"
+            },
+            "type" : "array"
+          },
+          "realm" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "edges", "name", "nodes", "realm" ],
         "type" : "object"
       },
       "SensorBatchRequest" : {
@@ -3806,7 +3924,7 @@
     },
     "/api/v1/admin/handlers/list" : {
       "post" : {
-        "operationId" : "list_3",
+        "operationId" : "list_4",
         "responses" : {
           "200" : {
             "content" : {
@@ -4290,7 +4408,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "responses" : {
           "200" : {
             "content" : {
@@ -4978,7 +5096,7 @@
     },
     "/api/v1/admin/kg/scopes" : {
       "get" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -7945,7 +8063,7 @@
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "responses" : {
           "200" : {
             "content" : {
@@ -9018,7 +9136,7 @@
       },
       "get" : {
         "description" : "Newest first.",
-        "operationId" : "list_2",
+        "operationId" : "list_3",
         "responses" : {
           "200" : {
             "content" : {
@@ -9477,6 +9595,143 @@
         },
         "summary" : "Update a realm",
         "tags" : [ "Realms" ]
+      }
+    },
+    "/api/v1/samples" : {
+      "delete" : {
+        "description" : "Every `:_Sample` node whatever loaded it — what you run before showing this world to somebody who should only see real records.",
+        "operationId" : "clear",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Cleared"
+          }
+        },
+        "summary" : "Remove all sample data",
+        "tags" : [ "Sample data" ]
+      },
+      "get" : {
+        "description" : "One entry per set, with how many nodes it put in.",
+        "operationId" : "list_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "What sample data is loaded",
+        "tags" : [ "Sample data" ]
+      },
+      "post" : {
+        "description" : "Nodes are marked `:_Sample` and tagged with the set name, so the set can be removed later without touching anything real. Loading the same set twice merges rather than duplicates.",
+        "operationId" : "load",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SampleSetRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Loaded"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The set was refused; the body lists why"
+          }
+        },
+        "summary" : "Load a sample set",
+        "tags" : [ "Sample data" ]
+      }
+    },
+    "/api/v1/samples/export" : {
+      "post" : {
+        "description" : "Returns exactly the body `POST /samples` accepts, so an exported file can be loaded elsewhere with no translation. Select by `source` (what one sample set loaded) or by `labels`, or both; labels alone take every record of that type in the world. Defaults to shape-only: labels, property keys and edges, with the values and ids replaced. Ask for `WITH_VALUES` deliberately — a support case rarely needs them, and ids are routinely email addresses.",
+        "operationId" : "export",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ExportRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SampleDataExportResponse"
+                }
+              }
+            },
+            "description" : "The set"
+          }
+        },
+        "summary" : "Read records out as a loadable sample set",
+        "tags" : [ "Sample data" ]
+      }
+    },
+    "/api/v1/samples/{name}" : {
+      "delete" : {
+        "description" : "Every node that set loaded, and nothing else.",
+        "operationId" : "remove",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Remove one sample set",
+        "tags" : [ "Sample data" ]
       }
     },
     "/api/v1/sensor/capabilities" : {
@@ -11374,7 +11629,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43333"
+    "url" : "http://localhost:46141"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -11478,6 +11733,9 @@
   }, {
     "description" : "Recent activity from this appliance's own log",
     "name" : "Diagnostics"
+  }, {
+    "description" : "Fictional records, marked and removable",
+    "name" : "Sample data"
   }, {
     "description" : "Search for installable skills, APIs, MCP servers, and realms",
     "name" : "Directory"
