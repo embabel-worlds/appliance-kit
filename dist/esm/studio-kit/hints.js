@@ -96,4 +96,27 @@ export function createCypherHint(CodeMirror, vc, options) {
         return null;
     };
 }
+/** The bare-word vocabulary both studios teach. Shared so one keystroke completes the same way
+ *  in Me and in the console; `ai.relevant/score/classify` are here because per-row judgment is
+ *  textual by nature — there is no control that expresses it. */
+export const CYPHER_KEYWORDS = [
+    'MATCH', 'WHERE', 'RETURN', 'ORDER BY', 'LIMIT', 'WITH', 'DISTINCT', 'AND', 'OR', 'NOT',
+    'CONTAINS', 'STARTS WITH', 'ENDS WITH', 'IN', 'IS NULL', 'IS NOT NULL', 'count(', 'toLower(',
+    'ai.relevant(', 'ai.score(', 'ai.classify(',
+];
+/**
+ * The SESSION-AWARE completion: `createCypherHint`, with the session's bindings synthesized into
+ * the alias context. A one-line prompt holding only `WHERE c.` completes Chunk's properties
+ * because the transcript bound `c` — the proxy prepends one `MATCH (var:Label)` line per binding
+ * to `getValue`, and touches nothing else: the hint replaces text by cursor coordinates, which
+ * stay on the REAL editor.
+ */
+export function createSessionCypherHint(CodeMirror, vc, options) {
+    const base = createCypherHint(CodeMirror, vc, options);
+    return (editor) => base({
+        getCursor: () => editor.getCursor(),
+        getLine: (line) => editor.getLine(line),
+        getValue: () => options.bindings().map((b) => `MATCH (${b.variable}:${b.label})`).join('\n') + '\n' + editor.getValue(),
+    });
+}
 //# sourceMappingURL=hints.js.map

@@ -8,7 +8,7 @@
  * understanding of what the engine offers.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.referencedScopeNames = exports.scopeReference = exports.scopeLabel = exports.SCOPE_NAME = exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
+exports.planLine = exports.pipelineText = exports.completeQuery = exports.PEEK_LIMIT = exports.referencedScopeNames = exports.scopeReference = exports.scopeLabel = exports.SCOPE_NAME = exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
 var targets_ts_1 = require("./targets.js");
 Object.defineProperty(exports, "TARGETS", { enumerable: true, get: function () { return targets_ts_1.TARGETS; } });
 Object.defineProperty(exports, "VIA_VALUES", { enumerable: true, get: function () { return targets_ts_1.VIA_VALUES; } });
@@ -44,4 +44,9 @@ Object.defineProperty(exports, "SCOPE_NAME", { enumerable: true, get: function (
 Object.defineProperty(exports, "scopeLabel", { enumerable: true, get: function () { return scopes_ts_1.scopeLabel; } });
 Object.defineProperty(exports, "scopeReference", { enumerable: true, get: function () { return scopes_ts_1.scopeReference; } });
 Object.defineProperty(exports, "referencedScopeNames", { enumerable: true, get: function () { return scopes_ts_1.referencedScopeNames; } });
+var session_ts_1 = require("./session.js");
+Object.defineProperty(exports, "PEEK_LIMIT", { enumerable: true, get: function () { return session_ts_1.PEEK_LIMIT; } });
+Object.defineProperty(exports, "completeQuery", { enumerable: true, get: function () { return session_ts_1.completeQuery; } });
+Object.defineProperty(exports, "pipelineText", { enumerable: true, get: function () { return session_ts_1.pipelineText; } });
+Object.defineProperty(exports, "planLine", { enumerable: true, get: function () { return session_ts_1.planLine; } });
 //# sourceMappingURL=index.js.map

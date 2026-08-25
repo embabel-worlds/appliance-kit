@@ -9,7 +9,7 @@
  * a page loads exactly one copy of each.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cypherFragmentCompletions = exports.createCypherHint = exports.severityOfLine = exports.severityOfLevel = exports.pendingBehind = exports.matchesFilter = exports.isAtBottom = exports.MAX_LOG_LINES = exports.toSafeHtml = exports.MARKDOWN_SANITIZE = exports.MARKDOWN_OPTIONS = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
+exports.cypherFragmentCompletions = exports.createSessionCypherHint = exports.createCypherHint = exports.CYPHER_KEYWORDS = exports.severityOfLine = exports.severityOfLevel = exports.pendingBehind = exports.matchesFilter = exports.isAtBottom = exports.MAX_LOG_LINES = exports.toSafeHtml = exports.MARKDOWN_SANITIZE = exports.MARKDOWN_OPTIONS = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
 var format_ts_1 = require("./format.js");
 Object.defineProperty(exports, "formatDuration", { enumerable: true, get: function () { return format_ts_1.formatDuration; } });
 var status_ts_1 = require("./status.js");
@@ -31,6 +31,8 @@ Object.defineProperty(exports, "pendingBehind", { enumerable: true, get: functio
 Object.defineProperty(exports, "severityOfLevel", { enumerable: true, get: function () { return logs_ts_1.severityOfLevel; } });
 Object.defineProperty(exports, "severityOfLine", { enumerable: true, get: function () { return logs_ts_1.severityOfLine; } });
 var hints_ts_1 = require("./hints.js");
+Object.defineProperty(exports, "CYPHER_KEYWORDS", { enumerable: true, get: function () { return hints_ts_1.CYPHER_KEYWORDS; } });
 Object.defineProperty(exports, "createCypherHint", { enumerable: true, get: function () { return hints_ts_1.createCypherHint; } });
+Object.defineProperty(exports, "createSessionCypherHint", { enumerable: true, get: function () { return hints_ts_1.createSessionCypherHint; } });
 Object.defineProperty(exports, "cypherFragmentCompletions", { enumerable: true, get: function () { return hints_ts_1.cypherFragmentCompletions; } });
 //# sourceMappingURL=index.js.map

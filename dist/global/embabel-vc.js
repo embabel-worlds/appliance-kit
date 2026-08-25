@@ -22,6 +22,7 @@ var EmbabelVc = (() => {
   var index_exports = {};
   __export(index_exports, {
     AI_KEYS: () => AI_KEYS,
+    PEEK_LIMIT: () => PEEK_LIMIT,
     RESERVED_PARAMS: () => RESERVED_PARAMS,
     SCOPE_NAME: () => SCOPE_NAME,
     TARGETS: () => TARGETS,
@@ -29,6 +30,7 @@ var EmbabelVc = (() => {
     VIA_VALUES: () => VIA_VALUES,
     aliasMap: () => aliasMap,
     anchorLabels: () => anchorLabels,
+    completeQuery: () => completeQuery,
     compose: () => compose,
     connectedLabels: () => connectedLabels,
     declaredParams: () => declaredParams,
@@ -39,6 +41,8 @@ var EmbabelVc = (() => {
     isTerminal: () => isTerminal,
     labelNames: () => labelNames,
     nodeContext: () => nodeContext,
+    pipelineText: () => pipelineText,
+    planLine: () => planLine,
     propertiesOf: () => propertiesOf,
     propertyMapContext: () => propertyMapContext,
     referencedScopeNames: () => referencedScopeNames,
@@ -401,6 +405,184 @@ var EmbabelVc = (() => {
       if (name !== void 0 && !names.includes(name)) names.push(name);
     }
     return names;
+  }
+
+  // src/vc/session.ts
+  var PEEK_LIMIT = 25;
+  var SUBSET_RETURN = /\bRETURN\s+(?:DISTINCT\s+)?([A-Za-z_]\w*)\s*(?=\bLIMIT\b|\bORDER\b|\bSKIP\b|$)/i;
+  var NODE_ATOM = /\(\s*([A-Za-z_]\w*)\s*(?::\s*(`?\$?[A-Za-z_]\w*`?))?\s*[){]/g;
+  function scopeRef(alias, name) {
+    return `(${alias}:\`$${name}\`)`;
+  }
+  function renameVar(stages, from, to) {
+    if (from === to) return stages;
+    const re = new RegExp(`\\b${from}\\b`, "g");
+    return stages.map((s) => s.replace(re, to));
+  }
+  function nodeAtoms(pattern) {
+    return [...pattern.matchAll(NODE_ATOM)].map((m) => ({ variable: m[1], label: m[2] ?? null }));
+  }
+  function planLine(raw, current, nextAutoName, findByName, findByVariable) {
+    const line = raw.trim().replace(/;$/, "");
+    if (!line) return { kind: "error", error: "nothing to run" };
+    const pin = line.match(/^pin\s+\$?([A-Za-z_]\w*)$/i);
+    if (pin) return { kind: "pin", pinTarget: pin[1] };
+    const peek = line.match(/^\$([A-Za-z_]\w*)$/);
+    if (peek) {
+      return {
+        kind: "run",
+        cypher: `MATCH ${scopeRef("x", peek[1])} RETURN x LIMIT ${PEEK_LIMIT}`,
+        tabular: true,
+        note: `peeking $${peek[1]} \u2014 first ${PEEK_LIMIT}`
+      };
+    }
+    const named = line.match(/^([A-Za-z_]\w*)\s*=\s*(.+)$/s);
+    if (named && !/^\s*(WHERE|RETURN|ORDER|LIMIT|SKIP)\b/i.test(named[2])) {
+      const [, name, rest] = named;
+      const aliased = rest.trim().match(/^\$([A-Za-z_]\w*)$/);
+      if (aliased) {
+        const source = findByName(aliased[1]);
+        if (!source) return { kind: "error", error: `unknown scope '$${aliased[1]}'` };
+        return {
+          kind: "run",
+          cypher: `MATCH ${scopeRef(source.variable, source.name)} RETURN ${source.variable}`,
+          captureAs: name,
+          variable: source.variable,
+          pipeline: source.pipeline
+        };
+      }
+      const inner = planLine(rest, current, nextAutoName, findByName, findByVariable);
+      if (inner.kind !== "run" || inner.tabular) {
+        return { kind: "error", error: `'${name} =' needs a MATCH that captures a node set` };
+      }
+      return { ...inner, captureAs: name };
+    }
+    if (/^(MATCH|OPTIONAL\s+MATCH)\b/i.test(line)) {
+      const atoms = nodeAtoms(line);
+      const consumed = [];
+      let sessionForm = line;
+      let pipelineClause = line;
+      for (const atom of atoms) {
+        if (atom.label === null) {
+          const b = findByVariable(atom.variable);
+          if (!b) continue;
+          consumed.push(b);
+          sessionForm = sessionForm.replace(new RegExp(`\\(\\s*${atom.variable}\\s*\\)`), scopeRef(atom.variable, b.name));
+        } else {
+          const ref = atom.label.match(/^`\$([A-Za-z_]\w*)`$/);
+          if (!ref) continue;
+          const b = findByName(ref[1]);
+          if (!b) continue;
+          consumed.push({ ...b, pipeline: renameVar(b.pipeline, b.variable, atom.variable), variable: atom.variable });
+          pipelineClause = pipelineClause.replace(new RegExp(`\\(\\s*${atom.variable}\\s*:\\s*\`\\$${ref[1]}\`\\s*\\)`), `(${atom.variable})`);
+        }
+      }
+      const explicit = line.match(SUBSET_RETURN);
+      const hasReturn = /\bRETURN\b/i.test(line);
+      const introduced = atoms.filter((a) => a.label !== null);
+      const captureVar = explicit?.[1] ?? introduced.at(-1)?.variable;
+      const capturable = captureVar !== void 0 && // labelled in this line, bound earlier, or RETURNing a scope-anchored continuation var
+      (introduced.some((a) => a.variable === captureVar) || consumed.some((b) => b.variable === captureVar));
+      if (hasReturn && !capturable) {
+        return {
+          kind: "run",
+          cypher: sessionForm,
+          tabular: true,
+          note: explicit ? `\`${explicit[1]}\` has no label to bind with \u2014 label it to capture` : void 0,
+          tabularPipeline: pipelineFor(consumed, pipelineClause)
+        };
+      }
+      if (hasReturn) {
+        const prefix = pipelineClause.slice(0, pipelineClause.search(/\bRETURN\b/i)).trim();
+        return {
+          kind: "run",
+          cypher: sessionForm,
+          captureAs: nextAutoName,
+          variable: captureVar,
+          pipeline: pipelineFor(consumed, prefix)
+        };
+      }
+      if (!capturable) {
+        return { kind: "error", error: "no labelled variable to return \u2014 label a node, e.g. MATCH (c:Chunk)" };
+      }
+      const distinct = atoms.length > 1 ? "DISTINCT " : "";
+      return {
+        kind: "run",
+        cypher: `${sessionForm} RETURN ${distinct}${captureVar}`,
+        captureAs: nextAutoName,
+        variable: captureVar,
+        pipeline: pipelineFor(consumed, pipelineClause),
+        note: `RETURN ${distinct}${captureVar} implied`
+      };
+    }
+    if (/^AND\b/i.test(line)) {
+      if (!current) return { kind: "error", error: "nothing to narrow \u2014 MATCH something first" };
+      const cond = line.replace(/^AND\s+/i, "");
+      const v = current.variable;
+      const last = current.pipeline.at(-1) ?? "";
+      const pipeline = /\bWHERE\b/i.test(last) ? [...current.pipeline.slice(0, -1), `${last} AND (${cond})`] : [...current.pipeline, /^(OPTIONAL\s+)?MATCH\b/i.test(last) ? `WHERE ${cond}` : `WITH ${v} WHERE ${cond}`];
+      return {
+        kind: "run",
+        cypher: `MATCH ${scopeRef(v, current.name)} WHERE ${cond} RETURN ${v}`,
+        captureAs: nextAutoName,
+        variable: v,
+        pipeline
+      };
+    }
+    if (/^OR\b/i.test(line)) {
+      return {
+        kind: "error",
+        error: "OR would WIDEN the set, and a frozen set can only narrow \u2014 open the pipeline in the editor (Cypher \u2192 Open in editor) and edit its WHERE instead"
+      };
+    }
+    if (/^WHERE\b/i.test(line)) {
+      if (!current) return { kind: "error", error: "nothing to narrow \u2014 MATCH something first" };
+      const v = current.variable;
+      const last = current.pipeline.at(-1) ?? "";
+      const stage = /^(OPTIONAL\s+)?MATCH\b/i.test(last) && !/\bWHERE\b/i.test(last) ? line : `WITH ${v} ${line}`;
+      return {
+        kind: "run",
+        cypher: `MATCH ${scopeRef(v, current.name)} ${line} RETURN ${v}`,
+        captureAs: nextAutoName,
+        variable: v,
+        pipeline: [...current.pipeline, stage]
+      };
+    }
+    if (/^(RETURN|ORDER\s+BY|LIMIT|SKIP)\b/i.test(line)) {
+      if (!current) return { kind: "error", error: "nothing to project \u2014 MATCH something first" };
+      const v = current.variable;
+      const clause = /^RETURN\b/i.test(line) ? line : `RETURN ${v} ${line}`;
+      return {
+        kind: "run",
+        cypher: `MATCH ${scopeRef(v, current.name)} ${clause}`,
+        tabular: true,
+        tabularPipeline: [...current.pipeline, clause]
+      };
+    }
+    return {
+      kind: "error",
+      error: "type a Cypher clause \u2014 MATCH \u2026, WHERE \u2026, RETURN \u2026 \u2014 or 'name = MATCH \u2026', 'pin name', '$name'"
+    };
+  }
+  function pipelineFor(consumed, clause) {
+    if (consumed.length === 0) return [clause];
+    const base = consumed[0];
+    const vars = consumed.map((b) => b.variable).join(", ");
+    return [...base.pipeline, `WITH DISTINCT ${vars}`, clause];
+  }
+  function completeQuery(raw) {
+    const cypher = raw.trim().replace(/;$/, "");
+    if (!/^(MATCH|OPTIONAL\s+MATCH)\b/i.test(cypher) || /\bRETURN\b/i.test(cypher)) return { cypher };
+    const atoms = nodeAtoms(cypher);
+    const variable = atoms.filter((a) => a.label !== null).at(-1)?.variable;
+    if (!variable) return { cypher };
+    const distinct = atoms.length > 1 ? "DISTINCT " : "";
+    return { cypher: `${cypher} RETURN ${distinct}${variable}`, note: `RETURN ${distinct}${variable} implied` };
+  }
+  function pipelineText(stages, returnClause) {
+    const body = [...stages];
+    if (returnClause) body.push(returnClause);
+    return body.join("\n");
   }
   return __toCommonJS(index_exports);
 })();

@@ -36,3 +36,6 @@ export type {
 } from './events.ts'
 
 export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from './scopes.ts'
+
+export { PEEK_LIMIT, completeQuery, pipelineText, planLine } from './session.ts'
+export type { LinePlan, SessionBinding } from './session.ts'

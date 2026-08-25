@@ -21,12 +21,14 @@ var EmbabelStudioKit = (() => {
   // src/studio-kit/index.ts
   var index_exports = {};
   __export(index_exports, {
+    CYPHER_KEYWORDS: () => CYPHER_KEYWORDS,
     MARKDOWN_OPTIONS: () => MARKDOWN_OPTIONS,
     MARKDOWN_SANITIZE: () => MARKDOWN_SANITIZE,
     MAX_LOG_LINES: () => MAX_LOG_LINES,
     copyWithNod: () => copyWithNod,
     createCypherHint: () => createCypherHint,
     createDefinitionTooltip: () => createDefinitionTooltip,
+    createSessionCypherHint: () => createSessionCypherHint,
     cypherFragmentCompletions: () => cypherFragmentCompletions,
     definitionTitle: () => definitionTitle,
     formatDuration: () => formatDuration,
@@ -229,6 +231,37 @@ var EmbabelStudioKit = (() => {
       }
       return null;
     };
+  }
+  var CYPHER_KEYWORDS = [
+    "MATCH",
+    "WHERE",
+    "RETURN",
+    "ORDER BY",
+    "LIMIT",
+    "WITH",
+    "DISTINCT",
+    "AND",
+    "OR",
+    "NOT",
+    "CONTAINS",
+    "STARTS WITH",
+    "ENDS WITH",
+    "IN",
+    "IS NULL",
+    "IS NOT NULL",
+    "count(",
+    "toLower(",
+    "ai.relevant(",
+    "ai.score(",
+    "ai.classify("
+  ];
+  function createSessionCypherHint(CodeMirror, vc, options) {
+    const base = createCypherHint(CodeMirror, vc, options);
+    return (editor) => base({
+      getCursor: () => editor.getCursor(),
+      getLine: (line) => editor.getLine(line),
+      getValue: () => options.bindings().map((b) => `MATCH (${b.variable}:${b.label})`).join("\n") + "\n" + editor.getValue()
+    });
   }
   return __toCommonJS(index_exports);
 })();

@@ -13,4 +13,5 @@ export { declaredParams, RESERVED_PARAMS } from "./params.js";
 export { rowColumns, rowsToMarkdown, rowsToCsv } from "./rows.js";
 export { describeVcEvent, isTerminal, isFailure } from "./events.js";
 export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from "./scopes.js";
+export { PEEK_LIMIT, completeQuery, pipelineText, planLine } from "./session.js";
 //# sourceMappingURL=index.js.map

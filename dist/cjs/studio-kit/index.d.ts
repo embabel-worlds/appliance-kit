@@ -7,6 +7,6 @@ export { MARKDOWN_OPTIONS, MARKDOWN_SANITIZE, toSafeHtml } from './markdown.ts';
 export { MAX_LOG_LINES, isAtBottom, matchesFilter, pendingBehind, severityOfLevel, severityOfLine } from './logs.ts';
 export type { LogSeverity } from './logs.ts';
 export type { MarkdownLibraries } from './markdown.ts';
-export { createCypherHint, cypherFragmentCompletions } from './hints.ts';
-export type { VcSemantics, CypherHintOptions, FragmentCompletion } from './hints.ts';
+export { CYPHER_KEYWORDS, createCypherHint, createSessionCypherHint, cypherFragmentCompletions } from './hints.ts';
+export type { VcSemantics, CypherHintOptions, FragmentCompletion, HintBinding } from './hints.ts';
 //# sourceMappingURL=index.d.ts.map
