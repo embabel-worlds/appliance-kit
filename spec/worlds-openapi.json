@@ -1950,8 +1950,16 @@
           "name" : {
             "type" : "string"
           },
+          "note" : {
+            "description" : "Why the stored query differs from the one sent",
+            "type" : "string"
+          },
           "ok" : {
             "type" : "boolean"
+          },
+          "savedCypher" : {
+            "description" : "The stored query, when promotion inlined captured scopes into it",
+            "type" : "string"
           }
         },
         "required" : [ "name", "ok" ],
@@ -11366,7 +11374,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41321"
+    "url" : "http://localhost:33871"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
