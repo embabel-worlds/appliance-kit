@@ -74,9 +74,19 @@ button {
 }
 
 /* Hover and keyboard focus land in the SAME place: a keyboard user should get
-   the affordance a mouse user gets, not a second, quieter one. */
-button:hover:not(:disabled),
-button:focus-visible:not(:disabled) {
+   the affordance a mouse user gets, not a second, quieter one.
+
+   CLASSLESS buttons only. This used to match every <button>, and consumers build
+   list rows, tabs and group heads out of <button> — the solid accent pill swallowed
+   their text (accent fill behind ink tuned for the page ground), and `:not(:disabled)`
+   out-specified the consumer's own `.row:hover` tint so it could not even be
+   overridden politely. The contract now: a bare <button> gets the kit's pill; a
+   button you classed is yours to style, hover included. `button.primary` below keeps
+   the pill on its own hover for the one classed button the kit itself defines. */
+button:not([class]):hover:not(:disabled),
+button:not([class]):focus-visible:not(:disabled),
+button.primary:hover:not(:disabled),
+button.primary:focus-visible:not(:disabled) {
   background: var(--signal);
   border-color: var(--signal);
   color: var(--on-signal);
