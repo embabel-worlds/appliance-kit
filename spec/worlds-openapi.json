@@ -619,6 +619,15 @@
         "required" : [ "description", "metadata", "name", "source", "type" ],
         "type" : "object"
       },
+      "DirectoryRefreshResponse" : {
+        "properties" : {
+          "refreshed" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "refreshed" ],
+        "type" : "object"
+      },
       "DiscoverRequest" : {
         "properties" : {
           "query" : {
@@ -894,6 +903,59 @@
           "type" : "object"
         } ],
         "required" : [ "text" ]
+      },
+      "Fill" : {
+        "properties" : {
+          "budgetPerTick" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "cypher" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "progress" : {
+            "$ref" : "#/components/schemas/FillProgress"
+          },
+          "userId" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "budgetPerTick", "cypher", "id", "label", "progress", "userId" ],
+        "type" : "object"
+      },
+      "FillProgress" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastError" : {
+            "type" : "string"
+          },
+          "lastTickAt" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "liveCallsTotal" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "ticks" : {
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "createdAt", "liveCallsTotal", "state", "ticks" ],
+        "type" : "object"
       },
       "HandlerAvailable" : {
         "description" : "A realm-shipped handler available to adopt, which this user has not enabled.",
@@ -2948,6 +3010,22 @@
         },
         "type" : "object"
       },
+      "StartFillRequest" : {
+        "properties" : {
+          "budgetPerTick" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "cypher" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "budgetPerTick", "cypher", "label" ],
+        "type" : "object"
+      },
       "TextIngestRequest" : {
         "properties" : {
           "content" : {
@@ -3924,7 +4002,7 @@
     },
     "/api/v1/admin/handlers/list" : {
       "post" : {
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "responses" : {
           "200" : {
             "content" : {
@@ -4408,7 +4486,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "responses" : {
           "200" : {
             "content" : {
@@ -4612,6 +4690,136 @@
         },
         "summary" : "Execute verbatim Cypher through the virtual-cypher engine, synchronously, watched, or in the background",
         "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/fills" : {
+      "get" : {
+        "operationId" : "list_4",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/Fill"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The acting user's fills"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "The acting user's fills, newest first, with tick and live-call progress",
+        "tags" : [ "KG Fills" ]
+      },
+      "post" : {
+        "operationId" : "start",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/StartFillRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Fill"
+                }
+              }
+            },
+            "description" : "The fill, as started"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Start a slow, resumable fill of an expensive materialization",
+        "tags" : [ "KG Fills" ]
+      }
+    },
+    "/api/v1/admin/kg/fills/{id}" : {
+      "delete" : {
+        "operationId" : "cancel",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The cancelled fill's id and its new state"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Cancel a fill — completed chunks stay cached; nothing is rolled back",
+        "tags" : [ "KG Fills" ]
       }
     },
     "/api/v1/admin/kg/generate" : {
@@ -5096,7 +5304,7 @@
     },
     "/api/v1/admin/kg/scopes" : {
       "get" : {
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -7694,6 +7902,36 @@
         "tags" : [ "Directory" ]
       }
     },
+    "/api/v1/directory/refresh" : {
+      "post" : {
+        "description" : "The GitHub realm scan is cached for the life of the process; this evicts it — the way a newly published realm becomes visible without a restart. Optionally scoped by type.",
+        "operationId" : "refresh",
+        "parameters" : [ {
+          "description" : "Only refresh directories of this type",
+          "in" : "query",
+          "name" : "type",
+          "required" : false,
+          "schema" : {
+            "enum" : [ "SKILL", "API", "MCP_SERVER", "REALM" ],
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DirectoryRefreshResponse"
+                }
+              }
+            },
+            "description" : "Caches evicted; the next browse re-fetches from the sources"
+          }
+        },
+        "summary" : "Evict the directory caches so the next browse re-scans the sources",
+        "tags" : [ "Directory" ]
+      }
+    },
     "/api/v1/directory/sources" : {
       "get" : {
         "description" : "Returns the registered directory sources and their types.",
@@ -8063,7 +8301,7 @@
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "responses" : {
           "200" : {
             "content" : {
@@ -11629,7 +11867,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46141"
+    "url" : "http://localhost:46349"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -11742,6 +11980,9 @@
   }, {
     "description" : "On-demand catchup / meeting-prep run",
     "name" : "Catchup"
+  }, {
+    "description" : "Admin: start, watch and cancel slow resumable materializations of expensive queries",
+    "name" : "KG Fills"
   }, {
     "description" : "Author, list and run saved lenses; the productized consumer path is Headless Invocation",
     "name" : "Lenses"
