@@ -332,6 +332,9 @@
             },
             "type" : "object"
           },
+          "headerName" : {
+            "type" : "string"
+          },
           "mode" : {
             "type" : "string"
           },
@@ -519,6 +522,91 @@
           }
         },
         "required" : [ "actionName", "cron", "description", "name", "payload" ],
+        "type" : "object"
+      },
+      "DataContractBindingSpec" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "mode" : {
+            "enum" : [ "observe", "enforce" ],
+            "type" : "string"
+          },
+          "object" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "mode", "object", "version" ],
+        "type" : "object"
+      },
+      "DataContractCheck" : {
+        "properties" : {
+          "kind" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "ruleId" : {
+            "type" : "string"
+          },
+          "scope" : {
+            "type" : "string"
+          },
+          "verdict" : {
+            "enum" : [ "PASS", "WARN", "FAIL", "UNKNOWN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind", "ruleId", "verdict" ],
+        "type" : "object"
+      },
+      "DataContractEvaluation" : {
+        "properties" : {
+          "apiVersion" : {
+            "type" : "string"
+          },
+          "available" : {
+            "type" : "boolean"
+          },
+          "blocksRows" : {
+            "type" : "boolean"
+          },
+          "checkedAt" : {
+            "type" : "string"
+          },
+          "checks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DataContractCheck"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "mode" : {
+            "enum" : [ "observe", "enforce" ],
+            "type" : "string"
+          },
+          "object" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "verdict" : {
+            "enum" : [ "PASS", "WARN", "FAIL", "UNKNOWN" ],
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "apiVersion", "available", "blocksRows", "checkedAt", "checks", "id", "mode", "object", "status", "verdict", "version" ],
         "type" : "object"
       },
       "DateWindow" : {
@@ -1047,6 +1135,13 @@
           },
           "english" : {
             "type" : "string"
+          },
+          "skills" : {
+            "description" : "Skills to bundle. They are handed to the writing model as references — prompt contribution AND tools — so a realm's documented idioms are followed rather than re-derived.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
         "required" : [ "english" ],
@@ -1113,7 +1208,19 @@
           "autonomous" : {
             "type" : "boolean"
           },
+          "inputTypeNames" : {
+            "description" : "Domain types it consumes; empty means reaction-only (dispatcher, never planner).",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
           "name" : {
+            "type" : "string"
+          },
+          "outputTypeName" : {
+            "description" : "Domain type it returns, or 'void'.",
             "type" : "string"
           },
           "schedule" : {
@@ -1123,9 +1230,16 @@
           "signalType" : {
             "description" : "The signal type that fires it; '*' = none.",
             "type" : "string"
+          },
+          "skills" : {
+            "description" : "Skills bundled with it.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           }
         },
-        "required" : [ "active", "autonomous", "name", "signalType" ],
+        "required" : [ "active", "autonomous", "inputTypeNames", "name", "outputTypeName", "signalType", "skills" ],
         "type" : "object"
       },
       "HandlerMutationResponse" : {
@@ -1150,7 +1264,19 @@
           "description" : {
             "type" : "string"
           },
+          "inputTypeNames" : {
+            "description" : "Domain types it consumes; empty means reaction-only.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
           "name" : {
+            "type" : "string"
+          },
+          "outputTypeName" : {
+            "description" : "Domain type it returns, or 'void'.",
             "type" : "string"
           },
           "schedule" : {
@@ -1159,11 +1285,18 @@
           "signalType" : {
             "type" : "string"
           },
+          "skills" : {
+            "description" : "Skills bundled with it, round-tripped so an edit does not drop them.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "source" : {
             "type" : "string"
           }
         },
-        "required" : [ "autonomous", "description", "name", "signalType", "source" ],
+        "required" : [ "autonomous", "description", "inputTypeNames", "name", "outputTypeName", "signalType", "skills", "source" ],
         "type" : "object"
       },
       "HandlerRanAgainst" : {
@@ -1185,7 +1318,23 @@
           "autonomous" : {
             "type" : "boolean"
           },
+          "description" : {
+            "description" : "One line describing what it does. Defaults to the name.",
+            "type" : "string"
+          },
+          "inputTypeNames" : {
+            "description" : "Domain types this action consumes. Declaring them makes it planner-chainable rather than reaction-only.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
           "name" : {
+            "type" : "string"
+          },
+          "outputTypeName" : {
+            "description" : "Domain type the body returns, bound on the blackboard so later actions chain on it. 'void' for a side-effecting action.",
             "type" : "string"
           },
           "schedule" : {
@@ -1195,6 +1344,13 @@
           "signalType" : {
             "description" : "`Signal.typeName` (or simple name) that fires this handler; '*' = none.",
             "type" : "string"
+          },
+          "skills" : {
+            "description" : "Skills bundled with this agent, put in front of the model that writes and refines it.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
           },
           "source" : {
             "type" : "string"
@@ -1548,6 +1704,72 @@
         "required" : [ "error", "valid" ],
         "type" : "object"
       },
+      "KgContractColumn" : {
+        "description" : "One drafted column, and whether its entry was read or inferred.",
+        "properties" : {
+          "evidence" : {
+            "description" : "`declared` (read from the view) or `sampled` (inferred from rows).",
+            "type" : "string"
+          },
+          "logicalType" : {
+            "description" : "ODCS logical type, present only when a sample agreed unanimously.",
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "suggestions" : {
+            "description" : "What the sample SUGGESTS but does not prove, as ODCS extension keys.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "evidence", "name", "suggestions" ],
+        "type" : "object"
+      },
+      "KgContractDisposition" : {
+        "description" : "What the server actually did, separate from what it drafted.",
+        "properties" : {
+          "bound" : {
+            "description" : "Whether the view now pins this contract in `observe` mode.",
+            "type" : "boolean"
+          },
+          "notes" : {
+            "description" : "Human-readable notes: what was not done, and why.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "sampleRows" : {
+            "description" : "Rows read while sampling. Zero when the view was not run.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sampleTruncated" : {
+            "description" : "Whether sampling stopped at its row cap.",
+            "type" : "boolean"
+          },
+          "savedAs" : {
+            "description" : "World-relative path written, or null when this was a preview.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bound", "notes", "sampleRows", "sampleTruncated" ],
+        "type" : "object"
+      },
+      "KgContractRefusal" : {
+        "description" : "A refusal to draft a contract, naming what about the view made it impossible.",
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "KgDecorationReport" : {
         "description" : "What one decoration tick did.",
         "properties" : {
@@ -1663,6 +1885,67 @@
           }
         },
         "required" : [ "cypher" ],
+        "type" : "object"
+      },
+      "KgGenerateContractRequest" : {
+        "description" : "How to draft an ODCS contract for a named view, and how far to go with it.",
+        "properties" : {
+          "args" : {
+            "additionalProperties" : { },
+            "description" : "Arguments for a parameterized view. Used only when sampling.",
+            "type" : "object"
+          },
+          "bind" : {
+            "description" : "Also pin the view to the new contract in `observe` mode. Requires `persist`.",
+            "type" : "boolean"
+          },
+          "persist" : {
+            "description" : "Write the draft into the world. False previews it and writes nothing.",
+            "type" : "boolean"
+          },
+          "sample" : {
+            "description" : "Run the view under a row cap to infer types and suggestions. Off by default: generation reads the declaration only unless asked to touch data.",
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "KgGenerateContractResponse" : {
+        "description" : "A drafted ODCS contract for a named view, in `draft` status and unreviewed.",
+        "properties" : {
+          "columns" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgContractColumn"
+            },
+            "type" : "array"
+          },
+          "contractId" : {
+            "type" : "string"
+          },
+          "disposition" : {
+            "$ref" : "#/components/schemas/KgContractDisposition",
+            "description" : "What was written and bound, and what an author still has to do."
+          },
+          "mode" : {
+            "description" : "`declaration` or `sample` — how much of this draft came from data.",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "ODCS status of the generated document. Always `draft`.",
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          },
+          "view" : {
+            "type" : "string"
+          },
+          "yaml" : {
+            "description" : "The contract document. Review this before promoting anything.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "columns", "contractId", "disposition", "mode", "status", "version", "view", "yaml" ],
         "type" : "object"
       },
       "KgGenerateResponse" : {
@@ -1794,6 +2077,10 @@
           "cypher" : {
             "description" : "The cypher that actually ran, after scope rewriting.",
             "type" : "string"
+          },
+          "dataContract" : {
+            "$ref" : "#/components/schemas/DataContractEvaluation",
+            "description" : "The pinned ODCS identity and invocation verdict, for a contracted named view only."
           },
           "durationMs" : {
             "description" : "Total: bridge-resolve plus materialize plus read.",
@@ -2892,6 +3179,28 @@
         "required" : [ "kind" ],
         "type" : "object"
       },
+      "SignalTypeInfo" : {
+        "properties" : {
+          "count" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "fields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "lastSeen" : {
+            "type" : "string"
+          },
+          "typeName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "count", "fields", "lastSeen", "typeName" ],
+        "type" : "object"
+      },
       "SkillSummary" : {
         "properties" : {
           "description" : {
@@ -3247,6 +3556,9 @@
           },
           "cypher" : {
             "type" : "string"
+          },
+          "dataContract" : {
+            "$ref" : "#/components/schemas/DataContractBindingSpec"
           },
           "description" : {
             "type" : "string"
@@ -5630,6 +5942,69 @@
           }
         },
         "summary" : "Delete a user-authored view from the acting user's world",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/views/{name}/contract" : {
+      "post" : {
+        "operationId" : "generateViewContract",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgGenerateContractRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgGenerateContractResponse"
+                }
+              }
+            },
+            "description" : "The drafted contract and what was done with it"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgContractRefusal"
+                }
+              }
+            },
+            "description" : "The view's output shape is not contractable, or the draft could not be saved"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Draft an ODCS contract for a saved view, optionally sampling, saving and binding it",
         "tags" : [ "Virtual Cypher" ]
       }
     },
@@ -9529,7 +9904,7 @@
     },
     "/api/v1/realms" : {
       "get" : {
-        "description" : "Returns all realms installed in the world.",
+        "description" : "Returns all realms installed in the world — the shipped Realms view's rows, filtered to installed, so this listing and a `MATCH (r:Realm)` query can never disagree.",
         "operationId" : "listRealms",
         "responses" : {
           "200" : {
@@ -10083,6 +10458,38 @@
         },
         "summary" : "Report a command's result",
         "tags" : [ "Sensor" ]
+      }
+    },
+    "/api/v1/signal-types" : {
+      "get" : {
+        "operationId" : "catalogue",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "days",
+          "required" : false,
+          "schema" : {
+            "default" : 30,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SignalTypeInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Signal types, busiest first"
+          }
+        },
+        "summary" : "List the signal types this world has received, with their fields and how often",
+        "tags" : [ "Signals" ]
       }
     },
     "/api/v1/skills" : {
@@ -11867,7 +12274,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41631"
+    "url" : "http://localhost:34185"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -11953,6 +12360,9 @@
   }, {
     "description" : "Realm runtime metrics and logs",
     "name" : "Realm observability"
+  }, {
+    "description" : "The signal types this world actually receives",
+    "name" : "Signals"
   }, {
     "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
     "name" : "World"
