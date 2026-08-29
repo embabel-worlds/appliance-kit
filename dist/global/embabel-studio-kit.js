@@ -25,6 +25,7 @@ var EmbabelStudioKit = (() => {
     MARKDOWN_OPTIONS: () => MARKDOWN_OPTIONS,
     MARKDOWN_SANITIZE: () => MARKDOWN_SANITIZE,
     MAX_LOG_LINES: () => MAX_LOG_LINES,
+    TOUR_SANITIZE: () => TOUR_SANITIZE,
     copyWithNod: () => copyWithNod,
     createCypherHint: () => createCypherHint,
     createDefinitionTooltip: () => createDefinitionTooltip,
@@ -35,10 +36,12 @@ var EmbabelStudioKit = (() => {
     isAtBottom: () => isAtBottom,
     matchesFilter: () => matchesFilter,
     pendingBehind: () => pendingBehind,
+    resolveTourImages: () => resolveTourImages,
     setStatus: () => setStatus,
     severityOfLevel: () => severityOfLevel,
     severityOfLine: () => severityOfLine,
-    toSafeHtml: () => toSafeHtml
+    toSafeHtml: () => toSafeHtml,
+    tourHtml: () => tourHtml
   });
 
   // src/studio-kit/format.ts
@@ -143,6 +146,39 @@ var EmbabelStudioKit = (() => {
     if (text == null || text === "") return "";
     const parsed = libs.parse(String(text), MARKDOWN_OPTIONS);
     return String(libs.sanitize(parsed, { ...MARKDOWN_SANITIZE, RETURN_DOM_FRAGMENT: false }));
+  }
+  var TOUR_SANITIZE = {
+    ...MARKDOWN_SANITIZE,
+    ALLOWED_TAGS: [...MARKDOWN_SANITIZE.ALLOWED_TAGS, "img"],
+    ALLOWED_ATTR: [...MARKDOWN_SANITIZE.ALLOWED_ATTR, "src", "alt"],
+    /*
+     * ROOTED RELATIVE URIS, as well as http(s). The shared policy allows `^https?://` and nothing
+     * else, which is right for prose full of links — and it silently defeated the first version of
+     * this: `/apps/world/x.svg` failed the pattern, DOMPurify dropped the `src`, and an image the
+     * appliance was serving perfectly well vanished along with the beacons.
+     *
+     * `\/(?!\/)` is one slash and not two, so `//evil.example/x.png` is still refused here rather
+     * than only by the pass below. This does NOT weaken the image rule — it is what lets the image
+     * rule be the thing that decides, instead of a regexp that cannot tell an `<img>` from an `<a>`.
+     */
+    ALLOWED_URI_REGEXP: /^(?:https?:\/\/|\/(?!\/))/i
+  };
+  function resolveTourImages(root, assetBase = "") {
+    for (const img of Array.from(root.querySelectorAll("img"))) {
+      const src = img.getAttribute("src") ?? "";
+      if (!src.startsWith("/") || src.startsWith("//")) img.remove();
+      else img.setAttribute("src", assetBase.replace(/\/$/, "") + src);
+    }
+  }
+  function tourHtml(libs, text, assetBase = "") {
+    if (text == null || text === "") return "";
+    const parsed = libs.parse(String(text), MARKDOWN_OPTIONS);
+    const html = String(libs.sanitize(parsed, { ...TOUR_SANITIZE, RETURN_DOM_FRAGMENT: false }));
+    if (typeof document === "undefined" || !html.includes("<img")) return html;
+    const holder = document.createElement("div");
+    holder.innerHTML = html;
+    resolveTourImages(holder, assetBase);
+    return holder.innerHTML;
   }
 
   // src/studio-kit/logs.ts

@@ -9,7 +9,7 @@
  * a page loads exactly one copy of each.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.cypherFragmentCompletions = exports.createSessionCypherHint = exports.createCypherHint = exports.CYPHER_KEYWORDS = exports.severityOfLine = exports.severityOfLevel = exports.pendingBehind = exports.matchesFilter = exports.isAtBottom = exports.MAX_LOG_LINES = exports.toSafeHtml = exports.MARKDOWN_SANITIZE = exports.MARKDOWN_OPTIONS = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
+exports.cypherFragmentCompletions = exports.createSessionCypherHint = exports.createCypherHint = exports.CYPHER_KEYWORDS = exports.severityOfLine = exports.severityOfLevel = exports.pendingBehind = exports.matchesFilter = exports.isAtBottom = exports.MAX_LOG_LINES = exports.tourHtml = exports.resolveTourImages = exports.TOUR_SANITIZE = exports.toSafeHtml = exports.MARKDOWN_SANITIZE = exports.MARKDOWN_OPTIONS = exports.definitionTitle = exports.createDefinitionTooltip = exports.copyWithNod = exports.setStatus = exports.formatDuration = void 0;
 var format_ts_1 = require("./format.js");
 Object.defineProperty(exports, "formatDuration", { enumerable: true, get: function () { return format_ts_1.formatDuration; } });
 var status_ts_1 = require("./status.js");
@@ -23,6 +23,9 @@ var markdown_ts_1 = require("./markdown.js");
 Object.defineProperty(exports, "MARKDOWN_OPTIONS", { enumerable: true, get: function () { return markdown_ts_1.MARKDOWN_OPTIONS; } });
 Object.defineProperty(exports, "MARKDOWN_SANITIZE", { enumerable: true, get: function () { return markdown_ts_1.MARKDOWN_SANITIZE; } });
 Object.defineProperty(exports, "toSafeHtml", { enumerable: true, get: function () { return markdown_ts_1.toSafeHtml; } });
+Object.defineProperty(exports, "TOUR_SANITIZE", { enumerable: true, get: function () { return markdown_ts_1.TOUR_SANITIZE; } });
+Object.defineProperty(exports, "resolveTourImages", { enumerable: true, get: function () { return markdown_ts_1.resolveTourImages; } });
+Object.defineProperty(exports, "tourHtml", { enumerable: true, get: function () { return markdown_ts_1.tourHtml; } });
 var logs_ts_1 = require("./logs.js");
 Object.defineProperty(exports, "MAX_LOG_LINES", { enumerable: true, get: function () { return logs_ts_1.MAX_LOG_LINES; } });
 Object.defineProperty(exports, "isAtBottom", { enumerable: true, get: function () { return logs_ts_1.isAtBottom; } });

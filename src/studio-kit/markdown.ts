@@ -70,3 +70,75 @@ export function toSafeHtml(libs: MarkdownLibraries, text: string | null | undefi
   const parsed = libs.parse(String(text), MARKDOWN_OPTIONS)
   return String(libs.sanitize(parsed, { ...MARKDOWN_SANITIZE, RETURN_DOM_FRAGMENT: false }))
 }
+
+/**
+ * The same policy, plus IMAGES — for tour narration only.
+ *
+ * A tour sometimes explains something that happens outside the app, and a picture of the terminal
+ * you are about to open carries further than a paragraph describing it. Nothing else here wants
+ * images: a document answer that could render one would be a model deciding to put a picture in
+ * front of you, which is a different feature with a different conversation attached.
+ */
+export const TOUR_SANITIZE = {
+  ...MARKDOWN_SANITIZE,
+  ALLOWED_TAGS: [...MARKDOWN_SANITIZE.ALLOWED_TAGS, 'img'],
+  ALLOWED_ATTR: [...MARKDOWN_SANITIZE.ALLOWED_ATTR, 'src', 'alt'],
+  /*
+   * ROOTED RELATIVE URIS, as well as http(s). The shared policy allows `^https?://` and nothing
+   * else, which is right for prose full of links — and it silently defeated the first version of
+   * this: `/apps/world/x.svg` failed the pattern, DOMPurify dropped the `src`, and an image the
+   * appliance was serving perfectly well vanished along with the beacons.
+   *
+   * `\/(?!\/)` is one slash and not two, so `//evil.example/x.png` is still refused here rather
+   * than only by the pass below. This does NOT weaken the image rule — it is what lets the image
+   * rule be the thing that decides, instead of a regexp that cannot tell an `<img>` from an `<a>`.
+   */
+  ALLOWED_URI_REGEXP: /^(?:https?:\/\/|\/(?!\/))/i,
+}
+
+/**
+ * Point every tour image at [assetBase] and DELETE the ones that were not ours to serve.
+ *
+ * THIS IS THE ANTI-BEACON RULE, and it is why tours get their own policy rather than a widened
+ * shared one. Tours are FILES PEOPLE EXCHANGE — a realm ships them, users export and import them.
+ * An `<img>` pointing at a host somebody else controls reports that a tour was opened, when, and
+ * from which address, to whoever wrote it, silently, before the reader agreed to anything. So a
+ * tour may show an asset THIS APPLIANCE serves and nothing else.
+ *
+ * DOMPurify cannot express it — `ALLOWED_URI_REGEXP` applies to every URI attribute alike, and
+ * links legitimately go anywhere — so the rule is enforced here, after sanitizing, and fails
+ * closed: anything that is not a rooted relative path is removed rather than rewritten.
+ *
+ * [assetBase] exists because the two surfaces disagree about what "same origin" resolves to. The
+ * console is served by the appliance, so '' is right. The Me app's windows load over `file://`,
+ * where `/apps/world/x.png` is a path on the user's disk — it passes the appliance's base URL.
+ */
+export function resolveTourImages(root: ParentNode, assetBase = ''): void {
+  for (const img of Array.from(root.querySelectorAll('img'))) {
+    const src = img.getAttribute('src') ?? ''
+    // Rooted and single-slashed: `//host/x.png` is a remote host wearing a relative path.
+    if (!src.startsWith('/') || src.startsWith('//')) img.remove()
+    else img.setAttribute('src', assetBase.replace(/\/$/, '') + src)
+  }
+}
+
+/**
+ * Tour narration: markdown in, sanitized HTML out, with same-origin images kept.
+ *
+ * The string form, for the console. A surface that needs nodes — the Me app, which rewires links
+ * for Electron — uses [TOUR_SANITIZE] and [resolveTourImages] directly, so both run one policy.
+ */
+export function tourHtml(
+  libs: MarkdownLibraries,
+  text: string | null | undefined,
+  assetBase = '',
+): string {
+  if (text == null || text === '') return ''
+  const parsed = libs.parse(String(text), MARKDOWN_OPTIONS)
+  const html = String(libs.sanitize(parsed, { ...TOUR_SANITIZE, RETURN_DOM_FRAGMENT: false }))
+  if (typeof document === 'undefined' || !html.includes('<img')) return html
+  const holder = document.createElement('div')
+  holder.innerHTML = html
+  resolveTourImages(holder, assetBase)
+  return holder.innerHTML
+}
