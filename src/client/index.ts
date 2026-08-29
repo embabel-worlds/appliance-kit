@@ -54,6 +54,15 @@ export type {
 export { HintsClient } from './hints.ts'
 export type { Hint, HintAction, HintSurface } from './hints.ts'
 
+export { ToursClient } from './tours.ts'
+export type {
+  TourSummary,
+  TourStepView,
+  TourListResponse,
+  TourStepStatusResponse,
+  TourDeletedResponse,
+} from './tours.ts'
+
 export { classifySource } from './citations.ts'
 export type { CitedSource, SourceKind } from './citations.ts'
 
@@ -79,6 +88,7 @@ import { DocumentsClient } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
 import { HintsClient } from './hints.ts'
 import { KgClient } from './kg.ts'
+import { ToursClient } from './tours.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
 
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
@@ -87,12 +97,14 @@ export class ApplianceClient {
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
   readonly hints: HintsClient
+  readonly tours: ToursClient
 
   constructor(readonly transport: Transport) {
     this.kg = new KgClient(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport)
     this.hints = new HintsClient(transport)
+    this.tours = new ToursClient(transport)
   }
 
   /** The console's configuration: relative URLs, same origin, ambient credentials. */

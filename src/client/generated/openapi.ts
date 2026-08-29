@@ -65,7 +65,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** List the user's handlers plus inactive realm-shipped handlers available to adopt */
-        post: operations["list_3"];
+        post: operations["list_5"];
         delete?: never;
         options?: never;
         head?: never;
@@ -233,7 +233,7 @@ export interface paths {
             cookie?: never;
         };
         /** List the registered node decorators and their tick, batch and staleness settings */
-        get: operations["list_6"];
+        get: operations["list_9"];
         put?: never;
         post?: never;
         delete?: never;
@@ -291,6 +291,41 @@ export interface paths {
          */
         post: operations["execute"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/fills": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The acting user's fills, newest first, with tick and live-call progress */
+        get: operations["list_4"];
+        put?: never;
+        /** Start a slow, resumable fill of an expensive materialization */
+        post: operations["start"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/fills/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Cancel a fill — completed chunks stay cached; nothing is rolled back */
+        delete: operations["cancel"];
         options?: never;
         head?: never;
         patch?: never;
@@ -457,7 +492,7 @@ export interface paths {
             cookie?: never;
         };
         /** List the acting user's live captured scopes, newest first */
-        get: operations["list_5"];
+        get: operations["list_8"];
         put?: never;
         post?: never;
         delete?: never;
@@ -477,7 +512,7 @@ export interface paths {
         put?: never;
         post?: never;
         /** Delete a captured scope */
-        delete: operations["delete_3"];
+        delete: operations["delete_4"];
         options?: never;
         head?: never;
         patch?: never;
@@ -547,6 +582,23 @@ export interface paths {
         post?: never;
         /** Delete a user-authored view from the acting user's world */
         delete: operations["deleteView"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/views/{name}/contract": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Draft an ODCS contract for a saved view, optionally sampling, saving and binding it */
+        post: operations["generateViewContract"];
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -657,6 +709,106 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/tours": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Every tour this world offers
+         * @description Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.
+         */
+        get: operations["list_6"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tours/import": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Store a tour somebody exported, or a client recorded
+         * @description The body is a tour FILE, not a JSON object: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.
+         */
+        post: operations["import"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tours/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Delete a tour this user saved
+         * @description A realm's tour and the world's own are not deletable here — they leave when whatever shipped them leaves. `deleted` is false rather than a 404 for those: the tour exists, it is simply not the caller's to remove.
+         */
+        delete: operations["delete_3"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tours/{id}/export": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * One tour as the file it would be
+         * @description What a user hands to somebody else. Round-trips through the import below, and is byte-for-byte the shape this server loads from a realm — so a tour that was exported, edited and re-imported is not a second dialect.
+         */
+        get: operations["export_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/tours/{id}/steps/{index}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Is this step already satisfied?
+         * @description Answered WHEN THE STEP IS REACHED, not when the tour is fetched: a tour changes the world as it walks through it, so a verdict computed at load time describes a world that no longer exists. UNKNOWN means the step's own query could not be answered — `detail` says why — and a client should run the step anyway. Repeating a step is visible and recoverable; silently skipping one is neither. A POST rather than a GET because the tour's collected parameters are the body: the condition worth writing is usually about the thing the user just named, and without them the only expressible preconditions are those that depend on no answer.
+         */
+        post: operations["stepStatus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -666,6 +818,57 @@ export interface components {
                 [key: string]: unknown;
             };
             statement: string;
+        };
+        DataContractBindingSpec: {
+            id: string;
+            /** @enum {string} */
+            mode: "observe" | "enforce";
+            object: string;
+            version: string;
+        };
+        DataContractCheck: {
+            kind: string;
+            message?: string;
+            ruleId: string;
+            scope?: string;
+            /** @enum {string} */
+            verdict: "PASS" | "WARN" | "FAIL" | "UNKNOWN";
+        };
+        DataContractEvaluation: {
+            apiVersion: string;
+            available: boolean;
+            blocksRows: boolean;
+            checkedAt: string;
+            checks: components["schemas"]["DataContractCheck"][];
+            id: string;
+            /** @enum {string} */
+            mode: "observe" | "enforce";
+            object: string;
+            status: string;
+            /** @enum {string} */
+            verdict: "PASS" | "WARN" | "FAIL" | "UNKNOWN";
+            version: string;
+        };
+        Fill: {
+            /** Format: int64 */
+            budgetPerTick: number;
+            cypher: string;
+            id: string;
+            label: string;
+            progress: components["schemas"]["FillProgress"];
+            userId: string;
+        };
+        FillProgress: {
+            /** Format: int64 */
+            createdAt: number;
+            lastError?: string;
+            /** Format: int64 */
+            lastTickAt?: number;
+            /** Format: int64 */
+            liveCallsTotal: number;
+            state: string;
+            /** Format: int64 */
+            ticks: number;
         };
         /** @description A realm-shipped handler available to adopt, which this user has not enabled. */
         HandlerAvailable: {
@@ -708,6 +911,8 @@ export interface components {
             /** @description When present, `english` is a CHANGE to this source — the round-trip an editor's Refine drives. */
             current?: string;
             english: string;
+            /** @description Skills to bundle. They are handed to the writing model as references — prompt contribution AND tools — so a realm's documented idioms are followed rather than re-derived. */
+            skills?: string[];
         };
         /** @description Generated (or refined) handler source, with the tsc verdict on it. */
         HandlerGenerateResponse: {
@@ -734,11 +939,17 @@ export interface components {
             /** @description Whether it currently fires. A saved handler that is off changes nothing. */
             active: boolean;
             autonomous: boolean;
+            /** @description Domain types it consumes; empty means reaction-only (dispatcher, never planner). */
+            inputTypeNames: string[];
             name: string;
+            /** @description Domain type it returns, or 'void'. */
+            outputTypeName: string;
             /** @description Its 6-field cron expression, or null when not scheduled. */
             schedule?: string;
             /** @description The signal type that fires it; '*' = none. */
             signalType: string;
+            /** @description Skills bundled with it. */
+            skills: string[];
         };
         /** @description Whether the mutation landed, and what the server has to say about it. */
         HandlerMutationResponse: {
@@ -749,9 +960,15 @@ export interface components {
         HandlerOpenResponse: {
             autonomous: boolean;
             description: string;
+            /** @description Domain types it consumes; empty means reaction-only. */
+            inputTypeNames: string[];
             name: string;
+            /** @description Domain type it returns, or 'void'. */
+            outputTypeName: string;
             schedule?: string;
             signalType: string;
+            /** @description Skills bundled with it, round-tripped so an edit does not drop them. */
+            skills: string[];
             source: string;
         };
         /** @description The signal a dry run bound, as sampled — not as requested. */
@@ -762,11 +979,19 @@ export interface components {
         /** @description A handler to create or update, with its triggers. */
         HandlerSaveRequest: {
             autonomous?: boolean;
+            /** @description One line describing what it does. Defaults to the name. */
+            description?: string;
+            /** @description Domain types this action consumes. Declaring them makes it planner-chainable rather than reaction-only. */
+            inputTypeNames?: string[];
             name: string;
+            /** @description Domain type the body returns, bound on the blackboard so later actions chain on it. 'void' for a side-effecting action. */
+            outputTypeName?: string;
             /** @description Optional 6-field cron expression; null = not scheduled. */
             schedule?: string;
             /** @description `Signal.typeName` (or simple name) that fires this handler; '*' = none. */
             signalType?: string;
+            /** @description Skills bundled with this agent, put in front of the model that writes and refines it. */
+            skills?: string[];
             source: string;
         };
         /** @description Acknowledgement of a schedule change, echoing the schedule now in force. */
@@ -882,6 +1107,36 @@ export interface components {
             /** @description The accepted values for `choice`. */
             valid: string[];
         };
+        /** @description One drafted column, and whether its entry was read or inferred. */
+        KgContractColumn: {
+            /** @description `declared` (read from the view) or `sampled` (inferred from rows). */
+            evidence: string;
+            /** @description ODCS logical type, present only when a sample agreed unanimously. */
+            logicalType?: string;
+            name: string;
+            /** @description What the sample SUGGESTS but does not prove, as ODCS extension keys. */
+            suggestions: string[];
+        };
+        /** @description What the server actually did, separate from what it drafted. */
+        KgContractDisposition: {
+            /** @description Whether the view now pins this contract in `observe` mode. */
+            bound: boolean;
+            /** @description Human-readable notes: what was not done, and why. */
+            notes: string[];
+            /**
+             * Format: int32
+             * @description Rows read while sampling. Zero when the view was not run.
+             */
+            sampleRows: number;
+            /** @description Whether sampling stopped at its row cap. */
+            sampleTruncated: boolean;
+            /** @description World-relative path written, or null when this was a preview. */
+            savedAs?: string;
+        };
+        /** @description A refusal to draft a contract, naming what about the view made it impossible. */
+        KgContractRefusal: {
+            error: string;
+        };
         /** @description What one decoration tick did. */
         KgDecorationReport: {
             /**
@@ -935,6 +1190,34 @@ export interface components {
             /** @description Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only. */
             captureAs?: string;
             cypher: string;
+        };
+        /** @description How to draft an ODCS contract for a named view, and how far to go with it. */
+        KgGenerateContractRequest: {
+            /** @description Arguments for a parameterized view. Used only when sampling. */
+            args?: {
+                [key: string]: unknown;
+            };
+            /** @description Also pin the view to the new contract in `observe` mode. Requires `persist`. */
+            bind?: boolean;
+            /** @description Write the draft into the world. False previews it and writes nothing. */
+            persist?: boolean;
+            /** @description Run the view under a row cap to infer types and suggestions. Off by default: generation reads the declaration only unless asked to touch data. */
+            sample?: boolean;
+        };
+        /** @description A drafted ODCS contract for a named view, in `draft` status and unreviewed. */
+        KgGenerateContractResponse: {
+            columns: components["schemas"]["KgContractColumn"][];
+            contractId: string;
+            /** @description What was written and bound, and what an author still has to do. */
+            disposition: components["schemas"]["KgContractDisposition"];
+            /** @description `declaration` or `sample` — how much of this draft came from data. */
+            mode: string;
+            /** @description ODCS status of the generated document. Always `draft`. */
+            status: string;
+            version: string;
+            view: string;
+            /** @description The contract document. Review this before promoting anything. */
+            yaml: string;
         };
         /** @description Generated cypher and what the engine will do with it, without running it. */
         KgGenerateResponse: {
@@ -998,6 +1281,8 @@ export interface components {
             capturedScope?: components["schemas"]["KgScopeInfo"];
             /** @description The cypher that actually ran, after scope rewriting. */
             cypher: string;
+            /** @description The pinned ODCS identity and invocation verdict, for a contracted named view only. */
+            dataContract?: components["schemas"]["DataContractEvaluation"];
             /**
              * Format: int64
              * @description Total: bridge-resolve plus materialize plus read.
@@ -1231,10 +1516,72 @@ export interface components {
             cypher: string;
             name: string;
         };
+        StartFillRequest: {
+            /** Format: int32 */
+            budgetPerTick: number;
+            cypher: string;
+            label: string;
+        };
+        /** @description Whether a saved tour was removed */
+        TourDeletedResponse: {
+            deleted: boolean;
+        };
+        /** @description A tour file to store */
+        TourImportRequest: {
+            /** @description The tour's YAML, as exported or as a realm would ship it */
+            yaml: string;
+        };
+        /** @description Every tour declared for a world */
+        TourListResponse: {
+            tours: components["schemas"]["TourSummary"][];
+        };
+        /** @description Why a tour was refused, in the server's own words */
+        TourRefusal: {
+            /** @description The refusal, as a sentence to show the user */
+            error: string;
+        };
+        /** @description The parameters a tour has collected so far, bound into the step's precondition */
+        TourStepStatusRequest: {
+            params: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description Whether a step's precondition is already satisfied */
+        TourStepStatusResponse: {
+            /** @description Why, when the status is UNKNOWN — the query error in the author's words */
+            detail?: string;
+            /** @enum {string} */
+            status: "DONE" | "TODO" | "UNKNOWN";
+        };
+        /** @description One step, as its file declared it — minus the precondition, which stays server-side */
+        TourStepView: {
+            presentation: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description A tour: its identity, its provenance, and the client's own declarations */
+        TourSummary: {
+            /** @description What the tour's own file called it — the id that survives an export */
+            declaredId: string;
+            /** @description This world can remove it. NOT the same as userSaved: a tour hand-written into a user's own config is theirs but is not this server's to delete, so a client offering Delete for it would offer a button that silently does nothing. */
+            deletable: boolean;
+            /** @description Unique within this world, and what every other call addresses */
+            id: string;
+            /** @description Everything the tour's YAML declared beyond id and steps, uninterpreted */
+            presentation: {
+                [key: string]: unknown;
+            };
+            /** @description The realm that shipped it, or absent for a world's own and a user's own. Carried rather than derived from the id — a namespace prefix is not something a client can reliably strip. */
+            source?: string;
+            steps: components["schemas"]["TourStepView"][];
+            /** @description Imported or recorded by this user, rather than shipped by a realm or the world */
+            userSaved: boolean;
+        };
         ViewDebugInfo: {
             /** Format: int64 */
             cachedMembers?: number;
             cypher: string;
+            dataContract?: components["schemas"]["DataContractBindingSpec"];
             description: string;
             /** Format: int64 */
             expiresAt?: number;
@@ -1365,7 +1712,7 @@ export interface operations {
             };
         };
     };
-    list_3: {
+    list_5: {
         parameters: {
             query?: never;
             header?: never;
@@ -1754,7 +2101,7 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    list_9: {
         parameters: {
             query?: never;
             header?: never;
@@ -1897,6 +2244,107 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KgQueryResult"] | components["schemas"]["KgBackgroundHandle"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    list_4: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The acting user's fills */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fill"][];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    start: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["StartFillRequest"];
+            };
+        };
+        responses: {
+            /** @description The fill, as started */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Fill"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    cancel: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The cancelled fill's id and its new state */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        [key: string]: unknown;
+                    };
                 };
             };
             /** @description No authenticated principal and no resolvable username */
@@ -2274,7 +2722,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_8: {
         parameters: {
             query?: {
                 username?: string;
@@ -2305,7 +2753,7 @@ export interface operations {
             };
         };
     };
-    delete_3: {
+    delete_4: {
         parameters: {
             query?: {
                 username?: string;
@@ -2523,6 +2971,52 @@ export interface operations {
             };
             /** @description No saved view of that name */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    generateViewContract: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["KgGenerateContractRequest"];
+            };
+        };
+        responses: {
+            /** @description The drafted contract and what was done with it */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgGenerateContractResponse"];
+                };
+            };
+            /** @description The view's output shape is not contractable, or the draft could not be saved */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgContractRefusal"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2758,6 +3252,184 @@ export interface operations {
                 };
                 content: {
                     "*/*": components["schemas"]["Hint"];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    list_6: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every tour declared for the acting user's world */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TourListResponse"];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    import: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TourImportRequest"];
+            };
+        };
+        responses: {
+            /** @description The tours as stored, with the ids this world gave them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TourListResponse"];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description A tour of that name is already shipped here — `error` names which one */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TourRefusal"];
+                };
+            };
+        };
+    };
+    delete_3: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether a saved tour was removed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TourDeletedResponse"];
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    export_1: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The tour's YAML */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description Basic-auth challenge failed */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description No tour of that id in this world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": components["schemas"]["TourRefusal"];
+                };
+            };
+        };
+    };
+    stepStatus: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                id: string;
+                index: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["TourStepStatusRequest"];
+            };
+        };
+        responses: {
+            /** @description DONE, TODO or UNKNOWN */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TourStepStatusResponse"];
                 };
             };
             /** @description Basic-auth challenge failed */

@@ -3,16 +3,53 @@
   "version": "0.1.0",
   "description": "The shared client, visual language and virtual-Cypher semantics behind the Embabel Me app and the Worlds console.",
   "type": "module",
-  "repository": { "type": "git", "url": "git+https://github.com/embabel-worlds/appliance-kit.git" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/embabel-worlds/appliance-kit.git"
+  },
   "license": "Apache-2.0",
-  "files": ["dist", "css", "src", "README.md"],
+  "files": [
+    "dist",
+    "css",
+    "src",
+    "README.md"
+  ],
   "exports": {
-    ".": { "types": "./dist/esm/client/index.d.ts", "import": "./dist/esm/client/index.js", "require": "./dist/cjs/client/index.js" },
-    "./vc": { "types": "./dist/esm/vc/index.d.ts", "import": "./dist/esm/vc/index.js", "require": "./dist/cjs/vc/index.js" },
-    "./code-surface": { "types": "./dist/esm/code-surface/index.d.ts", "import": "./dist/esm/code-surface/index.js", "require": "./dist/cjs/code-surface/index.js" },
-    "./studio-kit": { "types": "./dist/esm/studio-kit/index.d.ts", "import": "./dist/esm/studio-kit/index.js", "require": "./dist/cjs/studio-kit/index.js" },
-    "./backdrop": { "types": "./dist/esm/backdrop/backdrop.d.ts", "import": "./dist/esm/backdrop/backdrop.js", "require": "./dist/cjs/backdrop/backdrop.js" },
-    "./tips": { "types": "./dist/esm/tips/index.d.ts", "import": "./dist/esm/tips/index.js", "require": "./dist/cjs/tips/index.js" },
+    ".": {
+      "types": "./dist/esm/client/index.d.ts",
+      "import": "./dist/esm/client/index.js",
+      "require": "./dist/cjs/client/index.js"
+    },
+    "./vc": {
+      "types": "./dist/esm/vc/index.d.ts",
+      "import": "./dist/esm/vc/index.js",
+      "require": "./dist/cjs/vc/index.js"
+    },
+    "./code-surface": {
+      "types": "./dist/esm/code-surface/index.d.ts",
+      "import": "./dist/esm/code-surface/index.js",
+      "require": "./dist/cjs/code-surface/index.js"
+    },
+    "./studio-kit": {
+      "types": "./dist/esm/studio-kit/index.d.ts",
+      "import": "./dist/esm/studio-kit/index.js",
+      "require": "./dist/cjs/studio-kit/index.js"
+    },
+    "./backdrop": {
+      "types": "./dist/esm/backdrop/backdrop.d.ts",
+      "import": "./dist/esm/backdrop/backdrop.js",
+      "require": "./dist/cjs/backdrop/backdrop.js"
+    },
+    "./tips": {
+      "types": "./dist/esm/tips/index.d.ts",
+      "import": "./dist/esm/tips/index.js",
+      "require": "./dist/cjs/tips/index.js"
+    },
+    "./tour": {
+      "types": "./dist/esm/tour/index.d.ts",
+      "import": "./dist/esm/tour/index.js",
+      "require": "./dist/cjs/tour/index.js"
+    },
     "./css": "./css/index.css",
     "./css/*": "./css/*",
     "./global/*": "./dist/global/*"
@@ -32,5 +69,8 @@
     "esbuild": "^0.24.2",
     "openapi-typescript": "^7.4.4",
     "typescript": "^5.7.2"
+  },
+  "dependencies": {
+    "yaml": "^2.6.1"
   }
 }

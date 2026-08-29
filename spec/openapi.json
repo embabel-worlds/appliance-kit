@@ -131,7 +131,7 @@
     },
     "/api/v1/admin/handlers/list": {
       "post": {
-        "operationId": "list_3",
+        "operationId": "list_5",
         "responses": {
           "200": {
             "content": {
@@ -653,7 +653,7 @@
     },
     "/api/v1/admin/kg/decorate": {
       "get": {
-        "operationId": "list_6",
+        "operationId": "list_9",
         "responses": {
           "200": {
             "content": {
@@ -876,6 +876,149 @@
         "summary": "Execute verbatim Cypher through the virtual-cypher engine, synchronously, watched, or in the background",
         "tags": [
           "Virtual Cypher"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/fills": {
+      "get": {
+        "operationId": "list_4",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/Fill"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The acting user's fills"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "The acting user's fills, newest first, with tick and live-call progress",
+        "tags": [
+          "KG Fills"
+        ]
+      },
+      "post": {
+        "operationId": "start",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/StartFillRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Fill"
+                }
+              }
+            },
+            "description": "The fill, as started"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "Start a slow, resumable fill of an expensive materialization",
+        "tags": [
+          "KG Fills"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/fills/{id}": {
+      "delete": {
+        "operationId": "cancel",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "additionalProperties": {},
+                  "type": "object"
+                }
+              }
+            },
+            "description": "The cancelled fill's id and its new state"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "Cancel a fill — completed chunks stay cached; nothing is rolled back",
+        "tags": [
+          "KG Fills"
         ]
       }
     },
@@ -1403,7 +1546,7 @@
     },
     "/api/v1/admin/kg/scopes": {
       "get": {
-        "operationId": "list_5",
+        "operationId": "list_8",
         "parameters": [
           {
             "in": "query",
@@ -1444,7 +1587,7 @@
     },
     "/api/v1/admin/kg/scopes/{name}": {
       "delete": {
-        "operationId": "delete_3",
+        "operationId": "delete_4",
         "parameters": [
           {
             "in": "query",
@@ -1758,6 +1901,74 @@
           }
         },
         "summary": "Delete a user-authored view from the acting user's world",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/views/{name}/contract": {
+      "post": {
+        "operationId": "generateViewContract",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KgGenerateContractRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgGenerateContractResponse"
+                }
+              }
+            },
+            "description": "The drafted contract and what was done with it"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgContractRefusal"
+                }
+              }
+            },
+            "description": "The view's output shape is not contractable, or the draft could not be saved"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "Draft an ODCS contract for a saved view, optionally sampling, saving and binding it",
         "tags": [
           "Virtual Cypher"
         ]
@@ -2100,6 +2311,253 @@
           "Hints"
         ]
       }
+    },
+    "/api/v1/tours": {
+      "get": {
+        "description": "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
+        "operationId": "list_6",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourListResponse"
+                }
+              }
+            },
+            "description": "Every tour declared for the acting user's world"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Every tour this world offers",
+        "tags": [
+          "Tours"
+        ]
+      }
+    },
+    "/api/v1/tours/import": {
+      "post": {
+        "description": "The body is a tour FILE, not a JSON object: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
+        "operationId": "import",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TourImportRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourListResponse"
+                }
+              }
+            },
+            "description": "The tours as stored, with the ids this world gave them"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourRefusal"
+                }
+              }
+            },
+            "description": "A tour of that name is already shipped here — `error` names which one"
+          }
+        },
+        "summary": "Store a tour somebody exported, or a client recorded",
+        "tags": [
+          "Tours"
+        ]
+      }
+    },
+    "/api/v1/tours/{id}": {
+      "delete": {
+        "description": "A realm's tour and the world's own are not deletable here — they leave when whatever shipped them leaves. `deleted` is false rather than a 404 for those: the tour exists, it is simply not the caller's to remove.",
+        "operationId": "delete_3",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourDeletedResponse"
+                }
+              }
+            },
+            "description": "Whether a saved tour was removed"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Delete a tour this user saved",
+        "tags": [
+          "Tours"
+        ]
+      }
+    },
+    "/api/v1/tours/{id}/export": {
+      "get": {
+        "description": "What a user hands to somebody else. Round-trips through the import below, and is byte-for-byte the shape this server loads from a realm — so a tour that was exported, edited and re-imported is not a second dialect.",
+        "operationId": "export_1",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "The tour's YAML"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          },
+          "404": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourRefusal"
+                }
+              }
+            },
+            "description": "No tour of that id in this world"
+          }
+        },
+        "summary": "One tour as the file it would be",
+        "tags": [
+          "Tours"
+        ]
+      }
+    },
+    "/api/v1/tours/{id}/steps/{index}/status": {
+      "post": {
+        "description": "Answered WHEN THE STEP IS REACHED, not when the tour is fetched: a tour changes the world as it walks through it, so a verdict computed at load time describes a world that no longer exists. UNKNOWN means the step's own query could not be answered — `detail` says why — and a client should run the step anyway. Repeating a step is visible and recoverable; silently skipping one is neither. A POST rather than a GET because the tour's collected parameters are the body: the condition worth writing is usually about the thing the user just named, and without them the only expressible preconditions are those that depend on no answer.",
+        "operationId": "stepStatus",
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "index",
+            "required": true,
+            "schema": {
+              "format": "int32",
+              "type": "integer"
+            }
+          },
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/TourStepStatusRequest"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/TourStepStatusResponse"
+                }
+              }
+            },
+            "description": "DONE, TODO or UNKNOWN"
+          },
+          "401": {
+            "description": "Basic-auth challenge failed"
+          }
+        },
+        "summary": "Is this step already satisfied?",
+        "tags": [
+          "Tours"
+        ]
+      }
     }
   },
   "components": {
@@ -2117,6 +2575,193 @@
         "required": [
           "params",
           "statement"
+        ],
+        "type": "object"
+      },
+      "DataContractBindingSpec": {
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "observe",
+              "enforce"
+            ],
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "mode",
+          "object",
+          "version"
+        ],
+        "type": "object"
+      },
+      "DataContractCheck": {
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "message": {
+            "type": "string"
+          },
+          "ruleId": {
+            "type": "string"
+          },
+          "scope": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "PASS",
+              "WARN",
+              "FAIL",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "kind",
+          "ruleId",
+          "verdict"
+        ],
+        "type": "object"
+      },
+      "DataContractEvaluation": {
+        "properties": {
+          "apiVersion": {
+            "type": "string"
+          },
+          "available": {
+            "type": "boolean"
+          },
+          "blocksRows": {
+            "type": "boolean"
+          },
+          "checkedAt": {
+            "type": "string"
+          },
+          "checks": {
+            "items": {
+              "$ref": "#/components/schemas/DataContractCheck"
+            },
+            "type": "array"
+          },
+          "id": {
+            "type": "string"
+          },
+          "mode": {
+            "enum": [
+              "observe",
+              "enforce"
+            ],
+            "type": "string"
+          },
+          "object": {
+            "type": "string"
+          },
+          "status": {
+            "type": "string"
+          },
+          "verdict": {
+            "enum": [
+              "PASS",
+              "WARN",
+              "FAIL",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "apiVersion",
+          "available",
+          "blocksRows",
+          "checkedAt",
+          "checks",
+          "id",
+          "mode",
+          "object",
+          "status",
+          "verdict",
+          "version"
+        ],
+        "type": "object"
+      },
+      "Fill": {
+        "properties": {
+          "budgetPerTick": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "cypher": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "progress": {
+            "$ref": "#/components/schemas/FillProgress"
+          },
+          "userId": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "budgetPerTick",
+          "cypher",
+          "id",
+          "label",
+          "progress",
+          "userId"
+        ],
+        "type": "object"
+      },
+      "FillProgress": {
+        "properties": {
+          "createdAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "lastError": {
+            "type": "string"
+          },
+          "lastTickAt": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "liveCallsTotal": {
+            "format": "int64",
+            "type": "integer"
+          },
+          "state": {
+            "type": "string"
+          },
+          "ticks": {
+            "format": "int64",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "createdAt",
+          "liveCallsTotal",
+          "state",
+          "ticks"
         ],
         "type": "object"
       },
@@ -2225,6 +2870,13 @@
           },
           "english": {
             "type": "string"
+          },
+          "skills": {
+            "description": "Skills to bundle. They are handed to the writing model as references — prompt contribution AND tools — so a realm's documented idioms are followed rather than re-derived.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
@@ -2303,7 +2955,19 @@
           "autonomous": {
             "type": "boolean"
           },
+          "inputTypeNames": {
+            "description": "Domain types it consumes; empty means reaction-only (dispatcher, never planner).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
           "name": {
+            "type": "string"
+          },
+          "outputTypeName": {
+            "description": "Domain type it returns, or 'void'.",
             "type": "string"
           },
           "schedule": {
@@ -2313,13 +2977,23 @@
           "signalType": {
             "description": "The signal type that fires it; '*' = none.",
             "type": "string"
+          },
+          "skills": {
+            "description": "Skills bundled with it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           }
         },
         "required": [
           "active",
           "autonomous",
+          "inputTypeNames",
           "name",
-          "signalType"
+          "outputTypeName",
+          "signalType",
+          "skills"
         ],
         "type": "object"
       },
@@ -2348,7 +3022,19 @@
           "description": {
             "type": "string"
           },
+          "inputTypeNames": {
+            "description": "Domain types it consumes; empty means reaction-only.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
           "name": {
+            "type": "string"
+          },
+          "outputTypeName": {
+            "description": "Domain type it returns, or 'void'.",
             "type": "string"
           },
           "schedule": {
@@ -2357,6 +3043,13 @@
           "signalType": {
             "type": "string"
           },
+          "skills": {
+            "description": "Skills bundled with it, round-tripped so an edit does not drop them.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
           "source": {
             "type": "string"
           }
@@ -2364,8 +3057,11 @@
         "required": [
           "autonomous",
           "description",
+          "inputTypeNames",
           "name",
+          "outputTypeName",
           "signalType",
+          "skills",
           "source"
         ],
         "type": "object"
@@ -2392,7 +3088,23 @@
           "autonomous": {
             "type": "boolean"
           },
+          "description": {
+            "description": "One line describing what it does. Defaults to the name.",
+            "type": "string"
+          },
+          "inputTypeNames": {
+            "description": "Domain types this action consumes. Declaring them makes it planner-chainable rather than reaction-only.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array",
+            "uniqueItems": true
+          },
           "name": {
+            "type": "string"
+          },
+          "outputTypeName": {
+            "description": "Domain type the body returns, bound on the blackboard so later actions chain on it. 'void' for a side-effecting action.",
             "type": "string"
           },
           "schedule": {
@@ -2402,6 +3114,13 @@
           "signalType": {
             "description": "`Signal.typeName` (or simple name) that fires this handler; '*' = none.",
             "type": "string"
+          },
+          "skills": {
+            "description": "Skills bundled with this agent, put in front of the model that writes and refines it.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
           },
           "source": {
             "type": "string"
@@ -2725,6 +3444,83 @@
         ],
         "type": "object"
       },
+      "KgContractColumn": {
+        "description": "One drafted column, and whether its entry was read or inferred.",
+        "properties": {
+          "evidence": {
+            "description": "`declared` (read from the view) or `sampled` (inferred from rows).",
+            "type": "string"
+          },
+          "logicalType": {
+            "description": "ODCS logical type, present only when a sample agreed unanimously.",
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "suggestions": {
+            "description": "What the sample SUGGESTS but does not prove, as ODCS extension keys.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "evidence",
+          "name",
+          "suggestions"
+        ],
+        "type": "object"
+      },
+      "KgContractDisposition": {
+        "description": "What the server actually did, separate from what it drafted.",
+        "properties": {
+          "bound": {
+            "description": "Whether the view now pins this contract in `observe` mode.",
+            "type": "boolean"
+          },
+          "notes": {
+            "description": "Human-readable notes: what was not done, and why.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "sampleRows": {
+            "description": "Rows read while sampling. Zero when the view was not run.",
+            "format": "int32",
+            "type": "integer"
+          },
+          "sampleTruncated": {
+            "description": "Whether sampling stopped at its row cap.",
+            "type": "boolean"
+          },
+          "savedAs": {
+            "description": "World-relative path written, or null when this was a preview.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "bound",
+          "notes",
+          "sampleRows",
+          "sampleTruncated"
+        ],
+        "type": "object"
+      },
+      "KgContractRefusal": {
+        "description": "A refusal to draft a contract, naming what about the view made it impossible.",
+        "properties": {
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
       "KgDecorationReport": {
         "description": "What one decoration tick did.",
         "properties": {
@@ -2861,6 +3657,76 @@
         },
         "required": [
           "cypher"
+        ],
+        "type": "object"
+      },
+      "KgGenerateContractRequest": {
+        "description": "How to draft an ODCS contract for a named view, and how far to go with it.",
+        "properties": {
+          "args": {
+            "additionalProperties": {},
+            "description": "Arguments for a parameterized view. Used only when sampling.",
+            "type": "object"
+          },
+          "bind": {
+            "description": "Also pin the view to the new contract in `observe` mode. Requires `persist`.",
+            "type": "boolean"
+          },
+          "persist": {
+            "description": "Write the draft into the world. False previews it and writes nothing.",
+            "type": "boolean"
+          },
+          "sample": {
+            "description": "Run the view under a row cap to infer types and suggestions. Off by default: generation reads the declaration only unless asked to touch data.",
+            "type": "boolean"
+          }
+        },
+        "type": "object"
+      },
+      "KgGenerateContractResponse": {
+        "description": "A drafted ODCS contract for a named view, in `draft` status and unreviewed.",
+        "properties": {
+          "columns": {
+            "items": {
+              "$ref": "#/components/schemas/KgContractColumn"
+            },
+            "type": "array"
+          },
+          "contractId": {
+            "type": "string"
+          },
+          "disposition": {
+            "$ref": "#/components/schemas/KgContractDisposition",
+            "description": "What was written and bound, and what an author still has to do."
+          },
+          "mode": {
+            "description": "`declaration` or `sample` — how much of this draft came from data.",
+            "type": "string"
+          },
+          "status": {
+            "description": "ODCS status of the generated document. Always `draft`.",
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "view": {
+            "type": "string"
+          },
+          "yaml": {
+            "description": "The contract document. Review this before promoting anything.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "columns",
+          "contractId",
+          "disposition",
+          "mode",
+          "status",
+          "version",
+          "view",
+          "yaml"
         ],
         "type": "object"
       },
@@ -3012,6 +3878,10 @@
           "cypher": {
             "description": "The cypher that actually ran, after scope rewriting.",
             "type": "string"
+          },
+          "dataContract": {
+            "$ref": "#/components/schemas/DataContractEvaluation",
+            "description": "The pinned ODCS identity and invocation verdict, for a contracted named view only."
           },
           "durationMs": {
             "description": "Total: bridge-resolve plus materialize plus read.",
@@ -3587,6 +4457,171 @@
         ],
         "type": "object"
       },
+      "StartFillRequest": {
+        "properties": {
+          "budgetPerTick": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "cypher": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "budgetPerTick",
+          "cypher",
+          "label"
+        ],
+        "type": "object"
+      },
+      "TourDeletedResponse": {
+        "description": "Whether a saved tour was removed",
+        "properties": {
+          "deleted": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "deleted"
+        ],
+        "type": "object"
+      },
+      "TourImportRequest": {
+        "description": "A tour file to store",
+        "properties": {
+          "yaml": {
+            "description": "The tour's YAML, as exported or as a realm would ship it",
+            "type": "string"
+          }
+        },
+        "required": [
+          "yaml"
+        ],
+        "type": "object"
+      },
+      "TourListResponse": {
+        "description": "Every tour declared for a world",
+        "properties": {
+          "tours": {
+            "items": {
+              "$ref": "#/components/schemas/TourSummary"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "tours"
+        ],
+        "type": "object"
+      },
+      "TourRefusal": {
+        "description": "Why a tour was refused, in the server's own words",
+        "properties": {
+          "error": {
+            "description": "The refusal, as a sentence to show the user",
+            "type": "string"
+          }
+        },
+        "required": [
+          "error"
+        ],
+        "type": "object"
+      },
+      "TourStepStatusRequest": {
+        "description": "The parameters a tour has collected so far, bound into the step's precondition",
+        "properties": {
+          "params": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "params"
+        ],
+        "type": "object"
+      },
+      "TourStepStatusResponse": {
+        "description": "Whether a step's precondition is already satisfied",
+        "properties": {
+          "detail": {
+            "description": "Why, when the status is UNKNOWN — the query error in the author's words",
+            "type": "string"
+          },
+          "status": {
+            "enum": [
+              "DONE",
+              "TODO",
+              "UNKNOWN"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
+        ],
+        "type": "object"
+      },
+      "TourStepView": {
+        "description": "One step, as its file declared it — minus the precondition, which stays server-side",
+        "properties": {
+          "presentation": {
+            "additionalProperties": {},
+            "type": "object"
+          }
+        },
+        "required": [
+          "presentation"
+        ],
+        "type": "object"
+      },
+      "TourSummary": {
+        "description": "A tour: its identity, its provenance, and the client's own declarations",
+        "properties": {
+          "declaredId": {
+            "description": "What the tour's own file called it — the id that survives an export",
+            "type": "string"
+          },
+          "deletable": {
+            "description": "This world can remove it. NOT the same as userSaved: a tour hand-written into a user's own config is theirs but is not this server's to delete, so a client offering Delete for it would offer a button that silently does nothing.",
+            "type": "boolean"
+          },
+          "id": {
+            "description": "Unique within this world, and what every other call addresses",
+            "type": "string"
+          },
+          "presentation": {
+            "additionalProperties": {},
+            "description": "Everything the tour's YAML declared beyond id and steps, uninterpreted",
+            "type": "object"
+          },
+          "source": {
+            "description": "The realm that shipped it, or absent for a world's own and a user's own. Carried rather than derived from the id — a namespace prefix is not something a client can reliably strip.",
+            "type": "string"
+          },
+          "steps": {
+            "items": {
+              "$ref": "#/components/schemas/TourStepView"
+            },
+            "type": "array"
+          },
+          "userSaved": {
+            "description": "Imported or recorded by this user, rather than shipped by a realm or the world",
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "declaredId",
+          "deletable",
+          "id",
+          "presentation",
+          "steps",
+          "userSaved"
+        ],
+        "type": "object"
+      },
       "ViewDebugInfo": {
         "properties": {
           "cachedMembers": {
@@ -3595,6 +4630,9 @@
           },
           "cypher": {
             "type": "string"
+          },
+          "dataContract": {
+            "$ref": "#/components/schemas/DataContractBindingSpec"
           },
           "description": {
             "type": "string"

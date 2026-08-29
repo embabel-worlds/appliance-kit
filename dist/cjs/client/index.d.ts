@@ -10,6 +10,8 @@ export { DocumentsClient, newOperationId } from './documents.ts';
 export type { Answer, AskRequest, Citation, DateField, DocumentList, IngestedDocument, } from './documents.ts';
 export { HintsClient } from './hints.ts';
 export type { Hint, HintAction, HintSurface } from './hints.ts';
+export { ToursClient } from './tours.ts';
+export type { TourSummary, TourStepView, TourListResponse, TourStepStatusResponse, TourDeletedResponse, } from './tours.ts';
 export { classifySource } from './citations.ts';
 export type { CitedSource, SourceKind } from './citations.ts';
 export { HandlersClient } from './handlers.ts';
@@ -19,6 +21,7 @@ import { DocumentsClient } from './documents.ts';
 import { HandlersClient } from './handlers.ts';
 import { HintsClient } from './hints.ts';
 import { KgClient } from './kg.ts';
+import { ToursClient } from './tours.ts';
 import { type HttpTransportConfig, type Transport } from './transport.ts';
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
 export declare class ApplianceClient {
@@ -27,6 +30,7 @@ export declare class ApplianceClient {
     readonly handlers: HandlersClient;
     readonly documents: DocumentsClient;
     readonly hints: HintsClient;
+    readonly tours: ToursClient;
     constructor(transport: Transport);
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
     static sameOrigin(config?: Omit<HttpTransportConfig, 'baseUrl'>): ApplianceClient;
