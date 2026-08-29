@@ -57,7 +57,7 @@ function parseTarget(text) {
  * quietly — turns a typo into a tour that runs to the end having done less than it said, which is
  * the failure mode hardest to notice and worst to debug.
  */
-function parseStep(presentation) {
+function parseStep(presentation, watchable = false) {
     // `say` IS BOTH A VERB AND A MODIFIER, and the action wins.
     //
     // `say:` on its own is narration; `say:` beside `invoke:` is the narration for that step. Any
@@ -74,6 +74,7 @@ function parseStep(presentation) {
     const step = {
         verb,
         by,
+        watchable,
         raw: presentation,
         say: verb === 'say' ? str(subject) : str(presentation.say),
         hint: str(presentation.hint),
@@ -123,7 +124,7 @@ function parseTour(wire) {
         params,
         steps: (wire.steps ?? []).map((s, i) => {
             try {
-                return parseStep(s.presentation ?? {});
+                return parseStep(s.presentation ?? {}, s.watchable === true);
             }
             catch (e) {
                 throw new TourFormatError(`step ${i + 1}: ${e.message}`);

@@ -85,6 +85,15 @@ export interface TourStep {
   otherwise?: string
   /** The question the step asks, for `ask`. */
   question?: string
+  /**
+   * This step has a precondition — the server said so without saying what it is.
+   *
+   * What it buys is the step a tour cannot otherwise do well: hand something over to the user that
+   * happens OUTSIDE the app, and carry on by itself when the world says they have done it. "Open a
+   * terminal and connect a coding agent" cannot be driven and should not be; but the appliance
+   * knows the moment a coding agent connects, so the tour can simply notice.
+   */
+  watchable: boolean
   /** Everything the file declared, for a host that wants a field this kit has not heard of. */
   raw: Readonly<Record<string, unknown>>
 }
@@ -133,7 +142,7 @@ export interface WireTour {
   deletable?: boolean
   source?: string
   presentation: Record<string, unknown>
-  steps: { presentation: Record<string, unknown> }[]
+  steps: { presentation: Record<string, unknown>; watchable?: boolean }[]
 }
 
 export class TourFormatError extends Error {}
@@ -166,7 +175,7 @@ export function parseTarget(text: string): TourTarget {
  * quietly — turns a typo into a tour that runs to the end having done less than it said, which is
  * the failure mode hardest to notice and worst to debug.
  */
-export function parseStep(presentation: Record<string, unknown>): TourStep {
+export function parseStep(presentation: Record<string, unknown>, watchable = false): TourStep {
   // `say` IS BOTH A VERB AND A MODIFIER, and the action wins.
   //
   // `say:` on its own is narration; `say:` beside `invoke:` is the narration for that step. Any
@@ -183,6 +192,7 @@ export function parseStep(presentation: Record<string, unknown>): TourStep {
   const step: TourStep = {
     verb,
     by,
+    watchable,
     raw: presentation,
     say: verb === 'say' ? str(subject) : str(presentation.say),
     hint: str(presentation.hint),
@@ -232,7 +242,7 @@ export function parseTour(wire: WireTour): Tour {
     params,
     steps: (wire.steps ?? []).map((s, i) => {
       try {
-        return parseStep(s.presentation ?? {})
+        return parseStep(s.presentation ?? {}, s.watchable === true)
       } catch (e) {
         throw new TourFormatError(`step ${i + 1}: ${(e as Error).message}`)
       }

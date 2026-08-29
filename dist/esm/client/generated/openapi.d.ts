@@ -1557,6 +1557,8 @@ export interface components {
             presentation: {
                 [key: string]: unknown;
             };
+            /** @description This step HAS a precondition, without saying what it is. A client that hands a step to the user can then poll for it and carry on by itself when the world says the user has done the thing — go and connect a coding agent, and the tour notices. Without this flag a client would have to poll every hand-over blindly, spending a query every few seconds on steps that can never come true. */
+            watchable: boolean;
         };
         /** @description A tour: its identity, its provenance, and the client's own declarations */
         TourSummary: {

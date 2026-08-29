@@ -59,6 +59,15 @@ export interface TourStep {
     otherwise?: string;
     /** The question the step asks, for `ask`. */
     question?: string;
+    /**
+     * This step has a precondition — the server said so without saying what it is.
+     *
+     * What it buys is the step a tour cannot otherwise do well: hand something over to the user that
+     * happens OUTSIDE the app, and carry on by itself when the world says they have done it. "Open a
+     * terminal and connect a coding agent" cannot be driven and should not be; but the appliance
+     * knows the moment a coding agent connects, so the tour can simply notice.
+     */
+    watchable: boolean;
     /** Everything the file declared, for a host that wants a field this kit has not heard of. */
     raw: Readonly<Record<string, unknown>>;
 }
@@ -106,6 +115,7 @@ export interface WireTour {
     presentation: Record<string, unknown>;
     steps: {
         presentation: Record<string, unknown>;
+        watchable?: boolean;
     }[];
 }
 export declare class TourFormatError extends Error {
@@ -120,7 +130,7 @@ export declare function parseTarget(text: string): TourTarget;
  * quietly — turns a typo into a tour that runs to the end having done less than it said, which is
  * the failure mode hardest to notice and worst to debug.
  */
-export declare function parseStep(presentation: Record<string, unknown>): TourStep;
+export declare function parseStep(presentation: Record<string, unknown>, watchable?: boolean): TourStep;
 /** A tour from the wire. Throws [TourFormatError] on a step this kit cannot read. */
 export declare function parseTour(wire: WireTour): Tour;
 //# sourceMappingURL=tour.d.ts.map

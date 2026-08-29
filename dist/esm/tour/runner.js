@@ -17,6 +17,16 @@
  * the fail-soft matters and is decided server-side — UNKNOWN means run it, because repeating a step
  * is visible and recoverable while silently skipping one is neither.
  */
+/**
+ * How often a handed-over step asks the world whether the user has done it yet, backing off.
+ *
+ * Every poll is a Cypher query run as the user. Somebody who has gone to a terminal may be ten
+ * minutes, and a fixed four-second poll would spend a hundred and fifty queries waiting for them —
+ * so it starts responsive, because most people come back quickly, and slackens for the ones who do
+ * not. It never stops: the whole point is that they need not come back and press anything.
+ */
+const WATCH_MS = 4000;
+const WATCH_MAX_MS = 20_000;
 /** `{{ name }}` — the only interpolation there is. */
 export function interpolate(text, params) {
     return text.replace(/\{\{\s*([A-Za-z0-9_.-]+)\s*\}\}/g, (whole, name) => Object.prototype.hasOwnProperty.call(params, name) ? (params[name] ?? whole) : whole);
@@ -197,7 +207,16 @@ export class TourRun {
             //
             // A declined hand-over is a SKIP, not a stop: the user has decided this step is not for them,
             // and the rest of the tour may still be exactly what they wanted.
-            await this.host.handOver(step);
+            //
+            // AND THE WORLD CAN ANSWER FOR THEM. A step handed over because it happens OUTSIDE the app —
+            // open a terminal, connect a coding agent — cannot be driven and should not be. But when the
+            // step declares a precondition, the appliance knows the moment it comes true, so the tour
+            // waits for EITHER the button or the world and carries on by itself. That is the difference
+            // between "press Done when you have" and a tour that noticed.
+            const index = this.cursor;
+            await Promise.race(step.watchable ?
+                [this.host.handOver(step), this.watchFor(index)]
+                : [this.host.handOver(step)]);
             return true;
         }
         const target = step.target;
@@ -257,6 +276,25 @@ export class TourRun {
                 }
                 return true;
             }
+        }
+    }
+    /**
+     * Resolve once step [index]'s precondition holds.
+     *
+     * Polled rather than pushed, because the appliance has no channel for "this Cypher became true"
+     * — and the interval is deliberately slack: each poll is a query run as the user, and a step
+     * somebody has walked away from could be outstanding for minutes.
+     */
+    async watchFor(index) {
+        let every = WATCH_MS;
+        while (this.is('running', 'pausing', 'paused')) {
+            await new Promise((resolve) => setTimeout(resolve, every));
+            if (!this.is('running', 'pausing', 'paused'))
+                return;
+            const status = await this.host.stepStatus(index, this.params).catch(() => 'UNKNOWN');
+            if (status === 'DONE')
+                return;
+            every = Math.min(Math.round(every * 1.4), WATCH_MAX_MS);
         }
     }
     transition(state) {

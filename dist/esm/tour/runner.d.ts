@@ -129,6 +129,14 @@ export declare class TourRun {
     start(): Promise<TourProgress>;
     /** False means the tour should stop here — an unmet `expect`, or a user who declined. */
     private perform;
+    /**
+     * Resolve once step [index]'s precondition holds.
+     *
+     * Polled rather than pushed, because the appliance has no channel for "this Cypher became true"
+     * — and the interval is deliberately slack: each poll is a query run as the user, and a step
+     * somebody has walked away from could be outstanding for minutes.
+     */
+    private watchFor;
     private transition;
     private progress;
 }

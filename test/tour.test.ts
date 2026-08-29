@@ -28,7 +28,7 @@ const wire = (steps: Record<string, unknown>[], presentation: Record<string, unk
   declaredId: String(presentation.id ?? 'T'),
   userSaved: false,
   presentation: { name: 'A tour', ...presentation },
-  steps: steps.map((presentation) => ({ presentation })),
+  steps: steps.map((presentation) => ({ presentation, watchable: presentation.watchable === true })),
 })
 
 const ME: TourDictionary = {
@@ -273,6 +273,26 @@ suite('running one', () => {
 
     assert.equal(host.handedOver, 1)
     assert.deepEqual(host.did, ['handOver panel.query'])
+  })
+
+  it('a watchable hand-over carries on when the WORLD says the user did it', async () => {
+    // The step a tour cannot drive and should not: go to a terminal, connect a coding agent. The
+    // appliance knows the moment it comes true, so the tour notices rather than waiting on a
+    // button the user is not there to press.
+    const tour = parseTour(
+      wire([{ open: 'panel.query', by: 'user', hint: 'Go and do this outside', watchable: true }, { say: 'done' }]),
+    )
+    const host = new FakeHost()
+    // Never resolves: the user has walked away from the keyboard.
+    host.handOver = () => new Promise<boolean>(() => {})
+    // The world says so on the second ask.
+    let asked = 0
+    host.stepStatus = async () => (++asked >= 2 ? 'DONE' : 'TODO')
+
+    const end = await run(tour, host).start()
+
+    assert.equal(end.state, 'done', 'the tour must finish without the button ever being pressed')
+    assert.ok(asked >= 2)
   })
 
   it('does NOT narrate the hint — it belongs beside the buttons that act on it', async () => {
