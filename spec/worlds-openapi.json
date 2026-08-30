@@ -194,6 +194,15 @@
         "required" : [ "verbs" ],
         "type" : "object"
       },
+      "ChangeRequest" : {
+        "properties" : {
+          "model" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "model" ],
+        "type" : "object"
+      },
       "ChatRequest" : {
         "properties" : {
           "message" : {
@@ -817,6 +826,15 @@
           }
         },
         "required" : [ "authDetails", "authType", "description", "discoveredAt", "endpoints", "name", "sources", "specType", "specUrl", "synthesized" ],
+        "type" : "object"
+      },
+      "DismissRequest" : {
+        "properties" : {
+          "dismissed" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "dismissed" ],
         "type" : "object"
       },
       "DispatchSnapshot" : {
@@ -3387,6 +3405,130 @@
         "required" : [ "count", "maxMillis", "outcome", "totalMillis" ],
         "type" : "object"
       },
+      "TourDeletedResponse" : {
+        "description" : "Whether a saved tour was removed",
+        "properties" : {
+          "deleted" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "deleted" ],
+        "type" : "object"
+      },
+      "TourImportRequest" : {
+        "description" : "A tour file to store",
+        "properties" : {
+          "yaml" : {
+            "description" : "The tour's YAML, as exported or as a realm would ship it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "yaml" ],
+        "type" : "object"
+      },
+      "TourListResponse" : {
+        "description" : "Every tour declared for a world",
+        "properties" : {
+          "tours" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TourSummary"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "tours" ],
+        "type" : "object"
+      },
+      "TourRefusal" : {
+        "description" : "Why a tour was refused, in the server's own words",
+        "properties" : {
+          "error" : {
+            "description" : "The refusal, as a sentence to show the user",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "TourStepStatusRequest" : {
+        "description" : "The parameters a tour has collected so far, bound into the step's precondition",
+        "properties" : {
+          "params" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          }
+        },
+        "required" : [ "params" ],
+        "type" : "object"
+      },
+      "TourStepStatusResponse" : {
+        "description" : "Whether a step's precondition is already satisfied",
+        "properties" : {
+          "detail" : {
+            "description" : "Why, when the status is UNKNOWN — the query error in the author's words",
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "DONE", "TODO", "UNKNOWN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
+      },
+      "TourStepView" : {
+        "description" : "One step, as its file declared it — minus the precondition, which stays server-side",
+        "properties" : {
+          "presentation" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "watchable" : {
+            "description" : "This step HAS a precondition, without saying what it is. A client that hands a step to the user can then poll for it and carry on by itself when the world says the user has done the thing — go and connect a coding agent, and the tour notices. Without this flag a client would have to poll every hand-over blindly, spending a query every few seconds on steps that can never come true.",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "presentation", "watchable" ],
+        "type" : "object"
+      },
+      "TourSummary" : {
+        "description" : "A tour: its identity, its provenance, and the client's own declarations",
+        "properties" : {
+          "declaredId" : {
+            "description" : "What the tour's own file called it — the id that survives an export",
+            "type" : "string"
+          },
+          "deletable" : {
+            "description" : "This world can remove it. NOT the same as userSaved: a tour hand-written into a user's own config is theirs but is not this server's to delete, so a client offering Delete for it would offer a button that silently does nothing.",
+            "type" : "boolean"
+          },
+          "id" : {
+            "description" : "Unique within this world, and what every other call addresses",
+            "type" : "string"
+          },
+          "presentation" : {
+            "additionalProperties" : { },
+            "description" : "Everything the tour's YAML declared beyond id and steps, uninterpreted",
+            "type" : "object"
+          },
+          "source" : {
+            "description" : "The realm that shipped it, or absent for a world's own and a user's own. Carried rather than derived from the id — a namespace prefix is not something a client can reliably strip.",
+            "type" : "string"
+          },
+          "steps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/TourStepView"
+            },
+            "type" : "array"
+          },
+          "userSaved" : {
+            "description" : "Imported or recorded by this user, rather than shipped by a realm or the world",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "declaredId", "deletable", "id", "presentation", "steps", "userSaved" ],
+        "type" : "object"
+      },
       "TransitionRule" : {
         "properties" : {
           "crossesAbove" : {
@@ -4798,7 +4940,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_8",
+        "operationId" : "list_9",
         "responses" : {
           "200" : {
             "content" : {
@@ -5616,7 +5758,7 @@
     },
     "/api/v1/admin/kg/scopes" : {
       "get" : {
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -5653,7 +5795,7 @@
     },
     "/api/v1/admin/kg/scopes/{name}" : {
       "delete" : {
-        "operationId" : "delete_3",
+        "operationId" : "delete_4",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -7338,7 +7480,7 @@
     "/api/v1/chat/status" : {
       "get" : {
         "description" : "Returns the status of the user's chat session and any running agent processes. Use this to monitor progress of long-running actions.",
-        "operationId" : "status_1",
+        "operationId" : "status_2",
         "responses" : {
           "200" : {
             "content" : {
@@ -8673,10 +8815,79 @@
         "tags" : [ "Documents" ]
       }
     },
+    "/api/v1/embeddings" : {
+      "get" : {
+        "description" : "`configured` false means document features are off — `reason` says so in the words to show somebody, and names the command that fixes it.",
+        "operationId" : "status",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Whether documents can be embedded, and with what",
+        "tags" : [ "Embeddings" ]
+      },
+      "post" : {
+        "description" : "RE-EMBEDS EVERYTHING. Vector indexes are created at a model's own dimensions, so a different model means every stored vector is wrong until it is recomputed — this drops the indexes, walks each store, re-embeds, and rebuilds them at the new width, restoring the previous model if any of that fails. Setting the first model on an appliance that has none is the cheap case: there is nothing to re-embed yet.",
+        "operationId" : "change",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Changed"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such model, or it could not be reached"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "A reindex is already running"
+          }
+        },
+        "summary" : "Change the embedding model",
+        "tags" : [ "Embeddings" ]
+      }
+    },
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "responses" : {
           "200" : {
             "content" : {
@@ -9726,6 +9937,81 @@
         "tags" : [ "Models" ]
       }
     },
+    "/api/v1/next-steps" : {
+      "get" : {
+        "description" : "`status` is DONE, TODO or UNKNOWN. UNKNOWN means the step's own query could not be answered — `detail` says why — and must not be shown as outstanding work: a surface that nags on a broken query nags hardest when the appliance is least well.",
+        "operationId" : "nextSteps",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Every declared onboarding step, with whether it is already done",
+        "tags" : [ "Next steps" ]
+      }
+    },
+    "/api/v1/next-steps/{id}/dismissed" : {
+      "put" : {
+        "description" : "The only remembered thing here: every other answer is derived from the graph. Dismissing does NOT mark a step done — it is still evaluated, so one waved away and then done anyway still reports DONE.",
+        "operationId" : "setDismissed",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DismissRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Say this step is not going to be done, or take that back",
+        "tags" : [ "Next steps" ]
+      }
+    },
     "/api/v1/notifications" : {
       "delete" : {
         "operationId" : "dismissAll",
@@ -10660,6 +10946,229 @@
         "tags" : [ "Themes" ]
       }
     },
+    "/api/v1/tours" : {
+      "get" : {
+        "description" : "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
+        "operationId" : "list_6",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourListResponse"
+                }
+              }
+            },
+            "description" : "Every tour declared for the acting user's world"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          }
+        },
+        "summary" : "Every tour this world offers",
+        "tags" : [ "Tours" ]
+      }
+    },
+    "/api/v1/tours/import" : {
+      "post" : {
+        "description" : "`yaml` carries a tour FILE, not a JSON rendering of a tour: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship and what `/export` returned. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
+        "operationId" : "import",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TourImportRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourListResponse"
+                }
+              }
+            },
+            "description" : "The tours as stored, with the ids this world gave them"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourRefusal"
+                }
+              }
+            },
+            "description" : "A tour of that name is already shipped here — `error` names which one"
+          }
+        },
+        "summary" : "Store a tour somebody exported, or a client recorded",
+        "tags" : [ "Tours" ]
+      }
+    },
+    "/api/v1/tours/{id}" : {
+      "delete" : {
+        "description" : "A realm's tour and the world's own are not deletable here — they leave when whatever shipped them leaves. `deleted` is false rather than a 404 for those: the tour exists, it is simply not the caller's to remove.",
+        "operationId" : "delete_3",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourDeletedResponse"
+                }
+              }
+            },
+            "description" : "Whether a saved tour was removed"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          }
+        },
+        "summary" : "Delete a tour this user saved",
+        "tags" : [ "Tours" ]
+      }
+    },
+    "/api/v1/tours/{id}/export" : {
+      "get" : {
+        "description" : "What a user hands to somebody else. Round-trips through the import below, and is byte-for-byte the shape this server loads from a realm — so a tour that was exported, edited and re-imported is not a second dialect.",
+        "operationId" : "export_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The tour's YAML"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          },
+          "404" : {
+            "content" : {
+              "text/plain" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourRefusal"
+                }
+              }
+            },
+            "description" : "No tour of that id in this world"
+          }
+        },
+        "summary" : "One tour as the file it would be",
+        "tags" : [ "Tours" ]
+      }
+    },
+    "/api/v1/tours/{id}/steps/{index}/status" : {
+      "post" : {
+        "description" : "Answered WHEN THE STEP IS REACHED, not when the tour is fetched: a tour changes the world as it walks through it, so a verdict computed at load time describes a world that no longer exists. UNKNOWN means the step's own query could not be answered — `detail` says why — and a client should run the step anyway. Repeating a step is visible and recoverable; silently skipping one is neither. A POST rather than a GET because the tour's collected parameters are the body: the condition worth writing is usually about the thing the user just named, and without them the only expressible preconditions are those that depend on no answer.",
+        "operationId" : "stepStatus",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "index",
+          "required" : true,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TourStepStatusRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TourStepStatusResponse"
+                }
+              }
+            },
+            "description" : "DONE, TODO or UNKNOWN"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          }
+        },
+        "summary" : "Is this step already satisfied?",
+        "tags" : [ "Tours" ]
+      }
+    },
     "/api/v1/views/{name}/invoke" : {
       "post" : {
         "description" : "Run an authored Virtual-Cypher view by name and return a redacted, typed result envelope. The runnable query is never exposed.",
@@ -11185,7 +11694,7 @@
     "/api/v1/webhooks" : {
       "get" : {
         "description" : "Shows the local and public webhook URLs (detecting a Tailscale funnel when present), configured sources, and queued sources.",
-        "operationId" : "status",
+        "operationId" : "status_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -12274,7 +12783,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46757"
+    "url" : "http://localhost:34111"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -12288,6 +12797,9 @@
   }, {
     "description" : "Protocol for the local sensor app on the user's machine: event ingest and the command outbox",
     "name" : "Sensor"
+  }, {
+    "description" : "Guided walks through a surface, shipped as content",
+    "name" : "Tours"
   }, {
     "description" : "Resolve cited source links to their external home",
     "name" : "Sources"
@@ -12391,6 +12903,9 @@
     "description" : "On-demand catchup / meeting-prep run",
     "name" : "Catchup"
   }, {
+    "description" : "What is set up, and what is not",
+    "name" : "Next steps"
+  }, {
     "description" : "Admin: start, watch and cancel slow resumable materializations of expensive queries",
     "name" : "KG Fills"
   }, {
@@ -12411,5 +12926,8 @@
   }, {
     "description" : "Generate, execute, monitor and cancel scoped knowledge-graph queries, and invoke saved views",
     "name" : "Virtual Cypher"
+  }, {
+    "description" : "The embedding model, and switching it",
+    "name" : "Embeddings"
   } ]
 }
