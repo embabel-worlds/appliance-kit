@@ -8000,6 +8000,29 @@
         "tags" : [ "Config" ]
       }
     },
+    "/api/v1/config/storage" : {
+      "get" : {
+        "description" : "The graph engine this appliance runs on — a server fact, stated so surfaces never guess it.",
+        "operationId" : "getStorage",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Storage facts"
+          }
+        },
+        "summary" : "Get storage configuration",
+        "tags" : [ "Config" ]
+      }
+    },
     "/api/v1/context/observation/location" : {
       "post" : {
         "description" : "Always returns 204. An unauthenticated push or out-of-range coordinates are silently dropped rather than recorded, so 204 does not guarantee the observation was stored.",
@@ -12783,7 +12806,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39705"
+    "url" : "http://localhost:40253"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
