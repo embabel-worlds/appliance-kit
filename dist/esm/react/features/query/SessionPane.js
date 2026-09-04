@@ -59,6 +59,9 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
     const promptCm = useRef(null);
     const promptSchema = useRef(null);
     const submitRef = useRef(() => { });
+    const active = useRef(true);
+    const schemaGeneration = useRef(0);
+    const operationGeneration = useRef(0);
     /* The session's one real query: the newest binding's stages, or the last projection's. */
     const [stages, setStages] = useState(saved?.stages ?? []);
     const [returnClause, setReturnClause] = useState(saved?.returnClause ?? null);
@@ -69,18 +72,28 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
     const findByVariable = (variable) => [...bindings.current].reverse().find((b) => b.variable === variable);
     const current = () => bindings.current.at(-1) ?? null;
     useEffect(() => {
+        active.current = true;
         /* Refetched on focus, like the studio's own schema fetch: a realm installed in another tab
          * adds labels, and completion must not keep offering yesterday's graph. */
         const load = async () => {
+            const generation = ++schemaGeneration.current;
             const outcome = await services.kg.schema();
+            if (!active.current || generation !== schemaGeneration.current)
+                return;
             if (isOk(outcome))
                 promptSchema.current = outcome.value;
         };
         void load();
         const onFocus = () => void load();
         window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, []);
+        return () => {
+            active.current = false;
+            schemaGeneration.current += 1;
+            operationGeneration.current += 1;
+            promptSchema.current = null;
+            window.removeEventListener('focus', onFocus);
+        };
+    }, [services]);
     useEffect(() => {
         if (!promptHost.current || promptCm.current)
             return;
@@ -115,12 +128,13 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
             },
         });
         // One line, always: a pasted multi-line query flattens rather than growing a second prompt row.
-        cm.on('beforeChange', (_cm, change) => {
+        const beforeChange = (_cm, change) => {
             if (change.text.length > 1 && change.update)
                 change.update(change.from, change.to, [change.text.join(' ')]);
-        });
+        };
+        cm.on('beforeChange', beforeChange);
         // Same open-as-you-type triggers as the big editor, against the session-aware hint.
-        cm.on('inputRead', (_cm, change) => {
+        const inputRead = (_cm, change) => {
             if (change.origin !== '+input')
                 return;
             const ch = change.text[change.text.length - 1] ?? '';
@@ -130,8 +144,16 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
             const before = cm.getLine(cursor.line).slice(0, cursor.ch);
             if (/(\(\s*\w*:\w*|\[\s*\w*:\w*|\w+\.\w*|\w+$)/.test(before))
                 complete();
-        });
+        };
+        cm.on('inputRead', inputRead);
         promptCm.current = cm;
+        return () => {
+            cm.off('beforeChange', beforeChange);
+            cm.off('inputRead', inputRead);
+            cm.getWrapperElement().remove();
+            if (promptCm.current === cm)
+                promptCm.current = null;
+        };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     /* The placeholder follows the session: an empty box must SAY it is the place to type, and what
@@ -191,15 +213,21 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
             return append({ input: line, tone: 'error', text: `✗ ${plan.error}` });
         }
         if (plan.kind === 'pin') {
+            const generation = ++operationGeneration.current;
             setBusy(true);
             const outcome = await services.kg.pinScope(plan.pinTarget);
+            if (!active.current || generation !== operationGeneration.current)
+                return;
             setBusy(false);
             if (!isOk(outcome))
                 return append({ input: line, tone: 'error', text: `✗ ${failureMessage(outcome, 'pinning')}` });
             return append({ input: line, tone: 'ok', text: `⇒ $${plan.pinTarget} pinned — survives until you delete it` });
         }
+        const generation = ++operationGeneration.current;
         setBusy(true);
         const outcome = await services.kg.execute(plan.cypher, plan.captureAs ? { captureAs: plan.captureAs } : {});
+        if (!active.current || generation !== operationGeneration.current)
+            return;
         setBusy(false);
         if (!isOk(outcome)) {
             return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${failureMessage(outcome, 'the session line')}` });
@@ -273,6 +301,8 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
         });
         if (entry.scope) {
             await services.kg.deleteScope(entry.scope);
+            if (!active.current)
+                return;
             onCaptured();
         }
     };
@@ -306,6 +336,8 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
             // Server-side too, exactly as the single-row delete does: a scope nothing references is
             // still holding a result set until its TTL, and the user just said they do not want it.
             await Promise.all(scopes.map((name) => services.kg.deleteScope(name)));
+            if (!active.current)
+                return;
             onCaptured();
         }
     };

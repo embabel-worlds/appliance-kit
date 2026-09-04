@@ -40,6 +40,7 @@ import { QueryRuntimeProvider, useQueryRuntime } from "./runtime.js";
  * completion stayed empty for the life of the page.
  */
 const schemaBox = { current: null };
+let schemaOwner = null;
 let hintRegistered = false;
 function registerHint() {
     if (hintRegistered)
@@ -127,6 +128,11 @@ function QueryStudioBody({ handedOver }) {
     const validateSupported = useRef(true);
     const validateTimer = useRef(null);
     const validatedCypher = useRef(null);
+    const active = useRef(true);
+    const schemaGeneration = useRef(0);
+    const validationGeneration = useRef(0);
+    const runGeneration = useRef(0);
+    const owner = useRef(Symbol('query-schema-owner')).current;
     const runRef = useRef(() => { });
     /* Both callbacks go through refs rather than being passed directly. `scheduleValidation`
      * reaches `validateNow`, which reads `handle` — which comes out of this very call — so naming it
@@ -144,18 +150,41 @@ function QueryStudioBody({ handedOver }) {
      * realm install adds labels — and a snapshot taken once at mount quietly stops matching what
      * the engine validates against. Focus is when someone comes back from installing something. */
     const loadSchema = useCallback(async () => {
+        const generation = ++schemaGeneration.current;
         const outcome = await services.kg.schema();
+        if (!active.current || generation !== schemaGeneration.current || schemaOwner !== owner)
+            return;
         if (!isOk(outcome))
             return;
         setSchema(outcome.value);
         schemaBox.current = outcome.value;
-    }, [services]);
+    }, [owner, services]);
     useEffect(() => {
+        active.current = true;
+        schemaOwner = owner;
+        validationGeneration.current += 1;
+        runGeneration.current += 1;
+        validateSupported.current = true;
+        validatedCypher.current = null;
+        setSchema(null);
         void loadSchema();
         const onFocus = () => void loadSchema();
         window.addEventListener('focus', onFocus);
-        return () => window.removeEventListener('focus', onFocus);
-    }, [loadSchema]);
+        return () => {
+            active.current = false;
+            schemaGeneration.current += 1;
+            validationGeneration.current += 1;
+            runGeneration.current += 1;
+            if (validateTimer.current)
+                clearTimeout(validateTimer.current);
+            validateTimer.current = null;
+            window.removeEventListener('focus', onFocus);
+            if (schemaOwner === owner) {
+                schemaOwner = null;
+                schemaBox.current = null;
+            }
+        };
+    }, [loadSchema, owner]);
     /*
      * HOVER A LABEL, READ WHAT IT MEANS.
      *
@@ -229,8 +258,9 @@ function QueryStudioBody({ handedOver }) {
             validatedCypher.current = null;
             return setValidity({ tone: null, text: '', violations: [] });
         }
+        const generation = ++validationGeneration.current;
         const outcome = await services.kg.validate(cypher);
-        if (completeQuery(handle.getText()).cypher !== cypher)
+        if (!active.current || generation !== validationGeneration.current || completeQuery(handle.getText()).cypher !== cypher)
             return;
         if (!isOk(outcome)) {
             if (isAbsent(outcome))
@@ -252,6 +282,7 @@ function QueryStudioBody({ handedOver }) {
             return;
         if (validateTimer.current)
             clearTimeout(validateTimer.current);
+        validationGeneration.current += 1;
         validatedCypher.current = null;
         setValidity((v) => ({ ...v, tone: null, text: '…' }));
         // Anything painted about the OLD text is wrong now.
@@ -266,6 +297,7 @@ function QueryStudioBody({ handedOver }) {
         const { cypher, note: impliedNote } = completeQuery(handle.getText());
         if (!cypher || validatedCypher.current !== cypher)
             return;
+        const generation = ++runGeneration.current;
         setRunning(true);
         setStopping(false);
         // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
@@ -282,6 +314,8 @@ function QueryStudioBody({ handedOver }) {
         setRan(false);
         setRunStatus({ tone: null, text: 'Running — relevance joins fetch live, give it a moment…' });
         const outcome = await services.kg.execute(cypher);
+        if (!active.current || generation !== runGeneration.current)
+            return;
         setRunning(false);
         setStopping(false);
         runningCypher.current = null;

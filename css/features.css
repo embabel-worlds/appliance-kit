@@ -705,4 +705,76 @@ img.approw-icon { width: 20px; height: 20px; }
 /* ── the agent ladder ──────────────────────────────────────────────────────────────────────────
  *
  * Three states, not two booleans. `active` and `autonomous` are what the server stores; Proposed /
+ * Watching / Acting is what they MEAN, and the difference between the middle and the right one is
+ * the only irreversible thing on the page.
+ */
+.stage { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
+  border: 1px solid var(--rule); color: var(--mid); padding: 2px 6px; white-space: nowrap; }
+.stage.proposed { border-color: var(--rule); color: var(--mid); }
+.stage.watching { border-color: var(--signal); color: var(--signal); }
+.stage.acting { border-color: var(--caution); color: var(--caution); }
+/* An honest gap, said in the panel that would otherwise pretend. */
+.hint.gap { border-left: 2px solid var(--caution); padding-left: 10px; }
+.verdict-badge.v-partial { border-color: var(--mid); color: var(--mid); }
+.finding.v-partial { border-left-color: var(--mid); }
+
+/* The signal catalogue: a name, its traffic, and its fields on demand. */
+.signalrow { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; padding: 5px 0; border-bottom: 1px solid var(--rule); }
+.signalrow:last-child { border-bottom: 0; }
+.signalname { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; gap: 2px;
+  background: none; border: 0; padding: 0; text-align: left; cursor: pointer; color: inherit; font: inherit; }
+.signalname small { color: var(--mid); font-size: 11px; }
+.signalfields { flex: 1 1 100%; display: flex; flex-wrap: wrap; gap: 5px; padding: 4px 0 2px; }
+.signalfields code { font-size: 10.5px; color: var(--mid); border: 1px solid var(--rule); padding: 1px 5px; }
+
+/* A crash, rendered as a panel rather than as a blank page. Alert-toned because it is a fault,
+   not a gap — an honest CONTRACT GAP is expected, this is not. */
+.crashpanel { border-color: var(--alert); }
+.crashpanel .panel-head h2 { color: var(--alert); }
+
+/* A TALL ASK. Query Studio asks for a query in one line; an agent takes a paragraph — what it
+   reacts to, what it should check, when it should stay quiet — so the box grows and the button
+   sits at the top of it rather than centred against five rows of text. */
+.ask-row.tall { align-items: flex-start; }
+.ask-row.tall textarea { flex: 1; min-width: 0; resize: vertical; font-family: inherit; line-height: 1.45; }
+
+/* The coding-agent footnote at the bottom of the agents panel. */
+.agent-footnote { border-top: 1px solid var(--hairline); margin-top: 12px; padding-top: 10px; }
+
+/* An empty list, offered as routes in rather than as a sentence about being empty. */
+.emptymenu { display: flex; flex-direction: column; gap: 8px; }
+.emptyroute { display: flex; flex-direction: column; gap: 3px; text-align: left; text-decoration: none;
+  border: 1px solid var(--rule); padding: 9px 11px; color: inherit; background: none; cursor: pointer; font: inherit; }
+.emptyroute:hover, .emptyroute:focus-visible { border-color: var(--signal); outline: none; }
+.emptyroute small { color: var(--mid); font-size: 11.5px; }
+
+/* Receipts: what a watch did, newest first. Dense on purpose — this is a log somebody scans, not
+   a report they read, and the one line that matters is whether anything was published. */
+.receipts { display: flex; flex-direction: column; gap: 8px; margin-top: 8px; }
+.receipt { border-left: 2px solid var(--rule); padding: 5px 0 5px 10px; }
+.receipt-head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.receipt-head small { color: var(--mid); font-family: var(--mono); font-size: 10.5px; }
+.receipt-line { color: var(--mid); font-size: 12.5px; margin: 4px 0 0; }
+.receipt-delivery { color: var(--ink); }
+
+/* Bundling skills with an agent: a chosen set, not a search. Chips because the list is short and
+   the state that matters is which are ON. */
+.skillpicker { margin-top: 12px; }
+.skillchips { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0; }
+.skillchip { font-family: var(--mono); font-size: 10.5px; border: 1px solid var(--rule); color: var(--mid);
+  background: none; padding: 3px 8px; cursor: pointer; }
+.skillchip:hover { border-color: var(--ink); color: var(--ink); }
+.skillchip.is-on { border-color: var(--signal); color: var(--signal); }
+/* A realm's own failure, on its own row. The page-level status line sits below the whole realm
+   list and is off-screen on any world with a few realms — so an update that failed read as an
+   update that did nothing, with the amber "update available" still shouting and no reason given. */
+.realm-problem {
+  margin: 0 0 8px; color: var(--caution); font-size: 12.5px; line-height: 1.5;
+  border-left: 2px solid var(--caution); padding-left: 10px;
+}
+
+/* A pin whose app this world no longer serves. Dimmed rather than removed: the pin is the
+   user's, and it heals itself when the realm — or the world — comes back. */
+.pinchip.is-gone { opacity: 0.45; }
+.pinchip.is-gone .pinchip-name { text-decoration: line-through; text-decoration-thickness: 1px; }
 }

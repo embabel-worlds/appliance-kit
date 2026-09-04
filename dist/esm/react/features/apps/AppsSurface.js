@@ -215,8 +215,15 @@ export function AppsSurface({ services, host }) {
             if (!wanted)
                 return setOpenState(null);
             const found = apps.find((a) => appKey(a) === wanted);
-            if (found)
-                setOpenState(found);
+            if (!found)
+                return;
+            const url = validatedAppUrl(found);
+            if (!url) {
+                setOpenState(null);
+                host.openApp(null);
+                return;
+            }
+            setOpenState({ ...found, url });
         };
         follow();
         return host.subscribeSelection(follow);

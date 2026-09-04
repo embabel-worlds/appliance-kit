@@ -91,6 +91,7 @@ console.log('triggered by', signal?.typeName ?? 'cron tick')
  * rather than whatever had arrived when it was installed.
  */
 const state = { surface: null, schema: null, sample: null };
+let completionOwner = null;
 /** Cypher inside a `kg` call — the fragment doubles as its own alias source. */
 function cypherContext(before) {
     // The last unterminated single- or backtick-quoted string, when it looks like Cypher. Small and
@@ -194,6 +195,10 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     }, [draft, onDraftConsumed]);
     const validateSupported = (0, react_1.useRef)(true);
     const validateTimer = (0, react_1.useRef)(null);
+    const active = (0, react_1.useRef)(true);
+    const validationGeneration = (0, react_1.useRef)(0);
+    const handlersGeneration = (0, react_1.useRef)(0);
+    const dryRunGeneration = (0, react_1.useRef)(0);
     // A compile spins the sandbox, so an edit that undid itself must not buy the same verdict twice.
     const lastValidated = (0, react_1.useRef)(null);
     const dryRunRef = (0, react_1.useRef)(() => { });
@@ -209,14 +214,46 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     });
     registerHint();
     (0, react_1.useEffect)(() => {
+        const owner = Symbol('handler-completion-owner');
+        completionOwner = owner;
+        let current = true;
+        validationGeneration.current += 1;
+        dryRunGeneration.current += 1;
+        validateSupported.current = true;
+        lastValidated.current = null;
+        setSurface(null);
         void (async () => {
             const parsed = await fetchSurface(services);
+            if (!current || completionOwner !== owner)
+                return;
             state.surface = parsed;
             setSurface(parsed);
             const schema = await services.kg.schema();
+            if (!current || completionOwner !== owner)
+                return;
             state.schema = (0, outcome_ts_1.isOk)(schema) ? schema.value : null;
         })();
+        return () => {
+            current = false;
+            if (completionOwner === owner) {
+                completionOwner = null;
+                state.surface = null;
+                state.schema = null;
+            }
+        };
     }, [services]);
+    (0, react_1.useEffect)(() => {
+        active.current = true;
+        return () => {
+            active.current = false;
+            validationGeneration.current += 1;
+            handlersGeneration.current += 1;
+            dryRunGeneration.current += 1;
+            if (validateTimer.current)
+                clearTimeout(validateTimer.current);
+            validateTimer.current = null;
+        };
+    }, []);
     // The editor starts with the starter rather than empty: an empty box does not tell you that
     // `signal` and `gateway` are in scope, and that is the whole shape of a handler.
     const seeded = (0, react_1.useRef)(false);
@@ -227,7 +264,10 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
         handle.setText(STARTER);
     }, [handle]);
     const loadHandlers = (0, react_1.useCallback)(async () => {
+        const generation = ++handlersGeneration.current;
         const outcome = await services.handlers.list();
+        if (!active.current || generation !== handlersGeneration.current)
+            return;
         if (!(0, outcome_ts_1.isOk)(outcome))
             return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'the handlers surface'));
         setListError('');
@@ -259,7 +299,10 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
             return setValidity({ tone: null, text: '', violations: [] });
         if (source === lastValidated.current)
             return;
+        const generation = ++validationGeneration.current;
         const outcome = await services.handlers.validate(source);
+        if (!active.current || generation !== validationGeneration.current || handle.getText().trim() !== source)
+            return;
         if (!(0, outcome_ts_1.isOk)(outcome)) {
             if ((0, chrome_tsx_1.isAbsent)(outcome))
                 validateSupported.current = false;
@@ -276,6 +319,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
             return;
         if (validateTimer.current)
             clearTimeout(validateTimer.current);
+        validationGeneration.current += 1;
         setValidity((v) => ({ ...v, tone: null, text: '…' }));
         // Generous next to Query Studio's 700ms: this one spins a sandbox and runs tsc.
         validateTimer.current = setTimeout(() => void validateNow(), 1500);
@@ -286,10 +330,13 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
         const source = handle.getText().trim();
         if (!source)
             return;
+        const generation = ++dryRunGeneration.current;
         setBusy(true);
         setOutput(null);
         setRunStatus({ tone: null, text: 'Running observe-only on the appliance…' });
         const outcome = await services.handlers.dryRun(source, signalType || undefined);
+        if (!active.current || generation !== dryRunGeneration.current)
+            return;
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome))
             return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'handler dry runs') });

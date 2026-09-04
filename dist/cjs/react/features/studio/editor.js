@@ -45,16 +45,17 @@ function useEditor(options) {
             viewportMargin: Infinity,
             extraKeys: { 'Cmd-Enter': run, 'Ctrl-Enter': run, 'Ctrl-Space': 'autocomplete' },
         });
-        cm.on('change', () => {
+        const onChange = () => {
             if (programmatic.current)
                 return;
             setHandEdited(true);
             callbacks.current.onEdit?.();
-        });
+        };
+        cm.on('change', onChange);
         // Completion opens as you type the characters that BEGIN a completable thing — a label after
         // `(x:`, a relationship after `[:`, a property after `alias.`. Waiting for ⌃Space means most
         // people never discover the schema is there at all.
-        cm.on('inputRead', (_cm, change) => {
+        const onInputRead = (_cm, change) => {
             if (change.origin !== '+input')
                 return;
             const ch = change.text[change.text.length - 1] ?? '';
@@ -65,10 +66,13 @@ function useEditor(options) {
             if (/(\(\s*\w*:\w*|\[\s*\w*:\w*|\w+\.\w*|via:\s*'\w*|ai:\s*\{\s*\w*|\(\s*\w*\s*(?::\s*\w+)?\s*\{[^{}]*)$/.test(before)) {
                 cm.showHint({ completeSingle: false });
             }
-        });
+        };
+        cm.on('inputRead', onInputRead);
         editorRef.current = cm;
         forceRender((n) => n + 1);
         return () => {
+            cm.off('change', onChange);
+            cm.off('inputRead', onInputRead);
             cm.getWrapperElement().remove();
             editorRef.current = null;
         };

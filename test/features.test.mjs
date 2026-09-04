@@ -1,6 +1,8 @@
 import assert from 'node:assert/strict'
+import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
+import postcss from 'postcss'
 import { act, createElement as h } from 'react'
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
@@ -67,6 +69,17 @@ afterEach(async () => {
 })
 
 describe('the public browser feature entry point', () => {
+  it('ships parseable scoped CSS with every extracted workflow block', () => {
+    const css = readFileSync(new URL('../css/features.css', import.meta.url), 'utf8')
+    assert.doesNotThrow(() => postcss.parse(css, { from: 'features.css' }))
+    assert.match(css, /@scope\s+\(\.kit-feature\)/)
+    for (const selector of [
+      '.stage.acting', '.signalrow', '.signalname', '.signalfields', '.emptymenu', '.emptyroute',
+      '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
+      '.realm-problem', '.pinchip.is-gone',
+    ]) assert.equal(css.includes(selector), true, `${selector} style`)
+  })
+
   it('loads the real browser feature exports after browser globals exist', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
@@ -79,7 +92,7 @@ describe('the public browser feature entry point', () => {
   it('keeps apps grouped, pinned and confined to validated same-origin scoped URLs', async () => {
     let pins = []
     const pinListeners = new Set()
-    let selected = null
+    let selected = 'world/evil.html'
     const selectionListeners = new Set()
     const opened = []
     const tabs = []
@@ -103,6 +116,8 @@ describe('the public browser feature entry point', () => {
       services: { listApps: async () => ok(apps), searchApps: async () => ok({ rows: [] }) },
       host,
     }))
+    assert.equal(container.querySelector('iframe'), null)
+    assert.equal(opened.at(-1), null)
     await act(async () => button(container, 'World template').click())
     const rows = [...container.querySelectorAll('.approw')]
     const ledger = rows.find((row) => row.textContent.includes('ledger'))
@@ -113,6 +128,10 @@ describe('the public browser feature entry point', () => {
     assert.equal(pins[0].key, 'world/ledger.html')
     await act(async () => button(evil, 'Open').click())
     assert.equal(opened.some((app) => app?.name === 'evil.html'), false)
+    selected = 'world/evil.html'
+    await act(async () => { for (const listener of selectionListeners) listener() })
+    assert.equal(container.querySelector('iframe'), null)
+    assert.equal(opened.at(-1), null)
     assert.deepEqual(tabs, [])
   })
 
@@ -199,46 +218,67 @@ describe('the public browser feature entry point', () => {
     assert.deepEqual(drafts, [{ signalType: 'view.Overdue.changed', view: 'Overdue' }])
   })
 
-  it('treats a save payload with ok false as failure and keeps enabling separate', async () => {
+  it('dry-runs handlers and keeps a successful save disabled until explicit enable', async () => {
     let enableCalls = 0
+    let saved = false
+    let saveAttempts = 0
+    const dryRuns = []
     const services = {
       kg: { schema: async () => ok({ labels: [], relationships: [] }) },
       handlers: {
-        list: async () => ok({ yours: [], available: [] }),
+        list: async () => ok({ yours: saved ? [{ name: 'triage', active: false, autonomous: false }] : [], available: [] }),
         open: async () => refused('absent'),
         validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
-        dryRun: async () => ok({ ok: true, stdout: '', ranAgainst: {} }),
+        dryRun: async (source, signalType) => { dryRuns.push([source, signalType]); return ok({ ok: true, stdout: 'observed', ranAgainst: { signalType: 'cron', signalId: 'tick-1' } }) },
         setEnabled: async () => { enableCalls += 1; return ok({ enabled: true }) },
         delete: async () => ok({ deleted: true }),
       },
       generateHandler: async () => ok({ source: '', valid: true, attempts: 1 }),
-      saveHandler: async () => ok({ ok: false, message: 'validation failed' }),
+      saveHandler: async (request) => {
+        saveAttempts += 1
+        if (saveAttempts === 1) return ok({ ok: false, message: 'validation failed' })
+        saved = true
+        assert.equal(request.autonomous, false)
+        return ok({ ok: true, message: 'saved' })
+      },
       gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
       signalTypes: async () => ok([]), worldSkills: async () => ok([]),
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
+    await act(async () => button(container, 'Dry run').click())
+    await flush()
+    assert.equal(dryRuns.length, 1)
+    assert.match(container.textContent, /observed/)
     const name = [...container.querySelectorAll('input')].find((input) => input.placeholder === 'pr-triage')
     await act(async () => setInput(name, 'triage'))
     await act(async () => button(container, 'Save agent').click())
     await flush()
     assert.match(container.textContent, /validation failed/)
     assert.equal(enableCalls, 0)
+    await act(async () => button(container, 'Save agent').click())
+    await flush()
+    assert.match(container.textContent, /saved/)
+    assert.equal(enableCalls, 0)
+    await act(async () => button(container, 'Start watching').click())
+    assert.equal(enableCalls, 1)
   })
 
-  it('blocks invalid query execution and aborts a live progress subscription on unmount', async () => {
-    let executeCalls = 0
+  it('covers query validation, scopes, fills, interactive execution and disposal', async () => {
+    let invalidExecuteCalls = 0
     let signal
     const history = { read: () => [], write() {} }
-    const session = { read: () => null, write() {} }
+    const sessionWrites = []
+    const session = { read: () => null, write: (value) => sessionWrites.push(value) }
+    const scope = { name: 'recent', statement: 'MATCH (n)', outputLabel: 'Chunk', members: 2, expiresAt: 'soon' }
     const base = {
       runs: async () => ok([]), schema: async () => ok({ labels: [], relationships: [] }),
       kill: async () => ok({ killed: true }), generate: async () => ok({ cypher: '' }),
       refine: async () => ok({ cypher: '' }), saveView: async () => ok({ saved: true }),
-      scopes: async () => ok({ scopes: [] }), pinScope: async () => ok({ pinned: true }),
+      scopes: async () => ok({ scopes: [scope] }), pinScope: async () => ok({ pinned: true }),
       deleteScope: async () => ok({ deleted: true }),
     }
     const invalidServices = {
-      kg: { ...base, validate: async () => ok({ ok: false, violations: ['bad query'] }), execute: async () => { executeCalls += 1; return ok({ rows: [] }) } },
+      kg: { ...base, validate: async () => ok({ ok: false, violations: ['bad query'] }), execute: async () => { invalidExecuteCalls += 1; return ok({ rows: [] }) } },
       fills: { list: async () => ok([]), create: async () => ok({ id: 'f' }), delete: async () => ok(undefined) },
       subscribeProgress() {},
     }
@@ -247,30 +287,139 @@ describe('the public browser feature entry point', () => {
     await act(async () => cm.setValue('not cypher'))
     assert.equal(button(rendered.container, 'Run').disabled, true)
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 750)) })
-    assert.equal(executeCalls, 0)
+    assert.equal(invalidExecuteCalls, 0)
     assert.match(rendered.container.textContent, /1 schema problem/)
 
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
+    let fillRunning = true
+    const pinned = []
+    const canceled = []
+    const interactiveRuns = []
     const liveServices = {
       ...invalidServices,
-      kg: { ...base, validate: async () => ok({ ok: true, violations: [] }), execute: async () => new Promise(() => {}) },
+      kg: {
+        ...base,
+        pinScope: async (name) => { pinned.push(name); return ok({ pinned: true }) },
+        validate: async () => ok({ ok: true, violations: [] }),
+        execute: async (cypher, options = {}) => {
+          if (options.captureAs) {
+            interactiveRuns.push([cypher, options])
+            return ok({
+              rows: [{ id: 1 }],
+              capturedScope: { name: options.captureAs, outputLabel: 'Chunk', members: 1, expiresAt: 'soon' },
+            })
+          }
+          return new Promise(() => {})
+        },
+      },
+      fills: {
+        list: async () => ok(fillRunning ? [{ id: 'fill-1', label: 'Long query', cypher: 'MATCH (n)', progress: { state: 'RUNNING', ticks: 1, liveCallsTotal: 2 } }] : []),
+        create: async () => ok({ id: 'fill-new' }),
+        delete: async (id) => { canceled.push(id); fillRunning = false; return ok(undefined) },
+      },
       subscribeProgress: (_onEvent, nextSignal) => { signal = nextSignal },
     }
     rendered = await render(h(features.QueryStudioSurface, { services: liveServices, host: { history, interactive: { session } } }))
-    await act(async () => rendered.container.querySelector('.CodeMirror').CodeMirror.setValue('MATCH (n) RETURN n'))
+    await act(async () => button(rendered.container, 'Pin').click())
+    assert.deepEqual(pinned, ['recent'])
+    await act(async () => button(rendered.container, 'Cancel').click())
+    await flush()
+    assert.deepEqual(canceled, ['fill-1'])
+    await act(async () => button(rendered.container, 'Interactive').click())
+    const sessionCm = rendered.container.querySelector('.session-cm .CodeMirror').CodeMirror
+    await act(async () => sessionCm.setValue('MATCH (c:Chunk)'))
+    await act(async () => button(rendered.container, 'Enter').click())
+    await flush()
+    assert.equal(interactiveRuns.length, 1)
+    assert.equal(interactiveRuns[0][1].captureAs, '_1')
+    assert.equal(sessionWrites.at(-1).bindings[0].name, '_1')
+
+    await act(async () => button(rendered.container, 'Query').click())
+    const mainCm = rendered.container.querySelector('.studio-pane-query .CodeMirror').CodeMirror
+    await act(async () => mainCm.setValue('MATCH (n) RETURN n'))
     assert.equal(button(rendered.container, 'Run').disabled, true)
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 750)) })
     assert.equal(button(rendered.container, 'Run').disabled, false)
-    await act(async () => rendered.container.querySelector('.CodeMirror').CodeMirror.setValue('MATCH (m) RETURN m'))
+    await act(async () => mainCm.setValue('MATCH (m) RETURN m'))
     assert.equal(button(rendered.container, 'Run').disabled, true)
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 750)) })
     assert.equal(button(rendered.container, 'Run').disabled, false)
     await act(async () => button(rendered.container, 'Run').click())
     assert.equal(signal.aborted, false)
+    const editorWrappers = [...rendered.container.querySelectorAll('.CodeMirror')]
+    assert.equal(editorWrappers.length, 2)
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
     assert.equal(signal.aborted, true)
+    assert.equal(editorWrappers.every((wrapper) => !wrapper.isConnected), true)
+  })
+
+  it('blocks late studio loads and clears pending validation on replacement and unmount', async () => {
+    let resolveHandlerSurface
+    const slowHandlerSurface = new Promise((resolve) => { resolveHandlerSurface = resolve })
+    let oldHandlerValidations = 0
+    const handlerServices = (gatewayInterfaces, label) => ({
+      kg: { schema: async () => ok({ labels: [{ label }], relationships: [] }) },
+      handlers: {
+        list: async () => ok({ yours: [], available: [] }), open: async () => refused('absent'),
+        validate: async () => { oldHandlerValidations += 1; return ok({ valid: true, violations: [] }) },
+        dryRun: async () => ok({ ok: true, stdout: '', ranAgainst: {} }),
+        setEnabled: async () => ok({ enabled: true }), delete: async () => ok({ deleted: true }),
+      },
+      generateHandler: async () => ok({ source: '', valid: true, attempts: 1 }),
+      saveHandler: async () => ok({ ok: true, message: 'saved' }), gatewayInterfaces,
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+    })
+    let rendered = await render(h(features.HandlerStudioSurface, {
+      services: handlerServices(async () => slowHandlerSurface, 'Stale'),
+    }))
+    const oldHandlerWrapper = rendered.container.querySelector('.CodeMirror')
+    const freshHandlerServices = handlerServices(async () => ok('export interface WorldTools {\n  fresh(): void;\n}\nexport type GatewayContext = WorldTools;'), 'Fresh')
+    await act(async () => rendered.root.render(h(features.HandlerStudioSurface, { services: freshHandlerServices })))
+    await flush()
+    assert.match(rendered.container.textContent, /fresh/)
+    await act(async () => resolveHandlerSurface(ok('export interface WorldTools {\n  stale(): void;\n}\nexport type GatewayContext = WorldTools;')))
+    await flush()
+    assert.doesNotMatch(rendered.container.textContent, /stale/)
+    const handlerCm = rendered.container.querySelector('.CodeMirror').CodeMirror
+    await act(async () => handlerCm.setValue('console.log(1)'))
+    await act(async () => rendered.root.unmount())
+    activeRoots.delete(rendered.root)
+    await new Promise((resolve) => setTimeout(resolve, 1550))
+    assert.equal(oldHandlerValidations, 0)
+    assert.equal(oldHandlerWrapper.isConnected, false)
+
+    let resolveOldSchema
+    const oldSchema = new Promise((resolve) => { resolveOldSchema = resolve })
+    let queryValidations = 0
+    const queryServices = (schema) => ({
+      kg: {
+        runs: async () => ok([]), schema, validate: async () => { queryValidations += 1; return ok({ ok: true, violations: [] }) },
+        execute: async () => ok({ rows: [] }), kill: async () => ok({ killed: true }),
+        generate: async () => ok({ cypher: '' }), refine: async () => ok({ cypher: '' }), saveView: async () => ok({ saved: true }),
+        scopes: async () => ok({ scopes: [] }), pinScope: async () => ok({ pinned: true }), deleteScope: async () => ok({ deleted: true }),
+      },
+      fills: { list: async () => ok([]), create: async () => ok({ id: 'f' }), delete: async () => ok(undefined) },
+      subscribeProgress() {},
+    })
+    const queryHost = { history: { read: () => [], write() {} }, interactive: { session: { read: () => null, write() {} } } }
+    rendered = await render(h(features.QueryStudioSurface, { services: queryServices(async () => oldSchema), host: queryHost }))
+    await act(async () => rendered.root.render(h(features.QueryStudioSurface, {
+      services: queryServices(async () => ok({ labels: [{ label: 'Fresh' }], relationships: [] })), host: queryHost,
+    })))
+    await flush()
+    assert.match(rendered.container.textContent, /Fresh/)
+    await act(async () => resolveOldSchema(ok({ labels: [{ label: 'Stale' }], relationships: [] })))
+    await flush()
+    assert.doesNotMatch(rendered.container.textContent, /Stale/)
+    const queryWrappers = [...rendered.container.querySelectorAll('.CodeMirror')]
+    await act(async () => queryWrappers[0].CodeMirror.setValue('MATCH (n)'))
+    await act(async () => rendered.root.unmount())
+    activeRoots.delete(rendered.root)
+    await new Promise((resolve) => setTimeout(resolve, 750))
+    assert.equal(queryValidations, 0)
+    assert.equal(queryWrappers.every((wrapper) => !wrapper.isConnected), true)
   })
 
   it('keeps null MCP history unknown and sends credentials only to host rendering', async () => {
@@ -286,6 +435,8 @@ describe('the public browser feature entry point', () => {
       renderConnection: (command) => { rendered.push(command); return `${command.client} ${command.baseUrl} ${command.credential.value}` },
     }
     const { container } = await render(h(features.CodingAgentsSurface, { services, host }))
+    assert.equal(container.firstElementChild.classList.contains('kit-feature'), true)
+    assert.equal(container.firstElementChild.classList.contains('kit-feature-coding-agents'), true)
     assert.match(container.textContent, /not available|could not report|unknown/i)
     assert.equal(container.textContent.includes('secret-token'), false)
     assert.equal(rendered.every((command) => command.credential.value === 'secret-token'), true)

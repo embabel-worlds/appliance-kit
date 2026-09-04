@@ -45,6 +45,7 @@ export interface Editor {
     focus(): void;
     refresh(): void;
     on(event: string, handler: (...args: any[]) => void): void;
+    off(event: string, handler: (...args: any[]) => void): void;
     showHint(options: {
         completeSingle: boolean;
     }): void;

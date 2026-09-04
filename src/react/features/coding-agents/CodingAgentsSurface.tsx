@@ -123,7 +123,7 @@ export function CodingAgentsSurface({
       : 'unlit'
 
   return (
-    <div className="agents">
+    <div className="kit-feature kit-feature-coding-agents agents">
       <StudioPanel
         title="Coding agents"
         aside={<button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>}

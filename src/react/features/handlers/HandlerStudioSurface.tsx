@@ -63,6 +63,7 @@ const state: {
   schema: unknown
   sample: Record<string, unknown> | null
 } = { surface: null, schema: null, sample: null }
+let completionOwner: symbol | null = null
 
 /** Cypher inside a `kg` call — the fragment doubles as its own alias source. */
 function cypherContext(before: string): string | null {
@@ -190,6 +191,10 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
 
   const validateSupported = useRef(true)
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const active = useRef(true)
+  const validationGeneration = useRef(0)
+  const handlersGeneration = useRef(0)
+  const dryRunGeneration = useRef(0)
   // A compile spins the sandbox, so an edit that undid itself must not buy the same verdict twice.
   const lastValidated = useRef<string | null>(null)
 
@@ -208,14 +213,44 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
   registerHint()
 
   useEffect(() => {
+    const owner = Symbol('handler-completion-owner')
+    completionOwner = owner
+    let current = true
+    validationGeneration.current += 1
+    dryRunGeneration.current += 1
+    validateSupported.current = true
+    lastValidated.current = null
+    setSurface(null)
     void (async () => {
       const parsed = await fetchSurface(services)
+      if (!current || completionOwner !== owner) return
       state.surface = parsed
       setSurface(parsed)
       const schema = await services.kg.schema()
+      if (!current || completionOwner !== owner) return
       state.schema = isOk(schema) ? schema.value : null
     })()
+    return () => {
+      current = false
+      if (completionOwner === owner) {
+        completionOwner = null
+        state.surface = null
+        state.schema = null
+      }
+    }
   }, [services])
+
+  useEffect(() => {
+    active.current = true
+    return () => {
+      active.current = false
+      validationGeneration.current += 1
+      handlersGeneration.current += 1
+      dryRunGeneration.current += 1
+      if (validateTimer.current) clearTimeout(validateTimer.current)
+      validateTimer.current = null
+    }
+  }, [])
 
   // The editor starts with the starter rather than empty: an empty box does not tell you that
   // `signal` and `gateway` are in scope, and that is the whole shape of a handler.
@@ -227,7 +262,9 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
   }, [handle])
 
   const loadHandlers = useCallback(async () => {
+    const generation = ++handlersGeneration.current
     const outcome = await services.handlers.list()
+    if (!active.current || generation !== handlersGeneration.current) return
     if (!isOk(outcome)) return setListError(failureMessage(outcome, 'the handlers surface'))
     setListError('')
     setYours(outcome.value.yours ?? [])
@@ -257,7 +294,9 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
     const source = handle.getText().trim()
     if (!source) return setValidity({ tone: null, text: '', violations: [] })
     if (source === lastValidated.current) return
+    const generation = ++validationGeneration.current
     const outcome = await services.handlers.validate(source)
+    if (!active.current || generation !== validationGeneration.current || handle.getText().trim() !== source) return
     if (!isOk(outcome)) {
       if (isAbsent(outcome)) validateSupported.current = false
       return setValidity({ tone: null, text: '', violations: [] })
@@ -272,6 +311,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
   const scheduleValidation = useCallback((): void => {
     if (!validateSupported.current) return
     if (validateTimer.current) clearTimeout(validateTimer.current)
+    validationGeneration.current += 1
     setValidity((v) => ({ ...v, tone: null, text: '…' }))
     // Generous next to Query Studio's 700ms: this one spins a sandbox and runs tsc.
     validateTimer.current = setTimeout((): void => void validateNow(), 1500)
@@ -282,10 +322,12 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
   const dryRun = useCallback(async (): Promise<void> => {
     const source = handle.getText().trim()
     if (!source) return
+    const generation = ++dryRunGeneration.current
     setBusy(true)
     setOutput(null)
     setRunStatus({ tone: null, text: 'Running observe-only on the appliance…' })
     const outcome = await services.handlers.dryRun(source, signalType || undefined)
+    if (!active.current || generation !== dryRunGeneration.current) return
     setBusy(false)
     if (!isOk(outcome)) return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'handler dry runs') })
     const result = outcome.value

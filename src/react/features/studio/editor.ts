@@ -37,6 +37,7 @@ export interface Editor {
   focus(): void
   refresh(): void
   on(event: string, handler: (...args: any[]) => void): void
+  off(event: string, handler: (...args: any[]) => void): void
   showHint(options: { completeSingle: boolean }): void
 }
 
@@ -81,16 +82,17 @@ export function useEditor(options: EditorOptions): { ref: React.RefObject<HTMLDi
       extraKeys: { 'Cmd-Enter': run, 'Ctrl-Enter': run, 'Ctrl-Space': 'autocomplete' },
     }) as Editor
 
-    cm.on('change', () => {
+    const onChange = () => {
       if (programmatic.current) return
       setHandEdited(true)
       callbacks.current.onEdit?.()
-    })
+    }
+    cm.on('change', onChange)
 
     // Completion opens as you type the characters that BEGIN a completable thing — a label after
     // `(x:`, a relationship after `[:`, a property after `alias.`. Waiting for ⌃Space means most
     // people never discover the schema is there at all.
-    cm.on('inputRead', (_cm: unknown, change: { origin: string; text: string[] }) => {
+    const onInputRead = (_cm: unknown, change: { origin: string; text: string[] }) => {
       if (change.origin !== '+input') return
       const ch = change.text[change.text.length - 1] ?? ''
       if (!/[:.'{\w]/.test(ch)) return
@@ -99,11 +101,14 @@ export function useEditor(options: EditorOptions): { ref: React.RefObject<HTMLDi
       if (/(\(\s*\w*:\w*|\[\s*\w*:\w*|\w+\.\w*|via:\s*'\w*|ai:\s*\{\s*\w*|\(\s*\w*\s*(?::\s*\w+)?\s*\{[^{}]*)$/.test(before)) {
         cm.showHint({ completeSingle: false })
       }
-    })
+    }
+    cm.on('inputRead', onInputRead)
 
     editorRef.current = cm
     forceRender((n) => n + 1)
     return () => {
+      cm.off('change', onChange)
+      cm.off('inputRead', onInputRead)
       cm.getWrapperElement().remove()
       editorRef.current = null
     }
