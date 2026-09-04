@@ -18,6 +18,9 @@
       },
       "AddRealmRequest" : {
         "properties" : {
+          "confirmed" : {
+            "type" : "boolean"
+          },
           "path" : {
             "type" : "string"
           },
@@ -28,6 +31,7 @@
             "type" : "string"
           }
         },
+        "required" : [ "confirmed" ],
         "type" : "object"
       },
       "AnnotateDryRunRequest" : {
@@ -201,6 +205,24 @@
           }
         },
         "required" : [ "model" ],
+        "type" : "object"
+      },
+      "ChannelsResponse" : {
+        "properties" : {
+          "joined" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "offered" : {
+            "items" : {
+              "$ref" : "#/components/schemas/OfferedChannel"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "joined", "offered" ],
         "type" : "object"
       },
       "ChatRequest" : {
@@ -1521,6 +1543,18 @@
           }
         },
         "required" : [ "args" ],
+        "type" : "object"
+      },
+      "JoinRequest" : {
+        "properties" : {
+          "channels" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "channels" ],
         "type" : "object"
       },
       "JsonNode" : {
@@ -2921,6 +2955,23 @@
           }
         },
         "required" : [ "displayLabel", "id", "kind", "typeName" ],
+        "type" : "object"
+      },
+      "OfferedChannel" : {
+        "properties" : {
+          "apps" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "channel" : {
+            "type" : "string"
+          },
+          "views" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "apps", "channel", "views" ],
         "type" : "object"
       },
       "Principles" : {
@@ -6781,6 +6832,54 @@
         },
         "summary" : "Create or update an artifact",
         "tags" : [ "Artifacts" ]
+      }
+    },
+    "/api/v1/audience/channels" : {
+      "get" : {
+        "description" : "Deliberately unfiltered: a channel nobody has joined is the one somebody needs to find. Only the channel's NAME and its counts are exposed — the content stays gated.",
+        "operationId" : "channels",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChannelsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Channels this world's content declares, with what each unlocks",
+        "tags" : [ "Audience" ]
+      },
+      "put" : {
+        "description" : "The whole set, not a delta — a client that sends what it displays cannot drift from it. Names are normalised, so what an author wrote and what a user picked are the same channel.",
+        "operationId" : "join",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/JoinRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChannelsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Join or leave channels",
+        "tags" : [ "Audience" ]
       }
     },
     "/api/v1/auth/oauth2/authorize/{provider}" : {
@@ -12806,11 +12905,74 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46197"
+    "url" : "http://localhost:41979"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
     "name" : "Watches"
+  }, {
+    "description" : "Protocol for the local sensor app on the user's machine: event ingest and the command outbox",
+    "name" : "Sensor"
+  }, {
+    "description" : "Channels this world's content declares, and the ones you have joined",
+    "name" : "Audience"
+  }, {
+    "description" : "Resolve cited source links to their external home",
+    "name" : "Sources"
+  }, {
+    "description" : "The appliance's architectural principles, as coding agents receive them",
+    "name" : "Principles"
+  }, {
+    "description" : "Stylesheet theme management",
+    "name" : "Themes"
+  }, {
+    "description" : "Manage world artifacts: documents, sites, code, data, diagrams",
+    "name" : "Artifacts"
+  }, {
+    "description" : "Manage world realms",
+    "name" : "Realms"
+  }, {
+    "description" : "Chat with the assistant via SSE streaming",
+    "name" : "Chat"
+  }, {
+    "description" : "Manage world slash commands",
+    "name" : "Commands"
+  }, {
+    "description" : "API discovery from a natural-language description (LLM-driven) or directly from a spec URL",
+    "name" : "API Discovery"
+  }, {
+    "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
+    "name" : "World"
+  }, {
+    "description" : "Serve world images",
+    "name" : "Images"
+  }, {
+    "description" : "Admin: re-apply graph projection policy to already-extracted propositions",
+    "name" : "KG Reprojection"
+  }, {
+    "description" : "Manage ingested documents and sources",
+    "name" : "Documents"
+  }, {
+    "description" : "Admin: plan and run typed actions synthesised from a user's repositories and realm APIs",
+    "name" : "Code Actions"
+  }, {
+    "description" : "Search for installable skills, APIs, MCP servers, and realms",
+    "name" : "Directory"
+  }, {
+    "description" : "On-demand catchup / meeting-prep run",
+    "name" : "Catchup"
+  }, {
+    "description" : "What is set up, and what is not",
+    "name" : "Next steps"
+  }, {
+    "description" : "Author, list and run saved lenses; the productized consumer path is Headless Invocation",
+    "name" : "Lenses"
+  }, {
+    "description" : "Models available to this appliance",
+    "name" : "Models"
+  }, {
+    "description" : "The embedding model, and switching it",
+    "name" : "Embeddings"
   }, {
     "description" : "Manage world configuration",
     "name" : "Config"
@@ -12818,14 +12980,8 @@
     "description" : "Compile and manage world actions",
     "name" : "Actions"
   }, {
-    "description" : "Protocol for the local sensor app on the user's machine: event ingest and the command outbox",
-    "name" : "Sensor"
-  }, {
     "description" : "Guided walks through a surface, shipped as content",
     "name" : "Tours"
-  }, {
-    "description" : "Resolve cited source links to their external home",
-    "name" : "Sources"
   }, {
     "description" : "Admin: inspect node decorators and fire them on demand instead of waiting for the scheduled tick",
     "name" : "KG Decoration"
@@ -12833,23 +12989,14 @@
     "description" : "Manage scheduled jobs in the world",
     "name" : "Cron"
   }, {
-    "description" : "The appliance's architectural principles, as coding agents receive them",
-    "name" : "Principles"
-  }, {
     "description" : "OAuth2 authentication for external APIs",
     "name" : "Auth"
   }, {
     "description" : "Manage user worlds",
     "name" : "Worlds"
   }, {
-    "description" : "Stylesheet theme management",
-    "name" : "Themes"
-  }, {
     "description" : "Push observations into the user-context layer",
     "name" : "Context"
-  }, {
-    "description" : "Manage world artifacts: documents, sites, code, data, diagrams",
-    "name" : "Artifacts"
   }, {
     "description" : "Manage user notifications",
     "name" : "Notifications"
@@ -12869,15 +13016,6 @@
     "description" : "Installed agent skills for the authenticated user",
     "name" : "Skills"
   }, {
-    "description" : "Manage world realms",
-    "name" : "Realms"
-  }, {
-    "description" : "Chat with the assistant via SSE streaming",
-    "name" : "Chat"
-  }, {
-    "description" : "Manage world slash commands",
-    "name" : "Commands"
-  }, {
     "description" : "Invoke named lenses and views headlessly; identity from the authenticated principal.",
     "name" : "Headless Invocation"
   }, {
@@ -12886,9 +13024,6 @@
   }, {
     "description" : "Learn a connected source as a realm: detect, curate, probe, promote",
     "name" : "Learning"
-  }, {
-    "description" : "API discovery from a natural-language description (LLM-driven) or directly from a spec URL",
-    "name" : "API Discovery"
   }, {
     "description" : "Receive and process webhook events from external systems",
     "name" : "Webhooks"
@@ -12899,41 +13034,14 @@
     "description" : "The signal types this world actually receives",
     "name" : "Signals"
   }, {
-    "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
-    "name" : "World"
-  }, {
-    "description" : "Serve world images",
-    "name" : "Images"
-  }, {
-    "description" : "Admin: re-apply graph projection policy to already-extracted propositions",
-    "name" : "KG Reprojection"
-  }, {
-    "description" : "Manage ingested documents and sources",
-    "name" : "Documents"
-  }, {
-    "description" : "Admin: plan and run typed actions synthesised from a user's repositories and realm APIs",
-    "name" : "Code Actions"
-  }, {
     "description" : "Recent activity from this appliance's own log",
     "name" : "Diagnostics"
   }, {
     "description" : "Fictional records, marked and removable",
     "name" : "Sample data"
   }, {
-    "description" : "Search for installable skills, APIs, MCP servers, and realms",
-    "name" : "Directory"
-  }, {
-    "description" : "On-demand catchup / meeting-prep run",
-    "name" : "Catchup"
-  }, {
-    "description" : "What is set up, and what is not",
-    "name" : "Next steps"
-  }, {
     "description" : "Admin: start, watch and cancel slow resumable materializations of expensive queries",
     "name" : "KG Fills"
-  }, {
-    "description" : "Author, list and run saved lenses; the productized consumer path is Headless Invocation",
-    "name" : "Lenses"
   }, {
     "description" : "Record facts directly into the caller's memory, bypassing LLM extraction",
     "name" : "Memory"
@@ -12941,16 +13049,10 @@
     "description" : "Admin: write annotations onto graph nodes via a dry-run, frozen plan, apply/undo cycle",
     "name" : "KG Annotations"
   }, {
-    "description" : "Models available to this appliance",
-    "name" : "Models"
-  }, {
     "description" : "Author, inspect and schedule the authenticated user's TypeScript event handlers (admin)",
     "name" : "Handlers"
   }, {
     "description" : "Generate, execute, monitor and cancel scoped knowledge-graph queries, and invoke saved views",
     "name" : "Virtual Cypher"
-  }, {
-    "description" : "The embedding model, and switching it",
-    "name" : "Embeddings"
   } ]
 }
