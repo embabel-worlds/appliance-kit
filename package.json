@@ -55,6 +55,11 @@
       "import": "./dist/esm/react/index.js",
       "require": "./dist/cjs/react/index.js"
     },
+    "./react/features": {
+      "types": "./dist/esm/react/features/index.d.ts",
+      "import": "./dist/esm/react/features/index.js",
+      "require": "./dist/cjs/react/features/index.js"
+    },
     "./css": "./css/index.css",
     "./css/*": "./css/*",
     "./global/*": "./dist/global/*"
@@ -74,6 +79,9 @@
     "@types/node": "^22.20.1",
     "@types/react": "^19.2.0",
     "@types/react-dom": "^19.2.0",
+    "@types/codemirror": "^5.60.18",
+    "@phosphor-icons/react": "^2.1.10",
+    "codemirror": "^5.65.21",
     "esbuild": "^0.24.2",
     "jsdom": "^27.0.1",
     "openapi-typescript": "^7.4.4",
@@ -82,10 +90,18 @@
     "typescript": "^5.7.2"
   },
   "peerDependencies": {
+    "@phosphor-icons/react": "^2.1.10",
+    "codemirror": "^5.65.21",
     "react": "^19.0.0"
   },
   "peerDependenciesMeta": {
     "react": {
+      "optional": true
+    },
+    "codemirror": {
+      "optional": true
+    },
+    "@phosphor-icons/react": {
       "optional": true
     }
   },
