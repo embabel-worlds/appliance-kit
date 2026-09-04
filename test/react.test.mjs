@@ -122,6 +122,7 @@ describe('shared components', () => {
         'main',
         null,
         h(kit.Card, { as: 'li', className: 'app-card', value: 2 }, 'Card'),
+        h(kit.Card, { 'data-default-card': 'true' }, 'Default card'),
         h(
           kit.Panel,
           { as: 'div', className: 'app-panel', 'aria-label': 'Tools' },
@@ -129,9 +130,19 @@ describe('shared components', () => {
           h(kit.PanelBody, { className: 'app-body' }, 'Body'),
         ),
         h(
+          kit.Panel,
+          { 'data-default-panel': 'true' },
+          h('h2', null, 'Default panel'),
+        ),
+        h(
           kit.TabList,
           { as: 'nav', ref: listRef, 'aria-label': 'Modes' },
           h(kit.Tab, { ref: tabRef, selected: true, className: 'app-tab' }, 'Chat'),
+        ),
+        h(
+          kit.TabList,
+          { 'data-default-tabs': 'true' },
+          h(kit.Tab, { selected: false }, 'Search'),
         ),
       ),
     )
@@ -145,6 +156,10 @@ describe('shared components', () => {
     assert.equal(tabRef.current.getAttribute('role'), 'tab')
     assert.equal(tabRef.current.getAttribute('aria-selected'), 'true')
     assert.match(tabRef.current.className, /tab is-on app-tab/)
+    assert.equal(container.querySelector('[data-default-card]').tagName, 'DIV')
+    assert.equal(container.querySelector('[data-default-panel]').tagName, 'SECTION')
+    assert.equal(container.querySelector('[data-default-tabs]').tagName, 'DIV')
+    assert.equal(container.querySelector('[data-default-tabs]').getAttribute('role'), 'tablist')
   })
 
   it('renders status and setting contracts, including an explicit empty center slot', async () => {
@@ -160,21 +175,40 @@ describe('shared components', () => {
             title: 'Endpoint',
             description: 'Where requests are sent.',
             stacked: true,
-            center: null,
+            center: h('span', { 'data-center': 'trace' }, 'Trace ready'),
           },
           h('input', { 'aria-label': 'URL' }),
+        ),
+        h(
+          kit.SettingRow,
+          {
+            icon: Icon,
+            title: 'Empty Center',
+            description: 'Preserves an explicitly empty slot.',
+            center: null,
+          },
+          h('button', null, 'Reset'),
         ),
         h(kit.StatusPill, { tone: 'caution', word: 'Pending', 'data-state': 'pending' }),
       ),
     )
 
     const group = container.querySelector('section')
-    const row = container.querySelector('.setting-row')
+    const [row, emptyCenterRow] = container.querySelectorAll('.setting-row')
     assert.equal(group.getAttribute('aria-label'), 'Connection')
     assert.equal(row.dataset.stacked, 'true')
     assert.equal(row.dataset.hasCenter, 'true')
-    assert.ok(row.querySelector('.setting-row__center'))
+    assert.equal(row.querySelector('.setting-row__title').textContent, 'Endpoint')
+    assert.equal(
+      row.querySelector('.setting-row__description').textContent,
+      'Where requests are sent.',
+    )
+    assert.equal(row.querySelector('.setting-row__control input').getAttribute('aria-label'), 'URL')
+    assert.equal(row.querySelector('.setting-row__center [data-center]').textContent, 'Trace ready')
     assert.equal(row.querySelector('svg').getAttribute('aria-hidden'), 'true')
+    assert.equal(emptyCenterRow.dataset.hasCenter, 'true')
+    assert.ok(emptyCenterRow.querySelector('.setting-row__center'))
+    assert.equal(emptyCenterRow.querySelector('.setting-row__center').textContent, '')
     assert.match(container.querySelector('.pill').className, /pill caution/)
     assert.equal(container.querySelector('.pill .dot').getAttribute('aria-hidden'), 'true')
   })
