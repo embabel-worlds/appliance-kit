@@ -60,6 +60,27 @@ function setInput(input, value) {
   input.dispatchEvent(new Event('input', { bubbles: true }))
 }
 
+function observeEditorDisposal(editor) {
+  const offCalls = []
+  let removeCalls = 0
+  const originalOff = editor.off
+  const wrapper = editor.getWrapperElement()
+  const originalRemove = wrapper.remove
+  editor.off = function (event, handler) {
+    offCalls.push({ event, handler })
+    return originalOff.call(this, event, handler)
+  }
+  wrapper.remove = function () {
+    removeCalls += 1
+    return originalRemove.call(this)
+  }
+  return {
+    offCalls,
+    wrapper,
+    removeCalls: () => removeCalls,
+  }
+}
+
 afterEach(async () => {
   await act(async () => {
     for (const root of activeRoots) root.unmount()
@@ -328,6 +349,7 @@ describe('the public browser feature entry point', () => {
     assert.deepEqual(canceled, ['fill-1'])
     await act(async () => button(rendered.container, 'Interactive').click())
     const sessionCm = rendered.container.querySelector('.session-cm .CodeMirror').CodeMirror
+    const sessionDisposal = observeEditorDisposal(sessionCm)
     await act(async () => sessionCm.setValue('MATCH (c:Chunk)'))
     await act(async () => button(rendered.container, 'Enter').click())
     await flush()
@@ -337,6 +359,7 @@ describe('the public browser feature entry point', () => {
 
     await act(async () => button(rendered.container, 'Query').click())
     const mainCm = rendered.container.querySelector('.studio-pane-query .CodeMirror').CodeMirror
+    const mainDisposal = observeEditorDisposal(mainCm)
     await act(async () => mainCm.setValue('MATCH (n) RETURN n'))
     assert.equal(button(rendered.container, 'Run').disabled, true)
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 750)) })
@@ -352,6 +375,14 @@ describe('the public browser feature entry point', () => {
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
     assert.equal(signal.aborted, true)
+    assert.deepEqual(mainDisposal.offCalls.map(({ event }) => event), ['change', 'inputRead'])
+    assert.equal(mainDisposal.offCalls.every(({ handler }) => typeof handler === 'function'), true)
+    assert.equal(mainDisposal.removeCalls(), 1)
+    assert.deepEqual(sessionDisposal.offCalls.map(({ event }) => event), ['beforeChange', 'inputRead'])
+    assert.equal(sessionDisposal.offCalls.every(({ handler }) => typeof handler === 'function'), true)
+    assert.equal(sessionDisposal.removeCalls(), 1)
+    assert.equal(editorWrappers.includes(mainDisposal.wrapper), true)
+    assert.equal(editorWrappers.includes(sessionDisposal.wrapper), true)
     assert.equal(editorWrappers.every((wrapper) => !wrapper.isConnected), true)
   })
 
