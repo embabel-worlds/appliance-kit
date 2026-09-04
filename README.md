@@ -19,6 +19,7 @@ file may import from.
 ```js
 import { ApplianceClient } from '@embabel/appliance-kit'            // REST, no DOM
 import { compose, TARGETS } from '@embabel/appliance-kit/vc'        // pure semantics
+import { Button, Panel } from '@embabel/appliance-kit/react'         // optional React UI
 import '@embabel/appliance-kit/css'                                 // the visual language
 ```
 
@@ -66,8 +67,28 @@ apart from `apk add git`.
 | `./code-surface` | the editor surface |
 | `./studio-kit` | hints, formatting, status, copy |
 | `./backdrop` | the living-graph canvas |
+| `./react` | optional React components and focus helpers; React 19 remains a peer dependency |
 | `./css`, `./css/*` | tokens, ground, base, components, markdown |
 | `./global/*` | IIFE builds, for a renderer with no module system |
+
+React consumers opt into the framework-specific entry point and the kit stylesheet
+separately. The other entry points do not load React.
+
+```tsx
+import { Button, Panel, PanelBody } from '@embabel/appliance-kit/react'
+import '@embabel/appliance-kit/css'
+
+export function SavePanel() {
+  return (
+    <Panel>
+      <h2>Profile</h2>
+      <PanelBody>
+        <Button intent="primary">Save</Button>
+      </PanelBody>
+    </Panel>
+  )
+}
+```
 
 The global builds are **map-free on purpose**: a vendored copy travels without
 its sourcemap, and a `sourceMappingURL` pointing at a file that never arrives is
