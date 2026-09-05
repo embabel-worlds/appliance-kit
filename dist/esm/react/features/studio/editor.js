@@ -1,0 +1,94 @@
+/*
+ * THE EDITOR, ONCE, FOR BOTH STUDIOS.
+ *
+ * CodeMirror 5, not 6, and that is a decision rather than an oversight. The completion behaviour
+ * both studios stand on — `createCypherHint` in `@embabel/appliance-kit/studio-kit` — is written
+ * against CM5's `registerHelper`/`showHint` API and is already in production in the Me app. Taking
+ * CM6 here would mean a second hint implementation, and the two front ends would then complete
+ * differently on the same keystroke, which is precisely the drift the shared kit exists to end.
+ * When Me moves, this moves with it.
+ *
+ * CM5 owns a DOM node and React must not re-render into it, so the editor is created once against
+ * a ref and everything after that goes through the returned handle. React never sees the text.
+ */
+import { useEffect, useRef, useState } from 'react';
+import CodeMirror from 'codemirror';
+import 'codemirror/addon/hint/show-hint.js';
+// In-box placeholder text — how an empty prompt says it is the place to type.
+import 'codemirror/addon/display/placeholder.js';
+import 'codemirror/mode/cypher/cypher.js';
+import 'codemirror/mode/javascript/javascript.js';
+export function useEditor(options) {
+    const ref = useRef(null);
+    const editorRef = useRef(null);
+    const programmatic = useRef(false);
+    const [handEdited, setHandEdited] = useState(false);
+    // Held in a ref so recreating the editor is never needed just because a callback identity moved.
+    const callbacks = useRef(options);
+    callbacks.current = options;
+    const [, forceRender] = useState(0);
+    useEffect(() => {
+        if (!ref.current || editorRef.current)
+            return;
+        const run = () => callbacks.current.onRun();
+        const cm = CodeMirror(ref.current, {
+            mode: options.mode,
+            lineNumbers: true,
+            viewportMargin: Infinity,
+            extraKeys: { 'Cmd-Enter': run, 'Ctrl-Enter': run, 'Ctrl-Space': 'autocomplete' },
+        });
+        const onChange = () => {
+            if (programmatic.current)
+                return;
+            setHandEdited(true);
+            callbacks.current.onEdit?.();
+        };
+        cm.on('change', onChange);
+        // Completion opens as you type the characters that BEGIN a completable thing — a label after
+        // `(x:`, a relationship after `[:`, a property after `alias.`. Waiting for ⌃Space means most
+        // people never discover the schema is there at all.
+        const onInputRead = (_cm, change) => {
+            if (change.origin !== '+input')
+                return;
+            const ch = change.text[change.text.length - 1] ?? '';
+            if (!/[:.'{\w]/.test(ch))
+                return;
+            const cursor = cm.getCursor();
+            const before = cm.getLine(cursor.line).slice(0, cursor.ch);
+            if (/(\(\s*\w*:\w*|\[\s*\w*:\w*|\w+\.\w*|via:\s*'\w*|ai:\s*\{\s*\w*|\(\s*\w*\s*(?::\s*\w+)?\s*\{[^{}]*)$/.test(before)) {
+                cm.showHint({ completeSingle: false });
+            }
+        };
+        cm.on('inputRead', onInputRead);
+        editorRef.current = cm;
+        forceRender((n) => n + 1);
+        return () => {
+            cm.off('change', onChange);
+            cm.off('inputRead', onInputRead);
+            cm.getWrapperElement().remove();
+            editorRef.current = null;
+        };
+        // Created once for the life of the component: `mode` is fixed per studio, and re-running this
+        // would drop the user's text on the floor.
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+    return {
+        ref,
+        handle: {
+            editor: editorRef.current,
+            handEdited,
+            getText: () => editorRef.current?.getValue() ?? '',
+            setText: (text) => {
+                const cm = editorRef.current;
+                if (!cm)
+                    return;
+                programmatic.current = true;
+                cm.setValue(text);
+                programmatic.current = false;
+            },
+        },
+    };
+}
+/** The CodeMirror constructor, for `registerHelper` and `Pos` at a studio's module scope. */
+export { CodeMirror };
+//# sourceMappingURL=editor.js.map

@@ -13,4 +13,5 @@
 @import './ground.css';
 @import './base.css';
 @import './components.css';
+@import url('./react.css');
 @import './markdown.css';
