@@ -118,6 +118,22 @@ describe('the public browser feature entry point', () => {
       '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
       '.realm-problem', '.pinchip.is-gone',
     ]) assert.equal(css.includes(selector), true, `${selector} style`)
+
+    const ruleFor = (selector) => root.nodes
+      .flatMap((node) => node.type === 'rule' ? [node] : [])
+      .find((rule) => rule.selectors?.includes(selector))
+    assert.equal(
+      root.nodes.some((node) => node.type === 'rule' && node.selectors?.includes(':where(.kit-feature) input:not([type])')),
+      true,
+      'classless text inputs receive the shared feature field skin',
+    )
+    assert.equal(
+      root.nodes.some((node) => node.type === 'rule' && node.selectors?.some((selector) => /input\[type=['"]?(checkbox|radio)/.test(selector))),
+      false,
+      'native checkboxes and radios are not skinned as text fields',
+    )
+    assert.equal(ruleFor(':where(.kit-feature) .appgroup-head .realm-chevron')?.toString().includes('margin-left: 0'), true)
+    assert.equal(ruleFor(':where(.kit-feature) .approw')?.toString().includes("grid-template-areas: 'icon body pin actions'"), true)
   })
 
   it('loads the real browser feature exports after browser globals exist', () => {

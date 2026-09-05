@@ -332,6 +332,67 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .field.checkbox > span { text-transform: none; letter-spacing: normal; font-size: 12px;
   font-family: var(--sans); color: var(--mid); }
 
+/* Feature fields must carry their own skin. Several React inputs intentionally omit `type`, which
+   means the kit's document-level `input[type=text]` rule does not match them. Keep the selector to
+   text-entry controls so CodeMirror's hidden textarea and native checkboxes/radios retain the
+   behavior their widgets depend on. */
+
+:where(.kit-feature) input:not([type]),
+:where(.kit-feature) input[type='text'],
+:where(.kit-feature) input[type='password'],
+:where(.kit-feature) input[type='search'],
+:where(.kit-feature) input[type='url'],
+:where(.kit-feature) input[type='email'],
+:where(.kit-feature) input[type='date'],
+:where(.kit-feature) input[type='number'],
+:where(.kit-feature) select,
+:where(.kit-feature) .ask-row textarea,
+:where(.kit-feature) .skillsource textarea {
+  box-sizing: border-box; max-width: 100%; min-height: 34px;
+  font: inherit; font-family: var(--sans); font-size: 13px;
+  padding: 7px 9px; border: 1px solid var(--rule); border-radius: var(--radius);
+  background: var(--field-bg, var(--code-bg)); color: var(--ink);
+  text-transform: none; letter-spacing: normal;
+}
+
+:where(.kit-feature) input:not([type]):focus-visible,
+:where(.kit-feature) input[type='text']:focus-visible,
+:where(.kit-feature) input[type='password']:focus-visible,
+:where(.kit-feature) input[type='search']:focus-visible,
+:where(.kit-feature) input[type='url']:focus-visible,
+:where(.kit-feature) input[type='email']:focus-visible,
+:where(.kit-feature) input[type='date']:focus-visible,
+:where(.kit-feature) input[type='number']:focus-visible,
+:where(.kit-feature) select:focus-visible,
+:where(.kit-feature) .ask-row textarea:focus-visible,
+:where(.kit-feature) .skillsource textarea:focus-visible {
+  outline: 2px solid var(--signal); outline-offset: 1px;
+}
+
+:where(.kit-feature) input:not([type])[aria-invalid='true'],
+:where(.kit-feature) input[type='text'][aria-invalid='true'],
+:where(.kit-feature) input[type='password'][aria-invalid='true'],
+:where(.kit-feature) input[type='search'][aria-invalid='true'],
+:where(.kit-feature) input[type='url'][aria-invalid='true'],
+:where(.kit-feature) input[type='email'][aria-invalid='true'],
+:where(.kit-feature) input[type='date'][aria-invalid='true'],
+:where(.kit-feature) input[type='number'][aria-invalid='true'],
+:where(.kit-feature) select[aria-invalid='true'],
+:where(.kit-feature) .ask-row textarea[aria-invalid='true'],
+:where(.kit-feature) .skillsource textarea[aria-invalid='true'] { border-color: var(--alert); }
+
+:where(.kit-feature) input:not([type]):disabled,
+:where(.kit-feature) input[type='text']:disabled,
+:where(.kit-feature) input[type='password']:disabled,
+:where(.kit-feature) input[type='search']:disabled,
+:where(.kit-feature) input[type='url']:disabled,
+:where(.kit-feature) input[type='email']:disabled,
+:where(.kit-feature) input[type='date']:disabled,
+:where(.kit-feature) input[type='number']:disabled,
+:where(.kit-feature) select:disabled,
+:where(.kit-feature) .ask-row textarea:disabled,
+:where(.kit-feature) .skillsource textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+
 :where(.kit-feature) .verdict { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
 
 :where(.kit-feature) .violation { font-family: var(--mono); font-size: 11.5px; color: var(--alert);
@@ -341,7 +402,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .tips li { margin-bottom: 6px; }
 
-:where(.kit-feature) .btn.tiny { font-size: 10px; padding: 3px 7px; }
+:where(.kit-feature) .btn.tiny { min-height: 32px; font-size: 10px; padding: 3px 7px; }
 
 /* The verb that lets a handler act on the world unattended. Marked, not hidden. */
 
@@ -719,7 +780,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .applist .subhead { padding: 12px 0 2px; }
 
 :where(.kit-feature) .approw {
-  display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  display: grid; grid-template-columns: 20px minmax(0, 1fr) max-content max-content;
+  grid-template-areas: 'icon body pin actions'; align-items: start; gap: 12px;
   padding: 10px 0; border-bottom: 1px solid var(--hairline); font-size: 13.5px;
 }
 
@@ -729,9 +791,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
    pushed short descriptions away from the star and left them floating mid-row, which
    read as if the pinned apps had been right-justified for no reason. */
 
-:where(.kit-feature) .approw-body { flex: 1; min-width: 0; }
+:where(.kit-feature) .approw-body { grid-area: body; min-width: 0; }
 
-:where(.kit-feature) .approw-icon { margin-top: 1px; color: var(--mid); }
+:where(.kit-feature) .approw-icon { grid-area: icon; margin-top: 5px; color: var(--mid); }
 
 :where(.kit-feature) img.approw-icon { width: 20px; height: 20px; }
 
@@ -739,7 +801,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .approw p { color: var(--mid); font-size: 12.5px; margin-top: 3px; max-width: 68ch; }
 
-:where(.kit-feature) .approw .row { flex: none; flex-wrap: nowrap; gap: 6px; }
+:where(.kit-feature) .approw .row { grid-area: actions; flex-wrap: nowrap; gap: 6px; }
 
 :where(.kit-feature) .approw .btn { white-space: nowrap; }
 
@@ -883,15 +945,19 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .session-prompt { align-items: stretch; }
 
-:where(.kit-feature) .appgroup-head { display: flex; align-items: baseline; gap: 8px; width: 100%; text-align: left; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; background: none; color: inherit; cursor: pointer; }
+:where(.kit-feature) .appgroup-head { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; min-width: 0; text-align: left; padding: 6px 8px; border: 1px solid transparent; border-radius: 6px; background: none; color: inherit; cursor: pointer; font: inherit; }
 
 :where(.kit-feature) .appgroup-head:hover { border-color: var(--panel-edge); }
 
 :where(.kit-feature) .appgroup-count { font-family: var(--mono); font-size: 10.5px; color: var(--faint); }
 
+:where(.kit-feature) .appgroup-head .realm-chevron { margin-left: 0; flex: none; }
+
+:where(.kit-feature) .appgroup-head strong, :where(.kit-feature) .appgroup-count { flex: none; }
+
 :where(.kit-feature) .appgroup-names { color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
 
-:where(.kit-feature) .app-pin { background: none; border: none; cursor: pointer; font-size: 15px; color: var(--faint); padding: 2px 4px; align-self: flex-start; }
+:where(.kit-feature) .app-pin { grid-area: pin; display: inline-flex; align-items: center; justify-content: center; width: 32px; min-height: 32px; background: none; border: none; cursor: pointer; font-size: 15px; color: var(--faint); padding: 0; align-self: start; }
 
 :where(.kit-feature) .app-pin.is-pinned { color: var(--signal); }
 
@@ -900,9 +966,32 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .app-pin:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
 @media (max-width: 640px) {
-  :where(.kit-feature) .approw { flex-wrap: wrap; }
-  :where(.kit-feature) .approw-body { flex-basis: calc(100% - 64px); }
-  :where(.kit-feature) .approw .row { width: 100%; padding-left: 64px; }
+  :where(.kit-feature) .approw {
+    grid-template-columns: 20px minmax(0, 1fr) 44px;
+    grid-template-areas: 'icon body pin' '. actions actions';
+    column-gap: 10px; row-gap: 8px;
+  }
+  :where(.kit-feature) .approw .row { justify-content: flex-end; flex-wrap: wrap; min-width: 0; }
+  :where(.kit-feature) .appgroup-head { min-height: 44px; }
+}
+
+@media (max-width: 640px), (pointer: coarse) {
+  :where(.kit-feature) .btn,
+  :where(.kit-feature) .app-pin,
+  :where(.kit-feature) .pinchip,
+  :where(.kit-feature) .appgroup-head { min-height: 44px; }
+  :where(.kit-feature) .app-pin { width: 44px; }
+  :where(.kit-feature) input:not([type]),
+  :where(.kit-feature) input[type='text'],
+  :where(.kit-feature) input[type='password'],
+  :where(.kit-feature) input[type='search'],
+  :where(.kit-feature) input[type='url'],
+  :where(.kit-feature) input[type='email'],
+  :where(.kit-feature) input[type='date'],
+  :where(.kit-feature) input[type='number'],
+  :where(.kit-feature) select,
+  :where(.kit-feature) .ask-row textarea,
+  :where(.kit-feature) .skillsource textarea { min-height: 44px; }
 }
 
 :where(.kit-feature) .queryhistory { margin: 6px 0 0; }
