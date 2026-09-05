@@ -21,7 +21,7 @@
  * port instead, the frame is refused and the credential story splits in two.
  */
 
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react'
 import { isBackgroundHandle } from '../../../client/kg.ts'
 import { isOk } from '../../../client/outcome.ts'
 import type { AppArtifact, AppPin, AppsHost, AppsServices, AppsSurfaceProps, PinRailProps } from '../contracts.ts'
@@ -144,7 +144,8 @@ function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }: {
   return (
     <div className={`approw${isViewing ? ' is-open' : ''}`}>
       <button className={`app-pin${pinned ? ' is-pinned' : ''}`} onClick={onTogglePin}
-              title={pinned ? 'Unpin — off the rail' : 'Pin to the rail, reachable from every tab'}
+              aria-label={`${pinned ? 'Unpin' : 'Pin'} ${title(a)}`}
+              title={`${pinned ? 'Unpin' : 'Pin'} ${title(a)}`}
               aria-pressed={pinned}>
         {pinned ? '★' : '☆'}
       </button>
@@ -160,7 +161,7 @@ function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }: {
           {isViewing ? 'Close' : 'Open'}
         </button>
         <button className="btn ghost" onClick={() => onNewTab(a)}>
-          New tab
+          Open in new tab
         </button>
       </div>
     </div>
@@ -169,7 +170,7 @@ function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }: {
 
 export function AppsSurface({ services, host }: AppsSurfaceProps) {
   const [apps, setApps] = useState<AppArtifact[]>([])
-  const [status, setStatus] = useState<{ tone: Tone; text: string }>({ tone: null, text: 'loading…' })
+  const [status, setStatus] = useState<{ tone: Tone; text: string }>({ tone: null, text: 'Loading apps…' })
   const [query, setQuery] = useState('')
   /* WHICH APP IS OPEN LIVES IN THE URL, not only here. Reloading — which signing out
      does — used to drop somebody three levels into a workspace app back onto the Realms
@@ -192,16 +193,18 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
    * the engine's per-row judge deciding fit. null = keyword mode. An older appliance without the
    * catalog label errors the query; we then stay honestly in keyword mode and say so. */
   const [meaning, setMeaning] = useState<{ q: string; keys: Set<string> } | null>(null)
-  /* Groups are CLOSED by default — a directory of realms reads as an index, and the apps you
-   * actually live in are PINNED instead, to the rail as well as to the top of this list. */
+  /* A sole group starts open so a small catalogue is visible on arrival. Multiple groups stay an
+   * index, and any explicit collapse or expansion remains the user's choice. */
   const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const touchedGroups = useRef(new Set<string>())
   /* The pins themselves live in `pins.ts` — the shell's rail draws from the same store, so
      starring something here lights it up under the tab strip immediately. */
   const pins = useSyncExternalStore(host.pins.subscribe, host.pins.getSnapshot, host.pins.getSnapshot)
   const pinnedKeys = useMemo(() => new Set(pins.map((p) => p.key)), [pins])
-  const toggleGroup = (scope: string) => setExpanded((prev) => {
+  const toggleGroup = (scope: string, isOpen: boolean) => setExpanded((prev) => {
     const next = new Set(prev)
-    if (next.has(scope)) next.delete(scope); else next.add(scope)
+    touchedGroups.current.add(scope)
+    if (isOpen) next.delete(scope); else next.add(scope)
     return next
   })
   const [judging, setJudging] = useState(false)
@@ -241,8 +244,8 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
        must never get here. Names, icons and URLs refresh; an app that has gone loses its pin. */
     host.pins.reconcile(found.map(asPin))
     setStatus(found.length
-      ? { tone: 'ok', text: `${found.length} app(s) in this world` }
-      : { tone: null, text: 'No apps yet — a realm or a world template ships them, or you build one.' })
+      ? { tone: 'ok', text: `${found.length} ${found.length === 1 ? 'app' : 'apps'}` }
+      : { tone: null, text: 'No apps are available yet.' })
   }, [services, host.pins])
 
   useEffect(() => { void load() }, [load])
@@ -321,7 +324,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
                 const url = validatedAppUrl(open)
                 if (url) host.openInNewTab(url)
               }}>
-                Open in a tab
+                Open in new tab
               </button>
             }
           >
@@ -334,9 +337,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
         aside={<Status tone={status.tone}>{status.text}</Status>}
       >
         <p className="hint">
-          The apps this world offers — shipped by a realm, by the world template, or built here.
-          Each one runs against this world through the appliance's own gateway; pin the ones you
-          live in and they sit under the tab strip, one click away from wherever you are.
+          Apps available in this world. Pin favorites for quick access.
         </p>
 
         {apps.length > 3 && (
@@ -365,12 +366,13 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
                                           onNewTab={(app) => { const url = validatedAppUrl(app); if (url) host.openInNewTab(url) }} />)}
           {groups.map(([scope, list]) => {
             const label = scope === 'workspace' ? 'Yours' : scope === 'world' ? 'World template' : scope
-            const isOpen = searching || expanded.has(scope)
+            const isOpen = searching || expanded.has(scope) ||
+              (groups.length === 1 && !touchedGroups.current.has(scope))
             return (
               <div key={scope}>
                 {/* CLOSED, the row still says what it holds: the app names run to the right, so
                     scanning the directory never requires opening anything. */}
-                <button className="appgroup-head" aria-expanded={isOpen} onClick={() => toggleGroup(scope)}>
+                <button className="appgroup-head" aria-expanded={isOpen} onClick={() => toggleGroup(scope, isOpen)}>
                   <span className="realm-chevron" aria-hidden="true">{isOpen ? '▾' : '▸'}</span>
                   <strong>{label}</strong>
                   <span className="appgroup-count">{list.length}</span>

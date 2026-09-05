@@ -12,8 +12,8 @@ type McpState = 'noprobe' | 'down' | 'guarded' | 'open' | 'up'
 type AuthKind = AgentCredential['kind']
 
 const MODE_SAYS: Record<string, string> = {
-  ASSISTANT: 'Your data and nothing else — the right default.',
-  DEVELOPER: 'Also lets an agent install a realm and ask how to write one, and makes its orientation lead with realms rather than stay silent about them.',
+  ASSISTANT: 'Access this account’s data.',
+  DEVELOPER: 'Access data, install realms, and get guidance for building realms.',
 }
 
 const DEFAULT_MODES = ['ASSISTANT', 'DEVELOPER']
@@ -182,13 +182,13 @@ export function CodingAgentsSurface({
           <div className="rung">
             <span className={`lamp lamp-${canRender ? 'lit' : 'unlit'}`} />
             <div className="rung-body">
-              <strong>Point an agent at it</strong>
+              <strong>Connection instructions</strong>
               <p className="hint">
-                Build the connection instructions here, then copy them into your coding agent.
+                Choose credentials, then copy the generated setup into Claude Code or Codex.
               </p>
               <div className="row">
                 <label className="field grow">
-                  <span>Appliance URL an agent will reach</span>
+                  <span>Appliance URL</span>
                   <input
                     value={baseUrl}
                     placeholder="https://your-appliance.example"

@@ -331,7 +331,7 @@ function QueryStudioBody({ handedOver }) {
         // threw away the rows of any result that did not send one, which is how this looked in
         // practice: "parked in the background", over a payload holding the answer.
         if (isBackgroundHandle(outcome.value)) {
-            return setRunStatus({ tone: 'caution', text: 'The appliance parked this run in the background.' });
+            return setRunStatus({ tone: 'caution', text: 'This query is running in the background.' });
         }
         const result = outcome.value;
         /* A KILLED run comes back 200, with no error and no rows — so the generic path below would
@@ -389,7 +389,7 @@ function QueryStudioBody({ handedOver }) {
         const runId = progress.runId ?? (await inFlightRunId(services, runningCypher.current));
         if (!runId) {
             setStopping(false);
-            return setRunStatus({ tone: 'caution', text: 'Could not identify this run — the appliance reports nothing in flight for you.' });
+            return setRunStatus({ tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' });
         }
         const outcome = await services.kg.kill(runId);
         if (!isOk(outcome)) {
@@ -462,7 +462,7 @@ function QueryStudioBody({ handedOver }) {
                                         _jsx(RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
                                     _jsx("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && _jsx(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && (_jsxs("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && (_jsx("p", { className: "hint", children: progress.live
                                                 ? 'Waiting for the engine to report…'
-                                                : 'No trace — a query with no virtual labels never materializes anything, so there is nothing to narrate.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane", hidden: pane !== 'session', children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
+                                                : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane", hidden: pane !== 'session', children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
 }
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
 /**
@@ -485,7 +485,7 @@ function Ask({ onLand, current }) {
             return;
         setBusy(true);
         setExplanation('');
-        setStatus({ tone: null, text: refine ? 'Revising your query…' : 'Writing the Cypher — an LLM call, give it a moment…' });
+        setStatus({ tone: null, text: refine ? 'Revising your query…' : 'Writing the query…' });
         const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text);
         setBusy(false);
         if (!isOk(outcome)) {
@@ -585,7 +585,7 @@ export function SaveView({ current }) {
             // LIMIT so its members are particular rows from one moment, and that a view re-runs. The
             // reader could act on that sentence and could do nothing at all with ours.
             const refusal = outcome.value.error;
-            return setStatus({ tone: 'error', text: refusal || `The appliance refused '${viewName}'.` });
+            return setStatus({ tone: 'error', text: refusal || `Could not save '${viewName}'.` });
         }
         // PROMOTION IS NOT SILENT. A body written against captured scopes is stored with each
         // reference replaced by what the scope was captured from, so what the world keeps is not
@@ -742,7 +742,7 @@ function CaptureScope({ current, onCaptured }) {
         if (!isOk(outcome))
             return setStatus({ tone: 'error', text: failureMessage(outcome, 'capturing a scope') });
         if (isBackgroundHandle(outcome.value)) {
-            return setStatus({ tone: 'error', text: 'The appliance parked this run — capture is synchronous-only.' });
+            return setStatus({ tone: 'error', text: 'This query is running in the background; capturing a scope requires a synchronous result.' });
         }
         const result = outcome.value;
         if (result.error)

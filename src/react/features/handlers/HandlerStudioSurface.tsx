@@ -325,7 +325,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
     const generation = ++dryRunGeneration.current
     setBusy(true)
     setOutput(null)
-    setRunStatus({ tone: null, text: 'Running observe-only on the appliance…' })
+    setRunStatus({ tone: null, text: 'Running an observe-only dry run…' })
     const outcome = await services.handlers.dryRun(source, signalType || undefined)
     if (!active.current || generation !== dryRunGeneration.current) return
     setBusy(false)
@@ -410,8 +410,8 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
             <CopyButton label="Copy" text={handle.getText()} />
           </div>
           <p className="hint">
-            Dry run is observe-only and happens on the appliance — effects are suppressed. Saving,
-            enabling and scheduling are what let a handler act; they are below, and separate.
+            Dry run suppresses effects. Saving stores the handler; enabling lets it run, and
+            “May act” permits effects.
           </p>
           <Status tone={runStatus.tone}>{runStatus.text}</Status>
         </StudioPanel>
@@ -561,7 +561,7 @@ function Ask({ onLand, current, installed, skills, onSkills }: {
     const text = (refine ? instruction : english).trim()
     if (!text) return
     setBusy(true)
-    setStatus({ tone: null, text: `The appliance is ${refine ? 'revising' : 'writing'} your agent — an LLM call plus a compile…` })
+    setStatus({ tone: null, text: refine ? 'Revising the handler…' : 'Writing the handler…' })
     const r = await services.generateHandler(text, refine ? current() : undefined, skills)
     setBusy(false)
     if (!r.ok) return setStatus({ tone: 'error', text: r.message })
@@ -659,8 +659,8 @@ function SkillPicker({ installed, chosen, onChange }: {
       </div>
       <p className="hint">
         {chosen.length === 0
-          ? 'None bundled — the model writes from the world’s schema and gateway surface alone.'
-          : `${chosen.length} bundled — put in front of the model that writes and refines this agent, and saved with it.`}
+          ? 'No skills bundled.'
+          : `${chosen.length} bundled and saved with this handler.`}
       </p>
     </div>
   )
@@ -678,8 +678,7 @@ function SurfacePanel({ surface }: { surface: GatewaySurface | null }) {
     <StudioPanel title="Gateway">
       {surface == null ? (
         <p className="hint">
-          The appliance did not offer a generated surface — completion falls back to the ambient
-          vocabulary.
+          This world does not publish gateway completion details. Basic completion remains available.
         </p>
       ) : (
         <>
@@ -802,8 +801,8 @@ function SavePanel({ source, defaultName, defaultSignalType, catalogue, skills, 
         <p className="hint">Bundled skills: {skills.join(', ')} — saved with it, and used when you refine it.</p>
       )}
       <p className="hint">
-        Saving stores it. It stays <em>proposed</em> until you start it watching — that is the act
-        that lets it run unattended, and letting it <em>act</em> is a second one.
+        Saving keeps this handler proposed. Enable it to observe events; select “May act” to permit
+        effects.
       </p>
       <Status tone={status.tone}>{status.text}</Status>
     </StudioPanel>
@@ -833,7 +832,7 @@ function SignalsPanel({ catalogue, onPick }: {
     return (
       <StudioPanel title="What this world notices">
         <p className="hint">
-          This appliance does not publish a signal catalogue — the trigger stays a typed name.
+          This world does not publish a signal catalogue. Enter the trigger name directly.
         </p>
       </StudioPanel>
     )
@@ -846,8 +845,8 @@ function SignalsPanel({ catalogue, onPick }: {
     <StudioPanel title="What this world notices">
       {catalogue.length === 0 ? (
         <p className="hint">
-          No signals on record yet. Install a realm that produces events, or watch a view — a watch
-          publishes <code>view.&lt;name&gt;.changed</code>, which is a signal like any other.
+          No signals recorded yet. Install a realm that produces events, or watch a saved view to
+          publish <code>view.&lt;name&gt;.changed</code> when its rows change.
         </p>
       ) : (
         <>

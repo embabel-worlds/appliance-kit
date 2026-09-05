@@ -269,7 +269,7 @@ function SessionPane({ onCaptured, onOpenInEditor }) {
             return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${(0, chrome_tsx_1.failureMessage)(outcome, 'the session line')}` });
         }
         if ((0, kg_ts_1.isBackgroundHandle)(outcome.value)) {
-            return append({ input: line, ran: plan.cypher, tone: 'error', text: '✗ the appliance parked this run — sessions are synchronous' });
+            return append({ input: line, ran: plan.cypher, tone: 'error', text: '✗ this query is running in the background; interactive sessions require a synchronous result' });
         }
         const result = outcome.value;
         if (result.error) {

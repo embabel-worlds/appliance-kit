@@ -90,10 +90,29 @@ afterEach(async () => {
 })
 
 describe('the public browser feature entry point', () => {
-  it('ships parseable scoped CSS with every extracted workflow block', () => {
+  it('ships WKWebView-compatible feature-bound CSS with every extracted workflow block', () => {
     const css = readFileSync(new URL('../css/features.css', import.meta.url), 'utf8')
-    assert.doesNotThrow(() => postcss.parse(css, { from: 'features.css' }))
-    assert.match(css, /@scope\s+\(\.kit-feature\)/)
+    const root = postcss.parse(css, { from: 'features.css' })
+    assert.equal(root.nodes.some((node) => node.type === 'atrule' && node.name === 'scope'), false)
+
+    const intentionalBodyPortals = ['.CodeMirror-hint', 'li.CodeMirror-hint-active', '#deftip']
+    root.walkRules((rule) => {
+      for (let parent = rule.parent; parent; parent = parent.parent) {
+        if (parent.type === 'atrule' && /keyframes$/i.test(parent.name)) return
+      }
+      for (const selector of rule.selector.split(',').map((part) => part.trim())) {
+        if (intentionalBodyPortals.some((portal) => selector.startsWith(portal))) continue
+        assert.equal(
+          selector.startsWith(':where(.kit-feature)'),
+          true,
+          `${selector} stays inside a feature root`,
+        )
+      }
+    })
+    for (const rootClass of ['studio', 'viewspage', 'agents', 'pinrail', 'apps']) {
+      assert.match(css, new RegExp(`:where\\(\\.kit-feature\\)\\.${rootClass}\\b`))
+      assert.match(css, new RegExp(`:where\\(\\.kit-feature\\) \\.${rootClass}\\b`))
+    }
     for (const selector of [
       '.stage.acting', '.signalrow', '.signalname', '.signalfields', '.emptymenu', '.emptyroute',
       '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
@@ -139,7 +158,11 @@ describe('the public browser feature entry point', () => {
     }))
     assert.equal(container.querySelector('iframe'), null)
     assert.equal(opened.at(-1), null)
-    await act(async () => button(container, 'World template').click())
+    const group = button(container, 'World template')
+    assert.equal(group.getAttribute('aria-expanded'), 'true')
+    await act(async () => group.click())
+    assert.equal(group.getAttribute('aria-expanded'), 'false')
+    await act(async () => group.click())
     const rows = [...container.querySelectorAll('.approw')]
     const ledger = rows.find((row) => row.textContent.includes('ledger'))
     const evil = rows.find((row) => row.textContent.includes('evil'))
@@ -147,6 +170,11 @@ describe('the public browser feature entry point', () => {
     assert.equal(opened.at(-1).name, 'ledger.html')
     await act(async () => ledger.querySelector('.app-pin').click())
     assert.equal(pins[0].key, 'world/ledger.html')
+    const pinnedLedger = [...container.querySelectorAll('.approw')]
+      .find((row) => row.textContent.includes('ledger'))
+    assert.equal(pinnedLedger.querySelector('.app-pin').getAttribute('aria-label'), 'Unpin ledger')
+    assert.match(container.textContent, /2 apps/)
+    assert.match(container.textContent, /Apps available in this world\. Pin favorites for quick access\./)
     await act(async () => button(evil, 'Open').click())
     assert.equal(opened.some((app) => app?.name === 'evil.html'), false)
     selected = 'world/evil.html'

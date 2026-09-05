@@ -415,7 +415,7 @@ function WatchPanel({ viewName, args, onWriteAgent }: {
         <>
           <p className="hint">
             Run this view on a schedule, diff the answer, and publish <code>{signalType}</code> when
-            it moves. It notifies nobody by itself — the signal is what an agent reacts to.
+            it changes. The watch publishes a signal; it does not notify anyone by itself.
           </p>
           <div className="row skillsource">
             <select value={schedule} onChange={(e) => setSchedule(e.target.value)}>
@@ -448,8 +448,8 @@ function WatchPanel({ viewName, args, onWriteAgent }: {
             <button className="btn ghost" disabled={busy} onClick={() => void stop()}>Stop watching</button>
           </div>
           <p className="hint">
-            Nothing reacts to this yet unless an agent matches <code>{signalType}</code>. The watch
-            makes the change a fact; an agent decides what it is worth.
+            This watch reruns on schedule and publishes <code>{signalType}</code> when rows change.
+            Add a handler only if you want an automated response.
           </p>
           <div className="subhead">Runs</div>
           <WatchReceipts watchId={watch.id} />
@@ -554,7 +554,7 @@ function WatchReceipts({ watchId }: { watchId: string }) {
             )}
             {changes.length > 0 && delivered.length === 0 && (
               <p className="receipt-line hint">
-                Nothing was published — this watch has no <code>signal</code> delivery, so no agent was woken.
+                No change signal was published for this run.
               </p>
             )}
           </div>

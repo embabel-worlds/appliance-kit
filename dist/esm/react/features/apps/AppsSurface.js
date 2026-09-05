@@ -21,7 +21,7 @@ import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
  * calls reach the door through the existing proxy, and a frame is allowed. Linked at the door's
  * port instead, the frame is refused and the credential story splits in two.
  */
-import { useCallback, useEffect, useMemo, useState, useSyncExternalStore } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from 'react';
 import { isBackgroundHandle } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
 import { AppIcon } from "./AppIcon.js";
@@ -121,11 +121,11 @@ export function PinRail({ services, host }) {
 }
 function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }) {
     const isViewing = open !== null && appKey(open) === appKey(a);
-    return (_jsxs("div", { className: `approw${isViewing ? ' is-open' : ''}`, children: [_jsx("button", { className: `app-pin${pinned ? ' is-pinned' : ''}`, onClick: onTogglePin, title: pinned ? 'Unpin — off the rail' : 'Pin to the rail, reachable from every tab', "aria-pressed": pinned, children: pinned ? '★' : '☆' }), _jsx(AppIcon, { src: a.iconUrl, name: title(a), description: a.description, size: 20, className: "approw-icon" }), _jsxs("div", { className: "approw-body", children: [_jsx("strong", { children: title(a) }), a.readOnly === false && _jsx("span", { className: "appmine", children: "yours" }), pinned && a.scope && _jsx("span", { className: "realm-source", children: a.scope }), _jsx("p", { children: a.description || 'No description.' })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn", onClick: () => setOpen(isViewing ? null : a), children: isViewing ? 'Close' : 'Open' }), _jsx("button", { className: "btn ghost", onClick: () => onNewTab(a), children: "New tab" })] })] }));
+    return (_jsxs("div", { className: `approw${isViewing ? ' is-open' : ''}`, children: [_jsx("button", { className: `app-pin${pinned ? ' is-pinned' : ''}`, onClick: onTogglePin, "aria-label": `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, title: `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, "aria-pressed": pinned, children: pinned ? '★' : '☆' }), _jsx(AppIcon, { src: a.iconUrl, name: title(a), description: a.description, size: 20, className: "approw-icon" }), _jsxs("div", { className: "approw-body", children: [_jsx("strong", { children: title(a) }), a.readOnly === false && _jsx("span", { className: "appmine", children: "yours" }), pinned && a.scope && _jsx("span", { className: "realm-source", children: a.scope }), _jsx("p", { children: a.description || 'No description.' })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn", onClick: () => setOpen(isViewing ? null : a), children: isViewing ? 'Close' : 'Open' }), _jsx("button", { className: "btn ghost", onClick: () => onNewTab(a), children: "Open in new tab" })] })] }));
 }
 export function AppsSurface({ services, host }) {
     const [apps, setApps] = useState([]);
-    const [status, setStatus] = useState({ tone: null, text: 'loading…' });
+    const [status, setStatus] = useState({ tone: null, text: 'Loading apps…' });
     const [query, setQuery] = useState('');
     /* WHICH APP IS OPEN LIVES IN THE URL, not only here. Reloading — which signing out
        does — used to drop somebody three levels into a workspace app back onto the Realms
@@ -149,16 +149,18 @@ export function AppsSurface({ services, host }) {
      * the engine's per-row judge deciding fit. null = keyword mode. An older appliance without the
      * catalog label errors the query; we then stay honestly in keyword mode and say so. */
     const [meaning, setMeaning] = useState(null);
-    /* Groups are CLOSED by default — a directory of realms reads as an index, and the apps you
-     * actually live in are PINNED instead, to the rail as well as to the top of this list. */
+    /* A sole group starts open so a small catalogue is visible on arrival. Multiple groups stay an
+     * index, and any explicit collapse or expansion remains the user's choice. */
     const [expanded, setExpanded] = useState(new Set());
+    const touchedGroups = useRef(new Set());
     /* The pins themselves live in `pins.ts` — the shell's rail draws from the same store, so
        starring something here lights it up under the tab strip immediately. */
     const pins = useSyncExternalStore(host.pins.subscribe, host.pins.getSnapshot, host.pins.getSnapshot);
     const pinnedKeys = useMemo(() => new Set(pins.map((p) => p.key)), [pins]);
-    const toggleGroup = (scope) => setExpanded((prev) => {
+    const toggleGroup = (scope, isOpen) => setExpanded((prev) => {
         const next = new Set(prev);
-        if (next.has(scope))
+        touchedGroups.current.add(scope);
+        if (isOpen)
             next.delete(scope);
         else
             next.add(scope);
@@ -200,8 +202,8 @@ export function AppsSurface({ services, host }) {
            must never get here. Names, icons and URLs refresh; an app that has gone loses its pin. */
         host.pins.reconcile(found.map(asPin));
         setStatus(found.length
-            ? { tone: 'ok', text: `${found.length} app(s) in this world` }
-            : { tone: null, text: 'No apps yet — a realm or a world template ships them, or you build one.' });
+            ? { tone: 'ok', text: `${found.length} ${found.length === 1 ? 'app' : 'apps'}` }
+            : { tone: null, text: 'No apps are available yet.' });
     }, [services, host.pins]);
     useEffect(() => { void load(); }, [load]);
     /* FOLLOW the URL, don't just read it once. This began as a one-shot restore of whatever
@@ -262,12 +264,13 @@ export function AppsSurface({ services, host }) {
                             const url = validatedAppUrl(open);
                             if (url)
                                 host.openInNewTab(url);
-                        }, children: "Open in a tab" }), children: _jsx("iframe", { className: "appframe", src: appUrl(open), title: open.name }) })) }), _jsxs(StudioPanel, { title: "Apps", aside: _jsx(Status, { tone: status.tone, children: status.text }), children: [_jsx("p", { className: "hint", children: "The apps this world offers \u2014 shipped by a realm, by the world template, or built here. Each one runs against this world through the appliance's own gateway; pin the ones you live in and they sit under the tab strip, one click away from wherever you are." }), apps.length > 3 && (_jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: "Search apps \u2014 Enter for smart search", "aria-label": "search apps", onChange: (e) => { setQuery(e.target.value); setMeaning(null); setSmartNote(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
+                        }, children: "Open in new tab" }), children: _jsx("iframe", { className: "appframe", src: appUrl(open), title: open.name }) })) }), _jsxs(StudioPanel, { title: "Apps", aside: _jsx(Status, { tone: status.tone, children: status.text }), children: [_jsx("p", { className: "hint", children: "Apps available in this world. Pin favorites for quick access." }), apps.length > 3 && (_jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: "Search apps \u2014 Enter for smart search", "aria-label": "search apps", onChange: (e) => { setQuery(e.target.value); setMeaning(null); setSmartNote(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
                                     void searchByMeaning(); } }), query && (_jsx("button", { className: "btn ghost tiny", disabled: judging, onClick: () => void searchByMeaning(), title: "Understands what you're looking for, not just the words \u2014 'where the money goes' finds a grants app", children: judging ? 'searching…' : 'Smart search' })), query && _jsx("button", { className: "btn ghost tiny", onClick: () => { setQuery(''); setMeaning(null); setSmartNote(null); }, children: "Clear" })] })), meaning && (_jsxs("p", { className: "hint", children: ["Smart search for \u201C", meaning.q, "\u201D \u00B7 ", meaning.keys.size, " match", meaning.keys.size === 1 ? '' : 'es', " \u2014 judged on what each app does."] })), smartNote && _jsx("p", { className: "hint", children: smartNote }), _jsxs("div", { className: "applist", children: [pinnedShown.length > 0 && !searching && _jsx("div", { className: "subhead", children: "Pinned" }), pinnedShown.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: true, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
                                     host.openInNewTab(url); } }, appKey(a))), groups.map(([scope, list]) => {
                                 const label = scope === 'workspace' ? 'Yours' : scope === 'world' ? 'World template' : scope;
-                                const isOpen = searching || expanded.has(scope);
-                                return (_jsxs("div", { children: [_jsxs("button", { className: "appgroup-head", "aria-expanded": isOpen, onClick: () => toggleGroup(scope), children: [_jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: isOpen ? '▾' : '▸' }), _jsx("strong", { children: label }), _jsx("span", { className: "appgroup-count", children: list.length }), !isOpen && (_jsx("span", { className: "appgroup-names", children: list.map(title).join(' · ') }))] }), isOpen && list.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: false, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
+                                const isOpen = searching || expanded.has(scope) ||
+                                    (groups.length === 1 && !touchedGroups.current.has(scope));
+                                return (_jsxs("div", { children: [_jsxs("button", { className: "appgroup-head", "aria-expanded": isOpen, onClick: () => toggleGroup(scope, isOpen), children: [_jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: isOpen ? '▾' : '▸' }), _jsx("strong", { children: label }), _jsx("span", { className: "appgroup-count", children: list.length }), !isOpen && (_jsx("span", { className: "appgroup-names", children: list.map(title).join(' · ') }))] }), isOpen && list.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: false, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
                                                 host.openInNewTab(url); } }, appKey(a)))] }, scope));
                             }), apps.length > 0 && shown.length === 0 && (_jsxs("p", { className: "hint", children: ["No app matches \u201C", query, "\u201D."] }))] })] })] }));
 }
