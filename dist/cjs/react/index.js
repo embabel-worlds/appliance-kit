@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.StatusPill = exports.Tab = exports.TabList = exports.PanelBody = exports.Panel = exports.Card = exports.Button = exports.useFocusTrap = exports.getTabbable = void 0;
+exports.StatusPill = exports.Tab = exports.TabList = exports.ChatWorkspace = exports.PanelBody = exports.Panel = exports.Card = exports.Button = exports.useFocusTrap = exports.getTabbable = void 0;
 exports.SettingRow = SettingRow;
 exports.SettingGroup = SettingGroup;
 exports.formatReceiptLine = formatReceiptLine;
@@ -25,6 +25,81 @@ const PanelImplementation = (0, react_1.forwardRef)(function Panel({ as = 'secti
 exports.Panel = PanelImplementation;
 exports.PanelBody = (0, react_1.forwardRef)(function PanelBody({ className, children, ...rest }, ref) {
     return ((0, jsx_runtime_1.jsx)("div", { ...rest, ref: ref, className: classes('panel-body', className), children: children }));
+});
+const MIN_WORK_PANE_WIDTH = 30;
+const MAX_WORK_PANE_WIDTH = 70;
+const DEFAULT_WORK_PANE_WIDTH = 55;
+const clampWorkPaneWidth = (width) => Math.min(MAX_WORK_PANE_WIDTH, Math.max(MIN_WORK_PANE_WIDTH, width));
+exports.ChatWorkspace = (0, react_1.forwardRef)(function ChatWorkspace({ children, header, toolbar, workPane, workPaneLabel = 'Work pane', workPaneOpen, defaultWorkPaneOpen = false, onWorkPaneOpenChange, className, style, ...rest }, ref) {
+    const hasWorkPane = workPane !== undefined && workPane !== null;
+    const [uncontrolledOpen, setUncontrolledOpen] = (0, react_1.useState)(defaultWorkPaneOpen);
+    const [workPaneWidth, setWorkPaneWidth] = (0, react_1.useState)(DEFAULT_WORK_PANE_WIDTH);
+    const isControlled = workPaneOpen !== undefined;
+    const isOpen = hasWorkPane && (isControlled ? workPaneOpen : uncontrolledOpen);
+    const toggleRef = (0, react_1.useRef)(null);
+    const workPaneRef = (0, react_1.useRef)(null);
+    const bodyRef = (0, react_1.useRef)(null);
+    const wasOpenRef = (0, react_1.useRef)(isOpen);
+    const resizeCleanupRef = (0, react_1.useRef)(null);
+    const workPaneId = (0, react_1.useId)();
+    const workPaneLabelId = (0, react_1.useId)();
+    const stopResize = (0, react_1.useCallback)(() => {
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
+    }, []);
+    (0, react_1.useEffect)(() => stopResize, [stopResize]);
+    (0, react_1.useLayoutEffect)(() => {
+        if (wasOpenRef.current && !isOpen && workPaneRef.current?.contains(document.activeElement)) {
+            toggleRef.current?.focus();
+        }
+        wasOpenRef.current = isOpen;
+    }, [isOpen]);
+    const setOpen = (next) => {
+        if (!isControlled)
+            setUncontrolledOpen(next);
+        onWorkPaneOpenChange?.(next);
+    };
+    const handlePointerDown = (event) => {
+        if (event.button !== 0)
+            return;
+        const body = bodyRef.current;
+        if (!body)
+            return;
+        const bounds = body.getBoundingClientRect();
+        if (bounds.width <= 0)
+            return;
+        event.preventDefault();
+        stopResize();
+        const handlePointerMove = (moveEvent) => {
+            const width = ((bounds.right - moveEvent.clientX) / bounds.width) * 100;
+            setWorkPaneWidth(clampWorkPaneWidth(width));
+        };
+        const handlePointerEnd = () => stopResize();
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerEnd);
+        window.addEventListener('pointercancel', handlePointerEnd);
+        resizeCleanupRef.current = () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerEnd);
+            window.removeEventListener('pointercancel', handlePointerEnd);
+        };
+    };
+    const handleSeparatorKeyDown = (event) => {
+        let nextWidth;
+        if (event.key === 'ArrowLeft')
+            nextWidth = workPaneWidth + 5;
+        if (event.key === 'ArrowRight')
+            nextWidth = workPaneWidth - 5;
+        if (event.key === 'Home')
+            nextWidth = MIN_WORK_PANE_WIDTH;
+        if (event.key === 'End')
+            nextWidth = MAX_WORK_PANE_WIDTH;
+        if (nextWidth === undefined)
+            return;
+        event.preventDefault();
+        setWorkPaneWidth(clampWorkPaneWidth(nextWidth));
+    };
+    return ((0, jsx_runtime_1.jsxs)("div", { ...rest, ref: ref, className: classes('chat-workspace', className), style: style, "data-work-pane-open": isOpen ? 'true' : 'false', children: [header !== undefined || toolbar !== undefined || hasWorkPane ? ((0, jsx_runtime_1.jsxs)("div", { className: "chat-workspace__header", children: [(0, jsx_runtime_1.jsx)("div", { className: "chat-workspace__heading", children: header }), (0, jsx_runtime_1.jsxs)("div", { className: "chat-workspace__toolbar", children: [toolbar, hasWorkPane ? ((0, jsx_runtime_1.jsx)("button", { ref: toggleRef, type: "button", className: "chat-workspace__pane-button", "aria-controls": workPaneId, "aria-expanded": isOpen, onClick: () => setOpen(!isOpen), children: isOpen ? `Hide ${workPaneLabel}` : `Open ${workPaneLabel}` })) : null] })] })) : null, (0, jsx_runtime_1.jsxs)("div", { ref: bodyRef, className: "chat-workspace__body", children: [(0, jsx_runtime_1.jsx)("div", { className: "chat-workspace__conversation", children: children }), hasWorkPane && isOpen ? ((0, jsx_runtime_1.jsx)("div", { role: "separator", className: "chat-workspace__separator", tabIndex: 0, "aria-label": `${workPaneLabel} width`, "aria-controls": workPaneId, "aria-orientation": "vertical", "aria-valuemin": MIN_WORK_PANE_WIDTH, "aria-valuemax": MAX_WORK_PANE_WIDTH, "aria-valuenow": Math.round(workPaneWidth), onKeyDown: handleSeparatorKeyDown, onPointerDown: handlePointerDown })) : null, hasWorkPane ? ((0, jsx_runtime_1.jsxs)("aside", { ref: workPaneRef, id: workPaneId, className: "chat-workspace__work-pane", style: { flexBasis: `${workPaneWidth}%` }, "aria-labelledby": workPaneLabelId, hidden: !isOpen, children: [(0, jsx_runtime_1.jsxs)("div", { className: "chat-workspace__work-pane-header", children: [(0, jsx_runtime_1.jsx)("span", { id: workPaneLabelId, className: "chat-workspace__work-pane-label", children: workPaneLabel }), (0, jsx_runtime_1.jsx)("button", { type: "button", className: "chat-workspace__pane-button", "aria-label": `Close ${workPaneLabel}`, onClick: () => setOpen(false), children: "Back to chat" })] }), (0, jsx_runtime_1.jsx)("div", { className: "chat-workspace__work-pane-body", children: workPane })] })) : null] })] }));
 });
 const TabListImplementation = (0, react_1.forwardRef)(function TabList({ as = 'div', className, children, ...rest }, ref) {
     return (0, react_1.createElement)(as, { ...rest, ref, role: 'tablist', className: classes('tabs', className) }, children);

@@ -58,8 +58,10 @@ afterEach(async () => {
 describe('the public React entry point', () => {
   it('loads as ESM and CommonJS', () => {
     assert.equal(typeof kit.Button, 'object')
+    assert.equal(typeof kit.ChatWorkspace, 'object')
     assert.equal(typeof kit.ReceiptStrip, 'function')
     assert.equal(typeof cjsKit.Button, 'object')
+    assert.equal(typeof cjsKit.ChatWorkspace, 'object')
     assert.equal(typeof cjsKit.ReceiptStrip, 'function')
   })
 
@@ -270,6 +272,132 @@ describe('receipts', () => {
     assert.match(container.textContent, /Detail 1/)
     assert.doesNotMatch(container.textContent, /Detail 2/)
   })
+})
+
+describe('chat workspace', () => {
+  const pointerEvent = (type, properties) => {
+    const event = new Event(type, { bubbles: true, cancelable: true })
+    for (const [key, value] of Object.entries(properties)) {
+      Object.defineProperty(event, key, { value })
+    }
+    return event
+  }
+
+  it('omits pane controls when there is no pane', async () => {
+    const ref = createRef()
+    const { container } = await render(
+      h(kit.ChatWorkspace, { ref, className: 'consumer-workspace' }, h('p', null, 'Chat')),
+    )
+
+    assert.equal(ref.current, container.querySelector('.chat-workspace'))
+    assert.match(ref.current.className, /consumer-workspace/)
+    assert.equal(container.querySelector('button'), null)
+    assert.equal(container.querySelector('[role="separator"]'), null)
+    assert.equal(container.querySelector('aside'), null)
+  })
+
+  it('keeps uncontrolled pane content mounted and provides narrow reveal and return', async () => {
+    const changes = []
+    const { container } = await render(
+      h(
+        kit.ChatWorkspace,
+        {
+          header: h('h1', null, 'Conversation'),
+          toolbar: h('button', null, 'Tools'),
+          workPane: h('input', { 'aria-label': 'Pane draft', defaultValue: 'preserved' }),
+          workPaneLabel: 'Result',
+          onWorkPaneOpenChange: (open) => changes.push(open),
+        },
+        h('p', null, 'Chat'),
+      ),
+    )
+
+    const toggle = container.querySelector('[aria-controls]')
+    const pane = container.querySelector('aside')
+    assert.equal(toggle.getAttribute('aria-expanded'), 'false')
+    assert.equal(pane.hidden, true)
+    assert.ok(pane.querySelector('input'), 'closed content remains mounted')
+
+    await act(async () => toggle.click())
+    const close = pane.querySelector('[aria-label="Close Result"]')
+    const input = pane.querySelector('input')
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true')
+    assert.equal(pane.hidden, false)
+    input.value = 'still here'
+    close.focus()
+    await act(async () => close.click())
+    assert.deepEqual(changes, [true, false])
+    assert.equal(pane.hidden, true)
+    assert.equal(pane.querySelector('input'), input)
+    assert.equal(input.value, 'still here')
+    assert.equal(document.activeElement, toggle)
+    const css = readFileSync('css/react.css', 'utf8')
+    assert.match(css, /@media \(max-width: 640px\)/)
+    assert.match(css, /data-work-pane-open='true'[\s\S]*?conversation[\s\S]*?display: none/)
+    assert.match(css, /chat-workspace__separator[\s\S]*?display: none/)
+  })
+
+  it('honors controlled state and hands focus back on external collapse', async () => {
+    const changes = []
+    const pane = h('button', { 'data-pane-action': true }, 'Pane action')
+    const props = {
+      workPane: pane,
+      workPaneLabel: 'Context',
+      onWorkPaneOpenChange: (open) => changes.push(open),
+    }
+    const { container, rerender } = await render(
+      h(kit.ChatWorkspace, { ...props, workPaneOpen: true }, 'Chat'),
+    )
+    const toggle = container.querySelector('[aria-controls]')
+    const paneAction = container.querySelector('[data-pane-action]')
+
+    await act(async () => toggle.click())
+    assert.deepEqual(changes, [false])
+    assert.equal(toggle.getAttribute('aria-expanded'), 'true', 'parent owns controlled state')
+
+    paneAction.focus()
+    await rerender(h(kit.ChatWorkspace, { ...props, workPaneOpen: false }, 'Chat'))
+    assert.equal(container.querySelector('aside').hidden, true)
+    assert.equal(document.activeElement, toggle)
+  })
+
+  it('clamps pointer resizing, removes pointer listeners, and supports every resize key', async () => {
+    const { container } = await render(
+      h(kit.ChatWorkspace, { workPane: h('p', null, 'Result'), defaultWorkPaneOpen: true }, 'Chat'),
+    )
+    const body = container.querySelector('.chat-workspace__body')
+    const separator = container.querySelector('[role="separator"]')
+    body.getBoundingClientRect = () => ({ left: 0, right: 1000, width: 1000 })
+
+    assert.equal(separator.getAttribute('aria-orientation'), 'vertical')
+    assert.equal(separator.getAttribute('aria-valuemin'), '30')
+    assert.equal(separator.getAttribute('aria-valuemax'), '70')
+    assert.equal(separator.getAttribute('aria-valuenow'), '55')
+
+    await act(async () => {
+      separator.dispatchEvent(pointerEvent('pointerdown', { button: 0, clientX: 500 }))
+      window.dispatchEvent(pointerEvent('pointermove', { clientX: 100 }))
+    })
+    assert.equal(separator.getAttribute('aria-valuenow'), '70')
+
+    await act(async () => {
+      window.dispatchEvent(pointerEvent('pointerup', {}))
+      window.dispatchEvent(pointerEvent('pointermove', { clientX: 900 }))
+    })
+    assert.equal(separator.getAttribute('aria-valuenow'), '70', 'resize stops after pointerup')
+
+    const press = async (key) =>
+      act(async () => separator.dispatchEvent(new KeyboardEvent('keydown', { key, bubbles: true })))
+    await press('Home')
+    assert.equal(separator.getAttribute('aria-valuenow'), '30')
+    await press('ArrowRight')
+    assert.equal(separator.getAttribute('aria-valuenow'), '30', 'right clamps at the minimum')
+    await press('ArrowLeft')
+    assert.equal(separator.getAttribute('aria-valuenow'), '35')
+    await press('End')
+    assert.equal(separator.getAttribute('aria-valuenow'), '70')
+  })
+
 })
 
 describe('focus helpers', () => {

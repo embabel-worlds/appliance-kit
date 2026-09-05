@@ -29,6 +29,17 @@ export interface PanelBodyProps extends HTMLAttributes<HTMLDivElement> {
     children: ReactNode;
 }
 export declare const PanelBody: import("react").ForwardRefExoticComponent<PanelBodyProps & import("react").RefAttributes<HTMLDivElement>>;
+export interface ChatWorkspaceProps extends HTMLAttributes<HTMLDivElement> {
+    children: ReactNode;
+    header?: ReactNode;
+    toolbar?: ReactNode;
+    workPane?: ReactNode;
+    workPaneLabel?: string;
+    workPaneOpen?: boolean;
+    defaultWorkPaneOpen?: boolean;
+    onWorkPaneOpenChange?: (open: boolean) => void;
+}
+export declare const ChatWorkspace: import("react").ForwardRefExoticComponent<ChatWorkspaceProps & import("react").RefAttributes<HTMLDivElement>>;
 type TabListElement = 'div' | 'nav';
 type TabListOwnProps = {
     children: ReactNode;

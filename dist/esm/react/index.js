@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createElement, forwardRef, useState, } from 'react';
+import { createElement, forwardRef, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, } from 'react';
 import { formatDuration } from "../studio-kit/format.js";
 export { getTabbable, useFocusTrap } from "./useFocusTrap.js";
 const classes = (...names) => names.filter(Boolean).join(' ');
@@ -16,6 +16,81 @@ const PanelImplementation = forwardRef(function Panel({ as = 'section', classNam
 export const Panel = PanelImplementation;
 export const PanelBody = forwardRef(function PanelBody({ className, children, ...rest }, ref) {
     return (_jsx("div", { ...rest, ref: ref, className: classes('panel-body', className), children: children }));
+});
+const MIN_WORK_PANE_WIDTH = 30;
+const MAX_WORK_PANE_WIDTH = 70;
+const DEFAULT_WORK_PANE_WIDTH = 55;
+const clampWorkPaneWidth = (width) => Math.min(MAX_WORK_PANE_WIDTH, Math.max(MIN_WORK_PANE_WIDTH, width));
+export const ChatWorkspace = forwardRef(function ChatWorkspace({ children, header, toolbar, workPane, workPaneLabel = 'Work pane', workPaneOpen, defaultWorkPaneOpen = false, onWorkPaneOpenChange, className, style, ...rest }, ref) {
+    const hasWorkPane = workPane !== undefined && workPane !== null;
+    const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultWorkPaneOpen);
+    const [workPaneWidth, setWorkPaneWidth] = useState(DEFAULT_WORK_PANE_WIDTH);
+    const isControlled = workPaneOpen !== undefined;
+    const isOpen = hasWorkPane && (isControlled ? workPaneOpen : uncontrolledOpen);
+    const toggleRef = useRef(null);
+    const workPaneRef = useRef(null);
+    const bodyRef = useRef(null);
+    const wasOpenRef = useRef(isOpen);
+    const resizeCleanupRef = useRef(null);
+    const workPaneId = useId();
+    const workPaneLabelId = useId();
+    const stopResize = useCallback(() => {
+        resizeCleanupRef.current?.();
+        resizeCleanupRef.current = null;
+    }, []);
+    useEffect(() => stopResize, [stopResize]);
+    useLayoutEffect(() => {
+        if (wasOpenRef.current && !isOpen && workPaneRef.current?.contains(document.activeElement)) {
+            toggleRef.current?.focus();
+        }
+        wasOpenRef.current = isOpen;
+    }, [isOpen]);
+    const setOpen = (next) => {
+        if (!isControlled)
+            setUncontrolledOpen(next);
+        onWorkPaneOpenChange?.(next);
+    };
+    const handlePointerDown = (event) => {
+        if (event.button !== 0)
+            return;
+        const body = bodyRef.current;
+        if (!body)
+            return;
+        const bounds = body.getBoundingClientRect();
+        if (bounds.width <= 0)
+            return;
+        event.preventDefault();
+        stopResize();
+        const handlePointerMove = (moveEvent) => {
+            const width = ((bounds.right - moveEvent.clientX) / bounds.width) * 100;
+            setWorkPaneWidth(clampWorkPaneWidth(width));
+        };
+        const handlePointerEnd = () => stopResize();
+        window.addEventListener('pointermove', handlePointerMove);
+        window.addEventListener('pointerup', handlePointerEnd);
+        window.addEventListener('pointercancel', handlePointerEnd);
+        resizeCleanupRef.current = () => {
+            window.removeEventListener('pointermove', handlePointerMove);
+            window.removeEventListener('pointerup', handlePointerEnd);
+            window.removeEventListener('pointercancel', handlePointerEnd);
+        };
+    };
+    const handleSeparatorKeyDown = (event) => {
+        let nextWidth;
+        if (event.key === 'ArrowLeft')
+            nextWidth = workPaneWidth + 5;
+        if (event.key === 'ArrowRight')
+            nextWidth = workPaneWidth - 5;
+        if (event.key === 'Home')
+            nextWidth = MIN_WORK_PANE_WIDTH;
+        if (event.key === 'End')
+            nextWidth = MAX_WORK_PANE_WIDTH;
+        if (nextWidth === undefined)
+            return;
+        event.preventDefault();
+        setWorkPaneWidth(clampWorkPaneWidth(nextWidth));
+    };
+    return (_jsxs("div", { ...rest, ref: ref, className: classes('chat-workspace', className), style: style, "data-work-pane-open": isOpen ? 'true' : 'false', children: [header !== undefined || toolbar !== undefined || hasWorkPane ? (_jsxs("div", { className: "chat-workspace__header", children: [_jsx("div", { className: "chat-workspace__heading", children: header }), _jsxs("div", { className: "chat-workspace__toolbar", children: [toolbar, hasWorkPane ? (_jsx("button", { ref: toggleRef, type: "button", className: "chat-workspace__pane-button", "aria-controls": workPaneId, "aria-expanded": isOpen, onClick: () => setOpen(!isOpen), children: isOpen ? `Hide ${workPaneLabel}` : `Open ${workPaneLabel}` })) : null] })] })) : null, _jsxs("div", { ref: bodyRef, className: "chat-workspace__body", children: [_jsx("div", { className: "chat-workspace__conversation", children: children }), hasWorkPane && isOpen ? (_jsx("div", { role: "separator", className: "chat-workspace__separator", tabIndex: 0, "aria-label": `${workPaneLabel} width`, "aria-controls": workPaneId, "aria-orientation": "vertical", "aria-valuemin": MIN_WORK_PANE_WIDTH, "aria-valuemax": MAX_WORK_PANE_WIDTH, "aria-valuenow": Math.round(workPaneWidth), onKeyDown: handleSeparatorKeyDown, onPointerDown: handlePointerDown })) : null, hasWorkPane ? (_jsxs("aside", { ref: workPaneRef, id: workPaneId, className: "chat-workspace__work-pane", style: { flexBasis: `${workPaneWidth}%` }, "aria-labelledby": workPaneLabelId, hidden: !isOpen, children: [_jsxs("div", { className: "chat-workspace__work-pane-header", children: [_jsx("span", { id: workPaneLabelId, className: "chat-workspace__work-pane-label", children: workPaneLabel }), _jsx("button", { type: "button", className: "chat-workspace__pane-button", "aria-label": `Close ${workPaneLabel}`, onClick: () => setOpen(false), children: "Back to chat" })] }), _jsx("div", { className: "chat-workspace__work-pane-body", children: workPane })] })) : null] })] }));
 });
 const TabListImplementation = forwardRef(function TabList({ as = 'div', className, children, ...rest }, ref) {
     return createElement(as, { ...rest, ref, role: 'tablist', className: classes('tabs', className) }, children);
