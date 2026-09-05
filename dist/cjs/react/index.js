@@ -31,7 +31,7 @@ const MAX_WORK_PANE_WIDTH = 70;
 const DEFAULT_WORK_PANE_WIDTH = 55;
 const clampWorkPaneWidth = (width) => Math.min(MAX_WORK_PANE_WIDTH, Math.max(MIN_WORK_PANE_WIDTH, width));
 exports.ChatWorkspace = (0, react_1.forwardRef)(function ChatWorkspace({ children, header, toolbar, workPane, workPaneLabel = 'Work pane', workPaneOpen, defaultWorkPaneOpen = false, onWorkPaneOpenChange, className, style, ...rest }, ref) {
-    const hasWorkPane = workPane !== undefined && workPane !== null;
+    const hasWorkPane = react_1.Children.toArray(workPane).length > 0;
     const [uncontrolledOpen, setUncontrolledOpen] = (0, react_1.useState)(defaultWorkPaneOpen);
     const [workPaneWidth, setWorkPaneWidth] = (0, react_1.useState)(DEFAULT_WORK_PANE_WIDTH);
     const isControlled = workPaneOpen !== undefined;

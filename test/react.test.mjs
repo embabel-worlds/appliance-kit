@@ -283,17 +283,28 @@ describe('chat workspace', () => {
     return event
   }
 
-  it('omits pane controls when there is no pane', async () => {
+  it('omits pane controls for non-rendering nodes and keeps valid pane nodes', async () => {
     const ref = createRef()
-    const { container } = await render(
-      h(kit.ChatWorkspace, { ref, className: 'consumer-workspace' }, h('p', null, 'Chat')),
+    const { container, rerender } = await render(
+      h(
+        kit.ChatWorkspace,
+        { ref, className: 'consumer-workspace', workPane: false },
+        h('p', null, 'Chat'),
+      ),
     )
 
     assert.equal(ref.current, container.querySelector('.chat-workspace'))
     assert.match(ref.current.className, /consumer-workspace/)
-    assert.equal(container.querySelector('button'), null)
-    assert.equal(container.querySelector('[role="separator"]'), null)
-    assert.equal(container.querySelector('aside'), null)
+    for (const absentPane of [false, true, null, undefined]) {
+      await rerender(h(kit.ChatWorkspace, { workPane: absentPane }, h('p', null, 'Chat')))
+      assert.equal(container.querySelector('button'), null)
+      assert.equal(container.querySelector('[role="separator"]'), null)
+      assert.equal(container.querySelector('aside'), null)
+    }
+
+    await rerender(h(kit.ChatWorkspace, { workPane: h('p', null, 'Result') }, 'Chat'))
+    assert.ok(container.querySelector('[aria-controls]'))
+    assert.ok(container.querySelector('aside'))
   })
 
   it('keeps uncontrolled pane content mounted and provides narrow reveal and return', async () => {

@@ -1,5 +1,5 @@
 import { jsx as _jsx, jsxs as _jsxs } from "react/jsx-runtime";
-import { createElement, forwardRef, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, } from 'react';
+import { Children, createElement, forwardRef, useCallback, useEffect, useId, useLayoutEffect, useRef, useState, } from 'react';
 import { formatDuration } from "../studio-kit/format.js";
 export { getTabbable, useFocusTrap } from "./useFocusTrap.js";
 const classes = (...names) => names.filter(Boolean).join(' ');
@@ -22,7 +22,7 @@ const MAX_WORK_PANE_WIDTH = 70;
 const DEFAULT_WORK_PANE_WIDTH = 55;
 const clampWorkPaneWidth = (width) => Math.min(MAX_WORK_PANE_WIDTH, Math.max(MIN_WORK_PANE_WIDTH, width));
 export const ChatWorkspace = forwardRef(function ChatWorkspace({ children, header, toolbar, workPane, workPaneLabel = 'Work pane', workPaneOpen, defaultWorkPaneOpen = false, onWorkPaneOpenChange, className, style, ...rest }, ref) {
-    const hasWorkPane = workPane !== undefined && workPane !== null;
+    const hasWorkPane = Children.toArray(workPane).length > 0;
     const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultWorkPaneOpen);
     const [workPaneWidth, setWorkPaneWidth] = useState(DEFAULT_WORK_PANE_WIDTH);
     const isControlled = workPaneOpen !== undefined;

@@ -1,4 +1,5 @@
 import {
+  Children,
   createElement,
   forwardRef,
   useCallback,
@@ -152,7 +153,7 @@ export const ChatWorkspace = forwardRef<HTMLDivElement, ChatWorkspaceProps>(
     },
     ref,
   ) {
-    const hasWorkPane = workPane !== undefined && workPane !== null
+    const hasWorkPane = Children.toArray(workPane).length > 0
     const [uncontrolledOpen, setUncontrolledOpen] = useState(defaultWorkPaneOpen)
     const [workPaneWidth, setWorkPaneWidth] = useState(DEFAULT_WORK_PANE_WIDTH)
     const isControlled = workPaneOpen !== undefined
