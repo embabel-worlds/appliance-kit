@@ -402,6 +402,19 @@ describe('the public browser feature entry point', () => {
     await act(async () => editorHelpSummary.click())
     assert.equal(editorHelp.open, true)
     assert.match(editorHelp.textContent, /Control.*Space.*completes from the schema/)
+    const featureCss = postcss.parse(
+      readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'),
+      { from: 'features.css' },
+    )
+    const askActionRule = featureCss.nodes
+      .flatMap((node) => node.type === 'rule' ? [node] : [])
+      .find((rule) => rule.selectors?.includes(':where(.kit-feature) .studio-pane-query .ask-row > .btn'))
+    assert.ok(askActionRule, 'Query Ask actions have a bounded shared rule')
+    assert.equal(askActionRule.nodes.some((node) => node.prop === 'margin' && node.value === '0'), true)
+    const askActionSelector = askActionRule.selectors.find((selector) => selector.includes('.ask-row'))
+    assert.equal(button(rendered.container, 'Write the query').matches(askActionSelector), true)
+    assert.equal(button(rendered.container, 'Refine').matches(askActionSelector), true)
+    assert.equal(button(rendered.container, 'Run').matches(askActionSelector), false)
     await act(async () => button(rendered.container, 'Pin').click())
     assert.deepEqual(pinned, ['recent'])
     await act(async () => button(rendered.container, 'Cancel').click())

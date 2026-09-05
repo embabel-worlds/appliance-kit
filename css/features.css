@@ -637,7 +637,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   display: grid; grid-template-columns: minmax(0, 1fr) 132px;
 }
 
-:where(.kit-feature) .studio-pane-query .ask-row > .btn { width: 100%; }
+:where(.kit-feature) .studio-pane-query .ask-row > .btn { width: 100%; margin: 0; }
 
 :where(.kit-feature) .schema-summary { display: inline-flex; align-items: center; gap: 8px; }
 
