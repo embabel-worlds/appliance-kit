@@ -330,13 +330,15 @@ describe('the public browser feature entry point', () => {
 
   it('covers query validation, scopes, fills, interactive execution and disposal', async () => {
     let invalidExecuteCalls = 0
+    let schemaLoads = 0
     let signal
     const history = { read: () => [], write() {} }
     const sessionWrites = []
     const session = { read: () => null, write: (value) => sessionWrites.push(value) }
     const scope = { name: 'recent', statement: 'MATCH (n)', outputLabel: 'Chunk', members: 2, expiresAt: 'soon' }
     const base = {
-      runs: async () => ok([]), schema: async () => ok({ labels: [], relationships: [] }),
+      runs: async () => ok([]),
+      schema: async () => { schemaLoads += 1; return ok({ labels: [], relationships: [] }) },
       kill: async () => ok({ killed: true }), generate: async () => ok({ cypher: '' }),
       refine: async () => ok({ cypher: '' }), saveView: async () => ok({ saved: true }),
       scopes: async () => ok({ scopes: [scope] }), pinScope: async () => ok({ pinned: true }),
@@ -386,6 +388,20 @@ describe('the public browser feature entry point', () => {
       subscribeProgress: (_onEvent, nextSignal) => { signal = nextSignal },
     }
     rendered = await render(h(features.QueryStudioSurface, { services: liveServices, host: { history, interactive: { session } } }))
+    const refreshSchema = rendered.container.querySelector('button[aria-label="Refresh schema"]')
+    assert.ok(refreshSchema, 'schema refresh has an accessible name')
+    const loadsBeforeRefresh = schemaLoads
+    await act(async () => refreshSchema.click())
+    await flush()
+    assert.equal(schemaLoads, loadsBeforeRefresh + 1)
+    const editorHelp = rendered.container.querySelector('.editor-help')
+    const editorHelpSummary = editorHelp.querySelector('summary')
+    assert.equal(editorHelp.open, false)
+    editorHelpSummary.focus()
+    assert.equal(document.activeElement, editorHelpSummary, 'native summary is keyboard focusable')
+    await act(async () => editorHelpSummary.click())
+    assert.equal(editorHelp.open, true)
+    assert.match(editorHelp.textContent, /Control.*Space.*completes from the schema/)
     await act(async () => button(rendered.container, 'Pin').click())
     assert.deepEqual(pinned, ['recent'])
     await act(async () => button(rendered.container, 'Cancel').click())

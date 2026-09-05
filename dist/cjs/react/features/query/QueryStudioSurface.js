@@ -59,7 +59,8 @@ const jsx_runtime_1 = require("react/jsx-runtime");
  * there can never disagree; and the per-user scope is applied server-side, so an edited query can
  * be wrong but not unsafe.
  */
-const react_1 = require("react");
+const react_1 = require("@phosphor-icons/react");
+const react_2 = require("react");
 const kg_ts_1 = require("../../../client/kg.js");
 const outcome_ts_1 = require("../../../client/outcome.js");
 const index_ts_1 = require("../../../vc/index.js");
@@ -120,8 +121,8 @@ function QueryStudioSurface({ services, host, handedOver }) {
 }
 function QueryStudioBody({ handedOver }) {
     const { services, host } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [schema, setSchema] = (0, react_1.useState)(null);
-    const [validity, setValidity] = (0, react_1.useState)({ tone: null, text: '', violations: [] });
+    const [schema, setSchema] = (0, react_2.useState)(null);
+    const [validity, setValidity] = (0, react_2.useState)({ tone: null, text: '', violations: [] });
     /*
      * WHETHER THE VIOLATIONS ARE ON SCREEN, which is not the same question as whether the query is
      * valid.
@@ -136,46 +137,46 @@ function QueryStudioBody({ handedOver }) {
      * pill is a button while there is something to show). Typing hides it again, because a verdict
      * is stale the moment the text moves.
      */
-    const [showViolations, setShowViolations] = (0, react_1.useState)(false);
-    const [runStatus, setRunStatus] = (0, react_1.useState)({ tone: null, text: '' });
-    const [rows, setRows] = (0, react_1.useState)([]);
+    const [showViolations, setShowViolations] = (0, react_2.useState)(false);
+    const [runStatus, setRunStatus] = (0, react_2.useState)({ tone: null, text: '' });
+    const [rows, setRows] = (0, react_2.useState)([]);
     /* The WHOLE result, because `apiCallLog`, `llmCallLog` and the call counts ride on it and were
      * being thrown away — they are what the Vaadin console's Stats view is made of. */
-    const [result, setResult] = (0, react_1.useState)(null);
-    const [view, setView] = (0, react_1.useState)('table');
-    const [pane, setPane] = (0, react_1.useState)('query');
-    const [ran, setRan] = (0, react_1.useState)(false);
-    const [running, setRunning] = (0, react_1.useState)(false);
+    const [result, setResult] = (0, react_2.useState)(null);
+    const [view, setView] = (0, react_2.useState)('table');
+    const [pane, setPane] = (0, react_2.useState)('query');
+    const [ran, setRan] = (0, react_2.useState)(false);
+    const [running, setRunning] = (0, react_2.useState)(false);
     /* A kill has been asked for and the run has not answered yet. Separate from `running` because
      * the two overlap: the query is still in flight for as long as it takes the engine to notice. */
-    const [stopping, setStopping] = (0, react_1.useState)(false);
-    const runningCypher = (0, react_1.useRef)(null);
-    const [history, setHistory] = (0, react_1.useState)(() => host.history.read() ?? []);
+    const [stopping, setStopping] = (0, react_2.useState)(false);
+    const runningCypher = (0, react_2.useRef)(null);
+    const [history, setHistory] = (0, react_2.useState)(() => host.history.read() ?? []);
     /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
-    const [scopesVersion, setScopesVersion] = (0, react_1.useState)(0);
-    const [fillsVersion, setFillsVersion] = (0, react_1.useState)(0);
+    const [scopesVersion, setScopesVersion] = (0, react_2.useState)(0);
+    const [fillsVersion, setFillsVersion] = (0, react_2.useState)(0);
     /* What the engine is doing while we wait. The appliance has published this trace all along; not
      * reading it is why a slow run looked identical to a wedged one. */
     const progress = (0, progress_ts_1.useRunProgress)(services.subscribeProgress);
     /* Pinned to the newest line: the one that just arrived is the one being stared at while someone
      * decides whether this run is worth waiting for. */
-    const progressRef = (0, react_1.useRef)(null);
+    const progressRef = (0, react_2.useRef)(null);
     // Validation stops asking for good once an appliance answers "no such endpoint" — nagging per
     // keystroke about a feature this server simply does not have helps nobody.
-    const validateSupported = (0, react_1.useRef)(true);
-    const validateTimer = (0, react_1.useRef)(null);
-    const validatedCypher = (0, react_1.useRef)(null);
-    const active = (0, react_1.useRef)(true);
-    const schemaGeneration = (0, react_1.useRef)(0);
-    const validationGeneration = (0, react_1.useRef)(0);
-    const runGeneration = (0, react_1.useRef)(0);
-    const owner = (0, react_1.useRef)(Symbol('query-schema-owner')).current;
-    const runRef = (0, react_1.useRef)(() => { });
+    const validateSupported = (0, react_2.useRef)(true);
+    const validateTimer = (0, react_2.useRef)(null);
+    const validatedCypher = (0, react_2.useRef)(null);
+    const active = (0, react_2.useRef)(true);
+    const schemaGeneration = (0, react_2.useRef)(0);
+    const validationGeneration = (0, react_2.useRef)(0);
+    const runGeneration = (0, react_2.useRef)(0);
+    const owner = (0, react_2.useRef)(Symbol('query-schema-owner')).current;
+    const runRef = (0, react_2.useRef)(() => { });
     /* Both callbacks go through refs rather than being passed directly. `scheduleValidation`
      * reaches `validateNow`, which reads `handle` — which comes out of this very call — so naming it
      * here would be a circular inference TypeScript gives up on. The ref breaks the cycle and, as a
      * bonus, keeps the editor from caring that a callback identity moved. */
-    const editRef = (0, react_1.useRef)(() => { });
+    const editRef = (0, react_2.useRef)(() => { });
     const { ref: editorRef, handle } = (0, editor_ts_1.useEditor)({
         mode: 'application/x-cypher-query',
         onRun: () => runRef.current(),
@@ -186,7 +187,7 @@ function QueryStudioBody({ handedOver }) {
     /* Fetched on mount AND on window focus: the schema changes underneath a long-lived tab — a
      * realm install adds labels — and a snapshot taken once at mount quietly stops matching what
      * the engine validates against. Focus is when someone comes back from installing something. */
-    const loadSchema = (0, react_1.useCallback)(async () => {
+    const loadSchema = (0, react_2.useCallback)(async () => {
         const generation = ++schemaGeneration.current;
         const outcome = await services.kg.schema();
         if (!active.current || generation !== schemaGeneration.current || schemaOwner !== owner)
@@ -196,7 +197,7 @@ function QueryStudioBody({ handedOver }) {
         setSchema(outcome.value);
         schemaBox.current = outcome.value;
     }, [owner, services]);
-    (0, react_1.useEffect)(() => {
+    (0, react_2.useEffect)(() => {
         active.current = true;
         schemaOwner = owner;
         validationGeneration.current += 1;
@@ -232,7 +233,7 @@ function QueryStudioBody({ handedOver }) {
      * Attached once the editor exists, and torn down with it: CodeMirror owns this DOM node and
      * React will not clean up listeners it never added.
      */
-    (0, react_1.useEffect)(() => {
+    (0, react_2.useEffect)(() => {
         const cm = handle.editor;
         if (!cm)
             return;
@@ -288,7 +289,7 @@ function QueryStudioBody({ handedOver }) {
         };
     }, [handle.editor]);
     // ── validation: the engine's strict preflight, debounced ────────────────────────────────────
-    const validateNow = (0, react_1.useCallback)(async () => {
+    const validateNow = (0, react_2.useCallback)(async () => {
         // Validate what RUN will execute — the completed form — or the pill contradicts the Run button.
         const { cypher } = (0, index_ts_1.completeQuery)(handle.getText());
         if (!cypher) {
@@ -314,7 +315,7 @@ function QueryStudioBody({ handedOver }) {
             ? { tone: 'ok', text: '✓ schema-valid', violations: [] }
             : { tone: 'error', text: `${violations.length} schema problem(s)`, violations });
     }, [handle, services]);
-    const scheduleValidation = (0, react_1.useCallback)(() => {
+    const scheduleValidation = (0, react_2.useCallback)(() => {
         if (!validateSupported.current)
             return;
         if (validateTimer.current)
@@ -328,7 +329,7 @@ function QueryStudioBody({ handedOver }) {
     }, [validateNow]);
     editRef.current = scheduleValidation;
     // ── running ─────────────────────────────────────────────────────────────────────────────────
-    const run = (0, react_1.useCallback)(async () => {
+    const run = (0, react_2.useCallback)(async () => {
         // A RETURN-less MATCH runs with its RETURN implied — same rule as the Session tab, so
         // `MATCH (c:Chunk)` is runnable everywhere. The editor's text is not rewritten.
         const { cypher, note: impliedNote } = (0, index_ts_1.completeQuery)(handle.getText());
@@ -420,7 +421,7 @@ function QueryStudioBody({ handedOver }) {
      * boundaries, so granularity is about one model call. Stop is therefore a request, not a switch,
      * and the status says so rather than freezing the button and looking broken.
      */
-    const stop = (0, react_1.useCallback)(async () => {
+    const stop = (0, react_2.useCallback)(async () => {
         setStopping(true);
         setRunStatus({ tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' });
         const runId = progress.runId ?? (await inFlightRunId(services, runningCypher.current));
@@ -439,7 +440,7 @@ function QueryStudioBody({ handedOver }) {
         if (!outcome.value.killed)
             setStopping(false);
     }, [progress.runId]);
-    const land = (0, react_1.useCallback)((cypher) => {
+    const land = (0, react_2.useCallback)((cypher) => {
         validatedCypher.current = null;
         handle.setText(cypher);
         scheduleValidation();
@@ -449,8 +450,8 @@ function QueryStudioBody({ handedOver }) {
      * making the overwrite lossless. Collapsing the panel and focusing the editor are what
      * make the click VISIBLE: with History expanded above the editor, the landed text was
      * below the fold and a click looked like it did nothing. */
-    const historyRef = (0, react_1.useRef)(null);
-    const recall = (0, react_1.useCallback)((cypher) => {
+    const historyRef = (0, react_2.useRef)(null);
+    const recall = (0, react_2.useCallback)((cypher) => {
         const current = handle.getText();
         if (current.trim() && current !== cypher) {
             setHistory((entries) => {
@@ -467,14 +468,14 @@ function QueryStudioBody({ handedOver }) {
     }, [handle, land]);
     /* Landed on arrival AND on change, so opening the same view twice still works. The editor is
      * created asynchronously, so this waits for it rather than firing into nothing. */
-    const landed = (0, react_1.useRef)(null);
-    (0, react_1.useEffect)(() => {
+    const landed = (0, react_2.useRef)(null);
+    (0, react_2.useEffect)(() => {
         if (!handedOver || !handle.editor || landed.current === handedOver)
             return;
         landed.current = handedOver;
         land(handedOver);
     }, [handedOver, handle.editor, land]);
-    (0, react_1.useEffect)(() => {
+    (0, react_2.useEffect)(() => {
         const el = progressRef.current;
         if (el)
             el.scrollTop = el.scrollHeight;
@@ -483,18 +484,18 @@ function QueryStudioBody({ handedOver }) {
      * editor coming back on screen therefore renders blank, or drops the cursor in the wrong place,
      * until it is told to measure again. This is the whole cost of hiding rather than unmounting,
      * and it is a cheap one. */
-    (0, react_1.useEffect)(() => {
+    (0, react_2.useEffect)(() => {
         if (pane === 'query')
             handle.editor?.refresh();
     }, [pane, handle.editor]);
     const columns = (0, index_ts_1.rowColumns)(rows);
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-query studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), (0, jsx_runtime_1.jsx)(ScopesPanel, { version: scopesVersion, onInsert: land }), (0, jsx_runtime_1.jsx)(FillsPanel, { version: fillsVersion })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-tabbed", children: [(0, jsx_runtime_1.jsx)("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: land, current: () => handle.getText() }), (0, jsx_runtime_1.jsxs)("details", { className: "queryhistory", ref: historyRef, children: [(0, jsx_runtime_1.jsxs)("summary", { className: "queryhistory-title", children: ["History \u00B7 ", history.length] }), history.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Queries you run land here." }) : ((0, jsx_runtime_1.jsx)("div", { className: "historylist", children: history.map((entry) => {
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-query studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), (0, jsx_runtime_1.jsx)(ScopesPanel, { version: scopesVersion, onInsert: land }), (0, jsx_runtime_1.jsx)(FillsPanel, { version: fillsVersion })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-tabbed", children: [(0, jsx_runtime_1.jsx)("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: land, current: () => handle.getText() }), (0, jsx_runtime_1.jsxs)("details", { className: "queryhistory", ref: historyRef, children: [(0, jsx_runtime_1.jsxs)("summary", { className: "queryhistory-title", children: ["History ", (0, jsx_runtime_1.jsx)("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : ((0, jsx_runtime_1.jsx)("div", { className: "historylist", children: history.map((entry) => {
                                             const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                             return ((0, jsx_runtime_1.jsxs)("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [(0, jsx_runtime_1.jsx)("span", { className: "history-cypher", children: firstLine }), (0, jsx_runtime_1.jsx)("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                         }) }))] }), (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
                                     ? ((0, jsx_runtime_1.jsxs)("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
                                     : (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsxs)("div", { className: "editor-wrap", children: [(0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() })] }), showViolations && validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                    || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), children: running ? 'running…' : 'Run ⌘⏎' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)("span", { className: "hint", children: "\u2303Space completes from the schema" })] })] })] }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane", hidden: pane !== 'results', children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
+                                                    || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), children: running ? 'running…' : 'Run ⌘⏎' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), (0, jsx_runtime_1.jsxs)("details", { className: "editor-help", children: [(0, jsx_runtime_1.jsxs)("summary", { className: "btn ghost tiny", children: [(0, jsx_runtime_1.jsx)(react_1.Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), (0, jsx_runtime_1.jsxs)("p", { className: "editor-help-copy", children: [(0, jsx_runtime_1.jsx)("kbd", { children: "Control" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Space" }), " completes from the schema."] })] })] })] })] }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane", hidden: pane !== 'results', children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                     rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) :
                                         (0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                     (0, jsx_runtime_1.jsx)("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && (0, jsx_runtime_1.jsx)(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && ((0, jsx_runtime_1.jsxs)("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => ((0, jsx_runtime_1.jsx)("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: progress.live
@@ -509,11 +510,11 @@ function QueryStudioBody({ handedOver }) {
  */
 function Ask({ onLand, current }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [question, setQuestion] = (0, react_1.useState)('');
-    const [instruction, setInstruction] = (0, react_1.useState)('');
-    const [busy, setBusy] = (0, react_1.useState)(false);
-    const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
-    const [explanation, setExplanation] = (0, react_1.useState)('');
+    const [question, setQuestion] = (0, react_2.useState)('');
+    const [instruction, setInstruction] = (0, react_2.useState)('');
+    const [busy, setBusy] = (0, react_2.useState)(false);
+    const [status, setStatus] = (0, react_2.useState)({ tone: null, text: '' });
+    const [explanation, setExplanation] = (0, react_2.useState)('');
     async function go(refine) {
         // Two boxes, two questions: one describes the query you want, the other the change you want
         // made to the one on screen. Sharing a box made "refine" read as a second Write.
@@ -576,14 +577,14 @@ function useQuery(schema, label) {
  * and the first to go stale.
  */
 function SchemaPanel({ schema, onInsert, onReload }) {
-    const [filter, setFilter] = (0, react_1.useState)('');
-    const [open, setOpen] = (0, react_1.useState)(null);
+    const [filter, setFilter] = (0, react_2.useState)('');
+    const [open, setOpen] = (0, react_2.useState)(null);
     const labels = (schema?.labels ?? []);
     const needle = filter.trim().toLowerCase();
     // Alphabetical, not server order: the panel is a lookup, and lookups sort.
     const shown = (needle ? labels.filter((l) => l.label.toLowerCase().includes(needle)) : labels)
         .slice().sort((a, b) => a.label.localeCompare(b.label));
-    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Schema", aside: (0, jsx_runtime_1.jsxs)("span", { className: "hint", children: [labels.length, " labels", onReload && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", title: "Re-read the schema \u2014 after installing a realm", onClick: onReload, children: "\u21BB" }))] }), children: schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { value: filter, placeholder: "filter labels", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "schemalist", children: [shown.map((label) => ((0, jsx_runtime_1.jsxs)("div", { className: "schemarow", children: [(0, jsx_runtime_1.jsxs)("button", { className: "schemaname", onClick: () => setOpen((o) => (o === label.label ? null : label.label)), children: [(0, jsx_runtime_1.jsx)("strong", { children: (0, index_ts_2.definitionTitle)(label) }), label.anchor === false && (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: "reach-only" })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", title: useQuery(schema, label), onClick: () => onInsert(useQuery(schema, label)), children: "Query" }), open === label.label && label.description && (0, jsx_runtime_1.jsx)("small", { className: "schemadesc", children: label.description }), open === label.label && ((0, jsx_runtime_1.jsxs)("ul", { className: "proplist", children: [(label.properties ?? []).map((p) => ((0, jsx_runtime_1.jsxs)("li", { children: [(0, jsx_runtime_1.jsx)("code", { children: p.name }), p.description && (0, jsx_runtime_1.jsxs)("span", { children: [" \u2014 ", p.description] })] }, p.name))), (label.properties ?? []).length === 0 && (0, jsx_runtime_1.jsx)("li", { className: "hint", children: "no declared properties" })] }))] }, label.label))), shown.length === 0 && (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["nothing matches \"", filter, "\""] })] })] })) }));
+    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Schema", aside: (0, jsx_runtime_1.jsxs)("span", { className: "schema-summary", children: [(0, jsx_runtime_1.jsxs)("span", { className: "hint", children: [labels.length, " labels"] }), onReload && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny schema-refresh", "aria-label": "Refresh schema", title: "Refresh schema after installing a realm", onClick: onReload, children: (0, jsx_runtime_1.jsx)(react_1.ArrowClockwise, { size: 14, weight: "bold", "aria-hidden": "true" }) }))] }), children: schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { className: "schema-filter", type: "search", value: filter, placeholder: "filter labels", "aria-label": "Filter schema labels", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "schemalist", children: [shown.map((label) => ((0, jsx_runtime_1.jsxs)("div", { className: "schemarow", children: [(0, jsx_runtime_1.jsxs)("button", { className: "schemaname", onClick: () => setOpen((o) => (o === label.label ? null : label.label)), children: [(0, jsx_runtime_1.jsx)("strong", { children: (0, index_ts_2.definitionTitle)(label) }), label.anchor === false && (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: "reach-only" })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", title: useQuery(schema, label), onClick: () => onInsert(useQuery(schema, label)), children: "Query" }), open === label.label && label.description && (0, jsx_runtime_1.jsx)("small", { className: "schemadesc", children: label.description }), open === label.label && ((0, jsx_runtime_1.jsxs)("ul", { className: "proplist", children: [(label.properties ?? []).map((p) => ((0, jsx_runtime_1.jsxs)("li", { children: [(0, jsx_runtime_1.jsx)("code", { children: p.name }), p.description && (0, jsx_runtime_1.jsxs)("span", { children: [" \u2014 ", p.description] })] }, p.name))), (label.properties ?? []).length === 0 && (0, jsx_runtime_1.jsx)("li", { className: "hint", children: "no declared properties" })] }))] }, label.label))), shown.length === 0 && (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["nothing matches \"", filter, "\""] })] })] })) }));
 }
 // ── keeping what you wrote ────────────────────────────────────────────────────────────────────
 /**
@@ -595,13 +596,13 @@ function SchemaPanel({ schema, onInsert, onReload }) {
  */
 function SaveView({ current }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [open, setOpen] = (0, react_1.useState)(false);
-    const [name, setName] = (0, react_1.useState)('');
-    const [description, setDescription] = (0, react_1.useState)('');
-    const [busy, setBusy] = (0, react_1.useState)(false);
-    const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
+    const [open, setOpen] = (0, react_2.useState)(false);
+    const [name, setName] = (0, react_2.useState)('');
+    const [description, setDescription] = (0, react_2.useState)('');
+    const [busy, setBusy] = (0, react_2.useState)(false);
+    const [status, setStatus] = (0, react_2.useState)({ tone: null, text: '' });
     /** Set when the saved body is not the body typed — see the note where it is assigned. */
-    const [promoted, setPromoted] = (0, react_1.useState)(null);
+    const [promoted, setPromoted] = (0, react_2.useState)(null);
     // The parameters this query declares, so saving one tells you what it will ask for.
     const declared = open ? (0, index_ts_1.declaredParams)(current()) : [];
     /** This query's scope references, so the panel can say what promoting it will do BEFORE it runs. */
@@ -668,7 +669,7 @@ function SaveView({ current }) {
  * chunk every couple of minutes, survives restarts, and the Fills panel carries the progress. */
 function StartFill({ current, onStarted }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [busy, setBusy] = (0, react_1.useState)(false);
+    const [busy, setBusy] = (0, react_2.useState)(false);
     const start = async () => {
         const cypher = current().trim();
         if (!cypher)
@@ -685,9 +686,9 @@ function StartFill({ current, onStarted }) {
  * any fill is RUNNING — progress is the point — and goes quiet once everything is DONE. */
 function FillsPanel({ version }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [fills, setFills] = (0, react_1.useState)(null);
-    const [supported, setSupported] = (0, react_1.useState)(true);
-    (0, react_1.useEffect)(() => {
+    const [fills, setFills] = (0, react_2.useState)(null);
+    const [supported, setSupported] = (0, react_2.useState)(true);
+    (0, react_2.useEffect)(() => {
         if (!supported)
             return;
         let stop = false;
@@ -720,10 +721,10 @@ function FillsPanel({ version }) {
 }
 function ScopesPanel({ version, onInsert }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [scopes, setScopes] = (0, react_1.useState)(null);
-    const [supported, setSupported] = (0, react_1.useState)(true);
-    const [status, setStatus] = (0, react_1.useState)('');
-    (0, react_1.useEffect)(() => {
+    const [scopes, setScopes] = (0, react_2.useState)(null);
+    const [supported, setSupported] = (0, react_2.useState)(true);
+    const [status, setStatus] = (0, react_2.useState)('');
+    (0, react_2.useEffect)(() => {
         if (!supported)
             return;
         void (async () => {
@@ -760,10 +761,10 @@ function ScopesPanel({ version, onInsert }) {
  */
 function CaptureScope({ current, onCaptured }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
-    const [open, setOpen] = (0, react_1.useState)(false);
-    const [name, setName] = (0, react_1.useState)('');
-    const [busy, setBusy] = (0, react_1.useState)(false);
-    const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
+    const [open, setOpen] = (0, react_2.useState)(false);
+    const [name, setName] = (0, react_2.useState)('');
+    const [busy, setBusy] = (0, react_2.useState)(false);
+    const [status, setStatus] = (0, react_2.useState)({ tone: null, text: '' });
     async function capture() {
         const scopeName = name.trim();
         // Same completion as Run and the Session tab: `MATCH (c:Chunk)` captures without a RETURN.
