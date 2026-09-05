@@ -346,8 +346,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) input[type='date'],
 :where(.kit-feature) input[type='number'],
 :where(.kit-feature) select,
-:where(.kit-feature) .ask-row textarea,
-:where(.kit-feature) .skillsource textarea {
+:where(.kit-feature) .ask-row > textarea,
+:where(.kit-feature) .skillsource > textarea {
   box-sizing: border-box; max-width: 100%; min-height: 34px;
   font: inherit; font-family: var(--sans); font-size: 13px;
   padding: 7px 9px; border: 1px solid var(--rule); border-radius: var(--radius);
@@ -364,8 +364,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) input[type='date']:focus-visible,
 :where(.kit-feature) input[type='number']:focus-visible,
 :where(.kit-feature) select:focus-visible,
-:where(.kit-feature) .ask-row textarea:focus-visible,
-:where(.kit-feature) .skillsource textarea:focus-visible {
+:where(.kit-feature) .ask-row > textarea:focus-visible,
+:where(.kit-feature) .skillsource > textarea:focus-visible {
   outline: 2px solid var(--signal); outline-offset: 1px;
 }
 
@@ -378,8 +378,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) input[type='date'][aria-invalid='true'],
 :where(.kit-feature) input[type='number'][aria-invalid='true'],
 :where(.kit-feature) select[aria-invalid='true'],
-:where(.kit-feature) .ask-row textarea[aria-invalid='true'],
-:where(.kit-feature) .skillsource textarea[aria-invalid='true'] { border-color: var(--alert); }
+:where(.kit-feature) .ask-row > textarea[aria-invalid='true'],
+:where(.kit-feature) .skillsource > textarea[aria-invalid='true'] { border-color: var(--alert); }
 
 :where(.kit-feature) input:not([type]):disabled,
 :where(.kit-feature) input[type='text']:disabled,
@@ -390,8 +390,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) input[type='date']:disabled,
 :where(.kit-feature) input[type='number']:disabled,
 :where(.kit-feature) select:disabled,
-:where(.kit-feature) .ask-row textarea:disabled,
-:where(.kit-feature) .skillsource textarea:disabled { opacity: 0.55; cursor: not-allowed; }
+:where(.kit-feature) .ask-row > textarea:disabled,
+:where(.kit-feature) .skillsource > textarea:disabled { opacity: 0.55; cursor: not-allowed; }
 
 :where(.kit-feature) .verdict { display: flex; flex-direction: column; gap: 4px; margin: 10px 0; }
 
@@ -990,8 +990,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   :where(.kit-feature) input[type='date'],
   :where(.kit-feature) input[type='number'],
   :where(.kit-feature) select,
-  :where(.kit-feature) .ask-row textarea,
-  :where(.kit-feature) .skillsource textarea { min-height: 44px; }
+  :where(.kit-feature) .ask-row > textarea,
+  :where(.kit-feature) .skillsource > textarea { min-height: 44px; }
 }
 
 :where(.kit-feature) .queryhistory { margin: 6px 0 0; }

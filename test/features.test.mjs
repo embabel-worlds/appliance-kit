@@ -394,6 +394,21 @@ describe('the public browser feature entry point', () => {
     await act(async () => button(rendered.container, 'Interactive').click())
     const sessionCm = rendered.container.querySelector('.session-cm .CodeMirror').CodeMirror
     const sessionDisposal = observeEditorDisposal(sessionCm)
+    const fieldCss = postcss.parse(
+      readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'),
+      { from: 'features.css' },
+    )
+    let fieldSkinRule
+    fieldCss.walkRules((rule) => {
+      if (rule.selectors?.includes(':where(.kit-feature) input:not([type])') &&
+          rule.nodes.some((node) => node.type === 'decl' && node.prop === 'box-sizing')) fieldSkinRule = rule
+    })
+    assert.ok(fieldSkinRule, 'shared field skin rule')
+    const nativeAskInput = rendered.container.querySelector('.studio-pane-query .ask-row > input')
+    const codeMirrorInput = rendered.container.querySelector('.session-cm .CodeMirror textarea')
+    const matchesFieldSkin = (element) => fieldSkinRule.selectors.some((selector) => element.matches(selector))
+    assert.equal(matchesFieldSkin(nativeAskInput), true, 'native Query input keeps the shared field skin')
+    assert.equal(matchesFieldSkin(codeMirrorInput), false, 'CodeMirror input stays editor-owned')
     await act(async () => sessionCm.setValue('MATCH (c:Chunk)'))
     await act(async () => button(rendered.container, 'Enter').click())
     await flush()
