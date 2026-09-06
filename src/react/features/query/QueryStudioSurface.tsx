@@ -22,6 +22,7 @@
  * be wrong but not unsafe.
  */
 
+import { ArrowClockwise, Question } from '@phosphor-icons/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
   type KgQueryResult,
@@ -537,8 +538,10 @@ function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
             found it (twice); dimmed and below the editor, it hid a third time. ABOVE the
             editor, undimmed, collapsed until wanted. */}
         <details className="queryhistory" ref={historyRef}>
-          <summary className="queryhistory-title">History · {history.length}</summary>
-          {history.length === 0 ? <p className="hint">Queries you run land here.</p> : (
+          <summary className="queryhistory-title">
+            History <span className="queryhistory-count">{history.length}</span>
+          </summary>
+          {history.length === 0 ? <p className="hint">Run a query to keep it here for quick recall.</p> : (
             <div className="historylist">
               {history.map((entry) => {
                 const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher
@@ -592,7 +595,15 @@ function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
             <SaveView current={() => handle.getText()} />
             <CaptureScope current={() => handle.getText()} onCaptured={() => setScopesVersion((v) => v + 1)} />
             <StartFill current={() => completeQuery(handle.getText()).cypher} onStarted={() => setFillsVersion((v) => v + 1)} />
-            <span className="hint">⌃Space completes from the schema</span>
+            <details className="editor-help">
+              <summary className="btn ghost tiny">
+                <Question size={14} weight="bold" aria-hidden="true" />
+                Help
+              </summary>
+              <p className="editor-help-copy">
+                <kbd>Control</kbd> + <kbd>Space</kbd> completes from the schema.
+              </p>
+            </details>
           </div>
         </StudioPanel>
       </div>
@@ -789,17 +800,31 @@ function SchemaPanel({ schema, onInsert, onReload }: {
     <StudioPanel
       title="Schema"
       aside={
-        <span className="hint">
-          {labels.length} labels
+        <span className="schema-summary">
+          <span className="hint">{labels.length} labels</span>
           {onReload && (
-            <button className="btn ghost tiny" title="Re-read the schema — after installing a realm" onClick={onReload}>↻</button>
+            <button
+              className="btn ghost tiny schema-refresh"
+              aria-label="Refresh schema"
+              title="Refresh schema after installing a realm"
+              onClick={onReload}
+            >
+              <ArrowClockwise size={14} weight="bold" aria-hidden="true" />
+            </button>
           )}
         </span>
       }
     >
       {schema == null ? <p className="hint">loading…</p> : (
         <>
-          <input value={filter} placeholder="filter labels" onChange={(e) => setFilter(e.target.value)} />
+          <input
+            className="schema-filter"
+            type="search"
+            value={filter}
+            placeholder="filter labels"
+            aria-label="Filter schema labels"
+            onChange={(e) => setFilter(e.target.value)}
+          />
           <div className="schemalist">
             {shown.map((label) => (
               <div className="schemarow" key={label.label}>
