@@ -16,6 +16,41 @@
         "required" : [ "actionName", "command", "description" ],
         "type" : "object"
       },
+      "ActionListItem" : {
+        "properties" : {
+          "canRerun" : {
+            "type" : "boolean"
+          },
+          "deletable" : {
+            "type" : "boolean"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "inputTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outputTypes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "readOnly" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "canRerun", "deletable", "description", "inputTypes", "name", "outputTypes", "readOnly" ],
+        "type" : "object"
+      },
       "AddRealmRequest" : {
         "properties" : {
           "confirmed" : {
@@ -32,6 +67,33 @@
           }
         },
         "required" : [ "confirmed" ],
+        "type" : "object"
+      },
+      "AgentListItem" : {
+        "properties" : {
+          "actions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ActionListItem"
+            },
+            "type" : "array"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "goals" : {
+            "items" : {
+              "$ref" : "#/components/schemas/GoalListItem"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "actions", "description", "goals", "name" ],
         "type" : "object"
       },
       "AnnotateDryRunRequest" : {
@@ -139,6 +201,67 @@
         "required" : [ "filters", "sources", "unresolvedCitations" ],
         "type" : "object"
       },
+      "AvailableSourcesResponse" : {
+        "properties" : {
+          "sources" : {
+            "items" : {
+              "$ref" : "#/components/schemas/OnboardingSource"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "sources" ],
+        "type" : "object"
+      },
+      "BootstrapCapabilities" : {
+        "properties" : {
+          "apiDiscoveryEnabled" : {
+            "type" : "boolean"
+          },
+          "workosEnabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "apiDiscoveryEnabled", "workosEnabled" ],
+        "type" : "object"
+      },
+      "BootstrapResponse" : {
+        "properties" : {
+          "capabilities" : {
+            "$ref" : "#/components/schemas/BootstrapCapabilities"
+          },
+          "currentUser" : {
+            "$ref" : "#/components/schemas/BootstrapUser"
+          },
+          "preferredLogin" : {
+            "type" : "string"
+          },
+          "schemaVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "supportedAuthSchemes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "capabilities", "preferredLogin", "schemaVersion", "supportedAuthSchemes" ],
+        "type" : "object"
+      },
+      "BootstrapUser" : {
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "username" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "username" ],
+        "type" : "object"
+      },
       "BriefingLensRequest" : {
         "properties" : {
           "asOf" : {
@@ -168,6 +291,15 @@
         "required" : [ "lat", "lng" ],
         "type" : "object"
       },
+      "BrowserTimeZoneRequest" : {
+        "properties" : {
+          "zone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "zone" ],
+        "type" : "object"
+      },
       "BuildSnapshot" : {
         "properties" : {
           "byOutcome" : {
@@ -184,6 +316,103 @@
           }
         },
         "required" : [ "byOutcome", "recorded" ],
+        "type" : "object"
+      },
+      "CalendarAccount" : {
+        "properties" : {
+          "accountId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "accountId", "displayName", "provider" ],
+        "type" : "object"
+      },
+      "CalendarConnectionsView" : {
+        "properties" : {
+          "accounts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectedAccountView"
+            },
+            "type" : "array"
+          },
+          "providers" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectionProviderView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "accounts", "providers" ],
+        "type" : "object"
+      },
+      "CalendarEvent" : {
+        "properties" : {
+          "account" : {
+            "$ref" : "#/components/schemas/CalendarAccount"
+          },
+          "attendees" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EventAttendee"
+            },
+            "type" : "array"
+          },
+          "calendarId" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "end" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "eventId" : {
+            "type" : "string"
+          },
+          "isAllDay" : {
+            "type" : "boolean"
+          },
+          "isRecurring" : {
+            "type" : "boolean"
+          },
+          "joinUrl" : {
+            "type" : "string"
+          },
+          "location" : {
+            "type" : "string"
+          },
+          "myResponse" : {
+            "enum" : [ "NEEDS_ACTION", "ACCEPTED", "TENTATIVE", "DECLINED" ],
+            "type" : "string"
+          },
+          "organizer" : {
+            "$ref" : "#/components/schemas/EventAttendee"
+          },
+          "start" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "timeZone" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "visibility" : {
+            "enum" : [ "DEFAULT", "PUBLIC", "PRIVATE", "CONFIDENTIAL" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "attendees", "calendarId", "description", "end", "eventId", "isAllDay", "isRecurring", "myResponse", "start", "timeZone", "title", "visibility" ],
         "type" : "object"
       },
       "CapabilitiesRequest" : {
@@ -223,6 +452,18 @@
           }
         },
         "required" : [ "joined", "offered" ],
+        "type" : "object"
+      },
+      "ChatFeedbackRequest" : {
+        "properties" : {
+          "text" : {
+            "type" : "string"
+          },
+          "verdict" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "text", "verdict" ],
         "type" : "object"
       },
       "ChatRequest" : {
@@ -273,6 +514,28 @@
             "type" : "number"
           }
         },
+        "type" : "object"
+      },
+      "CollectorSettingsRequest" : {
+        "properties" : {
+          "cron" : {
+            "type" : "string"
+          },
+          "dryRun" : {
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "type" : "boolean"
+          },
+          "matcher" : {
+            "type" : "string"
+          },
+          "similarityThreshold" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "required" : [ "cron", "dryRun", "enabled", "matcher", "similarityThreshold" ],
         "type" : "object"
       },
       "CommandRunRequest" : {
@@ -404,6 +667,39 @@
           }
         },
         "required" : [ "fields", "password", "username" ],
+        "type" : "object"
+      },
+      "ConnectedAccountView" : {
+        "properties" : {
+          "accountId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "accountId", "displayName", "provider" ],
+        "type" : "object"
+      },
+      "ConnectionProviderView" : {
+        "properties" : {
+          "authorizeUrl" : {
+            "type" : "string"
+          },
+          "configured" : {
+            "type" : "boolean"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "providerName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "authorizeUrl", "configured", "displayName", "providerName" ],
         "type" : "object"
       },
       "Context" : {
@@ -878,6 +1174,15 @@
         "required" : [ "byOutcome", "hostCalls" ],
         "type" : "object"
       },
+      "DisplayNameBody" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "DistributionSnapshot" : {
         "properties" : {
           "baseUnit" : {
@@ -912,6 +1217,156 @@
           }
         },
         "required" : [ "from", "to", "type" ],
+        "type" : "object"
+      },
+      "EmailAccount" : {
+        "properties" : {
+          "accountId" : {
+            "type" : "string"
+          },
+          "displayName" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "accountId", "displayName", "provider" ],
+        "type" : "object"
+      },
+      "EmailAttachment" : {
+        "properties" : {
+          "extractedText" : {
+            "type" : "string"
+          },
+          "filename" : {
+            "type" : "string"
+          },
+          "mimeType" : {
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "extractedText", "filename", "mimeType", "sizeBytes" ],
+        "type" : "object"
+      },
+      "EmailConnectionsView" : {
+        "properties" : {
+          "accounts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectedAccountView"
+            },
+            "type" : "array"
+          },
+          "providers" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ConnectionProviderView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "accounts", "providers" ],
+        "type" : "object"
+      },
+      "EmailMessage" : {
+        "properties" : {
+          "attachments" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EmailAttachment"
+            },
+            "type" : "array"
+          },
+          "autoSubmitted" : {
+            "type" : "boolean"
+          },
+          "body" : {
+            "type" : "string"
+          },
+          "cc" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "from" : {
+            "type" : "string"
+          },
+          "hasAttachments" : {
+            "type" : "boolean"
+          },
+          "labels" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "messageId" : {
+            "type" : "string"
+          },
+          "receivedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "to" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "attachments", "autoSubmitted", "body", "cc", "from", "hasAttachments", "labels", "messageId", "receivedAt", "subject", "to" ],
+        "type" : "object"
+      },
+      "EmailThread" : {
+        "properties" : {
+          "account" : {
+            "$ref" : "#/components/schemas/EmailAccount"
+          },
+          "lastMessageAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "messages" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EmailMessage"
+            },
+            "type" : "array"
+          },
+          "participants" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/EmailThreadSource"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "threadId" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "lastMessageAt", "messages", "participants", "source", "subject", "threadId" ],
+        "type" : "object"
+      },
+      "EmailThreadSource" : {
+        "properties" : {
+          "provider" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "provider" ],
         "type" : "object"
       },
       "EngineFieldWire" : {
@@ -968,6 +1423,31 @@
         "required" : [ "engines" ],
         "type" : "object"
       },
+      "EventAttendee" : {
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "email" : {
+            "type" : "string"
+          },
+          "isOptional" : {
+            "type" : "boolean"
+          },
+          "isOrganizer" : {
+            "type" : "boolean"
+          },
+          "isResource" : {
+            "type" : "boolean"
+          },
+          "response" : {
+            "enum" : [ "NEEDS_ACTION", "ACCEPTED", "TENTATIVE", "DECLINED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "email", "isOptional", "isOrganizer", "isResource", "response" ],
+        "type" : "object"
+      },
       "EventReceipt" : {
         "properties" : {
           "detail" : {
@@ -981,6 +1461,21 @@
           }
         },
         "required" : [ "status" ],
+        "type" : "object"
+      },
+      "EventsResponse" : {
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "events" : {
+            "items" : {
+              "$ref" : "#/components/schemas/CalendarEvent"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "events" ],
         "type" : "object"
       },
       "ExportRequest" : {
@@ -1083,6 +1578,35 @@
           }
         },
         "required" : [ "createdAt", "liveCallsTotal", "state", "ticks" ],
+        "type" : "object"
+      },
+      "GoalListItem" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "examples" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outputType" : {
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          }
+        },
+        "required" : [ "description", "examples", "name", "tags" ],
         "type" : "object"
       },
       "HandlerAvailable" : {
@@ -1489,6 +2013,38 @@
         "required" : [ "chatInput", "label" ],
         "type" : "object"
       },
+      "HomeLocationBody" : {
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          },
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "HomeLocationView" : {
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          },
+          "latitude" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "longitude" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
       "InUseResponse" : {
         "properties" : {
           "allLocal" : {
@@ -1511,6 +2067,15 @@
           }
         },
         "required" : [ "allLocal", "cloudProviders", "models", "summary" ],
+        "type" : "object"
+      },
+      "InstallRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
         "type" : "object"
       },
       "InstalledResponse" : {
@@ -2736,6 +3301,28 @@
         "required" : [ "bufferSize", "entries", "truncated" ],
         "type" : "object"
       },
+      "McpServerInfo" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "toolCount" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "toolNames" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "name", "toolCount", "toolNames" ],
+        "type" : "object"
+      },
       "ModelInUse" : {
         "properties" : {
           "local" : {
@@ -2974,6 +3561,94 @@
         "required" : [ "apps", "channel", "views" ],
         "type" : "object"
       },
+      "OnboardingRequest" : {
+        "properties" : {
+          "buildMeApp" : {
+            "type" : "boolean"
+          },
+          "lookbackDays" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sources" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "buildMeApp", "lookbackDays", "sources" ],
+        "type" : "object"
+      },
+      "OnboardingSource" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "available", "id", "label" ],
+        "type" : "object"
+      },
+      "OnboardingStartResponse" : {
+        "properties" : {
+          "jobId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "jobId", "status" ],
+        "type" : "object"
+      },
+      "OnboardingStatusResponse" : {
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "jobId" : {
+            "type" : "string"
+          },
+          "progress" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "jobId", "status" ],
+        "type" : "object"
+      },
+      "PreferencesBody" : {
+        "properties" : {
+          "greetingEnabled" : {
+            "type" : "boolean"
+          },
+          "hintsEnabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "greetingEnabled", "hintsEnabled" ],
+        "type" : "object"
+      },
+      "PreferencesView" : {
+        "properties" : {
+          "greetingEnabled" : {
+            "type" : "boolean"
+          },
+          "hintsEnabled" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "greetingEnabled", "hintsEnabled" ],
+        "type" : "object"
+      },
       "Principles" : {
         "properties" : {
           "content" : {
@@ -2984,6 +3659,18 @@
           }
         },
         "required" : [ "content", "overridden" ],
+        "type" : "object"
+      },
+      "ProfileView" : {
+        "properties" : {
+          "displayName" : {
+            "type" : "string"
+          },
+          "home" : {
+            "$ref" : "#/components/schemas/HomeLocationView"
+          }
+        },
+        "required" : [ "displayName" ],
         "type" : "object"
       },
       "PromoteRequest" : {
@@ -3248,6 +3935,33 @@
         "required" : [ "kind" ],
         "type" : "object"
       },
+      "SessionSummaryResponse" : {
+        "properties" : {
+          "createdAt" : {
+            "type" : "string"
+          },
+          "lastActivityAt" : {
+            "type" : "string"
+          },
+          "sessionId" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "lastActivityAt", "sessionId" ],
+        "type" : "object"
+      },
+      "SetContextBody" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "SignalTypeInfo" : {
         "properties" : {
           "count" : {
@@ -3420,6 +4134,21 @@
           }
         },
         "required" : [ "content", "name" ],
+        "type" : "object"
+      },
+      "ThreadsResponse" : {
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "threads" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EmailThread"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "threads" ],
         "type" : "object"
       },
       "TimeoutsConfig" : {
@@ -3720,6 +4449,21 @@
         "required" : [ "url" ],
         "type" : "object"
       },
+      "UserContextView" : {
+        "properties" : {
+          "contexts" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "current" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "contexts", "current" ],
+        "type" : "object"
+      },
       "VerbSpec" : {
         "properties" : {
           "args" : {
@@ -3803,6 +4547,63 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "VoiceOptionView" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "label" ],
+        "type" : "object"
+      },
+      "VoiceProfileView" : {
+        "properties" : {
+          "available" : {
+            "type" : "boolean"
+          },
+          "effects" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "selectedEffects" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "voiceName" : {
+            "type" : "string"
+          },
+          "voices" : {
+            "items" : {
+              "$ref" : "#/components/schemas/VoiceOptionView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "available", "effects", "selectedEffects", "voices" ],
+        "type" : "object"
+      },
+      "VoiceUpdateBody" : {
+        "properties" : {
+          "effects" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "voiceName" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "effects" ],
         "type" : "object"
       },
       "WebFetchConfig" : {
@@ -3910,6 +4711,29 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/v1/actions" : {
+      "get" : {
+        "description" : "Returns every action the planner knows about, with its input/output types and whether it can be deleted from here. 'deletable' is true only for actions whose YAML lives directly under this world's config/actions directory — realm-shipped and platform-defined actions report false.",
+        "operationId" : "listActions_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ActionListItem"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "List of actions"
+          }
+        },
+        "summary" : "List actions in full",
+        "tags" : [ "Actions" ]
+      }
+    },
     "/api/v1/actions/available-references" : {
       "get" : {
         "operationId" : "availableReferences",
@@ -4191,7 +5015,7 @@
     },
     "/api/v1/admin/catchup/run" : {
       "post" : {
-        "operationId" : "run_4",
+        "operationId" : "run_5",
         "parameters" : [ {
           "description" : "Username to run catchup for.",
           "in" : "query",
@@ -4306,7 +5130,7 @@
     },
     "/api/v1/admin/code-action/run" : {
       "post" : {
-        "operationId" : "run_3",
+        "operationId" : "run_4",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -4364,7 +5188,7 @@
     },
     "/api/v1/admin/enrichment/run" : {
       "post" : {
-        "operationId" : "run_2",
+        "operationId" : "run_3",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -5583,7 +6407,7 @@
     },
     "/api/v1/admin/kg/runs/{runId}" : {
       "get" : {
-        "operationId" : "run_6",
+        "operationId" : "run_7",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -6566,6 +7390,52 @@
         "tags" : [ "Realm observability" ]
       }
     },
+    "/api/v1/agent-platform/agents" : {
+      "get" : {
+        "description" : "Returns every agent the platform hosts, each with its own actions and goals nested inline.",
+        "operationId" : "listAgents",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentListItem"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "List of agents"
+          }
+        },
+        "summary" : "List agents",
+        "tags" : [ "Agent platform" ]
+      }
+    },
+    "/api/v1/agent-platform/goals" : {
+      "get" : {
+        "description" : "Returns every goal the planner knows about, with its tags, example phrasings, and output type.",
+        "operationId" : "listGoals",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/GoalListItem"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "List of goals"
+          }
+        },
+        "summary" : "List goals",
+        "tags" : [ "Agent platform" ]
+      }
+    },
     "/api/v1/artifacts" : {
       "get" : {
         "description" : "Returns artifacts grouped by type.",
@@ -7085,6 +7955,94 @@
         "tags" : [ "Auth" ]
       }
     },
+    "/api/v1/bootstrap" : {
+      "get" : {
+        "description" : "Supported auth schemes, the preferred interactive login, the current user (null when anonymous), and capability flags. Values come from injected configuration, never guessed from the environment.",
+        "operationId" : "bootstrap",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BootstrapResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Bootstrap info",
+        "tags" : [ "Bootstrap" ]
+      }
+    },
+    "/api/v1/calendar/connections" : {
+      "get" : {
+        "operationId" : "connections_1",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CalendarConnectionsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Configured calendar providers and this user's connected accounts",
+        "tags" : [ "Calendar" ]
+      }
+    },
+    "/api/v1/calendar/connections/{accountId}" : {
+      "delete" : {
+        "operationId" : "disconnect_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "accountId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Disconnect one of this user's calendar accounts",
+        "tags" : [ "Calendar" ]
+      }
+    },
+    "/api/v1/calendar/events" : {
+      "get" : {
+        "operationId" : "events",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "days",
+          "required" : false,
+          "schema" : {
+            "default" : 7,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Calendar events across all connected accounts in a time window",
+        "tags" : [ "Calendar" ]
+      }
+    },
     "/api/v1/chat" : {
       "post" : {
         "description" : "Sends a user message to the assistant. The response is delivered via the SSE stream (GET /stream), not in the POST response body. An SSE stream must be open before sending messages.",
@@ -7316,6 +8274,52 @@
           }
         },
         "summary" : "Run a slash command",
+        "tags" : [ "Chat" ]
+      }
+    },
+    "/api/v1/chat/feedback" : {
+      "post" : {
+        "description" : "Publishes a CHAT-sourced UserFeedbackEvent for the given message text and verdict. Doesn't require an open stream — it's a judgement on a reply already received, not a new turn.",
+        "operationId" : "feedback",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChatFeedbackRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Feedback recorded"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Missing text or an unrecognised verdict"
+          }
+        },
+        "summary" : "Record thumbs up/down on an assistant reply",
         "tags" : [ "Chat" ]
       }
     },
@@ -7576,10 +8580,73 @@
         "tags" : [ "Chat" ]
       }
     },
+    "/api/v1/chat/sessions" : {
+      "get" : {
+        "description" : "Returns the authenticated user's persisted sessions, newest first, capped at 50 entries — the same cap and ordering the Vaadin sidebar uses. Metadata only (no message bodies).",
+        "operationId" : "listSessions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SessionSummaryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Session summaries"
+          }
+        },
+        "summary" : "List the user's chat sessions",
+        "tags" : [ "Chat sessions" ]
+      }
+    },
+    "/api/v1/chat/sessions/{sessionId}" : {
+      "delete" : {
+        "description" : "Hard-deletes a session and its messages. Refuses (404) if the session doesn't exist or isn't owned by the caller — [ChatSessionService.deleteSession] can't tell those two cases apart from the outside, and shouldn't: leaking which is which would tell a caller whether an id belongs to someone else. If the deleted session was the one currently attached to this user's live chat stream, it's detached too (`wasActive: true` in the response), so the SPA knows to navigate back to a blank chat rather than keep talking into a session that no longer exists — mirrors ChatSessionsSidebar.onDelete's navigate-to-blank-/chat.",
+        "operationId" : "deleteSession",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "sessionId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Session deleted"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such session, or not owned by the caller"
+          }
+        },
+        "summary" : "Delete a chat session",
+        "tags" : [ "Chat sessions" ]
+      }
+    },
     "/api/v1/chat/status" : {
       "get" : {
         "description" : "Returns the status of the user's chat session and any running agent processes. Use this to monitor progress of long-running actions.",
-        "operationId" : "status_2",
+        "operationId" : "status_3",
         "responses" : {
           "200" : {
             "content" : {
@@ -7608,8 +8675,16 @@
     },
     "/api/v1/chat/stream" : {
       "get" : {
-        "description" : "Opens a Server-Sent Events stream for receiving chat responses, background events, and progress updates. Creates a headless chat session if no session exists for this user. Multiple clients can connect simultaneously and all will receive events.",
+        "description" : "Opens a Server-Sent Events stream for receiving chat responses, background events, and progress updates. Creates a headless chat session if no session exists for this user and no sessionId is given. Pass sessionId to open (or switch to) one of the user's persisted sessions — see GET /chat/sessions for the list. Multiple clients can connect simultaneously and all will receive events.",
         "operationId" : "stream",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "sessionId",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {
@@ -7840,6 +8915,67 @@
           }
         },
         "summary" : "Set the model chat uses",
+        "tags" : [ "Config" ]
+      }
+    },
+    "/api/v1/config/collector" : {
+      "get" : {
+        "description" : "Returns the effective memory-dedup collector settings for this world: enabled, dryRun, matcher, similarityThreshold and cron are resolved against the deployment defaults (never null); the five multi-signal weights are returned as stored (null means the matcher's own default applies).",
+        "operationId" : "getCollectorSettings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Effective collector settings"
+          }
+        },
+        "summary" : "Get collector/dedup settings",
+        "tags" : [ "Config" ]
+      },
+      "put" : {
+        "description" : "Persists this world's collector settings, replacing the stored CollectorConfig. A user sees dry-run and the similarity threshold before the sweep ever touches their data, so both are validated here rather than saved sight-unseen: similarityThreshold and the signal weights must fall in [0, 1], matcher must be 'cosine' or 'multi-signal', and cron must be a valid Spring 6-field expression (seconds minutes hours day-of-month month day-of-week).",
+        "operationId" : "updateCollectorSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CollectorSettingsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Collector settings updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Invalid matcher, threshold, weight, or cron expression"
+          }
+        },
+        "summary" : "Update collector/dedup settings",
         "tags" : [ "Config" ]
       }
     },
@@ -8122,6 +9258,54 @@
         "tags" : [ "Config" ]
       }
     },
+    "/api/v1/context" : {
+      "get" : {
+        "operationId" : "context",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UserContextView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "This user's active context and every context name they've used",
+        "tags" : [ "Context" ]
+      }
+    },
+    "/api/v1/context/current" : {
+      "put" : {
+        "operationId" : "setCurrent",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetContextBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Switch this user's active context, creating a new one if the name hasn't been used before",
+        "tags" : [ "Context" ]
+      }
+    },
     "/api/v1/context/observation/location" : {
       "post" : {
         "description" : "Always returns 204. An unauthenticated push or out-of-range coordinates are silently dropped rather than recorded, so 204 does not guarantee the observation was stored.",
@@ -8142,6 +9326,29 @@
           }
         },
         "summary" : "Push the current browser geolocation for the authenticated user",
+        "tags" : [ "Context" ]
+      }
+    },
+    "/api/v1/context/timezone" : {
+      "post" : {
+        "description" : "Validates the timezone against ZoneId; rejects invalid zones. Returns 204 whether or not the value changed.",
+        "operationId" : "syncTimeZone",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/BrowserTimeZoneRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "No Content"
+          }
+        },
+        "summary" : "Sync the browser's IANA timezone for the authenticated user",
         "tags" : [ "Context" ]
       }
     },
@@ -8498,7 +9705,7 @@
     "/api/v1/directory/install" : {
       "post" : {
         "description" : "Install a skill, API, MCP server, or realm from a directory entry. Dispatches to the appropriate install mechanism based on type.",
-        "operationId" : "install_1",
+        "operationId" : "install_2",
         "requestBody" : {
           "content" : {
             "application/json" : {
@@ -8681,6 +9888,52 @@
           }
         },
         "summary" : "List cached API discoveries",
+        "tags" : [ "API Discovery" ]
+      }
+    },
+    "/api/v1/discovery/install" : {
+      "post" : {
+        "description" : "Looks up a cached discovery result by name and installs it: learns the real spec when possible, or synthesizes one from the endpoints discovery found. The same path Vaadin's Discover tab uses.",
+        "operationId" : "install_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InstallRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "API installed"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No cached discovery with that name — run discovery again"
+          }
+        },
+        "summary" : "Install a discovered API",
         "tags" : [ "API Discovery" ]
       }
     },
@@ -8935,6 +10188,83 @@
         },
         "summary" : "Ingest from URL",
         "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/email/connections" : {
+      "get" : {
+        "operationId" : "connections",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EmailConnectionsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Configured email providers and this user's connected accounts",
+        "tags" : [ "Email" ]
+      }
+    },
+    "/api/v1/email/connections/{accountId}" : {
+      "delete" : {
+        "operationId" : "disconnect_1",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "accountId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "description" : "OK"
+          }
+        },
+        "summary" : "Disconnect one of this user's email accounts",
+        "tags" : [ "Email" ]
+      }
+    },
+    "/api/v1/email/threads" : {
+      "get" : {
+        "operationId" : "threads",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "days",
+          "required" : false,
+          "schema" : {
+            "default" : 14,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        }, {
+          "in" : "query",
+          "name" : "maxPerAccount",
+          "required" : false,
+          "schema" : {
+            "default" : 50,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadsResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Recent email threads across all connected accounts",
+        "tags" : [ "Email" ]
       }
     },
     "/api/v1/embeddings" : {
@@ -9196,6 +10526,124 @@
         "tags" : [ "Hints" ]
       }
     },
+    "/api/v1/identity-link-proposals/{id}/accept" : {
+      "post" : {
+        "description" : "Links the identity with HUMAN provenance, updates any realm bridge, and dismisses the proposal.",
+        "operationId" : "accept",
+        "parameters" : [ {
+          "description" : "Notification id of the proposal",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Linked"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not permitted — the proposal targets another world"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such pending proposal"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Proposal payload could not be parsed"
+          }
+        },
+        "summary" : "Accept an identity-link proposal",
+        "tags" : [ "Identity Link Proposals" ]
+      }
+    },
+    "/api/v1/identity-link-proposals/{id}/reject" : {
+      "post" : {
+        "description" : "Tombstones the identity — automatic matching will never re-propose it — and dismisses the proposal.",
+        "operationId" : "reject",
+        "parameters" : [ {
+          "description" : "Notification id of the proposal",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Rejected"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not permitted — the proposal targets another world"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such pending proposal"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Proposal payload could not be parsed"
+          }
+        },
+        "summary" : "Reject an identity-link proposal",
+        "tags" : [ "Identity Link Proposals" ]
+      }
+    },
     "/api/v1/images/{filename}" : {
       "get" : {
         "description" : "Scoped to the authenticated user. The content type is derived from the file extension.",
@@ -9242,6 +10690,460 @@
         },
         "summary" : "Serve an image by filename",
         "tags" : [ "Images" ]
+      }
+    },
+    "/api/v1/kg/studio/execute" : {
+      "post" : {
+        "operationId" : "studioExecute",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgExecuteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgQueryResult"
+                }
+              }
+            },
+            "description" : "The finished result"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Execute verbatim Cypher through the virtual-cypher engine, synchronously",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/generate" : {
+      "post" : {
+        "operationId" : "studioGenerate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgAskRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgGenerateResponse"
+                }
+              }
+            },
+            "description" : "The generated cypher, its verdict, and what the engine will do"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Generation failed"
+          }
+        },
+        "summary" : "Generate Cypher and an execution explanation for a question, without running it",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/kill/{runId}" : {
+      "post" : {
+        "operationId" : "studioKill",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgKillResponse"
+                }
+              }
+            },
+            "description" : "Whether the kill landed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Cancel an in-flight run by id (owner-guarded)",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/runs" : {
+      "get" : {
+        "operationId" : "studioRuns",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/KgInFlightRun"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The caller's in-flight runs, newest first"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "List the caller's in-flight virtual-cypher runs",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/schema" : {
+      "get" : {
+        "operationId" : "studioSchema",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSchemaResponse"
+                }
+              }
+            },
+            "description" : "The schema snapshot; empty lists and no `refreshedAt` when none exists"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "The caller's own graph schema — labels, properties, relationship triples",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/validate" : {
+      "post" : {
+        "operationId" : "studioValidate",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgExecuteRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgValidationResponse"
+                }
+              }
+            },
+            "description" : "The verdict; `message` is present even when null"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Validate Cypher against the schema without executing it",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/views" : {
+      "get" : {
+        "operationId" : "studioViews",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ViewDebugInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Saved views across the world and realm tiers"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "List the caller's saved views with their cache state",
+        "tags" : [ "Virtual Cypher (user)" ]
+      },
+      "post" : {
+        "operationId" : "studioSaveView",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgSaveViewRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewResponse"
+                }
+              }
+            },
+            "description" : "View saved"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewRejection"
+                }
+              }
+            },
+            "description" : "Invalid view — bad name, unrunnable body, or the name is taken"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Save a user-authored view (optionally parameterized) into the caller's world",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/views/{name}" : {
+      "delete" : {
+        "operationId" : "studioDeleteView",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgDeleteViewResponse"
+                }
+              }
+            },
+            "description" : "View deleted"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No saved view of that name"
+          }
+        },
+        "summary" : "Delete a user-authored view from the caller's world",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/views/{name}/invocation" : {
+      "post" : {
+        "operationId" : "studioViewInvocation",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgInvokeViewRequest"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgViewInvocationResponse"
+                }
+              }
+            },
+            "description" : "The runnable cypher for this invocation"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Bad view arguments"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Unknown view"
+          }
+        },
+        "summary" : "Return the runnable Cypher for a saved view invoked with the given arguments",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/views/{name}/refresh" : {
+      "post" : {
+        "operationId" : "studioRefreshView",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgRefreshViewResponse"
+                }
+              }
+            },
+            "description" : "Whether anything was recomputed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Force-recompute a materialised view's cache now, ignoring its TTL",
+        "tags" : [ "Virtual Cypher (user)" ]
       }
     },
     "/api/v1/learn/apis" : {
@@ -9789,7 +11691,7 @@
     },
     "/api/v1/lenses/{id}/run" : {
       "post" : {
-        "operationId" : "run_1",
+        "operationId" : "run_2",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -10308,6 +12210,250 @@
         },
         "summary" : "Mark notification as read",
         "tags" : [ "Notifications" ]
+      }
+    },
+    "/api/v1/onboarding/run" : {
+      "post" : {
+        "operationId" : "run_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/OnboardingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OnboardingStartResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Start the Get-to-Know-Me onboarding flow",
+        "tags" : [ "Onboarding" ]
+      }
+    },
+    "/api/v1/onboarding/sources" : {
+      "get" : {
+        "operationId" : "availableSources",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AvailableSourcesResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Get available onboarding sources",
+        "tags" : [ "Onboarding" ]
+      }
+    },
+    "/api/v1/onboarding/status/{jobId}" : {
+      "get" : {
+        "operationId" : "status_2",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "jobId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/OnboardingStatusResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Get onboarding job status",
+        "tags" : [ "Onboarding" ]
+      }
+    },
+    "/api/v1/profile" : {
+      "get" : {
+        "operationId" : "profile",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProfileView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "This user's display name and home location",
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/api/v1/profile/display-name" : {
+      "put" : {
+        "operationId" : "setDisplayName",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DisplayNameBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Rename this user — pushes to WorkOS and heals proposition prose, same as the Vaadin profile editor",
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/api/v1/profile/home" : {
+      "put" : {
+        "operationId" : "setHomeLocation",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HomeLocationBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProfileView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Set or clear this user's home location",
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/api/v1/profile/preferences" : {
+      "get" : {
+        "operationId" : "preferences",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreferencesView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "This user's greeting and login-hints preferences",
+        "tags" : [ "Profile" ]
+      },
+      "put" : {
+        "operationId" : "setPreferences",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PreferencesBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PreferencesView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Set this user's greeting and login-hints preferences",
+        "tags" : [ "Profile" ]
+      }
+    },
+    "/api/v1/profile/voice" : {
+      "get" : {
+        "operationId" : "voice",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VoiceProfileView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "This user's voice preferences, and whether voice is available at all in this deployment",
+        "tags" : [ "Profile" ]
+      },
+      "put" : {
+        "operationId" : "setVoice",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/VoiceUpdateBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VoiceProfileView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Set this user's preferred voice and effects",
+        "tags" : [ "Profile" ]
       }
     },
     "/api/v1/realms" : {
@@ -10897,6 +13043,59 @@
           }
         },
         "summary" : "List the signal types this world has received, with their fields and how often",
+        "tags" : [ "Signals" ]
+      }
+    },
+    "/api/v1/signals/backfill/run" : {
+      "post" : {
+        "description" : "Replay signals from every time-window ingestion source over the past N hours. Redeliveries are deduped, so this is safe to re-run.",
+        "operationId" : "backfill",
+        "parameters" : [ {
+          "description" : "Lookback window in hours (e.g. 5 for the last 5 hours)",
+          "in" : "query",
+          "name" : "hours",
+          "required" : false,
+          "schema" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Backfill report with per-source results"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Invalid lookback duration"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Backfill failed"
+          }
+        },
+        "summary" : "Backfill signals from the trailing window",
         "tags" : [ "Signals" ]
       }
     },
@@ -11699,7 +13898,7 @@
     },
     "/api/v1/watches/{watchId}/runs/{runId}" : {
       "get" : {
-        "operationId" : "run_5",
+        "operationId" : "run_6",
         "parameters" : [ {
           "in" : "path",
           "name" : "watchId",
@@ -12257,6 +14456,29 @@
           }
         },
         "summary" : "Read a world document",
+        "tags" : [ "World" ]
+      }
+    },
+    "/api/v1/world/mcp" : {
+      "get" : {
+        "description" : "Returns MCP servers reachable from this world: those the world itself configured, plus any wired in at the installation level, each with its tool count and tool names.",
+        "operationId" : "listMcp",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/McpServerInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "List of MCP servers"
+          }
+        },
+        "summary" : "List MCP servers",
         "tags" : [ "World" ]
       }
     },
@@ -12905,11 +15127,14 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37807"
+    "url" : "http://localhost:42203"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
     "name" : "Watches"
+  }, {
+    "description" : "Accept or reject an inbox identity-link proposal",
+    "name" : "Identity Link Proposals"
   }, {
     "description" : "Protocol for the local sensor app on the user's machine: event ingest and the command outbox",
     "name" : "Sensor"
@@ -12923,11 +15148,17 @@
     "description" : "The appliance's architectural principles, as coding agents receive them",
     "name" : "Principles"
   }, {
+    "description" : "The signed-in user's own scoped view of the Cypher studio surface",
+    "name" : "Virtual Cypher (user)"
+  }, {
     "description" : "Stylesheet theme management",
     "name" : "Themes"
   }, {
     "description" : "Manage world artifacts: documents, sites, code, data, diagrams",
     "name" : "Artifacts"
+  }, {
+    "description" : "Get-to-Know-Me flow",
+    "name" : "Onboarding"
   }, {
     "description" : "Manage world realms",
     "name" : "Realms"
@@ -12937,6 +15168,12 @@
   }, {
     "description" : "Manage world slash commands",
     "name" : "Commands"
+  }, {
+    "description" : "Read the platform's goal and agent catalogue",
+    "name" : "Agent platform"
+  }, {
+    "description" : "The signed-in user's calendar events",
+    "name" : "Calendar"
   }, {
     "description" : "API discovery from a natural-language description (LLM-driven) or directly from a spec URL",
     "name" : "API Discovery"
@@ -12967,6 +15204,18 @@
   }, {
     "description" : "Author, list and run saved lenses; the productized consumer path is Headless Invocation",
     "name" : "Lenses"
+  }, {
+    "description" : "The signed-in user's email threads",
+    "name" : "Email"
+  }, {
+    "description" : "The signed-in user's named memory contexts, and which one is active",
+    "name" : "Context"
+  }, {
+    "description" : "The signed-in user's connected email accounts",
+    "name" : "Email"
+  }, {
+    "description" : "Tells a fresh client how to log in and who (if anyone) is signed in",
+    "name" : "Bootstrap"
   }, {
     "description" : "Models available to this appliance",
     "name" : "Models"
@@ -13004,6 +15253,12 @@
     "description" : "Development diagnostic tools; present only when assistant.infrastructure.diagnostics-enabled is true",
     "name" : "Diagnostics"
   }, {
+    "description" : "List and delete the user's persisted chat sessions",
+    "name" : "Chat sessions"
+  }, {
+    "description" : "The signed-in user's connected calendar accounts",
+    "name" : "Calendar"
+  }, {
     "description" : "Captured query scopes: frozen result sets referenced in later queries as (x:`$name`)",
     "name" : "KG Scopes"
   }, {
@@ -13012,6 +15267,12 @@
   }, {
     "description" : "Tips and hints for users",
     "name" : "Hints"
+  }, {
+    "description" : "Signal ingestion and backfill control",
+    "name" : "Signals"
+  }, {
+    "description" : "The signed-in user's own display name, home location, and voice preferences",
+    "name" : "Profile"
   }, {
     "description" : "Installed agent skills for the authenticated user",
     "name" : "Skills"
