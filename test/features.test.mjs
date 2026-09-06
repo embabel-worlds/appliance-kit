@@ -90,6 +90,43 @@ afterEach(async () => {
 })
 
 describe('the public browser feature entry point', () => {
+  it('reports editor text to the host and accepts an explicit repeat handoff without replaying edits', async () => {
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }),
+        scopes: async () => ok({ scopes: [] }), validate: async () => ok({ ok: true }) },
+      fills: { list: async () => ok([]) }, subscribeProgress() {},
+    }
+    const changes = []
+    const props = { services, host: { history: { read: () => [], write() {} },
+      interactive: { session: { read: () => null, write() {} } } },
+      handedOver: 'RETURN 1', handoffRevision: 1, onCypherChange: (text) => changes.push(text) }
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    const cm = rendered.container.querySelector('.CodeMirror').CodeMirror
+    assert.equal(cm.getValue(), 'RETURN 1')
+    assert.equal(changes.at(-1), 'RETURN 1')
+    await act(async () => cm.setValue('RETURN 2'))
+    assert.equal(changes.at(-1), 'RETURN 2')
+    await act(async () => rendered.root.render(h(features.QueryStudioSurface, { ...props })))
+    assert.equal(cm.getValue(), 'RETURN 2')
+    await act(async () => rendered.root.render(h(features.QueryStudioSurface, { ...props, handoffRevision: 2 })))
+    assert.equal(cm.getValue(), 'RETURN 1')
+  })
+
+  it('explains a refused fill instead of silently returning to idle', async () => {
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }),
+        scopes: async () => ok({ scopes: [] }), validate: async () => ok({ ok: true }) },
+      fills: { list: async () => ok([]), create: async () => ({ ok: false, kind: 'unauthorized', status: 403, message: 'Forbidden' }) },
+      subscribeProgress() {},
+    }
+    const host = { history: { read: () => [], write() {} }, interactive: { session: { read: () => null, write() {} } } }
+    const rendered = await render(h(features.QueryStudioSurface, { services, host, handedOver: 'RETURN 1' }))
+    const fill = [...rendered.container.querySelectorAll('button')].find((b) => b.textContent.trim() === 'Fill')
+    await act(async () => fill.click())
+    assert.match(rendered.container.textContent, /administrator/i)
+    assert.equal(fill.disabled, false)
+  })
+
   it('ships WKWebView-compatible feature-bound CSS with every extracted workflow block', () => {
     const css = readFileSync(new URL('../css/features.css', import.meta.url), 'utf8')
     const root = postcss.parse(css, { from: 'features.css' })

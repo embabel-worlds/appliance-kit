@@ -281,6 +281,10 @@ export interface QueryStudioSurfaceProps {
   services: QueryStudioServices
   host: QueryStudioHost
   handedOver?: string | null
+  /** Increment to explicitly apply the same query again after editing it. */
+  handoffRevision?: number
+  /** Current editor text, including generated and recalled queries. */
+  onCypherChange?(cypher: string): void
 }
 
 export interface McpProbe {
