@@ -108,16 +108,18 @@ async function inFlightRunId(services: QueryStudioServices, cypher: string | nul
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
  */
-export function QueryStudioSurface({ services, host, handedOver }: QueryStudioSurfaceProps) {
+export function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }: QueryStudioSurfaceProps) {
   return (
     <QueryRuntimeProvider services={services} host={host}>
-      <QueryStudioBody handedOver={handedOver} />
+      <QueryStudioBody handedOver={handedOver} handoffRevision={handoffRevision} onCypherChange={onCypherChange} />
     </QueryRuntimeProvider>
   )
 }
 
-function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
+function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<QueryStudioSurfaceProps, 'handedOver' | 'handoffRevision' | 'onCypherChange'>) {
   const { services, host } = useQueryRuntime()
+  const reportCypher = useRef(onCypherChange)
+  reportCypher.current = onCypherChange
   const [schema, setSchema] = useState<KgSchema | null>(null)
   const [validity, setValidity] = useState<{ tone: 'ok' | 'error' | null; text: string; violations: string[] }>(
     { tone: null, text: '', violations: [] },
@@ -334,7 +336,10 @@ function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
     setShowViolations(false)
     validateTimer.current = setTimeout((): void => void validateNow(), 700)
   }, [validateNow])
-  editRef.current = scheduleValidation
+  editRef.current = () => {
+    reportCypher.current?.(handle.getText())
+    scheduleValidation()
+  }
 
   // ── running ─────────────────────────────────────────────────────────────────────────────────
   const run = useCallback(async (): Promise<void> => {
@@ -445,6 +450,7 @@ function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
   const land = useCallback((cypher: string) => {
     validatedCypher.current = null
     handle.setText(cypher)
+    reportCypher.current?.(cypher)
     scheduleValidation()
   }, [handle, scheduleValidation])
 
@@ -471,12 +477,13 @@ function QueryStudioBody({ handedOver }: { handedOver?: string | null }) {
 
   /* Landed on arrival AND on change, so opening the same view twice still works. The editor is
    * created asynchronously, so this waits for it rather than firing into nothing. */
-  const landed = useRef<string | null>(null)
+  const landed = useRef<{ cypher: string; revision?: number } | null>(null)
   useEffect(() => {
-    if (!handedOver || !handle.editor || landed.current === handedOver) return
-    landed.current = handedOver
+    if (!handedOver || !handle.editor) return
+    if (landed.current?.cypher === handedOver && landed.current.revision === handoffRevision) return
+    landed.current = { cypher: handedOver, revision: handoffRevision }
     land(handedOver)
-  }, [handedOver, handle.editor, land])
+  }, [handedOver, handoffRevision, handle.editor, land])
 
   useEffect(() => {
     const el = progressRef.current
@@ -988,19 +995,32 @@ export function SaveView({ current }: { current(): string }) {
 function StartFill({ current, onStarted }: { current(): string; onStarted(): void }) {
   const { services } = useQueryRuntime()
   const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const start = async () => {
     const cypher = current().trim()
     if (!cypher) return
     setBusy(true)
-    const r = await services.fills.create(cypher, (cypher.split('\n')[0] ?? '').slice(0, 60))
-    setBusy(false)
-    if (r.ok) onStarted()
+    setError(null)
+    try {
+      const r = await services.fills.create(cypher, (cypher.split('\n')[0] ?? '').slice(0, 60))
+      if (r.ok) onStarted()
+      else setError(r.status === 403
+        ? 'Your account is not allowed to start fills. An administrator can check your access.'
+        : failureMessage(r, 'background fills'))
+    } catch (cause) {
+      setError(cause instanceof Error ? cause.message : 'The fill could not be started. Try again.')
+    } finally {
+      setBusy(false)
+    }
   }
   return (
+    <>
     <button className="btn ghost" disabled={busy} onClick={() => void start()}
             title="Run this query as a background fill: a budgeted chunk every couple of minutes until nothing is left to fetch. For deep histories and open sweeps.">
       {busy ? 'starting…' : 'Fill'}
     </button>
+    {error && <span role="alert">{error}</span>}
+    </>
   )
 }
 

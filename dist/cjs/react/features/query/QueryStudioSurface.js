@@ -116,11 +116,13 @@ async function inFlightRunId(services, cypher) {
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
  */
-function QueryStudioSurface({ services, host, handedOver }) {
-    return ((0, jsx_runtime_1.jsx)(runtime_tsx_1.QueryRuntimeProvider, { services: services, host: host, children: (0, jsx_runtime_1.jsx)(QueryStudioBody, { handedOver: handedOver }) }));
+function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }) {
+    return ((0, jsx_runtime_1.jsx)(runtime_tsx_1.QueryRuntimeProvider, { services: services, host: host, children: (0, jsx_runtime_1.jsx)(QueryStudioBody, { handedOver: handedOver, handoffRevision: handoffRevision, onCypherChange: onCypherChange }) }));
 }
-function QueryStudioBody({ handedOver }) {
+function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
     const { services, host } = (0, runtime_tsx_1.useQueryRuntime)();
+    const reportCypher = (0, react_2.useRef)(onCypherChange);
+    reportCypher.current = onCypherChange;
     const [schema, setSchema] = (0, react_2.useState)(null);
     const [validity, setValidity] = (0, react_2.useState)({ tone: null, text: '', violations: [] });
     /*
@@ -327,7 +329,10 @@ function QueryStudioBody({ handedOver }) {
         setShowViolations(false);
         validateTimer.current = setTimeout(() => void validateNow(), 700);
     }, [validateNow]);
-    editRef.current = scheduleValidation;
+    editRef.current = () => {
+        reportCypher.current?.(handle.getText());
+        scheduleValidation();
+    };
     // ── running ─────────────────────────────────────────────────────────────────────────────────
     const run = (0, react_2.useCallback)(async () => {
         // A RETURN-less MATCH runs with its RETURN implied — same rule as the Session tab, so
@@ -443,6 +448,7 @@ function QueryStudioBody({ handedOver }) {
     const land = (0, react_2.useCallback)((cypher) => {
         validatedCypher.current = null;
         handle.setText(cypher);
+        reportCypher.current?.(cypher);
         scheduleValidation();
     }, [handle, scheduleValidation]);
     /* Recalling from History replaces the editor text, and the replaced text may be work in
@@ -470,11 +476,13 @@ function QueryStudioBody({ handedOver }) {
      * created asynchronously, so this waits for it rather than firing into nothing. */
     const landed = (0, react_2.useRef)(null);
     (0, react_2.useEffect)(() => {
-        if (!handedOver || !handle.editor || landed.current === handedOver)
+        if (!handedOver || !handle.editor)
             return;
-        landed.current = handedOver;
+        if (landed.current?.cypher === handedOver && landed.current.revision === handoffRevision)
+            return;
+        landed.current = { cypher: handedOver, revision: handoffRevision };
         land(handedOver);
-    }, [handedOver, handle.editor, land]);
+    }, [handedOver, handoffRevision, handle.editor, land]);
     (0, react_2.useEffect)(() => {
         const el = progressRef.current;
         if (el)
@@ -670,17 +678,30 @@ function SaveView({ current }) {
 function StartFill({ current, onStarted }) {
     const { services } = (0, runtime_tsx_1.useQueryRuntime)();
     const [busy, setBusy] = (0, react_2.useState)(false);
+    const [error, setError] = (0, react_2.useState)(null);
     const start = async () => {
         const cypher = current().trim();
         if (!cypher)
             return;
         setBusy(true);
-        const r = await services.fills.create(cypher, (cypher.split('\n')[0] ?? '').slice(0, 60));
-        setBusy(false);
-        if (r.ok)
-            onStarted();
+        setError(null);
+        try {
+            const r = await services.fills.create(cypher, (cypher.split('\n')[0] ?? '').slice(0, 60));
+            if (r.ok)
+                onStarted();
+            else
+                setError(r.status === 403
+                    ? 'Your account is not allowed to start fills. An administrator can check your access.'
+                    : (0, chrome_tsx_1.failureMessage)(r, 'background fills'));
+        }
+        catch (cause) {
+            setError(cause instanceof Error ? cause.message : 'The fill could not be started. Try again.');
+        }
+        finally {
+            setBusy(false);
+        }
     };
-    return ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => void start(), title: "Run this query as a background fill: a budgeted chunk every couple of minutes until nothing is left to fetch. For deep histories and open sweeps.", children: busy ? 'starting…' : 'Fill' }));
+    return ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => void start(), title: "Run this query as a background fill: a budgeted chunk every couple of minutes until nothing is left to fetch. For deep histories and open sweeps.", children: busy ? 'starting…' : 'Fill' }), error && (0, jsx_runtime_1.jsx)("span", { role: "alert", children: error })] }));
 }
 /* EARN THE RAIL SPACE, same rule as Scopes: the panel exists only while fills exist. Polls while
  * any fill is RUNNING — progress is the point — and goes quiet once everything is DONE. */
