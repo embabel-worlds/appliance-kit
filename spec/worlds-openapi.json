@@ -10817,6 +10817,55 @@
         "tags" : [ "Virtual Cypher (user)" ]
       }
     },
+    "/api/v1/kg/studio/refine" : {
+      "post" : {
+        "operationId" : "studioRefine",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgRefineRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgGenerateResponse"
+                }
+              }
+            },
+            "description" : "The revised cypher, its verdict, and what the engine will do"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "500" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Refinement failed"
+          }
+        },
+        "summary" : "Revise existing Cypher per an instruction, without running it",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
     "/api/v1/kg/studio/runs" : {
       "get" : {
         "operationId" : "studioRuns",
@@ -10875,6 +10924,119 @@
           }
         },
         "summary" : "The caller's own graph schema — labels, properties, relationship triples",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/scopes" : {
+      "get" : {
+        "operationId" : "studioScopes",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeListResponse"
+                }
+              }
+            },
+            "description" : "The scopes; an expired scope is already absent"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "List the caller's live captured scopes, newest first",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/scopes/{name}" : {
+      "delete" : {
+        "operationId" : "studioDeleteScope",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeDeleteResponse"
+                }
+              }
+            },
+            "description" : "Whether anything was deleted"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          }
+        },
+        "summary" : "Delete one of the caller's captured scopes",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/scopes/{name}/pin" : {
+      "post" : {
+        "operationId" : "studioPinScope",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as stored, now with no expiry"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No such scope"
+          }
+        },
+        "summary" : "Pin one of the caller's captured scopes",
         "tags" : [ "Virtual Cypher (user)" ]
       }
     },
@@ -15127,7 +15289,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42203"
+    "url" : "http://localhost:35369"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
