@@ -3019,6 +3019,10 @@
             "description" : "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
             "type" : "string"
           },
+          "identity" : {
+            "description" : "True when the realm's type declares this property as the node's IDENTITY. Two columns denote the same thing only when both project the identity of the same label; matching names prove nothing, and a client that joins on them will relate records that are not related. Defaults false so an older client reading a newer appliance loses nothing, and so an undeclared property is never mistaken for a key.",
+            "type" : "boolean"
+          },
           "name" : {
             "type" : "string"
           },
@@ -3031,7 +3035,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "name", "sparse", "type" ],
+        "required" : [ "identity", "name", "sparse", "type" ],
         "type" : "object"
       },
       "KgSchemaRelationship" : {
@@ -15289,7 +15293,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36013"
+    "url" : "http://localhost:37761"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
