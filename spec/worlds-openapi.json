@@ -3015,6 +3015,10 @@
       "KgSchemaProperty" : {
         "description" : "A property observed on nodes carrying a label.",
         "properties" : {
+          "alternateKey" : {
+            "description" : "True when the realm's type declares this property as an ALTERNATE KEY: it identifies the same record as the identity does, in the vocabulary the source's own readers use. A policy's `policy_identifier` is its identity; its `policy_number` is what a view shows and what a client will try to join on. Both name the same policy. Unlike the identity, an alternate key is not the dedupe key and is not required on write, so a type may declare several. Defaults false.",
+            "type" : "boolean"
+          },
           "description" : {
             "description" : "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
             "type" : "string"
@@ -3035,7 +3039,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "identity", "name", "sparse", "type" ],
+        "required" : [ "alternateKey", "identity", "name", "sparse", "type" ],
         "type" : "object"
       },
       "KgSchemaRelationship" : {
@@ -15293,7 +15297,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37761"
+    "url" : "http://localhost:33887"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
