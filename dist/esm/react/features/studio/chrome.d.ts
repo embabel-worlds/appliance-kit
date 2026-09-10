@@ -2,19 +2,18 @@ import React from 'react';
 import type { Outcome } from '../../../client/outcome.ts';
 /** A status line's tone. Mirrors the kit CSS: `.status.ok`, `.status.error`, plain for neutral. */
 export type Tone = 'ok' | 'error' | 'caution' | null;
-export declare function Status({ tone, children, className }: {
+export declare function Status({ tone, children }: {
     tone: Tone;
     children: React.ReactNode;
-    className?: string;
 }): React.JSX.Element;
 /**
- * Keep the action and server detail together. Recovery must not assume a missing endpoint means
- * an old appliance, or that signing in again grants a forbidden permission.
- * action is a lowercase infinitive phrase, e.g. "list documents", never a noun or gerund.
+ * The sentence to show for a failure. `unsupported` gets the version story and everything else
+ * gets the SERVER's own words where it sent any — a message invented here would be a guess
+ * standing in front of an explanation the appliance already gave.
  */
 export declare function failureMessage(outcome: Extract<Outcome<unknown>, {
     ok: false;
-}>, action: string): string;
+}>, what: string): string;
 /**
  * A failure a surface should fall SILENT on rather than nag about. As-you-type validation against
  * an appliance without `/validate` would otherwise print the same version complaint on every

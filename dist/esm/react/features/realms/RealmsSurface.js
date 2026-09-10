@@ -1,9 +1,9 @@
-import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
+import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { isBackgroundHandle } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
-import { Status, StudioPanel, failureMessage } from "../studio/chrome.js";
-function useLoadable(load, action) {
+import { Status, StudioPanel } from "../studio/chrome.js";
+function useLoadable(load) {
     const [version, reload] = useState(0);
     const [state, setState] = useState({ data: null, error: '', loading: true });
     useEffect(() => {
@@ -14,10 +14,10 @@ function useLoadable(load, action) {
                 return;
             setState(outcome.ok
                 ? { data: outcome.value, error: '', loading: false }
-                : { data: null, error: failureMessage(outcome, action), loading: false });
+                : { data: null, error: outcome.message, loading: false });
         });
         return () => { active = false; };
-    }, [load, version, action]);
+    }, [load, version]);
     return useMemo(() => ({ ...state, reload: () => reload((value) => value + 1) }), [state]);
 }
 /** The GitHub account a realm URL lives under — the source worth one word on the row. */
@@ -26,12 +26,12 @@ function sourceOf(url, provider) {
     return m?.[1] ?? provider ?? null;
 }
 function Lamp({ tone }) {
-    return _jsx("span", { className: `lamp lamp-${tone}`, "aria-hidden": "true" });
+    return _jsx("span", { className: `lamp ${tone}`, "aria-hidden": "true" });
 }
 // ── realms ────────────────────────────────────────────────────────────────────
 export function RealmsSurface({ services, host }) {
-    const installed = useLoadable(useCallback(() => services.listInstalled(), [services]), 'list installed realms');
-    const suggested = useLoadable(useCallback(() => services.listDirectory(), [services]), 'load the realm directory');
+    const installed = useLoadable(useCallback(() => services.listInstalled(), [services]));
+    const suggested = useLoadable(useCallback(() => services.listDirectory(), [services]));
     const [dirRefreshing, setDirRefreshing] = useState(false);
     const refreshDirectory = useCallback(async () => {
         setDirRefreshing(true);
@@ -58,13 +58,11 @@ export function RealmsSurface({ services, host }) {
      * chat. null = keyword mode; rows = the judged matches for `q`. */
     const [meaning, setMeaning] = useState(null);
     const [judging, setJudging] = useState(false);
-    const [searchNote, setSearchNote] = useState(null);
     const searchByMeaning = useCallback(async () => {
         const q = query.trim();
         if (!q)
             return;
         setJudging(true);
-        setSearchNote(null);
         /* Bare alias, not r.description: the judge reads the whole row — name included — so a
          * realm with a thin manifest can still be found by what its name implies. */
         const cypher = "MATCH (d:RealmDirectory {scope:'all'})-[:OFFERS]->(r:AvailableRealm) " +
@@ -72,14 +70,8 @@ export function RealmsSurface({ services, host }) {
             'RETURN r.name AS name';
         const outcome = await services.searchRealms(cypher);
         setJudging(false);
-        if (isOk(outcome) && isBackgroundHandle(outcome.value)) {
-            setMeaning(null);
-            setSearchNote({ tone: 'caution', text: 'Smart search started a background run; its results are not available here. Showing keyword matches.' });
-            return;
-        }
-        if (!isOk(outcome) || isBackgroundHandle(outcome.value) || outcome.value.error) {
-            setMeaning(null);
-            setSearchNote({ tone: 'error', text: 'Smart search did not return results. Showing keyword matches instead; try Smart search again.' });
+        if (!isOk(outcome) || isBackgroundHandle(outcome.value)) {
+            setMeaning({ q, names: new Set() });
             return;
         }
         const names = new Set((outcome.value.rows ?? []).map((row) => String(row['name'] ?? '')));
@@ -117,7 +109,7 @@ export function RealmsSurface({ services, host }) {
     useEffect(() => { void checkUpdates(); }, [checkUpdates]);
     /** Offer Refresh when the realm HAS moved, or when nobody can say. Never when it is current. */
     const canRefresh = (name) => updates === null || updates[name] !== false;
-    const behindCount = (installed.data ?? []).filter((realm) => updates?.[realm.name] === true).length;
+    const behindCount = updates ? Object.values(updates).filter((b) => b === true).length : 0;
     const installedNames = new Set((Array.isArray(installed.data) ? installed.data : []).map((r) => r.name));
     // Real shape (verified): { providers: [{ provider, realms: [{ name, description, source, url, installed }] }] }
     const rawSuggestions = (suggested.data?.providers ?? []).flatMap((p) => (p.realms ?? []).map((r) => ({ ...r, provider: p.provider })));
@@ -172,7 +164,7 @@ export function RealmsSurface({ services, host }) {
     async function install(s) {
         const repo = s.source ?? s.repo ?? s.url ?? s.repository;
         if (!repo) {
-            setInstallMsg(`Could not install '${s.name}': its directory entry has no repository link. Ask the directory maintainer to add one.`);
+            setInstallMsg(`No repo URL on suggestion '${s.name}' — shape mismatch worth fixing.`);
             return;
         }
         setBusy(s.name ?? repo);
@@ -236,9 +228,9 @@ export function RealmsSurface({ services, host }) {
         void checkUpdates();
     }
     return (_jsx("div", { className: "kit-feature kit-feature-realms", children: _jsx(StudioPanel, { title: "Realms", aside: host.observability, children: installed.loading ? _jsx("div", { className: "notice", children: "loading\u2026" }) :
-                installed.error ? _jsxs(_Fragment, { children: [_jsx(Status, { tone: "error", children: installed.error }), _jsx("button", { className: "btn", onClick: installed.reload, children: "Retry listing realms" })] }) : (_jsxs(_Fragment, { children: [_jsxs("div", { className: "subhead subhead-row", children: [_jsxs("span", { children: ["Installed \u00B7 ", installedShown.length] }), installedShown.length > 0 && (updates === null || behindCount > 0) && (_jsx("button", { className: "btn ghost tiny", disabled: busy !== null, onClick: () => void refreshAll(), children: busy === '*' ? 'refreshing…'
-                                        : behindCount > 0 ? `Update ${behindCount}` : 'Refresh all' }))] }), _jsxs("div", { className: "realm-list", children: [installedShown.map((r) => (_jsxs("div", { className: `realm-row ${expanded.has(r.name) ? 'is-open' : ''}`, children: [_jsxs("button", { className: "realm-row-head", onClick: () => toggle(r.name), "aria-expanded": expanded.has(r.name), children: [_jsx(Lamp, { tone: busy === r.name || busy === '*' ? 'caution' : 'lit' }), _jsx("strong", { children: r.name }), " ", _jsxs("code", { className: "ver", children: ["v", r.version] }), sourceOf(r.url) && _jsx("small", { className: "realm-source", children: sourceOf(r.url) }), updates?.[r.name] === true && _jsx("span", { className: "realm-behind", children: "update available" }), _jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: expanded.has(r.name) ? '▾' : '▸' })] }), expanded.has(r.name) && (_jsxs("div", { className: "realm-row-body", children: [rowMsg[r.name] && _jsx("p", { className: "realm-problem", children: rowMsg[r.name] }), _jsx("p", { children: r.description }), (realmTours[r.name] ?? []).map((tour) => (_jsxs("button", { className: "btn tiny", title: "A guided walk through what this realm added \u2014 it says what it will do before it does any of it", onClick: () => host.openTour(tour.id), children: ["Take the tour: ", tour.name] }, tour.id))), canRefresh(r.name) && (_jsx("button", { className: `btn tiny ${updates?.[r.name] === true ? '' : 'ghost'}`, disabled: busy !== null, title: updateDetail[r.name] ?? 'Pull the latest and rebuild the world', onClick: () => void refresh(r.name), children: busy === r.name ? 'refreshing…' : updates?.[r.name] === true ? 'Update' : 'Refresh' }))] }))] }, r.name))), (installed.data ?? []).length === 0 && _jsx("div", { className: "notice", children: "No realms installed yet \u2014 pick one below." })] }), _jsxs("div", { className: "subhead subhead-row", children: [_jsx("span", { children: "Suggested" }), _jsx("button", { className: "btn ghost tiny", disabled: dirRefreshing, onClick: () => void refreshDirectory(), children: dirRefreshing ? 'refreshing…' : suggested.error ? 'Retry directory' : 'Refresh directory' })] }), _jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: `Search ${uninstalled.length || ''} available realms — Enter for smart search`.replace('  ', ' '), "aria-label": "search available realms", onChange: (e) => { setQuery(e.target.value); setMeaning(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
-                                        void searchByMeaning(); } }), query && (_jsx("button", { className: "btn ghost tiny", disabled: judging, onClick: () => void searchByMeaning(), title: "Understands what you're looking for, not just the words \u2014 'money owed' finds an accounting realm", children: judging ? 'searching…' : 'Smart search' })), query && _jsx("button", { className: "btn ghost tiny", onClick: () => { setQuery(''); setMeaning(null); }, children: "Clear" })] }), meaning && (_jsxs("div", { className: "notice", children: ["Smart search for \u201C", meaning.q, "\u201D \u00B7 ", suggestions.length, " match", suggestions.length === 1 ? '' : 'es', " \u2014 matched on what each realm does, not just its words. Asking in chat works the same way."] })), searchNote && _jsx(Status, { tone: searchNote.tone, children: searchNote.text }), !suggested.loading && !suggested.error && suggestions.length > 0 ? (
+                installed.error ? _jsx(Status, { tone: "error", children: installed.error }) : (_jsxs(_Fragment, { children: [_jsxs("div", { className: "subhead subhead-row", children: [_jsxs("span", { children: ["Installed \u00B7 ", installedShown.length] }), (updates === null || behindCount > 0) && (_jsx("button", { className: "btn ghost tiny", disabled: busy !== null, onClick: () => void refreshAll(), children: busy === '*' ? 'refreshing…'
+                                        : behindCount > 0 ? `Update ${behindCount}` : 'Refresh all' }))] }), _jsxs("div", { className: "realm-list", children: [installedShown.map((r) => (_jsxs("div", { className: `realm-row ${expanded.has(r.name) ? 'is-open' : ''}`, children: [_jsxs("button", { className: "realm-row-head", onClick: () => toggle(r.name), "aria-expanded": expanded.has(r.name), children: [_jsx(Lamp, { tone: busy === r.name || busy === '*' ? 'caution' : 'lit' }), _jsx("strong", { children: r.name }), " ", _jsxs("code", { className: "ver", children: ["v", r.version] }), sourceOf(r.url) && _jsx("small", { className: "realm-source", children: sourceOf(r.url) }), updates?.[r.name] === true && _jsx("span", { className: "realm-behind", children: "update available" }), _jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: expanded.has(r.name) ? '▾' : '▸' })] }), expanded.has(r.name) && (_jsxs("div", { className: "realm-row-body", children: [rowMsg[r.name] && _jsx("p", { className: "realm-problem", children: rowMsg[r.name] }), _jsx("p", { children: r.description }), (realmTours[r.name] ?? []).map((tour) => (_jsxs("button", { className: "btn tiny", title: "A guided walk through what this realm added \u2014 it says what it will do before it does any of it", onClick: () => host.openTour(tour.id), children: ["Take the tour: ", tour.name] }, tour.id))), canRefresh(r.name) && (_jsx("button", { className: `btn tiny ${updates?.[r.name] === true ? '' : 'ghost'}`, disabled: busy !== null, title: updateDetail[r.name] ?? 'Pull the latest and rebuild the world', onClick: () => void refresh(r.name), children: busy === r.name ? 'refreshing…' : updates?.[r.name] === true ? 'Update' : 'Refresh' }))] }))] }, r.name))), (installed.data ?? []).length === 0 && _jsx("div", { className: "notice", children: "No realms installed yet \u2014 pick one below." })] }), _jsxs("div", { className: "subhead subhead-row", children: [_jsx("span", { children: "Suggested" }), _jsx("button", { className: "btn ghost tiny", disabled: dirRefreshing, onClick: () => void refreshDirectory(), children: dirRefreshing ? 'refreshing…' : 'Refresh directory' })] }), _jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: `Search ${uninstalled.length || ''} available realms — Enter for smart search`.replace('  ', ' '), "aria-label": "search available realms", onChange: (e) => { setQuery(e.target.value); setMeaning(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
+                                        void searchByMeaning(); } }), query && (_jsx("button", { className: "btn ghost tiny", disabled: judging, onClick: () => void searchByMeaning(), title: "Understands what you're looking for, not just the words \u2014 'money owed' finds an accounting realm", children: judging ? 'searching…' : 'Smart search' })), query && _jsx("button", { className: "btn ghost tiny", onClick: () => { setQuery(''); setMeaning(null); }, children: "Clear" })] }), meaning && (_jsxs("div", { className: "notice", children: ["Smart search for \u201C", meaning.q, "\u201D \u00B7 ", meaning.names.size, " match", meaning.names.size === 1 ? '' : 'es', " \u2014 matched on what each realm does, not just its words. Asking in chat works the same way."] })), !suggested.loading && !suggested.error && suggestions.length > 0 ? (
                         /* Suggested realms compress to ONE LINE each, like the installed list above: a
                            directory of dozens read as a wall of cards; a directory reads as an index. The
                            name expands to the description and tags; Install stays on the line. */
@@ -246,6 +238,6 @@ export function RealmsSurface({ services, host }) {
                                 const id = `s:${s.name ?? s.repo ?? ''}`;
                                 const open = expanded.has(id);
                                 return (_jsxs("div", { className: `realm-row suggested-row ${open ? 'is-open' : ''}`, children: [_jsxs("button", { className: "realm-row-head", onClick: () => toggle(id), "aria-expanded": open, children: [_jsx(Lamp, { tone: "unlit" }), _jsx("strong", { children: s.name ?? s.repo }), s.metadata?.version && _jsxs("code", { className: "ver", children: ["v", s.metadata.version] }), sourceOf(s.url ?? s.repository, s.provider) && (_jsx("small", { className: "realm-source", children: sourceOf(s.url ?? s.repository, s.provider) })), _jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: open ? '▾' : '▸' })] }), _jsx("button", { className: "btn tiny suggested-install", disabled: busy === s.name, onClick: () => install(s), children: busy === s.name ? 'installing…' : 'Install' }), open && (_jsxs("div", { className: "realm-row-body suggested-body", children: [_jsx("p", { children: s.description ?? s.repo ?? '' }), _jsxs("div", { className: "realm-meta", children: [_jsx("span", { children: s.metadata?.author || s.provider }), tagsOf(s).map((t) => _jsx("span", { className: "realm-tag", children: t }, t))] })] }))] }, id));
-                            }) })) : !suggested.loading && !suggested.error ? (_jsx("div", { className: "notice", children: query ? `No realm matches “${query}”.` : 'Directory returned no further suggestions.' })) : (_jsx(Status, { tone: suggested.error ? 'error' : null, children: suggested.loading ? 'Loading realm directory…' : suggested.error })), installMsg && _jsx("div", { className: "notice", children: installMsg })] })) }) }));
+                            }) })) : !suggested.loading && !suggested.error ? (_jsx("div", { className: "notice", children: query ? `No realm matches “${query}”.` : 'Directory returned no further suggestions.' })) : (_jsxs("div", { className: "notice", children: ["directory: ", suggested.loading ? 'loading…' : suggested.error] })), installMsg && _jsx("div", { className: "notice", children: installMsg })] })) }) }));
 }
 //# sourceMappingURL=RealmsSurface.js.map

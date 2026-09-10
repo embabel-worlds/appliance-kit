@@ -2,11 +2,11 @@ import { useCallback, useEffect, useMemo, useState } from 'react'
 import { isBackgroundHandle } from '../../../client/kg.ts'
 import { isOk } from '../../../client/outcome.ts'
 import type { InstalledRealm, RealmDirectory, RealmsSurfaceProps, SuggestedRealm } from '../contracts.ts'
-import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { Status, StudioPanel } from '../studio/chrome.tsx'
 
 type Loadable<T> = { data: T | null; error: string; loading: boolean; reload(): void }
 
-function useLoadable<T>(load: () => Promise<import('../../../client/outcome.ts').Outcome<T>>, action: string): Loadable<T> {
+function useLoadable<T>(load: () => Promise<import('../../../client/outcome.ts').Outcome<T>>): Loadable<T> {
   const [version, reload] = useState(0)
   const [state, setState] = useState<Omit<Loadable<T>, 'reload'>>({ data: null, error: '', loading: true })
   useEffect(() => {
@@ -16,10 +16,10 @@ function useLoadable<T>(load: () => Promise<import('../../../client/outcome.ts')
       if (!active) return
       setState(outcome.ok
         ? { data: outcome.value, error: '', loading: false }
-        : { data: null, error: failureMessage(outcome, action), loading: false })
+        : { data: null, error: outcome.message, loading: false })
     })
     return () => { active = false }
-  }, [load, version, action])
+  }, [load, version])
   return useMemo(() => ({ ...state, reload: () => reload((value) => value + 1) }), [state])
 }
 
@@ -30,13 +30,13 @@ function sourceOf(url?: string, provider?: string): string | null {
 }
 
 function Lamp({ tone }: { tone: string }) {
-  return <span className={`lamp lamp-${tone}`} aria-hidden="true" />
+  return <span className={`lamp ${tone}`} aria-hidden="true" />
 }
 
 // ── realms ────────────────────────────────────────────────────────────────────
 export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
-  const installed = useLoadable<InstalledRealm[]>(useCallback(() => services.listInstalled(), [services]), 'list installed realms')
-  const suggested = useLoadable<RealmDirectory>(useCallback(() => services.listDirectory(), [services]), 'load the realm directory')
+  const installed = useLoadable<InstalledRealm[]>(useCallback(() => services.listInstalled(), [services]))
+  const suggested = useLoadable<RealmDirectory>(useCallback(() => services.listDirectory(), [services]))
   const [dirRefreshing, setDirRefreshing] = useState(false)
   const refreshDirectory = useCallback(async () => {
     setDirRefreshing(true)
@@ -60,13 +60,11 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
    * chat. null = keyword mode; rows = the judged matches for `q`. */
   const [meaning, setMeaning] = useState<{ q: string; names: Set<string> } | null>(null)
   const [judging, setJudging] = useState(false)
-  const [searchNote, setSearchNote] = useState<{ tone: 'error' | 'caution'; text: string } | null>(null)
 
   const searchByMeaning = useCallback(async () => {
     const q = query.trim()
     if (!q) return
     setJudging(true)
-    setSearchNote(null)
     /* Bare alias, not r.description: the judge reads the whole row — name included — so a
      * realm with a thin manifest can still be found by what its name implies. */
     const cypher =
@@ -75,16 +73,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
       'RETURN r.name AS name'
     const outcome = await services.searchRealms(cypher)
     setJudging(false)
-    if (isOk(outcome) && isBackgroundHandle(outcome.value)) {
-      setMeaning(null)
-      setSearchNote({ tone: 'caution', text: 'Smart search started a background run; its results are not available here. Showing keyword matches.' })
-      return
-    }
-    if (!isOk(outcome) || isBackgroundHandle(outcome.value) || outcome.value.error) {
-      setMeaning(null)
-      setSearchNote({ tone: 'error', text: 'Smart search did not return results. Showing keyword matches instead; try Smart search again.' })
-      return
-    }
+    if (!isOk(outcome) || isBackgroundHandle(outcome.value)) { setMeaning({ q, names: new Set() }); return }
     const names = new Set((outcome.value.rows ?? []).map((row) => String((row as Record<string, unknown>)['name'] ?? '')))
     setMeaning({ q, names })
   }, [query, services])
@@ -120,7 +109,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
 
   /** Offer Refresh when the realm HAS moved, or when nobody can say. Never when it is current. */
   const canRefresh = (name: string) => updates === null || updates[name] !== false
-  const behindCount = (installed.data ?? []).filter((realm) => updates?.[realm.name] === true).length
+  const behindCount = updates ? Object.values(updates).filter((b) => b === true).length : 0
 
   const installedNames = new Set((Array.isArray(installed.data) ? installed.data : []).map((r) => r.name))
   // Real shape (verified): { providers: [{ provider, realms: [{ name, description, source, url, installed }] }] }
@@ -181,7 +170,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
 
   async function install(s: SuggestedRealm) {
     const repo = s.source ?? s.repo ?? s.url ?? s.repository
-    if (!repo) { setInstallMsg(`Could not install '${s.name}': its directory entry has no repository link. Ask the directory maintainer to add one.`); return }
+    if (!repo) { setInstallMsg(`No repo URL on suggestion '${s.name}' — shape mismatch worth fixing.`); return }
     setBusy(s.name ?? repo)
     const r = await services.installRealm(repo)
     setBusy(null)
@@ -249,11 +238,11 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
     <div className="kit-feature kit-feature-realms">
       <StudioPanel title="Realms" aside={host.observability}>
       {installed.loading ? <div className="notice">loading…</div> :
-       installed.error ? <><Status tone="error">{installed.error}</Status><button className="btn" onClick={installed.reload}>Retry listing realms</button></> : (
+       installed.error ? <Status tone="error">{installed.error}</Status> : (
         <>
           <div className="subhead subhead-row">
             <span>Installed · {installedShown.length}</span>
-            {installedShown.length > 0 && (updates === null || behindCount > 0) && (
+            {(updates === null || behindCount > 0) && (
               <button className="btn ghost tiny" disabled={busy !== null} onClick={() => void refreshAll()}>
                 {busy === '*' ? 'refreshing…'
                   : behindCount > 0 ? `Update ${behindCount}` : 'Refresh all'}
@@ -310,7 +299,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
                 how a realm published five minutes ago becomes installable without a restart.
                 An older appliance answers 404: the browse still reloads, honestly unchanged. */}
             <button className="btn ghost tiny" disabled={dirRefreshing} onClick={() => void refreshDirectory()}>
-              {dirRefreshing ? 'refreshing…' : suggested.error ? 'Retry directory' : 'Refresh directory'}
+              {dirRefreshing ? 'refreshing…' : 'Refresh directory'}
             </button>
           </div>
           <div className="realmsearch">
@@ -332,11 +321,10 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
           </div>
           {meaning && (
             <div className="notice">
-              Smart search for “{meaning.q}” · {suggestions.length} match{suggestions.length === 1 ? '' : 'es'} —
+              Smart search for “{meaning.q}” · {meaning.names.size} match{meaning.names.size === 1 ? '' : 'es'} —
               matched on what each realm does, not just its words. Asking in chat works the same way.
             </div>
           )}
-          {searchNote && <Status tone={searchNote.tone}>{searchNote.text}</Status>}
           {!suggested.loading && !suggested.error && suggestions.length > 0 ? (
             /* Suggested realms compress to ONE LINE each, like the installed list above: a
                directory of dozens read as a wall of cards; a directory reads as an index. The
@@ -377,7 +365,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
               {query ? `No realm matches “${query}”.` : 'Directory returned no further suggestions.'}
             </div>
           ) : (
-            <Status tone={suggested.error ? 'error' : null}>{suggested.loading ? 'Loading realm directory…' : suggested.error}</Status>
+            <div className="notice">directory: {suggested.loading ? 'loading…' : suggested.error}</div>
           )}
           {installMsg && <div className="notice">{installMsg}</div>}
         </>

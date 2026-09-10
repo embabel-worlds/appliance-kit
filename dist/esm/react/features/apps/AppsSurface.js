@@ -25,7 +25,7 @@ import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore
 import { isBackgroundHandle } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
 import { AppIcon } from "./AppIcon.js";
-import { Status, StudioPanel, failureMessage } from "../studio/chrome.js";
+import { Status, StudioPanel } from "../studio/chrome.js";
 /** The app's URL on THIS origin — see the header for why that is not the door's origin.
  *  Prefers the server's canonical scoped `url`; an older door without one gets the legacy
  *  flat form, encoded per segment so the scope separator survives. */
@@ -121,7 +121,7 @@ export function PinRail({ services, host }) {
 }
 function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }) {
     const isViewing = open !== null && appKey(open) === appKey(a);
-    return (_jsxs("div", { className: `approw${isViewing ? ' is-open' : ''}`, children: [_jsx("button", { className: `app-pin${pinned ? ' is-pinned' : ''}`, onClick: onTogglePin, "aria-label": `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, title: `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, "aria-pressed": pinned, children: pinned ? '★' : '☆' }), _jsx(AppIcon, { src: a.iconUrl, name: title(a), description: a.description, size: 20, className: "approw-icon" }), _jsxs("div", { className: "approw-body", children: [_jsx("strong", { children: title(a) }), a.readOnly === false && _jsx("span", { className: "appmine", children: "yours" }), pinned && a.scope && _jsx("span", { className: "realm-source", children: a.scope }), _jsx("p", { children: a.description || 'No description.' })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn", "aria-label": `${isViewing ? 'Close' : 'Open'} ${title(a)}`, onClick: () => setOpen(isViewing ? null : a), children: isViewing ? 'Close' : 'Open' }), _jsx("button", { className: "btn ghost", "aria-label": `Open ${title(a)} in a new tab`, onClick: () => onNewTab(a), children: "Open in new tab" })] })] }));
+    return (_jsxs("div", { className: `approw${isViewing ? ' is-open' : ''}`, children: [_jsx("button", { className: `app-pin${pinned ? ' is-pinned' : ''}`, onClick: onTogglePin, "aria-label": `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, title: `${pinned ? 'Unpin' : 'Pin'} ${title(a)}`, "aria-pressed": pinned, children: pinned ? '★' : '☆' }), _jsx(AppIcon, { src: a.iconUrl, name: title(a), description: a.description, size: 20, className: "approw-icon" }), _jsxs("div", { className: "approw-body", children: [_jsx("strong", { children: title(a) }), a.readOnly === false && _jsx("span", { className: "appmine", children: "yours" }), pinned && a.scope && _jsx("span", { className: "realm-source", children: a.scope }), _jsx("p", { children: a.description || 'No description.' })] }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn", onClick: () => setOpen(isViewing ? null : a), children: isViewing ? 'Close' : 'Open' }), _jsx("button", { className: "btn ghost", onClick: () => onNewTab(a), children: "Open in new tab" })] })] }));
 }
 export function AppsSurface({ services, host }) {
     const [apps, setApps] = useState([]);
@@ -179,13 +179,9 @@ export function AppsSurface({ services, host }) {
             'RETURN a.name AS name, a.scope AS scope';
         const outcome = await services.searchApps(cypher);
         setJudging(false);
-        if (isOk(outcome) && isBackgroundHandle(outcome.value)) {
-            setMeaning(null);
-            return setSmartNote('Smart search started a background run; its results are not available here. Showing keyword matches.');
-        }
         if (!isOk(outcome) || isBackgroundHandle(outcome.value) || outcome.value.error) {
             setMeaning(null);
-            return setSmartNote('Smart search did not return results. Showing keyword matches instead; try Smart search again.');
+            return setSmartNote('Smart search needs a newer appliance — showing keyword matches instead.');
         }
         const keys = new Set((outcome.value.rows ?? []).map((row) => {
             const r = row;
@@ -195,8 +191,11 @@ export function AppsSurface({ services, host }) {
     }, [query, services]);
     const load = useCallback(async () => {
         const r = await services.listApps();
+        if (!r.ok && (r.status === 401 || r.status === 403)) {
+            return setStatus({ tone: 'error', text: 'Sign in to see this world’s apps.' });
+        }
         if (!r.ok)
-            return setStatus({ tone: 'error', text: failureMessage(r, 'list apps') });
+            return setStatus({ tone: 'error', text: r.message });
         const found = r.value;
         setApps(found);
         /* Only from a listing that actually succeeded — see reconcilePins on why a failed one
@@ -265,14 +264,14 @@ export function AppsSurface({ services, host }) {
                             const url = validatedAppUrl(open);
                             if (url)
                                 host.openInNewTab(url);
-                        }, children: "Open in new tab" }), children: _jsx("iframe", { className: "appframe", src: appUrl(open), title: open.name }) })) }), _jsxs(StudioPanel, { title: "Apps", aside: _jsx(Status, { tone: status.tone, children: status.text }), children: [_jsx("p", { className: "hint", children: "Apps available in this world. Pin favorites for quick access." }), status.tone === 'error' && _jsx("button", { className: "btn", onClick: () => void load(), children: "Retry listing apps" }), apps.length > 3 && (_jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: "Search apps \u2014 Enter for smart search", "aria-label": "search apps", onChange: (e) => { setQuery(e.target.value); setMeaning(null); setSmartNote(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
-                                    void searchByMeaning(); } }), query && (_jsx("button", { className: "btn ghost tiny", disabled: judging, onClick: () => void searchByMeaning(), title: "Understands what you're looking for, not just the words \u2014 'where the money goes' finds a grants app", children: judging ? 'searching…' : 'Smart search' })), query && _jsx("button", { className: "btn ghost tiny", onClick: () => { setQuery(''); setMeaning(null); setSmartNote(null); }, children: "Clear" })] })), meaning && (_jsxs("p", { className: "hint", children: ["Smart search for \u201C", meaning.q, "\u201D \u00B7 ", shown.length, " match", shown.length === 1 ? '' : 'es', " \u2014 judged on what each app does."] })), smartNote && _jsx("p", { className: "hint", children: smartNote }), _jsxs("div", { className: "applist", children: [pinnedShown.length > 0 && !searching && _jsx("div", { className: "subhead", children: "Pinned" }), pinnedShown.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: true, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
+                        }, children: "Open in new tab" }), children: _jsx("iframe", { className: "appframe", src: appUrl(open), title: open.name }) })) }), _jsxs(StudioPanel, { title: "Apps", aside: _jsx(Status, { tone: status.tone, children: status.text }), children: [_jsx("p", { className: "hint", children: "Apps available in this world. Pin favorites for quick access." }), apps.length > 3 && (_jsxs("div", { className: "realmsearch", children: [_jsx("input", { type: "search", value: query, placeholder: "Search apps \u2014 Enter for smart search", "aria-label": "search apps", onChange: (e) => { setQuery(e.target.value); setMeaning(null); setSmartNote(null); }, onKeyDown: (e) => { if (e.key === 'Enter')
+                                    void searchByMeaning(); } }), query && (_jsx("button", { className: "btn ghost tiny", disabled: judging, onClick: () => void searchByMeaning(), title: "Understands what you're looking for, not just the words \u2014 'where the money goes' finds a grants app", children: judging ? 'searching…' : 'Smart search' })), query && _jsx("button", { className: "btn ghost tiny", onClick: () => { setQuery(''); setMeaning(null); setSmartNote(null); }, children: "Clear" })] })), meaning && (_jsxs("p", { className: "hint", children: ["Smart search for \u201C", meaning.q, "\u201D \u00B7 ", meaning.keys.size, " match", meaning.keys.size === 1 ? '' : 'es', " \u2014 judged on what each app does."] })), smartNote && _jsx("p", { className: "hint", children: smartNote }), _jsxs("div", { className: "applist", children: [pinnedShown.length > 0 && !searching && _jsx("div", { className: "subhead", children: "Pinned" }), pinnedShown.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: true, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
                                     host.openInNewTab(url); } }, appKey(a))), groups.map(([scope, list]) => {
                                 const label = scope === 'workspace' ? 'Yours' : scope === 'world' ? 'World template' : scope;
                                 const isOpen = searching || expanded.has(scope) ||
                                     (groups.length === 1 && !touchedGroups.current.has(scope));
                                 return (_jsxs("div", { children: [_jsxs("button", { className: "appgroup-head", "aria-expanded": isOpen, onClick: () => toggleGroup(scope, isOpen), children: [_jsx("span", { className: "realm-chevron", "aria-hidden": "true", children: isOpen ? '▾' : '▸' }), _jsx("strong", { children: label }), _jsx("span", { className: "appgroup-count", children: list.length }), !isOpen && (_jsx("span", { className: "appgroup-names", children: list.map(title).join(' · ') }))] }), isOpen && list.map((a) => _jsx(AppRow, { a: a, open: open, setOpen: setOpen, pinned: false, onTogglePin: () => host.pins.toggle(asPin(a)), onNewTab: (app) => { const url = validatedAppUrl(app); if (url)
                                                 host.openInNewTab(url); } }, appKey(a)))] }, scope));
-                            }), apps.length > 0 && shown.length === 0 && (_jsxs("p", { className: "hint", children: ["No app matches \u201C", query, "\u201D.", !meaning && ' Try Smart search to search by meaning.'] }))] })] })] }));
+                            }), apps.length > 0 && shown.length === 0 && (_jsxs("p", { className: "hint", children: ["No app matches \u201C", query, "\u201D."] }))] })] })] }));
 }
 //# sourceMappingURL=AppsSurface.js.map

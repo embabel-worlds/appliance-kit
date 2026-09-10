@@ -1,6 +1,5 @@
 import React from 'react';
-export declare function SessionPane({ onCaptured, onOpenInEditor, visible }: {
-    visible?: boolean;
+export declare function SessionPane({ onCaptured, onOpenInEditor }: {
     onCaptured(): void;
     onOpenInEditor(cypher: string): void;
 }): React.JSX.Element;

@@ -72,7 +72,6 @@
     "build:global": "node scripts/build-globals.mjs",
     "typecheck": "tsc --noEmit",
     "test": "node --experimental-transform-types --test test/*.test.ts test/*.test.mjs",
-    "fixture:handlers": "node scripts/handler-fixture.mjs",
     "check": "npm run build && npm test"
   },
   "devDependencies": {

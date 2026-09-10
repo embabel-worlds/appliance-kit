@@ -170,7 +170,7 @@ export interface WatchServices {
 }
 
 export interface ViewsServices {
-  kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView'> & Partial<Pick<KgClient, 'schema'>>
+  kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView'>
   watches: WatchServices
 }
 
@@ -179,12 +179,9 @@ export interface HandlerDraft {
   view: string
 }
 
-export type SavedViewsDestination = 'open' | 'run' | 'results' | 'schema' | 'watch'
-
 export interface SavedViewsHost {
   selectedView(): string | null
   subscribeSelection(listener: () => void): () => void
-  navigateToView?(name: string | null, destination: SavedViewsDestination, replace?: boolean): void
   onOpenInStudio(cypher: string): void
   onCreateHandler(draft: HandlerDraft): void
 }
@@ -284,8 +281,6 @@ export interface QueryStudioSurfaceProps {
   services: QueryStudioServices
   host: QueryStudioHost
   handedOver?: string | null
-  /** Landed once only when the editor is first created and still empty. */
-  initialCypher?: string
   /** Increment to explicitly apply the same query again after editing it. */
   handoffRevision?: number
   /** Current editor text, including generated and recalled queries. */

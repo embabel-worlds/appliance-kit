@@ -1,6 +1,6 @@
 import { jsx as _jsx, Fragment as _Fragment, jsxs as _jsxs } from "react/jsx-runtime";
 import { useCallback, useEffect, useState } from 'react';
-import { CopyButton, Status, StudioPanel, failureMessage } from "../studio/chrome.js";
+import { Status, StudioPanel, failureMessage } from "../studio/chrome.js";
 const MODE_SAYS = {
     ASSISTANT: 'Access this account’s data.',
     DEVELOPER: 'Access data, install realms, and get guidance for building realms.',
@@ -12,7 +12,7 @@ function probeState(outcome) {
             return 'noprobe';
         if (outcome.kind === 'unreachable')
             return 'down';
-        return 'unknown';
+        return 'up';
     }
     const status = outcome.value.status;
     if (status == null)
@@ -49,14 +49,14 @@ export function CodingAgentsSurface({ services, host, }) {
             services.getMcpMode(),
         ]);
         setMcp(probeState(probe));
-        setProbeMessage(probe.ok || probe.kind === 'unsupported' ? '' : failureMessage(probe, 'check MCP status'));
+        setProbeMessage(probe.ok || probe.kind === 'unsupported' ? '' : failureMessage(probe, 'MCP status'));
         if (modeConfig.ok) {
             setMode(modeConfig.value.mode ?? '');
             setModes(modeConfig.value.modes ?? DEFAULT_MODES);
             setModeStatus({ tone: null, text: '' });
         }
         else {
-            setModeStatus({ tone: 'error', text: failureMessage(modeConfig, 'load MCP mode settings') });
+            setModeStatus({ tone: 'error', text: failureMessage(modeConfig, 'MCP mode settings') });
         }
     }, [services]);
     useEffect(() => {
@@ -66,7 +66,7 @@ export function CodingAgentsSurface({ services, host, }) {
         setModeStatus({ tone: null, text: 'switching…' });
         const result = await services.setMcpMode(next);
         if (!result.ok) {
-            setModeStatus({ tone: 'error', text: failureMessage(result, 'save MCP mode settings') });
+            setModeStatus({ tone: 'error', text: failureMessage(result, 'MCP mode settings') });
             return;
         }
         setMode(next);
@@ -109,14 +109,18 @@ export function CodingAgentsSurface({ services, host, }) {
                                                     mcp === 'down' ? (probeMessage || 'The appliance could not be reached.') :
                                                         mcp === 'noprobe' ? 'Connection status is not available for this appliance.' :
                                                             mcp === 'probing' ? 'checking…' :
-                                                                mcp === 'unknown' ? (probeMessage || 'Could not verify the MCP connection. Refresh to check again.') :
-                                                                    (probeMessage || 'The MCP service is responding.') })] })] }), _jsxs("div", { className: "rung", children: [_jsx("span", { className: `lamp lamp-${mode ? 'lit' : 'unlit'}` }), _jsxs("div", { className: "rung-body", children: [_jsx("strong", { children: "What an agent may do" }), _jsx("p", { className: "hint", children: MODE_SAYS[mode] ?? 'Pick what an agent connecting here is allowed to do.' }), _jsxs("div", { className: "row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Mode" }), _jsxs("select", { value: mode, onChange: (event) => void chooseMode(event.target.value), children: [mode === '' && _jsx("option", { value: "", children: "unknown" }), (modes.length ? modes : DEFAULT_MODES).map((availableMode) => (_jsx("option", { value: availableMode, children: availableMode === 'ASSISTANT'
+                                                                (probeMessage || 'The MCP service is responding.') })] })] }), _jsxs("div", { className: "rung", children: [_jsx("span", { className: `lamp lamp-${mode ? 'lit' : 'unlit'}` }), _jsxs("div", { className: "rung-body", children: [_jsx("strong", { children: "What an agent may do" }), _jsx("p", { className: "hint", children: MODE_SAYS[mode] ?? 'Pick what an agent connecting here is allowed to do.' }), _jsxs("div", { className: "row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Mode" }), _jsxs("select", { value: mode, onChange: (event) => void chooseMode(event.target.value), children: [mode === '' && _jsx("option", { value: "", children: "unknown" }), (modes.length ? modes : DEFAULT_MODES).map((availableMode) => (_jsx("option", { value: availableMode, children: availableMode === 'ASSISTANT'
                                                                         ? 'Assistant — my data'
                                                                         : availableMode === 'DEVELOPER'
                                                                             ? 'Developer — also build realms'
-                                                                            : availableMode }, availableMode)))] })] }), _jsx(Status, { tone: modeStatus.tone, children: modeStatus.text })] }), changedMode && (_jsx("p", { className: "hint", children: "This takes effect immediately. An agent that is already connected can try its call again." }))] })] }), _jsxs("div", { className: "rung", children: [_jsx("span", { className: `lamp lamp-${canRender ? 'lit' : 'unlit'}` }), _jsxs("div", { className: "rung-body", children: [_jsx("strong", { children: "Connection instructions" }), _jsx("p", { className: "hint", children: "Choose credentials, then copy the generated setup into Claude Code or Codex." }), _jsx("div", { className: "row", children: _jsxs("label", { className: "field grow", children: [_jsx("span", { children: "Appliance URL" }), _jsx("input", { value: baseUrl, placeholder: "https://your-appliance.example", onChange: (event) => setBaseUrl(event.target.value) })] }) }), _jsxs("div", { className: "row authpick", children: [_jsx("button", { className: `btn${authKind === 'basic' ? ' primary' : ' ghost'}`, onClick: () => setAuthKind('basic'), children: "Use my sign-in" }), _jsx("button", { className: `btn${authKind === 'bearer' ? ' primary' : ' ghost'}`, onClick: () => setAuthKind('bearer'), children: "Use a bearer token" })] }), authKind === 'basic' ? (_jsxs(_Fragment, { children: [_jsxs("p", { className: "hint", children: ["Use the username and password for the account the coding agent should act as.", suppliedCredential && ' The host has supplied your current credential.'] }), !suppliedCredential && (_jsxs("div", { className: "row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Username" }), _jsx("input", { value: username, onChange: (event) => setUsername(event.target.value) })] }), _jsxs("label", { className: "field", children: [_jsx("span", { children: "Password" }), _jsx("input", { type: "password", value: password, onChange: (event) => setPassword(event.target.value) })] })] })), _jsx("p", { className: "hint", children: "The agent's configuration may contain this credential in a readable form. Anyone who can read that configuration can use the same account." })] })) : (_jsxs(_Fragment, { children: [suppliedCredential ? (_jsx("p", { className: "hint", children: "The host has supplied your current bearer credential." })) : (_jsx("div", { className: "row", children: _jsxs("label", { className: "field grow", children: [_jsx("span", { children: "Bearer token" }), _jsx("input", { type: "password", value: token, placeholder: "Paste a token for this appliance", onChange: (event) => setToken(event.target.value) })] }) })), _jsx("p", { className: "hint", children: "Use a bearer token created for the appliance when you do not want the agent to carry your sign-in." })] })), _jsxs("p", { className: "hint", children: ["Credentials entered here remain in this page until you leave it. Copy includes the full credential, even while hidden.", ' ', haveCredential && (_jsx("button", { className: "status as-link", onClick: () => setReveal((value) => !value), children: reveal ? 'hide it' : 'show it' }))] }), _jsx(Snippet, { label: "Claude Code", shown: mask(claudeConnection), copy: claudeConnection, disabled: !canRender }), _jsx(Snippet, { label: "Codex", shown: mask(codexConnection), copy: codexConnection, disabled: !canRender })] })] })] })] }) }));
+                                                                            : availableMode }, availableMode)))] })] }), _jsx(Status, { tone: modeStatus.tone, children: modeStatus.text })] }), changedMode && (_jsx("p", { className: "hint", children: "This takes effect immediately. An agent that is already connected can try its call again." }))] })] }), _jsxs("div", { className: "rung", children: [_jsx("span", { className: `lamp lamp-${canRender ? 'lit' : 'unlit'}` }), _jsxs("div", { className: "rung-body", children: [_jsx("strong", { children: "Connection instructions" }), _jsx("p", { className: "hint", children: "Choose credentials, then copy the generated setup into Claude Code or Codex." }), _jsx("div", { className: "row", children: _jsxs("label", { className: "field grow", children: [_jsx("span", { children: "Appliance URL" }), _jsx("input", { value: baseUrl, placeholder: "https://your-appliance.example", onChange: (event) => setBaseUrl(event.target.value) })] }) }), _jsxs("div", { className: "row authpick", children: [_jsx("button", { className: `btn${authKind === 'basic' ? ' primary' : ' ghost'}`, onClick: () => setAuthKind('basic'), children: "Use my sign-in" }), _jsx("button", { className: `btn${authKind === 'bearer' ? ' primary' : ' ghost'}`, onClick: () => setAuthKind('bearer'), children: "Use a bearer token" })] }), authKind === 'basic' ? (_jsxs(_Fragment, { children: [_jsxs("p", { className: "hint", children: ["Use the username and password for the account the coding agent should act as.", suppliedCredential && ' The host has supplied your current credential.'] }), !suppliedCredential && (_jsxs("div", { className: "row", children: [_jsxs("label", { className: "field", children: [_jsx("span", { children: "Username" }), _jsx("input", { value: username, onChange: (event) => setUsername(event.target.value) })] }), _jsxs("label", { className: "field", children: [_jsx("span", { children: "Password" }), _jsx("input", { type: "password", value: password, onChange: (event) => setPassword(event.target.value) })] })] })), _jsx("p", { className: "hint", children: "The agent's configuration may contain this credential in a readable form. Anyone who can read that configuration can use the same account." })] })) : (_jsxs(_Fragment, { children: [suppliedCredential ? (_jsx("p", { className: "hint", children: "The host has supplied your current bearer credential." })) : (_jsx("div", { className: "row", children: _jsxs("label", { className: "field grow", children: [_jsx("span", { children: "Bearer token" }), _jsx("input", { type: "password", value: token, placeholder: "Paste a token for this appliance", onChange: (event) => setToken(event.target.value) })] }) })), _jsx("p", { className: "hint", children: "Use a bearer token created for the appliance when you do not want the agent to carry your sign-in." })] })), _jsxs("p", { className: "hint", children: ["Credentials entered here stay in this page only long enough to build the instructions.", ' ', haveCredential && (_jsx("button", { className: "status as-link", onClick: () => setReveal((value) => !value), children: reveal ? 'hide it' : 'show it' }))] }), _jsx(Snippet, { label: "Claude Code", shown: mask(claudeConnection), copy: claudeConnection, disabled: !canRender }), _jsx(Snippet, { label: "Codex", shown: mask(codexConnection), copy: codexConnection, disabled: !canRender })] })] })] })] }) }));
 }
 function Snippet({ label, shown, copy, disabled, }) {
-    return (_jsxs("div", { className: "snippet", children: [_jsxs("div", { className: "snippet-head", children: [_jsx("strong", { children: label }), _jsx(CopyButton, { label: `Copy ${label} setup`, text: copy, disabled: disabled })] }), _jsx("pre", { className: "cmd", children: shown })] }));
+    const [copied, setCopied] = useState(false);
+    return (_jsxs("div", { className: "snippet", children: [_jsxs("div", { className: "snippet-head", children: [_jsx("strong", { children: label }), _jsx("button", { className: "btn ghost tiny", disabled: disabled, onClick: () => {
+                            void navigator.clipboard?.writeText(copy);
+                            setCopied(true);
+                            setTimeout(() => setCopied(false), 1500);
+                        }, children: copied ? 'Copied' : 'Copy' })] }), _jsx("pre", { className: "cmd", children: shown })] }));
 }
 //# sourceMappingURL=CodingAgentsSurface.js.map
