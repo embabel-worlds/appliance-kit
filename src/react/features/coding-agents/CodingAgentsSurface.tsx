@@ -6,9 +6,9 @@ import type {
   CodingAgentsSurfaceProps,
   McpProbe,
 } from '../contracts.ts'
-import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { CopyButton, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
-type McpState = 'noprobe' | 'down' | 'guarded' | 'open' | 'up'
+type McpState = 'noprobe' | 'down' | 'guarded' | 'open' | 'up' | 'unknown'
 type AuthKind = AgentCredential['kind']
 
 const MODE_SAYS: Record<string, string> = {
@@ -22,7 +22,7 @@ function probeState(outcome: Outcome<McpProbe>): McpState {
   if (!outcome.ok) {
     if (outcome.kind === 'unsupported') return 'noprobe'
     if (outcome.kind === 'unreachable') return 'down'
-    return 'up'
+    return 'unknown'
   }
 
   const status = outcome.value.status
@@ -62,14 +62,14 @@ export function CodingAgentsSurface({
     ])
 
     setMcp(probeState(probe))
-    setProbeMessage(probe.ok || probe.kind === 'unsupported' ? '' : failureMessage(probe, 'MCP status'))
+    setProbeMessage(probe.ok || probe.kind === 'unsupported' ? '' : failureMessage(probe, 'check MCP status'))
 
     if (modeConfig.ok) {
       setMode(modeConfig.value.mode ?? '')
       setModes(modeConfig.value.modes ?? DEFAULT_MODES)
       setModeStatus({ tone: null, text: '' })
     } else {
-      setModeStatus({ tone: 'error', text: failureMessage(modeConfig, 'MCP mode settings') })
+      setModeStatus({ tone: 'error', text: failureMessage(modeConfig, 'load MCP mode settings') })
     }
   }, [services])
 
@@ -81,7 +81,7 @@ export function CodingAgentsSurface({
     setModeStatus({ tone: null, text: 'switching…' })
     const result = await services.setMcpMode(next)
     if (!result.ok) {
-      setModeStatus({ tone: 'error', text: failureMessage(result, 'MCP mode settings') })
+      setModeStatus({ tone: 'error', text: failureMessage(result, 'save MCP mode settings') })
       return
     }
     setMode(next)
@@ -143,6 +143,7 @@ export function CodingAgentsSurface({
                  mcp === 'down' ? (probeMessage || 'The appliance could not be reached.') :
                  mcp === 'noprobe' ? 'Connection status is not available for this appliance.' :
                  mcp === 'probing' ? 'checking…' :
+                 mcp === 'unknown' ? (probeMessage || 'Could not verify the MCP connection. Refresh to check again.') :
                  (probeMessage || 'The MCP service is responding.')}
               </p>
             </div>
@@ -263,7 +264,7 @@ export function CodingAgentsSurface({
               )}
 
               <p className="hint">
-                Credentials entered here stay in this page only long enough to build the instructions.{' '}
+                Credentials entered here remain in this page until you leave it. Copy includes the full credential, even while hidden.{' '}
                 {haveCredential && (
                   <button className="status as-link" onClick={() => setReveal((value) => !value)}>
                     {reveal ? 'hide it' : 'show it'}
@@ -302,22 +303,11 @@ function Snippet({
   copy: string
   disabled?: boolean
 }) {
-  const [copied, setCopied] = useState(false)
   return (
     <div className="snippet">
       <div className="snippet-head">
         <strong>{label}</strong>
-        <button
-          className="btn ghost tiny"
-          disabled={disabled}
-          onClick={() => {
-            void navigator.clipboard?.writeText(copy)
-            setCopied(true)
-            setTimeout(() => setCopied(false), 1500)
-          }}
-        >
-          {copied ? 'Copied' : 'Copy'}
-        </button>
+        <CopyButton label={`Copy ${label} setup`} text={copy} disabled={disabled} />
       </div>
       <pre className="cmd">{shown}</pre>
     </div>

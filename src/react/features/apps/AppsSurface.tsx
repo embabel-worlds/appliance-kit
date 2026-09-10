@@ -26,7 +26,7 @@ import { isBackgroundHandle } from '../../../client/kg.ts'
 import { isOk } from '../../../client/outcome.ts'
 import type { AppArtifact, AppPin, AppsHost, AppsServices, AppsSurfaceProps, PinRailProps } from '../contracts.ts'
 import { AppIcon } from './AppIcon.tsx'
-import { Status, StudioPanel, type Tone } from '../studio/chrome.tsx'
+import { Status, StudioPanel, failureMessage, type Tone } from '../studio/chrome.tsx'
 
 /** The app's URL on THIS origin — see the header for why that is not the door's origin.
  *  Prefers the server's canonical scoped `url`; an older door without one gets the legacy
@@ -157,10 +157,10 @@ function AppRow({ a, open, setOpen, pinned, onTogglePin, onNewTab }: {
         <p>{a.description || 'No description.'}</p>
       </div>
       <div className="row">
-        <button className="btn" onClick={() => setOpen(isViewing ? null : a)}>
+        <button className="btn" aria-label={`${isViewing ? 'Close' : 'Open'} ${title(a)}`} onClick={() => setOpen(isViewing ? null : a)}>
           {isViewing ? 'Close' : 'Open'}
         </button>
-        <button className="btn ghost" onClick={() => onNewTab(a)}>
+        <button className="btn ghost" aria-label={`Open ${title(a)} in a new tab`} onClick={() => onNewTab(a)}>
           Open in new tab
         </button>
       </div>
@@ -221,9 +221,13 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
       'RETURN a.name AS name, a.scope AS scope'
     const outcome = await services.searchApps(cypher)
     setJudging(false)
+    if (isOk(outcome) && isBackgroundHandle(outcome.value)) {
+      setMeaning(null)
+      return setSmartNote('Smart search started a background run; its results are not available here. Showing keyword matches.')
+    }
     if (!isOk(outcome) || isBackgroundHandle(outcome.value) || outcome.value.error) {
       setMeaning(null)
-      return setSmartNote('Smart search needs a newer appliance — showing keyword matches instead.')
+      return setSmartNote('Smart search did not return results. Showing keyword matches instead; try Smart search again.')
     }
     const keys = new Set((outcome.value.rows ?? []).map((row) => {
       const r = row as Record<string, unknown>
@@ -234,10 +238,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
 
   const load = useCallback(async () => {
     const r = await services.listApps()
-    if (!r.ok && (r.status === 401 || r.status === 403)) {
-      return setStatus({ tone: 'error', text: 'Sign in to see this world’s apps.' })
-    }
-    if (!r.ok) return setStatus({ tone: 'error', text: r.message })
+    if (!r.ok) return setStatus({ tone: 'error', text: failureMessage(r, 'list apps') })
     const found = r.value
     setApps(found)
     /* Only from a listing that actually succeeded — see reconcilePins on why a failed one
@@ -339,6 +340,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
         <p className="hint">
           Apps available in this world. Pin favorites for quick access.
         </p>
+        {status.tone === 'error' && <button className="btn" onClick={() => void load()}>Retry listing apps</button>}
 
         {apps.length > 3 && (
           <div className="realmsearch">
@@ -355,7 +357,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
           </div>
         )}
         {meaning && (
-          <p className="hint">Smart search for “{meaning.q}” · {meaning.keys.size} match{meaning.keys.size === 1 ? '' : 'es'} — judged on what each app does.</p>
+          <p className="hint">Smart search for “{meaning.q}” · {shown.length} match{shown.length === 1 ? '' : 'es'} — judged on what each app does.</p>
         )}
         {smartNote && <p className="hint">{smartNote}</p>}
 
@@ -387,7 +389,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
             )
           })}
           {apps.length > 0 && shown.length === 0 && (
-            <p className="hint">No app matches “{query}”.</p>
+            <p className="hint">No app matches “{query}”.{!meaning && ' Try Smart search to search by meaning.'}</p>
           )}
         </div>
       </StudioPanel>

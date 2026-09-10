@@ -107,16 +107,17 @@ async function inFlightRunId(services: QueryStudioServices, cypher: string | nul
 /**
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
+ * @param initialCypher a starter landed once into an empty editor; unlike a handoff it never replays.
  */
-export function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }: QueryStudioSurfaceProps) {
+export function QueryStudioSurface({ services, host, handedOver, initialCypher, handoffRevision, onCypherChange }: QueryStudioSurfaceProps) {
   return (
     <QueryRuntimeProvider services={services} host={host}>
-      <QueryStudioBody handedOver={handedOver} handoffRevision={handoffRevision} onCypherChange={onCypherChange} />
+      <QueryStudioBody handedOver={handedOver} initialCypher={initialCypher} handoffRevision={handoffRevision} onCypherChange={onCypherChange} />
     </QueryRuntimeProvider>
   )
 }
 
-function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<QueryStudioSurfaceProps, 'handedOver' | 'handoffRevision' | 'onCypherChange'>) {
+function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherChange }: Pick<QueryStudioSurfaceProps, 'handedOver' | 'initialCypher' | 'handoffRevision' | 'onCypherChange'>) {
   const { services, host } = useQueryRuntime()
   const reportCypher = useRef(onCypherChange)
   reportCypher.current = onCypherChange
@@ -142,18 +143,22 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
   const [runStatus, setRunStatus] = useState<{ tone: 'ok' | 'error' | 'caution' | null; text: string }>(
     { tone: null, text: '' },
   )
+  const [stopStatus, setStopStatus] = useState<{ tone: 'error' | 'caution' | null; text: string }>({ tone: null, text: '' })
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
   /* The WHOLE result, because `apiCallLog`, `llmCallLog` and the call counts ride on it and were
    * being thrown away — they are what the Vaadin console's Stats view is made of. */
   const [result, setResult] = useState<KgQueryResult | null>(null)
   const [view, setView] = useState<ResultView>('table')
   const [pane, setPane] = useState<Pane>('query')
+  const [editorExpanded, setEditorExpanded] = useState(false)
   const [ran, setRan] = useState(false)
   const [running, setRunning] = useState(false)
   /* A kill has been asked for and the run has not answered yet. Separate from `running` because
    * the two overlap: the query is still in flight for as long as it takes the engine to notice. */
   const [stopping, setStopping] = useState(false)
   const runningCypher = useRef<string | null>(null)
+  const stopAccepted = useRef(false)
+  const runTerminal = useRef<'finished' | 'failed' | 'killed' | null>(null)
   const [history, setHistory] = useState<QueryHistoryEntry[]>(() => host.history.read() ?? [])
   /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
   const [scopesVersion, setScopesVersion] = useState(0)
@@ -350,6 +355,9 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
     const generation = ++runGeneration.current
     setRunning(true)
     setStopping(false)
+    stopAccepted.current = false
+    runTerminal.current = null
+    setStopStatus({ tone: null, text: '' })
     // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
     setPane('results')
     /* The cypher AS SUBMITTED. Stop needs to name the run it is stopping, and by the time anyone
@@ -372,7 +380,10 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
      * waited forty seconds is owed the account of where it went. */
     progress.end()
     if (!isOk(outcome)) {
-      return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'query execution') })
+      runTerminal.current = 'failed'
+      setStopStatus({ tone: null, text: '' })
+      stopAccepted.current = false
+      return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'run the query') })
     }
     // `execute` has two success shapes. Without `background` this is always the finished result,
     // but the type says otherwise and reading `rows` off a handle would silently show zero rows.
@@ -380,6 +391,11 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
     // threw away the rows of any result that did not send one, which is how this looked in
     // practice: "parked in the background", over a payload holding the answer.
     if (isBackgroundHandle(outcome.value)) {
+      runTerminal.current = 'finished'
+      setStopStatus(stopAccepted.current
+        ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
+        : { tone: null, text: '' })
+      stopAccepted.current = false
       return setRunStatus({ tone: 'caution', text: 'This query is running in the background.' })
     }
     const result = outcome.value
@@ -389,10 +405,14 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
      * guess from the hint text. The hint is the engine's own: committed work is KEPT, so re-running
      * resumes from the first cold anchor rather than starting over. */
     if (result.reason === 'KILLED') {
-      return setRunStatus({
-        tone: 'caution',
+      runTerminal.current = 'killed'
+      stopAccepted.current = false
+      const status = {
+        tone: 'caution' as const,
         text: `Stopped. ${result.hint ?? 'Work already materialized is kept — run it again to resume from there.'}`,
-      })
+      }
+      setStopStatus(status)
+      return setRunStatus(status)
     }
     const rows = (result.rows ?? []) as Array<Record<string, unknown>>
     // `rowCount` is documented as required and is not always sent. The rows are the truth.
@@ -402,7 +422,17 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
     if (result.durationMs != null) parts.push(formatDuration(result.durationMs))
     for (const warning of result.warnings ?? []) parts.push(warning)
     if (!rowCount && result.hint) parts.push(result.hint)
-    if (result.error) return setRunStatus({ tone: 'error', text: result.error })
+    if (result.error) {
+      runTerminal.current = 'failed'
+      setStopStatus({ tone: null, text: '' })
+      stopAccepted.current = false
+      return setRunStatus({ tone: 'error', text: result.error })
+    }
+    runTerminal.current = 'finished'
+    setStopStatus(stopAccepted.current
+      ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
+      : { tone: null, text: '' })
+    stopAccepted.current = false
     setRunStatus({ tone: (result.warnings ?? []).length ? 'caution' : 'ok', text: parts.join(' · ') })
     setRows(rows)
     setResult(result)
@@ -430,21 +460,47 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
    */
   const stop = useCallback(async (): Promise<void> => {
     setStopping(true)
-    setRunStatus({ tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' })
+    const stoppingStatus = { tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' }
+    setStopStatus(stoppingStatus)
+    setRunStatus(stoppingStatus)
     const runId = progress.runId ?? (await inFlightRunId(services, runningCypher.current))
     if (!runId) {
       setStopping(false)
-      return setRunStatus({ tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' })
+      stopAccepted.current = false
+      const status = { tone: 'caution' as const, text: 'No matching query is still running, so it could not be stopped.' }
+      setStopStatus(status)
+      return setRunStatus(status)
     }
     const outcome = await services.kg.kill(runId)
     if (!isOk(outcome)) {
       setStopping(false)
-      return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'stopping the run') })
+      stopAccepted.current = false
+      const status = { tone: 'error' as const, text: failureMessage(outcome, 'stop the run') }
+      setStopStatus(status)
+      return setRunStatus(status)
     }
-    /* `killed: false` means the registry had no such run — it finished between the click and the
-     * call. The execute POST is about to return the real answer, so say nothing that contradicts
-     * the rows that are one moment away. */
-    if (!outcome.value.killed) setStopping(false)
+    /* The kill response says whether the registry accepted the request, not whether a cooperative
+     * checkpoint has stopped execution. Only the still-open execute response can confirm KILLED. */
+    if (outcome.value.killed) {
+      if (runTerminal.current === 'finished') {
+        const status = { tone: 'caution' as const, text: 'Stop was requested, but the run finished before it could stop.' }
+        setStopStatus(status)
+        setRunStatus(status)
+      } else if (runTerminal.current === 'failed') {
+        setStopStatus({ tone: null, text: '' })
+      } else if (runTerminal.current !== 'killed') {
+        stopAccepted.current = true
+        const status = { tone: null, text: 'Stop requested — waiting for the run to confirm it stopped…' }
+        setStopStatus(status)
+        setRunStatus(status)
+      }
+    } else if (runTerminal.current === null) {
+      setStopping(false)
+      stopAccepted.current = false
+      const status = { tone: 'caution' as const, text: 'Stop was not confirmed — the run may already have finished.' }
+      setStopStatus(status)
+      setRunStatus(status)
+    }
   }, [progress.runId])
 
   const land = useCallback((cypher: string) => {
@@ -477,6 +533,13 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
 
   /* Landed on arrival AND on change, so opening the same view twice still works. The editor is
    * created asynchronously, so this waits for it rather than firing into nothing. */
+  const initialized = useRef(false)
+  useEffect(() => {
+    if (!handle.editor || initialized.current) return
+    initialized.current = true
+    if (initialCypher && handedOver == null && !handle.getText().trim()) land(initialCypher)
+  }, [handedOver, handle, initialCypher, land])
+
   const landed = useRef<{ cypher: string; revision?: number } | null>(null)
   useEffect(() => {
     if (!handedOver || !handle.editor) return
@@ -496,7 +559,7 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
    * and it is a cheap one. */
   useEffect(() => {
     if (pane === 'query') handle.editor?.refresh()
-  }, [pane, handle.editor])
+  }, [pane, editorExpanded, handle.editor])
 
   const columns = rowColumns(rows)
 
@@ -535,7 +598,7 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
           ))}
         </nav>
 
-      <div className="studio-pane studio-pane-query" hidden={pane !== 'query'}>
+      <div className={`studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`} hidden={pane !== 'query'}>
         {/* Ask sits ABOVE the query, not beside it. Tucked into the rail it was the last thing
             anyone found, and "describe what you want" is the shortest path into this surface for
             someone who does not write Cypher — it has to be the first thing on the page. */}
@@ -572,10 +635,18 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
             )
             : <Status tone={validity.tone}>{validity.text}</Status>}
         >
-          {/* Copy lives ON the query box, where the thing being copied is. */}
-          <div className="editor-wrap">
+          <div className={`editor-wrap${editorExpanded ? ' is-expanded' : ''}`}>
+            <div className="editor-toolbar">
+              <CopyButton label="Copy" text={handle.getText()} />
+              <button
+                className="btn ghost tiny"
+                aria-expanded={editorExpanded}
+                onClick={() => setEditorExpanded((expanded) => !expanded)}
+              >
+                {editorExpanded ? 'Collapse editor' : 'Expand editor'}
+              </button>
+            </div>
             <div className="editor-host" ref={editorRef} />
-            <CopyButton label="Copy" text={handle.getText()} />
           </div>
           {showViolations && validity.violations.length > 0 && (
             <div className="verdict">
@@ -588,8 +659,9 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
               disabled={running || validity.tone !== 'ok'
                 || validatedCypher.current !== completeQuery(handle.getText()).cypher}
               onClick={() => void run()}
+              title="Run query (Ctrl+Enter or ⌘+Enter)"
             >
-              {running ? 'running…' : 'Run ⌘⏎'}
+              {running ? 'running…' : 'Run (⌘/Ctrl+Enter)'}
             </button>
             {/* Only while there is something to stop — a permanently disabled Stop teaches that the
                 feature does not work. It stays clickable while stopping: the second press is
@@ -608,10 +680,12 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
                 Help
               </summary>
               <p className="editor-help-copy">
+                <kbd>⌘</kbd> + <kbd>Enter</kbd> on Mac or <kbd>Ctrl</kbd> + <kbd>Enter</kbd> on other keyboards runs the query.{' '}
                 <kbd>Control</kbd> + <kbd>Space</kbd> completes from the schema.
               </p>
             </details>
           </div>
+          {stopStatus.text && <Status tone={stopStatus.tone} className="query-stop-status">{stopStatus.text}</Status>}
         </StudioPanel>
       </div>
 
@@ -674,8 +748,9 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
 
       {/* Hidden, not unmounted, like the other panes: the transcript and bindings are state
           worth keeping across tab switches. */}
-      <div className="studio-pane" hidden={pane !== 'session'}>
+      <div className="studio-pane studio-pane-session" hidden={pane !== 'session'}>
         <SessionPane
+          visible={pane === 'session'}
           onCaptured={() => setScopesVersion((v) => v + 1)}
           onOpenInEditor={(cypher) => { land(cypher); setPane('query') }}
         />
@@ -712,7 +787,7 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
     const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text)
     setBusy(false)
     if (!isOk(outcome)) {
-      return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'query refinement' : 'query generation') })
+      return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'refine the query' : 'generate a query') })
     }
     const generated = outcome.value
     if (!generated.cypher) return setStatus({ tone: 'error', text: 'Nothing came back.' })
@@ -730,6 +805,7 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
       <div className="ask-row">
         <input
           value={question}
+          aria-label="Describe the query you want"
           placeholder="which documents mention the renewal? · files about trip logistics…"
           onChange={(e) => setQuestion(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void go(false) }}
@@ -739,6 +815,7 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
       <div className="ask-row">
         <input
           value={instruction}
+          aria-label="Describe the change to the query"
           placeholder="refine what's in the editor: also show the margin · sort by state · drop the limit…"
           onChange={(e) => setInstruction(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') void go(true) }}
@@ -898,13 +975,13 @@ export function SaveView({ current }: { current(): string }) {
   async function save() {
     const viewName = name.trim()
     const cypher = current().trim()
-    if (!viewName || !cypher) return setStatus({ tone: 'error', text: 'a view needs a name and a query' })
+    if (!viewName || !cypher) return setStatus({ tone: 'error', text: 'A view needs a name and a query.' })
     setBusy(true)
     const outcome = await services.kg.saveView(
       description.trim() ? { name: viewName, cypher, description: description.trim() } : { name: viewName, cypher },
     )
     setBusy(false)
-    if (!isOk(outcome)) return setStatus({ tone: 'error', text: failureMessage(outcome, 'saving views') })
+    if (!isOk(outcome)) return setStatus({ tone: 'error', text: failureMessage(outcome, 'save this view') })
     if (!outcome.value.ok) {
       // THE APPLIANCE'S OWN WORDS. "The appliance refused it" threw away the one thing the
       // refusal was written to carry — which scope blocks the save, that it was captured with
@@ -1004,9 +1081,7 @@ function StartFill({ current, onStarted }: { current(): string; onStarted(): voi
     try {
       const r = await services.fills.create(cypher, (cypher.split('\n')[0] ?? '').slice(0, 60))
       if (r.ok) onStarted()
-      else setError(r.status === 403
-        ? 'Your account is not allowed to start fills. An administrator can check your access.'
-        : failureMessage(r, 'background fills'))
+      else setError(failureMessage(r, 'start a background fill'))
     } catch (cause) {
       setError(cause instanceof Error ? cause.message : 'The fill could not be started. Try again.')
     } finally {
@@ -1178,13 +1253,13 @@ function CaptureScope({ current, onCaptured }: { current(): string; onCaptured()
     const scopeName = name.trim()
     // Same completion as Run and the Session tab: `MATCH (c:Chunk)` captures without a RETURN.
     const { cypher } = completeQuery(current())
-    if (!cypher) return setStatus({ tone: 'error', text: 'nothing to capture — write a query first' })
-    if (!scopeName) return setStatus({ tone: 'error', text: 'name the scope — the name is how a later query references it' })
+    if (!cypher) return setStatus({ tone: 'error', text: 'Nothing to capture — write a query first.' })
+    if (!scopeName) return setStatus({ tone: 'error', text: 'Name the scope — the name is how a later query references it.' })
     setBusy(true)
     setStatus({ tone: null, text: 'Running and freezing the result set…' })
     const outcome = await services.kg.execute(cypher, { captureAs: scopeName })
     setBusy(false)
-    if (!isOk(outcome)) return setStatus({ tone: 'error', text: failureMessage(outcome, 'capturing a scope') })
+    if (!isOk(outcome)) return setStatus({ tone: 'error', text: failureMessage(outcome, 'capture a scope') })
     if (isBackgroundHandle(outcome.value)) {
       return setStatus({ tone: 'error', text: 'This query is running in the background; capturing a scope requires a synchronous result.' })
     }
