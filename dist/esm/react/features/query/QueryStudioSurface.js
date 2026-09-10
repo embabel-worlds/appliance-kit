@@ -78,12 +78,11 @@ async function inFlightRunId(services, cypher) {
 /**
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
- * @param initialCypher a starter landed once into an empty editor; unlike a handoff it never replays.
  */
-export function QueryStudioSurface({ services, host, handedOver, initialCypher, handoffRevision, onCypherChange }) {
-    return (_jsx(QueryRuntimeProvider, { services: services, host: host, children: _jsx(QueryStudioBody, { handedOver: handedOver, initialCypher: initialCypher, handoffRevision: handoffRevision, onCypherChange: onCypherChange }) }));
+export function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }) {
+    return (_jsx(QueryRuntimeProvider, { services: services, host: host, children: _jsx(QueryStudioBody, { handedOver: handedOver, handoffRevision: handoffRevision, onCypherChange: onCypherChange }) }));
 }
-function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherChange }) {
+function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
     const { services, host } = useQueryRuntime();
     const reportCypher = useRef(onCypherChange);
     reportCypher.current = onCypherChange;
@@ -105,22 +104,18 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
      */
     const [showViolations, setShowViolations] = useState(false);
     const [runStatus, setRunStatus] = useState({ tone: null, text: '' });
-    const [stopStatus, setStopStatus] = useState({ tone: null, text: '' });
     const [rows, setRows] = useState([]);
     /* The WHOLE result, because `apiCallLog`, `llmCallLog` and the call counts ride on it and were
      * being thrown away — they are what the Vaadin console's Stats view is made of. */
     const [result, setResult] = useState(null);
     const [view, setView] = useState('table');
     const [pane, setPane] = useState('query');
-    const [editorExpanded, setEditorExpanded] = useState(false);
     const [ran, setRan] = useState(false);
     const [running, setRunning] = useState(false);
     /* A kill has been asked for and the run has not answered yet. Separate from `running` because
      * the two overlap: the query is still in flight for as long as it takes the engine to notice. */
     const [stopping, setStopping] = useState(false);
     const runningCypher = useRef(null);
-    const stopAccepted = useRef(false);
-    const runTerminal = useRef(null);
     const [history, setHistory] = useState(() => host.history.read() ?? []);
     /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
     const [scopesVersion, setScopesVersion] = useState(0);
@@ -311,9 +306,6 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         const generation = ++runGeneration.current;
         setRunning(true);
         setStopping(false);
-        stopAccepted.current = false;
-        runTerminal.current = null;
-        setStopStatus({ tone: null, text: '' });
         // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
         setPane('results');
         /* The cypher AS SUBMITTED. Stop needs to name the run it is stopping, and by the time anyone
@@ -337,10 +329,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
          * waited forty seconds is owed the account of where it went. */
         progress.end();
         if (!isOk(outcome)) {
-            runTerminal.current = 'failed';
-            setStopStatus({ tone: null, text: '' });
-            stopAccepted.current = false;
-            return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'run the query') });
+            return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'query execution') });
         }
         // `execute` has two success shapes. Without `background` this is always the finished result,
         // but the type says otherwise and reading `rows` off a handle would silently show zero rows.
@@ -348,11 +337,6 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         // threw away the rows of any result that did not send one, which is how this looked in
         // practice: "parked in the background", over a payload holding the answer.
         if (isBackgroundHandle(outcome.value)) {
-            runTerminal.current = 'finished';
-            setStopStatus(stopAccepted.current
-                ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
-                : { tone: null, text: '' });
-            stopAccepted.current = false;
             return setRunStatus({ tone: 'caution', text: 'This query is running in the background.' });
         }
         const result = outcome.value;
@@ -362,14 +346,10 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
          * guess from the hint text. The hint is the engine's own: committed work is KEPT, so re-running
          * resumes from the first cold anchor rather than starting over. */
         if (result.reason === 'KILLED') {
-            runTerminal.current = 'killed';
-            stopAccepted.current = false;
-            const status = {
+            return setRunStatus({
                 tone: 'caution',
                 text: `Stopped. ${result.hint ?? 'Work already materialized is kept — run it again to resume from there.'}`,
-            };
-            setStopStatus(status);
-            return setRunStatus(status);
+            });
         }
         const rows = (result.rows ?? []);
         // `rowCount` is documented as required and is not always sent. The rows are the truth.
@@ -383,17 +363,8 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             parts.push(warning);
         if (!rowCount && result.hint)
             parts.push(result.hint);
-        if (result.error) {
-            runTerminal.current = 'failed';
-            setStopStatus({ tone: null, text: '' });
-            stopAccepted.current = false;
+        if (result.error)
             return setRunStatus({ tone: 'error', text: result.error });
-        }
-        runTerminal.current = 'finished';
-        setStopStatus(stopAccepted.current
-            ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
-            : { tone: null, text: '' });
-        stopAccepted.current = false;
         setRunStatus({ tone: (result.warnings ?? []).length ? 'caution' : 'ok', text: parts.join(' · ') });
         setRows(rows);
         setResult(result);
@@ -420,50 +391,22 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
      */
     const stop = useCallback(async () => {
         setStopping(true);
-        const stoppingStatus = { tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' };
-        setStopStatus(stoppingStatus);
-        setRunStatus(stoppingStatus);
+        setRunStatus({ tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' });
         const runId = progress.runId ?? (await inFlightRunId(services, runningCypher.current));
         if (!runId) {
             setStopping(false);
-            stopAccepted.current = false;
-            const status = { tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' };
-            setStopStatus(status);
-            return setRunStatus(status);
+            return setRunStatus({ tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' });
         }
         const outcome = await services.kg.kill(runId);
         if (!isOk(outcome)) {
             setStopping(false);
-            stopAccepted.current = false;
-            const status = { tone: 'error', text: failureMessage(outcome, 'stop the run') };
-            setStopStatus(status);
-            return setRunStatus(status);
+            return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'stopping the run') });
         }
-        /* The kill response says whether the registry accepted the request, not whether a cooperative
-         * checkpoint has stopped execution. Only the still-open execute response can confirm KILLED. */
-        if (outcome.value.killed) {
-            if (runTerminal.current === 'finished') {
-                const status = { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' };
-                setStopStatus(status);
-                setRunStatus(status);
-            }
-            else if (runTerminal.current === 'failed') {
-                setStopStatus({ tone: null, text: '' });
-            }
-            else if (runTerminal.current !== 'killed') {
-                stopAccepted.current = true;
-                const status = { tone: null, text: 'Stop requested — waiting for the run to confirm it stopped…' };
-                setStopStatus(status);
-                setRunStatus(status);
-            }
-        }
-        else if (runTerminal.current === null) {
+        /* `killed: false` means the registry had no such run — it finished between the click and the
+         * call. The execute POST is about to return the real answer, so say nothing that contradicts
+         * the rows that are one moment away. */
+        if (!outcome.value.killed)
             setStopping(false);
-            stopAccepted.current = false;
-            const status = { tone: 'caution', text: 'Stop was not confirmed — the run may already have finished.' };
-            setStopStatus(status);
-            setRunStatus(status);
-        }
     }, [progress.runId]);
     const land = useCallback((cypher) => {
         validatedCypher.current = null;
@@ -494,14 +437,6 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     }, [handle, land]);
     /* Landed on arrival AND on change, so opening the same view twice still works. The editor is
      * created asynchronously, so this waits for it rather than firing into nothing. */
-    const initialized = useRef(false);
-    useEffect(() => {
-        if (!handle.editor || initialized.current)
-            return;
-        initialized.current = true;
-        if (initialCypher && handedOver == null && !handle.getText().trim())
-            land(initialCypher);
-    }, [handedOver, handle, initialCypher, land]);
     const landed = useRef(null);
     useEffect(() => {
         if (!handedOver || !handle.editor)
@@ -523,20 +458,20 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     useEffect(() => {
         if (pane === 'query')
             handle.editor?.refresh();
-    }, [pane, editorExpanded, handle.editor]);
+    }, [pane, handle.editor]);
     const columns = rowColumns(rows);
-    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => (_jsx("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, hidden: pane !== 'query', children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
+    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => (_jsx("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
                                             const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                             return (_jsxs("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [_jsx("span", { className: "history-cypher", children: firstLine }), _jsx("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                         }) }))] }), _jsxs(StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
                                     ? (_jsxs("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
-                                    : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [_jsxs("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [_jsxs("div", { className: "editor-toolbar", children: [_jsx(CopyButton, { label: "Copy", text: handle.getText() }), _jsx("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), _jsx("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                    || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "\u2318" }), " + ", _jsx("kbd", { children: "Enter" }), " on Mac or ", _jsx("kbd", { children: "Ctrl" }), " + ", _jsx("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', _jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && _jsx(Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), _jsx("div", { className: "studio-pane", hidden: pane !== 'results', children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                    : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [_jsxs("div", { className: "editor-wrap", children: [_jsx("div", { className: "editor-host", ref: editorRef }), _jsx(CopyButton, { label: "Copy", text: handle.getText() })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
+                                                    || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), children: running ? 'running…' : 'Run ⌘⏎' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] })] })] }), _jsx("div", { className: "studio-pane", hidden: pane !== 'results', children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
                                     rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) :
                                         _jsx(RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
                                     _jsx("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && _jsx(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && (_jsxs("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && (_jsx("p", { className: "hint", children: progress.live
                                                 ? 'Waiting for the engine to report…'
-                                                : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane studio-pane-session", hidden: pane !== 'session', children: _jsx(SessionPane, { visible: pane === 'session', onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
+                                                : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane", hidden: pane !== 'session', children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
 }
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
 /**
@@ -563,7 +498,7 @@ function Ask({ onLand, current }) {
         const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text);
         setBusy(false);
         if (!isOk(outcome)) {
-            return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'refine the query' : 'generate a query') });
+            return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'query refinement' : 'query generation') });
         }
         const generated = outcome.value;
         if (!generated.cypher)
@@ -576,8 +511,8 @@ function Ask({ onLand, current }) {
             ? { tone: 'ok', text: 'Landed in the editor — read it before you run it.' }
             : { tone: 'error', text: `Landed, but it has ${(generated.violations ?? []).length} schema problem(s).` });
     }
-    return (_jsxs(StudioPanel, { title: "Ask", children: [_jsxs("div", { className: "ask-row", children: [_jsx("input", { value: question, "aria-label": "Describe the query you want", placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
-                            void go(false); } }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), _jsxs("div", { className: "ask-row", children: [_jsx("input", { value: instruction, "aria-label": "Describe the change to the query", placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+    return (_jsxs(StudioPanel, { title: "Ask", children: [_jsxs("div", { className: "ask-row", children: [_jsx("input", { value: question, placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+                            void go(false); } }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), _jsxs("div", { className: "ask-row", children: [_jsx("input", { value: instruction, placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
                             void go(true); } }), _jsx("button", { className: "btn", disabled: busy || !current().trim(), onClick: () => void go(true), children: "Refine" })] }), _jsx(Status, { tone: status.tone, children: status.text }), explanation && _jsx("p", { className: "hint", children: explanation })] }));
 }
 // ── the schema browser ────────────────────────────────────────────────────────────────────────
@@ -647,12 +582,12 @@ export function SaveView({ current }) {
         const viewName = name.trim();
         const cypher = current().trim();
         if (!viewName || !cypher)
-            return setStatus({ tone: 'error', text: 'A view needs a name and a query.' });
+            return setStatus({ tone: 'error', text: 'a view needs a name and a query' });
         setBusy(true);
         const outcome = await services.kg.saveView(description.trim() ? { name: viewName, cypher, description: description.trim() } : { name: viewName, cypher });
         setBusy(false);
         if (!isOk(outcome))
-            return setStatus({ tone: 'error', text: failureMessage(outcome, 'save this view') });
+            return setStatus({ tone: 'error', text: failureMessage(outcome, 'saving views') });
         if (!outcome.value.ok) {
             // THE APPLIANCE'S OWN WORDS. "The appliance refused it" threw away the one thing the
             // refusal was written to carry — which scope blocks the save, that it was captured with
@@ -718,7 +653,9 @@ function StartFill({ current, onStarted }) {
             if (r.ok)
                 onStarted();
             else
-                setError(failureMessage(r, 'start a background fill'));
+                setError(r.status === 403
+                    ? 'Your account is not allowed to start fills. An administrator can check your access.'
+                    : failureMessage(r, 'background fills'));
         }
         catch (cause) {
             setError(cause instanceof Error ? cause.message : 'The fill could not be started. Try again.');
@@ -817,15 +754,15 @@ function CaptureScope({ current, onCaptured }) {
         // Same completion as Run and the Session tab: `MATCH (c:Chunk)` captures without a RETURN.
         const { cypher } = completeQuery(current());
         if (!cypher)
-            return setStatus({ tone: 'error', text: 'Nothing to capture — write a query first.' });
+            return setStatus({ tone: 'error', text: 'nothing to capture — write a query first' });
         if (!scopeName)
-            return setStatus({ tone: 'error', text: 'Name the scope — the name is how a later query references it.' });
+            return setStatus({ tone: 'error', text: 'name the scope — the name is how a later query references it' });
         setBusy(true);
         setStatus({ tone: null, text: 'Running and freezing the result set…' });
         const outcome = await services.kg.execute(cypher, { captureAs: scopeName });
         setBusy(false);
         if (!isOk(outcome))
-            return setStatus({ tone: 'error', text: failureMessage(outcome, 'capture a scope') });
+            return setStatus({ tone: 'error', text: failureMessage(outcome, 'capturing a scope') });
         if (isBackgroundHandle(outcome.value)) {
             return setStatus({ tone: 'error', text: 'This query is running in the background; capturing a scope requires a synchronous result.' });
         }

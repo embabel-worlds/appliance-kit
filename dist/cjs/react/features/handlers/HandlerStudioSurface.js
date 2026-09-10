@@ -163,8 +163,8 @@ function HandlerStudioSurface({ services, draft, onDraftConsumed, }) {
 }
 function HandlerStudioBody({ draft, onDraftConsumed }) {
     const { services } = useHandlerRuntime();
-    const [surface, setSurface] = (0, react_1.useState)(undefined);
-    const [catalogue, setCatalogue] = (0, react_1.useState)(undefined);
+    const [surface, setSurface] = (0, react_1.useState)(null);
+    const [catalogue, setCatalogue] = (0, react_1.useState)(null);
     /* The skills bundled with the agent being authored. Owned here because BOTH halves need them:
        Ask hands them to the writing model, Save persists them with the action. */
     const [skills, setSkills] = (0, react_1.useState)([]);
@@ -172,10 +172,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     const [yours, setYours] = (0, react_1.useState)([]);
     const [available, setAvailable] = (0, react_1.useState)([]);
     const [listError, setListError] = (0, react_1.useState)('');
-    const [listLoading, setListLoading] = (0, react_1.useState)(true);
     const [openName, setOpenName] = (0, react_1.useState)(null);
-    const [opened, setOpened] = (0, react_1.useState)(null);
-    const [formEpoch, setFormEpoch] = (0, react_1.useState)(0);
     const [validity, setValidity] = (0, react_1.useState)({ tone: null, text: '', violations: [] });
     const [runStatus, setRunStatus] = (0, react_1.useState)({ tone: null, text: '' });
     const [output, setOutput] = (0, react_1.useState)(null);
@@ -224,7 +221,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
         dryRunGeneration.current += 1;
         validateSupported.current = true;
         lastValidated.current = null;
-        setSurface(undefined);
+        setSurface(null);
         void (async () => {
             const parsed = await fetchSurface(services);
             if (!current || completionOwner !== owner)
@@ -268,13 +265,11 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     }, [handle]);
     const loadHandlers = (0, react_1.useCallback)(async () => {
         const generation = ++handlersGeneration.current;
-        setListLoading(true);
         const outcome = await services.handlers.list();
         if (!active.current || generation !== handlersGeneration.current)
             return;
-        setListLoading(false);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'list agents'));
+            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'the handlers surface'));
         setListError('');
         setYours(outcome.value.yours ?? []);
         setAvailable(outcome.value.available ?? []);
@@ -344,7 +339,7 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
             return;
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'dry-run this agent') });
+            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'handler dry runs') });
         const result = outcome.value;
         // What it RAN AGAINST, not what was asked for: a signal type with nothing on record falls back
         // to a cron tick, and reporting the request would tell you it saw an event it never saw.
@@ -358,11 +353,10 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     async function open(name) {
         const outcome = await services.handlers.open(name);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'open the agent') });
+            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'opening handlers') });
         const spec = outcome.value;
         handle.setText(spec.source ?? '');
         setOpenName(spec.name ?? name);
-        setOpened(spec);
         setSignalType(spec.signalType && spec.signalType !== '*' ? spec.signalType : '');
         // Round-tripped, or saving an edit would quietly unbundle every skill the agent had.
         setSkills((spec.skills) ?? []);
@@ -372,80 +366,22 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
     async function setEnabled(name, enabled) {
         const outcome = await services.handlers.setEnabled(name, enabled);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'change whether this agent is enabled'));
+            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'enabling handlers'));
         void loadHandlers();
-    }
-    async function changeStage(handler) {
-        const stage = stageOf(handler);
-        if (stage === 'acting')
-            return setEnabled(handler.name, false);
-        if (stage === 'proposed' && !handler.autonomous)
-            return setEnabled(handler.name, true);
-        const openedResult = await services.handlers.open(handler.name);
-        if (!(0, outcome_ts_1.isOk)(openedResult)) {
-            return setListError(`Start ${stage === 'watching' ? 'acting' : 'watching'} is unavailable: ${(0, chrome_tsx_1.failureMessage)(openedResult, 'open the agent')}`);
-        }
-        const next = { ...openedResult.value, autonomous: stage === 'watching' };
-        const saved = await services.saveHandler(next);
-        if (!(0, outcome_ts_1.isOk)(saved) || !saved.value.ok) {
-            const message = (0, outcome_ts_1.isOk)(saved) ? saved.value.message : (0, chrome_tsx_1.failureMessage)(saved, 'save the agent');
-            return setListError(`Start ${stage === 'watching' ? 'acting' : 'watching'} is unavailable: ${message}`);
-        }
-        setOpened((current) => current?.name === handler.name ? next : current);
-        if (stage === 'proposed')
-            await setEnabled(handler.name, true);
-        else
-            void loadHandlers();
-    }
-    function newAgent() {
-        setOpenName(null);
-        setOpened(null);
-        setFormEpoch((epoch) => epoch + 1);
-        setSignalType('');
-        setSkills([]);
-        state.sample = null;
-        handle.setText(STARTER);
-        lastValidated.current = null;
-        setValidity({ tone: null, text: '', violations: [] });
-        setRunStatus({ tone: null, text: '' });
-        setOutput(null);
-    }
-    async function adopt(name) {
-        if (!confirm(`Start watching with the realm agent '${name}'? It will be adopted into yours.`))
-            return;
-        await setEnabled(name, true);
     }
     async function remove(name) {
         if (!confirm(`Delete the agent '${name}'?`))
             return;
         const outcome = await services.handlers.delete(name);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'delete the agent'));
+            return setListError((0, chrome_tsx_1.failureMessage)(outcome, 'deleting handlers'));
         if (openName === name)
             setOpenName(null);
         void loadHandlers();
     }
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-handlers studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(HandlersList, { yours: yours, available: available, error: listError, loading: listLoading, openName: openName, onOpen: (n) => void open(n), onNew: newAgent, onChangeStage: (h) => void changeStage(h), onAdopt: (n) => void adopt(n), onDelete: (n) => void remove(n) }), (0, jsx_runtime_1.jsx)(SignalsPanel, { catalogue: catalogue, onPick: (signal) => {
-                            setSignalType(signal.typeName);
-                            state.sample = Object.fromEntries(signal.fields.map((field) => [field, undefined]));
-                        } }), (0, jsx_runtime_1.jsx)(SurfacePanel, { surface: surface })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-main", children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: (source) => { handle.setText(source); lastValidated.current = null; scheduleValidation(); }, current: () => handle.getText(), installed: installed, skills: skills, onSkills: setSkills }), (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: openName ? `Agent · ${openName}` : 'Agent', aside: (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef }), validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void dryRun(), children: busy ? 'running…' : 'Dry run' }), (0, jsx_runtime_1.jsxs)("label", { className: "field inline", children: [(0, jsx_runtime_1.jsx)("span", { children: "against" }), (0, jsx_runtime_1.jsx)("input", { value: signalType, placeholder: "most recent signal \u00B7 blank = cron tick", onChange: (e) => setSignalType(e.target.value) })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() })] }), (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Dry run suppresses effects. Saving stores the handler; enabling lets it run, and \u201CMay act\u201D permits effects." }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: runStatus.tone, children: runStatus.text })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Output", aside: output && (0, jsx_runtime_1.jsxs)("span", { className: "hint", children: ["ran against ", output.ranAgainst] }), children: !output ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Dry run output appears here." }) :
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-handlers studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(HandlersList, { yours: yours, available: available, error: listError, openName: openName, onOpen: (n) => void open(n), onToggle: (n, on) => void setEnabled(n, on), onDelete: (n) => void remove(n) }), (0, jsx_runtime_1.jsx)(SignalsPanel, { catalogue: catalogue, onPick: (t) => setSignalType(t) }), (0, jsx_runtime_1.jsx)(SurfacePanel, { surface: surface })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-main", children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: (source) => { handle.setText(source); lastValidated.current = null; scheduleValidation(); }, current: () => handle.getText(), installed: installed, skills: skills, onSkills: setSkills }), (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: openName ? `Agent · ${openName}` : 'Agent', aside: (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef }), validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void dryRun(), children: busy ? 'running…' : 'Dry run' }), (0, jsx_runtime_1.jsxs)("label", { className: "field inline", children: [(0, jsx_runtime_1.jsx)("span", { children: "against" }), (0, jsx_runtime_1.jsx)("input", { value: signalType, placeholder: "most recent signal \u00B7 blank = cron tick", onChange: (e) => setSignalType(e.target.value) })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() })] }), (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Dry run suppresses effects. Saving stores the handler; enabling lets it run, and \u201CMay act\u201D permits effects." }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: runStatus.tone, children: runStatus.text })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Output", aside: output && (0, jsx_runtime_1.jsxs)("span", { className: "hint", children: ["ran against ", output.ranAgainst] }), children: !output ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Dry run output appears here." }) :
                             output.stdout.trim() === '' ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "The handler logged nothing." }) :
-                                (0, jsx_runtime_1.jsx)("pre", { className: "runoutput", children: output.stdout }) }), (0, jsx_runtime_1.jsx)(SavePanel, { source: () => handle.getText(), opened: opened, defaultSignalType: signalType, catalogue: catalogue ?? null, skills: skills, onSaved: (saved) => {
-                            setOpenName(saved.name);
-                            setOpened({
-                                ...saved,
-                                name: saved.name,
-                                source: saved.source,
-                                description: saved.description ?? saved.name,
-                                signalType: saved.signalType ?? '*',
-                                schedule: saved.schedule,
-                                autonomous: saved.autonomous ?? false,
-                                inputTypeNames: saved.inputTypeNames ?? [],
-                                outputTypeName: saved.outputTypeName ?? 'void',
-                                skills: saved.skills ?? [],
-                            });
-                            void loadHandlers();
-                        } }, formEpoch)] })] }));
+                                (0, jsx_runtime_1.jsx)("pre", { className: "runoutput", children: output.stdout }) }), (0, jsx_runtime_1.jsx)(SavePanel, { source: () => handle.getText(), defaultName: openName ?? '', defaultSignalType: signalType, catalogue: catalogue, skills: skills, onSaved: () => { void loadHandlers(); } })] })] }));
 }
 function stageOf(h) {
     if (!h.active)
@@ -458,17 +394,17 @@ const STAGE_SAYS = {
     acting: 'Live and permitted to apply effects. This is the state with consequences.',
 };
 // ── the handlers list ─────────────────────────────────────────────────────────────────────────
-function HandlersList({ yours, available, error, loading, openName, onOpen, onNew, onChangeStage, onAdopt, onDelete }) {
-    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Agents", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", onClick: onNew, children: "New agent" }), loading ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: null, children: "Loading agents\u2026" }) : error ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: error }) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [yours.length === 0 && available.length === 0 && (
-                    /*
-                     * AN EMPTY LIST IS A MENU, NOT A SENTENCE.
-                     *
-                     * "No agents yet" beside an empty editor is the original problem in miniature: it tells
-                     * somebody the tab is empty and leaves them to invent what could fill it. These are the
-                     * three real routes in, in the order they cost effort — the cheapest first, because the
-                     * point is to own one agent today, not to write the best one.
-                     */
-                    (0, jsx_runtime_1.jsxs)("div", { className: "emptymenu", children: [(0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No agents are listed in this world yet. Three ways to start:" }), (0, jsx_runtime_1.jsxs)("a", { className: "emptyroute", href: "#views", children: [(0, jsx_runtime_1.jsx)("strong", { children: "Watch a saved view" }), (0, jsx_runtime_1.jsx)("small", { children: "a question you already trust, on a schedule \u2014 it publishes a signal when the answer moves" })] }), (0, jsx_runtime_1.jsxs)("button", { className: "emptyroute", onClick: () => document.querySelector('.ask-row.tall textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), children: [(0, jsx_runtime_1.jsx)("strong", { children: "Describe one in English" }), (0, jsx_runtime_1.jsx)("small", { children: "the Ask above writes it, type-checks it against this world, and lands it in the editor" })] }), (0, jsx_runtime_1.jsxs)("a", { className: "emptyroute", href: "#realms", children: [(0, jsx_runtime_1.jsx)("strong", { children: "Install a realm that ships agents" }), (0, jsx_runtime_1.jsx)("small", { children: "a realm brings its own \u2014 observe-only until you adopt them" })] })] })), yours.length > 0 && (0, jsx_runtime_1.jsx)("div", { className: "subhead", children: "yours" }), yours.map((h) => ((0, jsx_runtime_1.jsxs)("div", { className: `handler-row ${h.name === openName ? 'active' : ''}`, children: [(0, jsx_runtime_1.jsxs)("button", { className: "handlername", onClick: () => onOpen(h.name), children: [(0, jsx_runtime_1.jsx)("strong", { children: h.name }), (0, jsx_runtime_1.jsxs)("small", { children: [h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger', h.schedule ? ` · cron ${h.schedule}` : '', ' · ', (0, jsx_runtime_1.jsx)("span", { className: `stage ${stageOf(h)}`, title: STAGE_SAYS[stageOf(h)], children: stageOf(h) })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `btn tiny ${stageOf(h) === 'acting' ? 'ghost' : 'arm'}`, title: STAGE_SAYS[stageOf(h) === 'proposed' ? 'watching' : stageOf(h) === 'watching' ? 'acting' : 'proposed'], onClick: () => onChangeStage(h), children: stageOf(h) === 'proposed' ? 'Start watching' : stageOf(h) === 'watching' ? 'Start acting' : 'Stand down' }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => onDelete(h.name), children: "Delete" })] }, h.name))), yours.some((handler) => stageOf(handler) === 'acting') && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Acting agents must stand down before returning to watching." })), available.length > 0 && (0, jsx_runtime_1.jsx)("div", { className: "subhead", children: "available to adopt" }), available.map((h) => ((0, jsx_runtime_1.jsxs)("div", { className: "handler-row", children: [(0, jsx_runtime_1.jsxs)("button", { className: "handlername", onClick: () => onOpen(h.name), children: [(0, jsx_runtime_1.jsx)("strong", { children: h.name }), (0, jsx_runtime_1.jsxs)("small", { children: [h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger', " \u00B7 from a realm"] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn tiny arm", title: STAGE_SAYS.watching, onClick: () => onAdopt(h.name), children: "Start watching" })] }, h.name)))] }))] }));
+function HandlersList({ yours, available, error, openName, onOpen, onToggle, onDelete }) {
+    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Agents", children: error ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: error }) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [yours.length === 0 && available.length === 0 && (
+                /*
+                 * AN EMPTY LIST IS A MENU, NOT A SENTENCE.
+                 *
+                 * "No agents yet" beside an empty editor is the original problem in miniature: it tells
+                 * somebody the tab is empty and leaves them to invent what could fill it. These are the
+                 * three real routes in, in the order they cost effort — the cheapest first, because the
+                 * point is to own one agent today, not to write the best one.
+                 */
+                (0, jsx_runtime_1.jsxs)("div", { className: "emptymenu", children: [(0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing runs unattended in this world yet. Three ways to start:" }), (0, jsx_runtime_1.jsxs)("a", { className: "emptyroute", href: "#views", children: [(0, jsx_runtime_1.jsx)("strong", { children: "Watch a saved view" }), (0, jsx_runtime_1.jsx)("small", { children: "a question you already trust, on a schedule \u2014 it publishes a signal when the answer moves" })] }), (0, jsx_runtime_1.jsxs)("button", { className: "emptyroute", onClick: () => document.querySelector('.ask-row.tall textarea')?.scrollIntoView({ behavior: 'smooth', block: 'center' }), children: [(0, jsx_runtime_1.jsx)("strong", { children: "Describe one in English" }), (0, jsx_runtime_1.jsx)("small", { children: "the Ask above writes it, type-checks it against this world, and lands it in the editor" })] }), (0, jsx_runtime_1.jsxs)("a", { className: "emptyroute", href: "#realms", children: [(0, jsx_runtime_1.jsx)("strong", { children: "Install a realm that ships agents" }), (0, jsx_runtime_1.jsx)("small", { children: "a realm brings its own \u2014 observe-only until you adopt them" })] })] })), yours.length > 0 && (0, jsx_runtime_1.jsx)("div", { className: "subhead", children: "yours" }), yours.map((h) => ((0, jsx_runtime_1.jsxs)("div", { className: `handler-row ${h.name === openName ? 'active' : ''}`, children: [(0, jsx_runtime_1.jsxs)("button", { className: "handlername", onClick: () => onOpen(h.name), children: [(0, jsx_runtime_1.jsx)("strong", { children: h.name }), (0, jsx_runtime_1.jsxs)("small", { children: [h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger', h.schedule ? ` · cron ${h.schedule}` : '', ' · ', (0, jsx_runtime_1.jsx)("span", { className: `stage ${stageOf(h)}`, title: STAGE_SAYS[stageOf(h)], children: stageOf(h) })] })] }), (0, jsx_runtime_1.jsx)("button", { className: `btn tiny ${h.active ? 'ghost' : 'arm'}`, onClick: () => onToggle(h.name, !h.active), children: h.active ? 'Stand down' : 'Start watching' }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => onDelete(h.name), children: "Delete" })] }, h.name))), available.length > 0 && (0, jsx_runtime_1.jsx)("div", { className: "subhead", children: "available to adopt" }), available.map((h) => ((0, jsx_runtime_1.jsxs)("div", { className: "handler-row", children: [(0, jsx_runtime_1.jsxs)("button", { className: "handlername", onClick: () => onOpen(h.name), children: [(0, jsx_runtime_1.jsx)("strong", { children: h.name }), (0, jsx_runtime_1.jsxs)("small", { children: [h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger', " \u00B7 from a realm"] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn tiny arm", onClick: () => onToggle(h.name, true), children: "Adopt" })] }, h.name)))] })) }));
 }
 // ── ask ───────────────────────────────────────────────────────────────────────────────────────
 /**
@@ -542,7 +478,7 @@ function SurfacePanel({ surface }) {
     const [filter, setFilter] = (0, react_1.useState)('');
     const needle = filter.trim().toLowerCase();
     const matches = (m) => !needle || m.name.toLowerCase().includes(needle);
-    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Gateway", children: surface === undefined ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: null, children: "Loading gateway details\u2026" }) : surface === null ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Gateway details are unavailable. Basic completion remains available; reopen Agents to check again." })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { value: filter, placeholder: "filter verbs", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "surfacelist", children: [surface.methods.filter(matches).map((m) => ((0, jsx_runtime_1.jsxs)("div", { className: "surfacerow", children: [(0, jsx_runtime_1.jsxs)("code", { children: ["gateway.", m.signature] }), m.doc && (0, jsx_runtime_1.jsx)("small", { children: m.doc })] }, m.name))), surface.namespaces.map((ns) => {
+    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Gateway", children: surface == null ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "This world does not publish gateway completion details. Basic completion remains available." })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { value: filter, placeholder: "filter verbs", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "surfacelist", children: [surface.methods.filter(matches).map((m) => ((0, jsx_runtime_1.jsxs)("div", { className: "surfacerow", children: [(0, jsx_runtime_1.jsxs)("code", { children: ["gateway.", m.signature] }), m.doc && (0, jsx_runtime_1.jsx)("small", { children: m.doc })] }, m.name))), surface.namespaces.map((ns) => {
                             const shown = ns.methods.filter(matches);
                             if (shown.length === 0)
                                 return null;
@@ -558,44 +494,38 @@ function SurfacePanel({ surface }) {
  * changes nothing; the moment it is on, it runs unattended on real events. That is a different
  * decision from "keep this text", and it reads as one.
  */
-function SavePanel({ source, opened, defaultSignalType, catalogue, skills, onSaved }) {
+function SavePanel({ source, defaultName, defaultSignalType, catalogue, skills, onSaved }) {
     const { services } = useHandlerRuntime();
-    const [name, setName] = (0, react_1.useState)(opened?.name ?? '');
+    const [name, setName] = (0, react_1.useState)(defaultName);
     const [signalType, setSignalType] = (0, react_1.useState)(defaultSignalType);
     const [schedule, setSchedule] = (0, react_1.useState)('');
     const [autonomous, setAutonomous] = (0, react_1.useState)(false);
     const [busy, setBusy] = (0, react_1.useState)(false);
     const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
-    // An opened name is identity, not an editable label: changing it would create a second agent.
-    (0, react_1.useEffect)(() => {
-        setName(opened?.name ?? '');
-        setSchedule(opened?.schedule ?? '');
-        setAutonomous(opened?.autonomous ?? false);
-    }, [opened]);
+    // Opening a handler renames the box, so saving edits to it does not silently fork a copy.
+    (0, react_1.useEffect)(() => { setName(defaultName); }, [defaultName]);
     (0, react_1.useEffect)(() => { setSignalType(defaultSignalType); }, [defaultSignalType]);
     async function save() {
         const handlerName = name.trim();
         if (!handlerName)
             return setStatus({ tone: 'error', text: 'a handler needs a name' });
         setBusy(true);
-        const request = {
-            ...opened,
-            name: opened?.name ?? handlerName,
+        const r = await services.saveHandler({
+            name: handlerName,
             source: source(),
             signalType: signalType.trim() || '*',
             schedule: schedule.trim() || undefined,
             autonomous,
             skills,
-        };
-        const r = await services.saveHandler(request);
+        });
         setBusy(false);
         if (!r.ok)
             return setStatus({ tone: 'error', text: r.message });
         setStatus({ tone: r.value.ok ? 'ok' : 'error', text: r.value.message ?? '' });
         if (r.value.ok)
-            onSaved(request);
+            onSaved();
     }
-    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Save", children: [(0, jsx_runtime_1.jsxs)("div", { className: "saveform", children: [(0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Name" }), (0, jsx_runtime_1.jsx)("input", { value: name, readOnly: opened !== null, "aria-describedby": opened ? 'handler-name-help' : undefined, placeholder: "pr-triage", onChange: (e) => setName(e.target.value) }), opened && (0, jsx_runtime_1.jsx)("small", { className: "hint", id: "handler-name-help", children: "Name identifies this agent. Saving updates it in place." })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Fires on" }), (0, jsx_runtime_1.jsx)("input", { value: signalType, list: "signal-types", placeholder: catalogue && catalogue.length > 0
+    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Save", children: [(0, jsx_runtime_1.jsxs)("div", { className: "saveform", children: [(0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Name" }), (0, jsx_runtime_1.jsx)("input", { value: name, placeholder: "pr-triage", onChange: (e) => setName(e.target.value) })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Fires on" }), (0, jsx_runtime_1.jsx)("input", { value: signalType, list: "signal-types", placeholder: catalogue && catalogue.length > 0
                                     ? `${catalogue[0].typeName} · blank = no signal trigger`
                                     : 'PullRequestOpened · blank = no signal trigger', onChange: (e) => setSignalType(e.target.value) }), (0, jsx_runtime_1.jsx)("datalist", { id: "signal-types", children: (catalogue ?? []).map((t) => (0, jsx_runtime_1.jsx)("option", { value: t.typeName }, t.typeName)) })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Cron" }), (0, jsx_runtime_1.jsx)("input", { value: schedule, placeholder: "0 0 9 * * * \u00B7 blank = not scheduled", onChange: (e) => setSchedule(e.target.value) })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field checkbox", children: [(0, jsx_runtime_1.jsx)("input", { type: "checkbox", checked: autonomous, onChange: (e) => setAutonomous(e.target.checked) }), (0, jsx_runtime_1.jsx)("span", { children: "May act \u2014 apply real effects, not just observe" })] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy, onClick: () => void save(), children: busy ? 'saving…' : 'Save agent' }), skills.length > 0 && ((0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["Bundled skills: ", skills.join(', '), " \u2014 saved with it, and used when you refine it."] })), (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Saving keeps this handler proposed. Enable it to observe events; select \u201CMay act\u201D to permit effects." }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] }));
 }
@@ -615,11 +545,11 @@ function SignalsPanel({ catalogue, onPick }) {
     const [filter, setFilter] = (0, react_1.useState)('');
     const [open, setOpen] = (0, react_1.useState)(null);
     if (catalogue == null) {
-        return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "What this world notices", children: (0, jsx_runtime_1.jsx)("p", { className: "hint", children: catalogue === undefined ? 'Loading signal types…' : 'Signal types are unavailable. Enter the trigger name directly, or reopen Agents to check again.' }) }));
+        return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "What this world notices", children: (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "This world does not publish a signal catalogue. Enter the trigger name directly." }) }));
     }
     const needle = filter.trim().toLowerCase();
     const shown = catalogue.filter((t) => !needle || t.typeName.toLowerCase().includes(needle));
-    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "What this world notices", children: catalogue.length === 0 ? ((0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["No signals recorded yet. Install a realm that produces events, or watch a saved view to publish ", (0, jsx_runtime_1.jsx)("code", { children: "view.<name>.changed" }), " when its rows change."] })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { value: filter, placeholder: "filter signal types", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "surfacelist", children: [shown.map((t) => ((0, jsx_runtime_1.jsxs)("div", { className: "signalrow", children: [(0, jsx_runtime_1.jsxs)("button", { className: "signalname", onClick: () => setOpen(open === t.typeName ? null : t.typeName), children: [(0, jsx_runtime_1.jsx)("code", { children: t.typeName }), (0, jsx_runtime_1.jsxs)("small", { children: [t.count > 0 ? `${t.count} in 30 days` : 'none in 30 days', t.lastSeen ? ` · last ${t.lastSeen.slice(0, 10)}` : ''] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => onPick(t), children: "Use" }), open === t.typeName && ((0, jsx_runtime_1.jsx)("div", { className: "signalfields", children: t.fields.length === 0
+    return ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "What this world notices", children: catalogue.length === 0 ? ((0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["No signals recorded yet. Install a realm that produces events, or watch a saved view to publish ", (0, jsx_runtime_1.jsx)("code", { children: "view.<name>.changed" }), " when its rows change."] })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)("input", { value: filter, placeholder: "filter signal types", onChange: (e) => setFilter(e.target.value) }), (0, jsx_runtime_1.jsxs)("div", { className: "surfacelist", children: [shown.map((t) => ((0, jsx_runtime_1.jsxs)("div", { className: "signalrow", children: [(0, jsx_runtime_1.jsxs)("button", { className: "signalname", onClick: () => setOpen(open === t.typeName ? null : t.typeName), children: [(0, jsx_runtime_1.jsx)("code", { children: t.typeName }), (0, jsx_runtime_1.jsxs)("small", { children: [t.count > 0 ? `${t.count} in 30 days` : 'none in 30 days', t.lastSeen ? ` · last ${t.lastSeen.slice(0, 10)}` : ''] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => onPick(t.typeName), children: "Use" }), open === t.typeName && ((0, jsx_runtime_1.jsx)("div", { className: "signalfields", children: t.fields.length === 0
                                         ? (0, jsx_runtime_1.jsx)("small", { className: "hint", children: "No fields sampled." })
                                         : t.fields.map((f) => (0, jsx_runtime_1.jsxs)("code", { children: ["signal.", f] }, f)) }))] }, t.typeName))), shown.length === 0 && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing matches that filter." })] })] })) }));
 }
