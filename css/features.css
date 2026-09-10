@@ -99,7 +99,7 @@
 
 :where(.kit-feature).studio, :where(.kit-feature) .studio {
   display: grid; grid-template-columns: 350px minmax(0, 1fr); gap: 24px;
-  height: calc(100vh - 320px); min-height: 420px;
+  height: calc(100vh - 320px); min-height: 420px; overflow: hidden;
 }
 
 :where(.kit-feature) .studio-side {
@@ -166,79 +166,49 @@
 
 :where(.kit-feature) .studio-main > .panel { flex: 0 0 auto; min-height: 0; margin-bottom: 0; }
 
-/*
- * QUERY STUDIO'S work column: a tab bar, then whichever pane is on.
- *
- * It stacked Ask, the query and the rows in one scrolling column, and the two things that matter
- * fought over the same height. Results was given a floor to stop it collapsing to ~48px — which
- * worked, and handed the problem to the editor instead: the query box took whatever was left and
- * was routinely squeezed to a couple of visible lines.
- *
- * One pane at a time ends the fight. Nothing here needs a floor, because nothing is sharing.
- */
+/* Query Studio matches Views: one viewport-tall grid. The schema rail scrolls. The work
+   column scrolls Query / Results / Interactive as stacked sections. */
+:where(.kit-feature).kit-feature-query .studio-tabbed {
+  display: grid; grid-template-rows: auto minmax(0, 1fr); gap: 14px;
+  min-width: 0; min-height: 0; max-height: 100%; overflow: hidden;
+}
 
-:where(.kit-feature) .studio-tabbed {
-  display: grid; grid-template-rows: auto 1fr;
-  gap: 10px; min-width: 0; min-height: 0;
+:where(.kit-feature).kit-feature-query .studio-sections {
+  display: grid; align-content: start; gap: 14px; min-width: 0; min-height: 0;
+  max-height: 100%; overflow-y: auto; scrollbar-gutter: stable;
+  padding-bottom: min(62dvh, 560px);
+  /* Rows must be content-sized. The panes carry `min-height: 0`, so an `auto` row may shrink to
+     nothing once the bottom padding has eaten the box, and the three sections then render as
+     7px rows with their content spilling over one another. */
+  grid-auto-rows: max-content;
 }
 
 :where(.kit-feature) .studio-pane {
-  /* Most panes hold one panel, which takes the available work area. Query has its own three-row
-     contract below because Ask and History precede its editor. */
-  display: grid; grid-template-rows: auto 1fr; gap: 12px;
-  min-width: 0; min-height: 0;
+  display: grid; grid-template-rows: auto; gap: 12px;
+  min-width: 0; min-height: 0; scroll-margin-top: 58px;
 }
 
-:where(.kit-feature) .studio-pane-query {
-  grid-template-rows: auto auto auto; overflow-y: auto; padding-right: 4px;
-}
+:where(.kit-feature) .studio-pane-query { grid-template-rows: auto auto auto; }
 
-:where(.kit-feature) .studio-pane-query > .queryhistory {
-  min-width: 0; margin: 0;
-}
-
-:where(.kit-feature) .studio-pane-query > .queryhistory[open] .historylist {
-  max-height: min(220px, 24vh);
-}
-
-:where(.kit-feature) .studio-pane-query.is-editor-expanded {
-  grid-template-rows: minmax(0, 1fr); overflow-y: hidden; padding-right: 0;
-}
+:where(.kit-feature) .studio-pane-query > .queryhistory { min-width: 0; margin: 0; }
 
 :where(.kit-feature) .studio-pane-query.is-editor-expanded > .panel:first-child,
-:where(.kit-feature) .studio-pane-query.is-editor-expanded > .queryhistory {
-  display: none;
+:where(.kit-feature) .studio-pane-query.is-editor-expanded > .queryhistory { display: none; }
+
+:where(.kit-feature) .studio-pane > .panel {
+  min-height: 0; display: flex; flex-direction: column; margin-bottom: 0;
 }
 
-/* `hidden` is a UA rule, and `display: grid` above outranks it. Say it in author CSS or the
-   inactive pane stays on screen. */
-
-:where(.kit-feature) .studio-pane[hidden] { display: none; }
-
-:where(.kit-feature) .studio-pane > .panel { min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
-
-/* Consumer shells can place a viewport-sized floor on panels in a single-column route. Query
-   stacks three panels, so its root supplies enough specificity to keep each row content-sized. */
-:where(.kit-feature).kit-feature-query .studio-pane-query > .panel { min-height: 0; }
-
-:where(.kit-feature) .studio-pane > .panel > .panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
-
-/* The editor is bounded below, so its actions can stay in ordinary flow. Sticky actions covered
-   the last editor lines and made the controls look as though they belonged inside the query. */
+:where(.kit-feature).kit-feature-query .studio-pane > .panel > .panel-body { overflow-y: visible; }
 
 :where(.kit-feature) .studio-pane-query .studio-actions {
-  position: static;
-  flex: 0 0 auto;
-  margin-top: 10px;
+  position: static; flex: 0 0 auto; margin-top: 10px;
 }
 
-/*
- * The pane selector. Deliberately quieter than the app's own tab bar above it: these are two views
- * of one surface, not two surfaces, and matching the masthead tabs would read as a second
- * navigation level competing with the first.
- */
-
-:where(.kit-feature) .studiotabs { display: flex; gap: 4px; border-bottom: 1px solid var(--rule); }
+:where(.kit-feature) .studiotabs {
+  position: sticky; z-index: 2; top: 0;
+  display: flex; gap: 4px; border-bottom: 1px solid var(--rule); background: var(--paper);
+}
 
 :where(.kit-feature) .studiotab {
   appearance: none; background: none; border: 0; border-bottom: 2px solid transparent;
@@ -246,25 +216,20 @@
 }
 
 :where(.kit-feature) .studiotab:hover { color: var(--ink); }
-
 :where(.kit-feature) .studiotab.is-on { color: var(--ink); border-bottom-color: var(--signal); }
-
 :where(.kit-feature) .studiotab:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
-
-/* Query uses a flex body so the bounded editor, validation, and actions remain separate rows.
-   Results keeps ordinary block layout for its table. */
 
 :where(.kit-feature) .studio-pane-query > .panel > .panel-body { display: flex; flex-direction: column; }
 
-/* Bounded by default so the actions remain below the editor. Expansion is explicit and grows only
-   inside the pane's existing scroll region, so it never covers the controls it pushes down. */
+/* CodeMirror owns the editor's only vertical scroll area. */
 :where(.kit-feature) .studio-pane-query .editor-wrap {
   display: flex; flex: 0 0 320px; flex-direction: column;
   height: 320px; min-height: 320px; max-height: 320px;
 }
 
 :where(.kit-feature) .studio-pane-query .editor-wrap.is-expanded {
-  flex: 1 1 0; height: auto; min-height: 0; max-height: none;
+  flex: 0 0 clamp(420px, 60vh, 720px); flex-basis: clamp(420px, 60dvh, 720px);
+  height: clamp(420px, 60vh, 720px); height: clamp(420px, 60dvh, 720px); max-height: none;
 }
 
 :where(.kit-feature) .editor-toolbar {
@@ -272,37 +237,19 @@
 }
 
 :where(.kit-feature) .studio-pane-query .editor-host { flex: 1 1 auto; min-height: 0; }
-
 :where(.kit-feature) .studio-pane-query .editor-host,
 :where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { height: 100%; }
-
 :where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { min-height: 0; }
 
 :where(.kit-feature) .query-stop-status {
   flex: 0 0 auto; min-width: 0; margin-top: 8px; overflow-wrap: anywhere;
 }
 
-:where(.kit-feature) .studio-pane-session > .panel > .panel-body {
-  display: flex; flex-direction: column; overflow: hidden;
-}
+:where(.kit-feature) .studio-pane-session > .panel > .panel-body { display: flex; flex-direction: column; }
 
 @media (max-width: 1100px) {
-  /* One column: the rail feeds the editor, so it belongs above it — and the fixed height comes
-     off, because two scroll areas stacked in one viewport leaves no room for either. */
   :where(.kit-feature).studio, :where(.kit-feature) .studio { grid-template-columns: 1fr; height: auto; }
   :where(.kit-feature) .studio-side, :where(.kit-feature) .studio-main { overflow-y: visible; }
-  /* No column height to divide up, so panes use their content height. The editor wrapper remains
-     bounded and CodeMirror scrolls inside it rather than growing to its line count. */
-  :where(.kit-feature) .studio-tabbed, :where(.kit-feature) .studio-pane { grid-template-rows: auto auto; }
-  :where(.kit-feature) .studio-pane-query { grid-template-rows: auto auto auto; overflow-y: visible; padding-right: 0; }
-  :where(.kit-feature) .studio-pane-query.is-editor-expanded { overflow-y: visible; }
-  :where(.kit-feature) .studio-pane-query .editor-wrap.is-expanded {
-    flex: 0 0 clamp(420px, 60vh, 720px);
-    flex-basis: clamp(420px, 60dvh, 720px);
-    height: clamp(420px, 60vh, 720px);
-    height: clamp(420px, 60dvh, 720px);
-    max-height: none;
-  }
 }
 
 /* CodeMirror, reskinned to this surface — the SAME skin the Me app's studios use, because two

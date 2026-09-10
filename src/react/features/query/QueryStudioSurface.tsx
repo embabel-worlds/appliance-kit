@@ -169,6 +169,10 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   /* Pinned to the newest line: the one that just arrived is the one being stared at while someone
    * decides whether this run is worth waiting for. */
   const progressRef = useRef<HTMLDivElement>(null)
+  const paneNavRef = useRef<HTMLElement>(null)
+  const sectionsRef = useRef<HTMLDivElement>(null)
+  const sectionRefs = useRef<Partial<Record<Pane, HTMLElement>>>({})
+  const pendingPaneScroll = useRef(false)
 
   // Validation stops asking for good once an appliance answers "no such endpoint" — nagging per
   // keystroke about a feature this server simply does not have helps nobody.
@@ -358,7 +362,8 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     stopAccepted.current = false
     runTerminal.current = null
     setStopStatus({ tone: null, text: '' })
-    // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
+    // The outcome is what you asked for; take the reader to its section.
+    pendingPaneScroll.current = true
     setPane('results')
     /* The cypher AS SUBMITTED. Stop needs to name the run it is stopping, and by the time anyone
      * presses it the editor may hold something else entirely. */
@@ -553,13 +558,61 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     if (el) el.scrollTop = el.scrollHeight
   }, [progress.lines])
 
-  /* CM5 measures itself against a laid-out DOM, and a `display: none` pane has no dimensions. An
-   * editor coming back on screen therefore renders blank, or drops the cursor in the wrong place,
-   * until it is told to measure again. This is the whole cost of hiding rather than unmounting,
-   * and it is a cheap one. */
+  useEffect(() => { handle.editor?.refresh() }, [editorExpanded, handle.editor])
+
+  function revealPaneButton(nextPane: Pane): void {
+    paneNavRef.current?.querySelector<HTMLElement>(`[data-studio-pane="${nextPane}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
+  }
+
+  function revealPane(nextPane: Pane): void {
+    revealPaneButton(nextPane)
+    sectionRefs.current[nextPane]?.scrollIntoView({ block: 'start', inline: 'nearest' })
+    requestAnimationFrame(() => { pendingPaneScroll.current = false })
+  }
+
+  function showPane(nextPane: Pane): void {
+    const alreadyActive = pane === nextPane
+    pendingPaneScroll.current = true
+    setPane(nextPane)
+    if (alreadyActive) requestAnimationFrame(() => revealPane(nextPane))
+  }
+
   useEffect(() => {
-    if (pane === 'query') handle.editor?.refresh()
-  }, [pane, editorExpanded, handle.editor])
+    if (!pendingPaneScroll.current) return
+    const frame = requestAnimationFrame(() => revealPane(pane))
+    return () => cancelAnimationFrame(frame)
+  }, [pane])
+
+  useEffect(() => {
+    let frame = 0
+    const follow = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (pendingPaneScroll.current) return
+        const marker = (paneNavRef.current?.getBoundingClientRect().bottom ?? 0) + 18
+        const candidates: Pane[] = ['query', 'results', 'session']
+        let current: Pane = 'query'
+        for (const candidate of candidates) {
+          const section = sectionRefs.current[candidate]
+          if (section && section.getBoundingClientRect().top <= marker) current = candidate
+        }
+        const scroller = sectionsRef.current
+        const atBottom = scroller && scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight
+          && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
+        if (atBottom) current = 'session'
+        if (current === pane) return
+        setPane(current)
+        revealPaneButton(current)
+      })
+    }
+    const scroller = sectionsRef.current
+    if (!scroller) return
+    scroller.addEventListener('scroll', follow, { passive: true })
+    return () => {
+      cancelAnimationFrame(frame)
+      scroller.removeEventListener('scroll', follow)
+    }
+  }, [pane])
 
   const columns = rowColumns(rows)
 
@@ -574,31 +627,19 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         <FillsPanel version={fillsVersion} />
       </div>
 
-      {/*
-        QUERY | RESULTS, the Vaadin Cypher console's own split, for the reason it has it: stacked,
-        the editor and the rows compete for one column's height and BOTH lose. The editor was the
-        one that lost worst — squeezed to a few lines while Results held its floor — and a Cypher
-        box you cannot see six lines of is not a Cypher box.
-
-        Tabbed, whichever one you are working with gets the whole column. Run jumps to Results, so
-        the outcome is never missed (Vaadin's `switchToResults`, same reasoning); the tab back is
-        how you edit, and the editor is exactly as you left it.
-
-        HIDDEN, NOT UNMOUNTED. CodeMirror owns its DOM node and React must not recreate it —
-        unmounting the Query pane would destroy the editor and take the text and the undo history
-        with it. So both panes stay mounted and CSS decides which is on screen.
-      */}
+      {/* Same as Views: the work column is the scroller. Tabs jump to Query / Results / Interactive. */}
       <div className="studio-tabbed">
-        <nav className="studiotabs" role="tablist">
+        <nav className="studiotabs" aria-label="Query Studio sections" ref={paneNavRef}>
           {(['query', 'results', 'session'] as Pane[]).map((p) => (
-            <button key={p} role="tab" aria-selected={pane === p}
-                    className={`studiotab${pane === p ? ' is-on' : ''}`} onClick={() => setPane(p)}>
+            <button key={p} data-studio-pane={p} aria-current={pane === p ? 'page' : undefined}
+                    className={`studiotab${pane === p ? ' is-on' : ''}`} onClick={() => showPane(p)}>
               {p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results'}
             </button>
           ))}
         </nav>
 
-      <div className={`studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`} hidden={pane !== 'query'}>
+      <div className="studio-sections" ref={sectionsRef}>
+      <section className={`studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`} data-studio-pane="query" ref={(node) => { sectionRefs.current.query = node ?? undefined }}>
         {/* Ask sits ABOVE the query, not beside it. Tucked into the rail it was the last thing
             anyone found, and "describe what you want" is the shortest path into this surface for
             someone who does not write Cypher — it has to be the first thing on the page. */}
@@ -687,9 +728,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
           </div>
           {stopStatus.text && <Status tone={stopStatus.tone} className="query-stop-status">{stopStatus.text}</Status>}
         </StudioPanel>
-      </div>
+      </section>
 
-      <div className="studio-pane" hidden={pane !== 'results'}>
+      <section className="studio-pane" data-studio-pane="results" ref={(node) => { sectionRefs.current.results = node ?? undefined }}>
         {/* Table / Raw / Stats / Trace share one selector. Trace selects itself while a run is
             live so progress is visible without hiding the eventual result. */}
         <StudioPanel
@@ -744,16 +785,14 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             <Status tone={runStatus.tone}>{runStatus.text}</Status>
           </div>
         </StudioPanel>
-      </div>
+      </section>
 
-      {/* Hidden, not unmounted, like the other panes: the transcript and bindings are state
-          worth keeping across tab switches. */}
-      <div className="studio-pane studio-pane-session" hidden={pane !== 'session'}>
+      <section className="studio-pane studio-pane-session" data-studio-pane="session" ref={(node) => { sectionRefs.current.session = node ?? undefined }}>
         <SessionPane
-          visible={pane === 'session'}
           onCaptured={() => setScopesVersion((v) => v + 1)}
-          onOpenInEditor={(cypher) => { land(cypher); setPane('query') }}
+          onOpenInEditor={(cypher) => { land(cypher); showPane('query') }}
         />
+      </section>
       </div>
 
       </div>

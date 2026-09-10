@@ -102,6 +102,30 @@ describe('the public browser feature entry point', () => {
       interactive: { session: { read: () => null, write() {} } } },
       handedOver: 'RETURN 1', handoffRevision: 1, onCypherChange: (text) => changes.push(text) }
     const rendered = await render(h(features.QueryStudioSurface, props))
+    const sections = [...rendered.container.querySelectorAll('.studio-pane')]
+    assert.deepEqual(sections.map((section) => section.dataset.studioPane), ['query', 'results', 'session'])
+    assert.equal(sections.every((section) => !section.hidden), true, 'all studio sections stay in page flow')
+    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
+    const reveals = []
+    HTMLElement.prototype.scrollIntoView = function (options) { reveals.push([this.dataset.studioPane, options]) }
+    try {
+      await act(async () => button(rendered.container, 'Results').click())
+      await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
+      assert.equal(reveals.some(([target, options]) => target === 'results' && options.block === 'start'), true)
+
+      rendered.container.querySelector('.studiotabs').getBoundingClientRect = () => ({ bottom: 44 })
+      const tops = { query: -200, results: -100, session: 200 }
+      for (const section of sections) section.getBoundingClientRect = () => ({ top: tops[section.dataset.studioPane] })
+      rendered.container.querySelector('.studio-sections').dispatchEvent(new Event('scroll'))
+      await act(async () => { await new Promise((resolve) => requestAnimationFrame(resolve)) })
+      assert.equal(button(rendered.container, 'Results').getAttribute('aria-current'), 'page')
+      tops.session = 20
+      rendered.container.querySelector('.studio-sections').dispatchEvent(new Event('scroll'))
+      await act(async () => { await new Promise((resolve) => requestAnimationFrame(resolve)) })
+      assert.equal(button(rendered.container, 'Interactive').getAttribute('aria-current'), 'page')
+    } finally {
+      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
+    }
     const cm = rendered.container.querySelector('.CodeMirror').CodeMirror
     assert.equal(cm.getValue(), 'RETURN 1')
     assert.equal(cm.getInputField().getAttribute('aria-label'), 'Cypher query')
@@ -1336,16 +1360,12 @@ describe('the public browser feature entry point', () => {
     await act(async () => button(rendered.container, 'Interactive').click())
     const sessionCm = rendered.container.querySelector('.session-cm .CodeMirror').CodeMirror
     const sessionDisposal = observeEditorDisposal(sessionCm)
-    let sessionRefreshes = 0
-    const refreshSession = sessionCm.refresh.bind(sessionCm)
-    sessionCm.refresh = () => { sessionRefreshes++; return refreshSession() }
     await act(async () => sessionCm.setValue('RETURN 7'))
-    const paneTab = name => [...rendered.container.querySelectorAll('button[role="tab"]')].find(b => b.textContent.trim() === name)
-    await act(async () => paneTab('Query').click())
-    await act(async () => paneTab('Interactive').click())
-    assert.equal(sessionRefreshes, 1, 'revealing the retained editor must refresh hidden-mount measurements')
+    const paneLink = name => [...rendered.container.querySelectorAll('.studiotab')].find(b => b.textContent.trim() === name)
+    await act(async () => paneLink('Query').click())
+    await act(async () => paneLink('Interactive').click())
     assert.equal(rendered.container.querySelector('.session-cm .CodeMirror').CodeMirror, sessionCm)
-    assert.equal(sessionCm.getValue(), 'RETURN 7', 'refresh must preserve the unsent prompt')
+    assert.equal(sessionCm.getValue(), 'RETURN 7', 'section navigation preserves the unsent prompt')
     const fieldCss = postcss.parse(
       readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'),
       { from: 'features.css' },
@@ -1479,7 +1499,7 @@ describe('the public browser feature entry point', () => {
     await flush()
     assert.equal(rendered.container.querySelector('.query-stop-status'), null)
     await act(async () => button(rendered.container, 'Results').click())
-    assert.match(rendered.container.querySelector('.studio-pane:not([hidden])').textContent, /execute failed/)
+    assert.match(rendered.container.querySelector('.studio-pane[data-studio-pane="results"]').textContent, /execute failed/)
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
 
@@ -1507,7 +1527,7 @@ describe('the public browser feature entry point', () => {
     await flush()
     assert.equal(rendered.container.querySelector('.query-stop-status'), null)
     await act(async () => button(rendered.container, 'Results').click())
-    assert.match(rendered.container.querySelector('.studio-pane:not([hidden])').textContent, /1 row/)
+    assert.match(rendered.container.querySelector('.studio-pane[data-studio-pane="results"]').textContent, /1 row/)
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
 
@@ -1520,7 +1540,7 @@ describe('the public browser feature entry point', () => {
     await flush()
     assert.equal(rendered.container.querySelector('.query-stop-status'), null)
     await act(async () => button(rendered.container, 'Results').click())
-    assert.match(rendered.container.querySelector('.studio-pane:not([hidden])').textContent, /terminal execute error/)
+    assert.match(rendered.container.querySelector('.studio-pane[data-studio-pane="results"]').textContent, /terminal execute error/)
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)
 

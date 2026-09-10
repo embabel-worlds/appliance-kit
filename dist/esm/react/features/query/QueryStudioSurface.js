@@ -131,6 +131,10 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     /* Pinned to the newest line: the one that just arrived is the one being stared at while someone
      * decides whether this run is worth waiting for. */
     const progressRef = useRef(null);
+    const paneNavRef = useRef(null);
+    const sectionsRef = useRef(null);
+    const sectionRefs = useRef({});
+    const pendingPaneScroll = useRef(false);
     // Validation stops asking for good once an appliance answers "no such endpoint" — nagging per
     // keystroke about a feature this server simply does not have helps nobody.
     const validateSupported = useRef(true);
@@ -314,7 +318,8 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         stopAccepted.current = false;
         runTerminal.current = null;
         setStopStatus({ tone: null, text: '' });
-        // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
+        // The outcome is what you asked for; take the reader to its section.
+        pendingPaneScroll.current = true;
         setPane('results');
         /* The cypher AS SUBMITTED. Stop needs to name the run it is stopping, and by the time anyone
          * presses it the editor may hold something else entirely. */
@@ -516,27 +521,76 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         if (el)
             el.scrollTop = el.scrollHeight;
     }, [progress.lines]);
-    /* CM5 measures itself against a laid-out DOM, and a `display: none` pane has no dimensions. An
-     * editor coming back on screen therefore renders blank, or drops the cursor in the wrong place,
-     * until it is told to measure again. This is the whole cost of hiding rather than unmounting,
-     * and it is a cheap one. */
+    useEffect(() => { handle.editor?.refresh(); }, [editorExpanded, handle.editor]);
+    function revealPaneButton(nextPane) {
+        paneNavRef.current?.querySelector(`[data-studio-pane="${nextPane}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+    }
+    function revealPane(nextPane) {
+        revealPaneButton(nextPane);
+        sectionRefs.current[nextPane]?.scrollIntoView({ block: 'start', inline: 'nearest' });
+        requestAnimationFrame(() => { pendingPaneScroll.current = false; });
+    }
+    function showPane(nextPane) {
+        const alreadyActive = pane === nextPane;
+        pendingPaneScroll.current = true;
+        setPane(nextPane);
+        if (alreadyActive)
+            requestAnimationFrame(() => revealPane(nextPane));
+    }
     useEffect(() => {
-        if (pane === 'query')
-            handle.editor?.refresh();
-    }, [pane, editorExpanded, handle.editor]);
+        if (!pendingPaneScroll.current)
+            return;
+        const frame = requestAnimationFrame(() => revealPane(pane));
+        return () => cancelAnimationFrame(frame);
+    }, [pane]);
+    useEffect(() => {
+        let frame = 0;
+        const follow = () => {
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(() => {
+                if (pendingPaneScroll.current)
+                    return;
+                const marker = (paneNavRef.current?.getBoundingClientRect().bottom ?? 0) + 18;
+                const candidates = ['query', 'results', 'session'];
+                let current = 'query';
+                for (const candidate of candidates) {
+                    const section = sectionRefs.current[candidate];
+                    if (section && section.getBoundingClientRect().top <= marker)
+                        current = candidate;
+                }
+                const scroller = sectionsRef.current;
+                const atBottom = scroller && scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight
+                    && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
+                if (atBottom)
+                    current = 'session';
+                if (current === pane)
+                    return;
+                setPane(current);
+                revealPaneButton(current);
+            });
+        };
+        const scroller = sectionsRef.current;
+        if (!scroller)
+            return;
+        scroller.addEventListener('scroll', follow, { passive: true });
+        return () => {
+            cancelAnimationFrame(frame);
+            scroller.removeEventListener('scroll', follow);
+        };
+    }, [pane]);
     const columns = rowColumns(rows);
-    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => (_jsx("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, hidden: pane !== 'query', children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
-                                            const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
-                                            return (_jsxs("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [_jsx("span", { className: "history-cypher", children: firstLine }), _jsx("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
-                                        }) }))] }), _jsxs(StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
-                                    ? (_jsxs("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
-                                    : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [_jsxs("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [_jsxs("div", { className: "editor-toolbar", children: [_jsx(CopyButton, { label: "Copy", text: handle.getText() }), _jsx("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), _jsx("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                    || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "\u2318" }), " + ", _jsx("kbd", { children: "Enter" }), " on Mac or ", _jsx("kbd", { children: "Ctrl" }), " + ", _jsx("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', _jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && _jsx(Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), _jsx("div", { className: "studio-pane", hidden: pane !== 'results', children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
-                                    rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) :
-                                        _jsx(RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
-                                    _jsx("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && _jsx(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && (_jsxs("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && (_jsx("p", { className: "hint", children: progress.live
-                                                ? 'Waiting for the engine to report…'
-                                                : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane studio-pane-session", hidden: pane !== 'session', children: _jsx(SessionPane, { visible: pane === 'session', onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
+    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", "aria-label": "Query Studio sections", ref: paneNavRef, children: ['query', 'results', 'session'].map((p) => (_jsx("button", { "data-studio-pane": p, "aria-current": pane === p ? 'page' : undefined, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => showPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: "studio-sections", ref: sectionsRef, children: [_jsxs("section", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, "data-studio-pane": "query", ref: (node) => { sectionRefs.current.query = node ?? undefined; }, children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
+                                                    const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
+                                                    return (_jsxs("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [_jsx("span", { className: "history-cypher", children: firstLine }), _jsx("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
+                                                }) }))] }), _jsxs(StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
+                                            ? (_jsxs("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
+                                            : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [_jsxs("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [_jsxs("div", { className: "editor-toolbar", children: [_jsx(CopyButton, { label: "Copy", text: handle.getText() }), _jsx("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), _jsx("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
+                                                            || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "\u2318" }), " + ", _jsx("kbd", { children: "Enter" }), " on Mac or ", _jsx("kbd", { children: "Ctrl" }), " + ", _jsx("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', _jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && _jsx(Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), _jsx("section", { className: "studio-pane", "data-studio-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                            rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) :
+                                                _jsx(RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                            _jsx("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && _jsx(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && (_jsxs("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && (_jsx("p", { className: "hint", children: progress.live
+                                                        ? 'Waiting for the engine to report…'
+                                                        : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("section", { className: "studio-pane studio-pane-session", "data-studio-pane": "session", ref: (node) => { sectionRefs.current.session = node ?? undefined; }, children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); showPane('query'); } }) })] })] })] }));
 }
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
 /**
