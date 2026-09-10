@@ -115,11 +115,12 @@ async function inFlightRunId(services, cypher) {
 /**
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
+ * @param initialCypher a starter landed once into an empty editor; unlike a handoff it never replays.
  */
-function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }) {
-    return ((0, jsx_runtime_1.jsx)(runtime_tsx_1.QueryRuntimeProvider, { services: services, host: host, children: (0, jsx_runtime_1.jsx)(QueryStudioBody, { handedOver: handedOver, handoffRevision: handoffRevision, onCypherChange: onCypherChange }) }));
+function QueryStudioSurface({ services, host, handedOver, initialCypher, handoffRevision, onCypherChange }) {
+    return ((0, jsx_runtime_1.jsx)(runtime_tsx_1.QueryRuntimeProvider, { services: services, host: host, children: (0, jsx_runtime_1.jsx)(QueryStudioBody, { handedOver: handedOver, initialCypher: initialCypher, handoffRevision: handoffRevision, onCypherChange: onCypherChange }) }));
 }
-function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
+function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherChange }) {
     const { services, host } = (0, runtime_tsx_1.useQueryRuntime)();
     const reportCypher = (0, react_2.useRef)(onCypherChange);
     reportCypher.current = onCypherChange;
@@ -141,18 +142,22 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
      */
     const [showViolations, setShowViolations] = (0, react_2.useState)(false);
     const [runStatus, setRunStatus] = (0, react_2.useState)({ tone: null, text: '' });
+    const [stopStatus, setStopStatus] = (0, react_2.useState)({ tone: null, text: '' });
     const [rows, setRows] = (0, react_2.useState)([]);
     /* The WHOLE result, because `apiCallLog`, `llmCallLog` and the call counts ride on it and were
      * being thrown away — they are what the Vaadin console's Stats view is made of. */
     const [result, setResult] = (0, react_2.useState)(null);
     const [view, setView] = (0, react_2.useState)('table');
     const [pane, setPane] = (0, react_2.useState)('query');
+    const [editorExpanded, setEditorExpanded] = (0, react_2.useState)(false);
     const [ran, setRan] = (0, react_2.useState)(false);
     const [running, setRunning] = (0, react_2.useState)(false);
     /* A kill has been asked for and the run has not answered yet. Separate from `running` because
      * the two overlap: the query is still in flight for as long as it takes the engine to notice. */
     const [stopping, setStopping] = (0, react_2.useState)(false);
     const runningCypher = (0, react_2.useRef)(null);
+    const stopAccepted = (0, react_2.useRef)(false);
+    const runTerminal = (0, react_2.useRef)(null);
     const [history, setHistory] = (0, react_2.useState)(() => host.history.read() ?? []);
     /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
     const [scopesVersion, setScopesVersion] = (0, react_2.useState)(0);
@@ -343,6 +348,9 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
         const generation = ++runGeneration.current;
         setRunning(true);
         setStopping(false);
+        stopAccepted.current = false;
+        runTerminal.current = null;
+        setStopStatus({ tone: null, text: '' });
         // The outcome is what you asked for; don't leave it on a tab nobody is looking at.
         setPane('results');
         /* The cypher AS SUBMITTED. Stop needs to name the run it is stopping, and by the time anyone
@@ -366,7 +374,10 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
          * waited forty seconds is owed the account of where it went. */
         progress.end();
         if (!(0, outcome_ts_1.isOk)(outcome)) {
-            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'query execution') });
+            runTerminal.current = 'failed';
+            setStopStatus({ tone: null, text: '' });
+            stopAccepted.current = false;
+            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'run the query') });
         }
         // `execute` has two success shapes. Without `background` this is always the finished result,
         // but the type says otherwise and reading `rows` off a handle would silently show zero rows.
@@ -374,6 +385,11 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
         // threw away the rows of any result that did not send one, which is how this looked in
         // practice: "parked in the background", over a payload holding the answer.
         if ((0, kg_ts_1.isBackgroundHandle)(outcome.value)) {
+            runTerminal.current = 'finished';
+            setStopStatus(stopAccepted.current
+                ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
+                : { tone: null, text: '' });
+            stopAccepted.current = false;
             return setRunStatus({ tone: 'caution', text: 'This query is running in the background.' });
         }
         const result = outcome.value;
@@ -383,10 +399,14 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
          * guess from the hint text. The hint is the engine's own: committed work is KEPT, so re-running
          * resumes from the first cold anchor rather than starting over. */
         if (result.reason === 'KILLED') {
-            return setRunStatus({
+            runTerminal.current = 'killed';
+            stopAccepted.current = false;
+            const status = {
                 tone: 'caution',
                 text: `Stopped. ${result.hint ?? 'Work already materialized is kept — run it again to resume from there.'}`,
-            });
+            };
+            setStopStatus(status);
+            return setRunStatus(status);
         }
         const rows = (result.rows ?? []);
         // `rowCount` is documented as required and is not always sent. The rows are the truth.
@@ -400,8 +420,17 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
             parts.push(warning);
         if (!rowCount && result.hint)
             parts.push(result.hint);
-        if (result.error)
+        if (result.error) {
+            runTerminal.current = 'failed';
+            setStopStatus({ tone: null, text: '' });
+            stopAccepted.current = false;
             return setRunStatus({ tone: 'error', text: result.error });
+        }
+        runTerminal.current = 'finished';
+        setStopStatus(stopAccepted.current
+            ? { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' }
+            : { tone: null, text: '' });
+        stopAccepted.current = false;
         setRunStatus({ tone: (result.warnings ?? []).length ? 'caution' : 'ok', text: parts.join(' · ') });
         setRows(rows);
         setResult(result);
@@ -428,22 +457,50 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
      */
     const stop = (0, react_2.useCallback)(async () => {
         setStopping(true);
-        setRunStatus({ tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' });
+        const stoppingStatus = { tone: null, text: 'Stopping — the engine checks between steps, so this can take a moment…' };
+        setStopStatus(stoppingStatus);
+        setRunStatus(stoppingStatus);
         const runId = progress.runId ?? (await inFlightRunId(services, runningCypher.current));
         if (!runId) {
             setStopping(false);
-            return setRunStatus({ tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' });
+            stopAccepted.current = false;
+            const status = { tone: 'caution', text: 'No matching query is still running, so it could not be stopped.' };
+            setStopStatus(status);
+            return setRunStatus(status);
         }
         const outcome = await services.kg.kill(runId);
         if (!(0, outcome_ts_1.isOk)(outcome)) {
             setStopping(false);
-            return setRunStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'stopping the run') });
+            stopAccepted.current = false;
+            const status = { tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'stop the run') };
+            setStopStatus(status);
+            return setRunStatus(status);
         }
-        /* `killed: false` means the registry had no such run — it finished between the click and the
-         * call. The execute POST is about to return the real answer, so say nothing that contradicts
-         * the rows that are one moment away. */
-        if (!outcome.value.killed)
+        /* The kill response says whether the registry accepted the request, not whether a cooperative
+         * checkpoint has stopped execution. Only the still-open execute response can confirm KILLED. */
+        if (outcome.value.killed) {
+            if (runTerminal.current === 'finished') {
+                const status = { tone: 'caution', text: 'Stop was requested, but the run finished before it could stop.' };
+                setStopStatus(status);
+                setRunStatus(status);
+            }
+            else if (runTerminal.current === 'failed') {
+                setStopStatus({ tone: null, text: '' });
+            }
+            else if (runTerminal.current !== 'killed') {
+                stopAccepted.current = true;
+                const status = { tone: null, text: 'Stop requested — waiting for the run to confirm it stopped…' };
+                setStopStatus(status);
+                setRunStatus(status);
+            }
+        }
+        else if (runTerminal.current === null) {
             setStopping(false);
+            stopAccepted.current = false;
+            const status = { tone: 'caution', text: 'Stop was not confirmed — the run may already have finished.' };
+            setStopStatus(status);
+            setRunStatus(status);
+        }
     }, [progress.runId]);
     const land = (0, react_2.useCallback)((cypher) => {
         validatedCypher.current = null;
@@ -474,6 +531,14 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
     }, [handle, land]);
     /* Landed on arrival AND on change, so opening the same view twice still works. The editor is
      * created asynchronously, so this waits for it rather than firing into nothing. */
+    const initialized = (0, react_2.useRef)(false);
+    (0, react_2.useEffect)(() => {
+        if (!handle.editor || initialized.current)
+            return;
+        initialized.current = true;
+        if (initialCypher && handedOver == null && !handle.getText().trim())
+            land(initialCypher);
+    }, [handedOver, handle, initialCypher, land]);
     const landed = (0, react_2.useRef)(null);
     (0, react_2.useEffect)(() => {
         if (!handedOver || !handle.editor)
@@ -495,20 +560,20 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
     (0, react_2.useEffect)(() => {
         if (pane === 'query')
             handle.editor?.refresh();
-    }, [pane, handle.editor]);
+    }, [pane, editorExpanded, handle.editor]);
     const columns = (0, index_ts_1.rowColumns)(rows);
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-query studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), (0, jsx_runtime_1.jsx)(ScopesPanel, { version: scopesVersion, onInsert: land }), (0, jsx_runtime_1.jsx)(FillsPanel, { version: fillsVersion })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-tabbed", children: [(0, jsx_runtime_1.jsx)("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: land, current: () => handle.getText() }), (0, jsx_runtime_1.jsxs)("details", { className: "queryhistory", ref: historyRef, children: [(0, jsx_runtime_1.jsxs)("summary", { className: "queryhistory-title", children: ["History ", (0, jsx_runtime_1.jsx)("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : ((0, jsx_runtime_1.jsx)("div", { className: "historylist", children: history.map((entry) => {
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-query studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), (0, jsx_runtime_1.jsx)(ScopesPanel, { version: scopesVersion, onInsert: land }), (0, jsx_runtime_1.jsx)(FillsPanel, { version: fillsVersion })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-tabbed", children: [(0, jsx_runtime_1.jsx)("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), (0, jsx_runtime_1.jsxs)("div", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, hidden: pane !== 'query', children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: land, current: () => handle.getText() }), (0, jsx_runtime_1.jsxs)("details", { className: "queryhistory", ref: historyRef, children: [(0, jsx_runtime_1.jsxs)("summary", { className: "queryhistory-title", children: ["History ", (0, jsx_runtime_1.jsx)("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : ((0, jsx_runtime_1.jsx)("div", { className: "historylist", children: history.map((entry) => {
                                             const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                             return ((0, jsx_runtime_1.jsxs)("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [(0, jsx_runtime_1.jsx)("span", { className: "history-cypher", children: firstLine }), (0, jsx_runtime_1.jsx)("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                         }) }))] }), (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
                                     ? ((0, jsx_runtime_1.jsxs)("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
-                                    : (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsxs)("div", { className: "editor-wrap", children: [(0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() })] }), showViolations && validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                    || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), children: running ? 'running…' : 'Run ⌘⏎' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), (0, jsx_runtime_1.jsxs)("details", { className: "editor-help", children: [(0, jsx_runtime_1.jsxs)("summary", { className: "btn ghost tiny", children: [(0, jsx_runtime_1.jsx)(react_1.Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), (0, jsx_runtime_1.jsxs)("p", { className: "editor-help-copy", children: [(0, jsx_runtime_1.jsx)("kbd", { children: "Control" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Space" }), " completes from the schema."] })] })] })] })] }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane", hidden: pane !== 'results', children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
+                                    : (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsxs)("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [(0, jsx_runtime_1.jsxs)("div", { className: "editor-toolbar", children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), (0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
+                                                    || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), (0, jsx_runtime_1.jsxs)("details", { className: "editor-help", children: [(0, jsx_runtime_1.jsxs)("summary", { className: "btn ghost tiny", children: [(0, jsx_runtime_1.jsx)(react_1.Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), (0, jsx_runtime_1.jsxs)("p", { className: "editor-help-copy", children: [(0, jsx_runtime_1.jsx)("kbd", { children: "\u2318" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on Mac or ", (0, jsx_runtime_1.jsx)("kbd", { children: "Ctrl" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', (0, jsx_runtime_1.jsx)("kbd", { children: "Control" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane", hidden: pane !== 'results', children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                     rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) :
                                         (0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                     (0, jsx_runtime_1.jsx)("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && (0, jsx_runtime_1.jsx)(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && ((0, jsx_runtime_1.jsxs)("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => ((0, jsx_runtime_1.jsx)("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: progress.live
                                                 ? 'Waiting for the engine to report…'
-                                                : 'No trace is available for queries without virtual labels.' }))] })), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, index_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, index_ts_1.rowsToCsv)(rows) })] })), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane", hidden: pane !== 'session', children: (0, jsx_runtime_1.jsx)(SessionPane_tsx_1.SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
+                                                : 'No trace is available for queries without virtual labels.' }))] })), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, index_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, index_ts_1.rowsToCsv)(rows) })] })), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "studio-pane studio-pane-session", hidden: pane !== 'session', children: (0, jsx_runtime_1.jsx)(SessionPane_tsx_1.SessionPane, { visible: pane === 'session', onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
 }
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
 /**
@@ -535,7 +600,7 @@ function Ask({ onLand, current }) {
         const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text);
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome)) {
-            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, refine ? 'query refinement' : 'query generation') });
+            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, refine ? 'refine the query' : 'generate a query') });
         }
         const generated = outcome.value;
         if (!generated.cypher)
@@ -548,8 +613,8 @@ function Ask({ onLand, current }) {
             ? { tone: 'ok', text: 'Landed in the editor — read it before you run it.' }
             : { tone: 'error', text: `Landed, but it has ${(generated.violations ?? []).length} schema problem(s).` });
     }
-    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Ask", children: [(0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: question, placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
-                            void go(false); } }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: instruction, placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Ask", children: [(0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: question, "aria-label": "Describe the query you want", placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+                            void go(false); } }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: instruction, "aria-label": "Describe the change to the query", placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
                             void go(true); } }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy || !current().trim(), onClick: () => void go(true), children: "Refine" })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text }), explanation && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: explanation })] }));
 }
 // ── the schema browser ────────────────────────────────────────────────────────────────────────
@@ -619,12 +684,12 @@ function SaveView({ current }) {
         const viewName = name.trim();
         const cypher = current().trim();
         if (!viewName || !cypher)
-            return setStatus({ tone: 'error', text: 'a view needs a name and a query' });
+            return setStatus({ tone: 'error', text: 'A view needs a name and a query.' });
         setBusy(true);
         const outcome = await services.kg.saveView(description.trim() ? { name: viewName, cypher, description: description.trim() } : { name: viewName, cypher });
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'saving views') });
+            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'save this view') });
         if (!outcome.value.ok) {
             // THE APPLIANCE'S OWN WORDS. "The appliance refused it" threw away the one thing the
             // refusal was written to carry — which scope blocks the save, that it was captured with
@@ -690,9 +755,7 @@ function StartFill({ current, onStarted }) {
             if (r.ok)
                 onStarted();
             else
-                setError(r.status === 403
-                    ? 'Your account is not allowed to start fills. An administrator can check your access.'
-                    : (0, chrome_tsx_1.failureMessage)(r, 'background fills'));
+                setError((0, chrome_tsx_1.failureMessage)(r, 'start a background fill'));
         }
         catch (cause) {
             setError(cause instanceof Error ? cause.message : 'The fill could not be started. Try again.');
@@ -791,15 +854,15 @@ function CaptureScope({ current, onCaptured }) {
         // Same completion as Run and the Session tab: `MATCH (c:Chunk)` captures without a RETURN.
         const { cypher } = (0, index_ts_1.completeQuery)(current());
         if (!cypher)
-            return setStatus({ tone: 'error', text: 'nothing to capture — write a query first' });
+            return setStatus({ tone: 'error', text: 'Nothing to capture — write a query first.' });
         if (!scopeName)
-            return setStatus({ tone: 'error', text: 'name the scope — the name is how a later query references it' });
+            return setStatus({ tone: 'error', text: 'Name the scope — the name is how a later query references it.' });
         setBusy(true);
         setStatus({ tone: null, text: 'Running and freezing the result set…' });
         const outcome = await services.kg.execute(cypher, { captureAs: scopeName });
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome))
-            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'capturing a scope') });
+            return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'capture a scope') });
         if ((0, kg_ts_1.isBackgroundHandle)(outcome.value)) {
             return setStatus({ tone: 'error', text: 'This query is running in the background; capturing a scope requires a synchronous result.' });
         }

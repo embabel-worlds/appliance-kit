@@ -98,12 +98,12 @@
  */
 
 :where(.kit-feature).studio, :where(.kit-feature) .studio {
-  display: grid; grid-template-columns: 350px 1fr; gap: 20px;
+  display: grid; grid-template-columns: 350px minmax(0, 1fr); gap: 24px;
   height: calc(100vh - 320px); min-height: 420px;
 }
 
 :where(.kit-feature) .studio-side {
-  display: flex; flex-direction: column; gap: 20px; min-width: 0;
+  display: flex; flex-direction: column; gap: 24px; min-width: 0;
   min-height: 0; overflow-y: auto; padding-right: 4px;
 }
 
@@ -157,7 +157,7 @@
    * and a save form, all of which someone may want at their full size.
    */
   display: flex; flex-direction: column;
-  gap: 20px; min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px;
+  gap: 24px; min-width: 0; min-height: 0; overflow-y: auto; padding-right: 4px;
 }
 
 /* `min-height: 0` cancels the `.single .panel` floor of 560px — a sensible default for a tab
@@ -190,7 +190,7 @@
 }
 
 :where(.kit-feature) .studio-pane-query {
-  grid-template-rows: auto auto minmax(0, 1fr);
+  grid-template-rows: auto auto auto; overflow-y: auto; padding-right: 4px;
 }
 
 :where(.kit-feature) .studio-pane-query > .queryhistory {
@@ -199,6 +199,15 @@
 
 :where(.kit-feature) .studio-pane-query > .queryhistory[open] .historylist {
   max-height: min(220px, 24vh);
+}
+
+:where(.kit-feature) .studio-pane-query.is-editor-expanded {
+  grid-template-rows: minmax(0, 1fr); overflow-y: hidden; padding-right: 0;
+}
+
+:where(.kit-feature) .studio-pane-query.is-editor-expanded > .panel:first-child,
+:where(.kit-feature) .studio-pane-query.is-editor-expanded > .queryhistory {
+  display: none;
 }
 
 /* `hidden` is a UA rule, and `display: grid` above outranks it. Say it in author CSS or the
@@ -212,23 +221,15 @@
    stacks three panels, so its root supplies enough specificity to keep each row content-sized. */
 :where(.kit-feature).kit-feature-query .studio-pane-query > .panel { min-height: 0; }
 
-:where(.kit-feature) .studio-pane > .panel > .panel-body { min-height: 0; overflow-y: auto; }
+:where(.kit-feature) .studio-pane > .panel > .panel-body { flex: 1 1 auto; min-height: 0; overflow-y: auto; }
 
-/*
- * RUN STAYS REACHABLE. The action row is the last thing in a panel body that scrolls, so a tall
- * query — or a query plus its violations — pushed the primary button of the whole tab below the
- * fold, and running what you had just typed meant scrolling away from it first.
- *
- * Sticky rather than moved out of the body: the row belongs to the query it acts on, and the same
- * trick already pins the drawer's panel heads. It needs an opaque background of its own, or the
- * editor scrolls through it.
- */
+/* The editor is bounded below, so its actions can stay in ordinary flow. Sticky actions covered
+   the last editor lines and made the controls look as though they belonged inside the query. */
 
-:where(.kit-feature) .studio-pane .studio-actions {
-  position: sticky; bottom: 0; z-index: 1;
-  background: var(--panel-bg);
-  border-top: 1px solid var(--panel-edge);
-  margin: 0 -16px -14px; padding: 10px 16px 14px;
+:where(.kit-feature) .studio-pane-query .studio-actions {
+  position: static;
+  flex: 0 0 auto;
+  margin-top: 10px;
 }
 
 /*
@@ -250,29 +251,58 @@
 
 :where(.kit-feature) .studiotab:focus-visible { outline: 2px solid var(--signal); outline-offset: 2px; }
 
-/* THE EDITOR TAKES THE PANE. `height: auto` grew with the text and left the rest of the column
-   empty; with the query on its own tab there is a definite height to fill, so fill it. The chain
-   of `min-height: 0` above is what makes the height definite rather than content-derived, and the
-   body has to be a flex column for the editor to be the child that stretches — the violations and
-   the action row keep their natural size beneath it. Scoped to the query pane: the results body
-   holds a table and wants its ordinary block layout. */
+/* Query uses a flex body so the bounded editor, validation, and actions remain separate rows.
+   Results keeps ordinary block layout for its table. */
 
 :where(.kit-feature) .studio-pane-query > .panel > .panel-body { display: flex; flex-direction: column; }
 
-:where(.kit-feature) .studio-pane-query .editor-wrap { flex: 1 1 auto; min-height: 240px; }
+/* Bounded by default so the actions remain below the editor. Expansion is explicit and grows only
+   inside the pane's existing scroll region, so it never covers the controls it pushes down. */
+:where(.kit-feature) .studio-pane-query .editor-wrap {
+  display: flex; flex: 0 0 320px; flex-direction: column;
+  height: 320px; min-height: 320px; max-height: 320px;
+}
 
-:where(.kit-feature) .studio-pane-query .editor-host, :where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { height: 100%; }
+:where(.kit-feature) .studio-pane-query .editor-wrap.is-expanded {
+  flex: 1 1 0; height: auto; min-height: 0; max-height: none;
+}
+
+:where(.kit-feature) .editor-toolbar {
+  display: flex; flex: 0 0 auto; justify-content: flex-end; gap: 6px; margin-bottom: 6px;
+}
+
+:where(.kit-feature) .studio-pane-query .editor-host { flex: 1 1 auto; min-height: 0; }
+
+:where(.kit-feature) .studio-pane-query .editor-host,
+:where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { height: 100%; }
+
+:where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { min-height: 0; }
+
+:where(.kit-feature) .query-stop-status {
+  flex: 0 0 auto; min-width: 0; margin-top: 8px; overflow-wrap: anywhere;
+}
+
+:where(.kit-feature) .studio-pane-session > .panel > .panel-body {
+  display: flex; flex-direction: column; overflow: hidden;
+}
 
 @media (max-width: 1100px) {
   /* One column: the rail feeds the editor, so it belongs above it — and the fixed height comes
      off, because two scroll areas stacked in one viewport leaves no room for either. */
   :where(.kit-feature).studio, :where(.kit-feature) .studio { grid-template-columns: 1fr; height: auto; }
   :where(.kit-feature) .studio-side, :where(.kit-feature) .studio-main { overflow-y: visible; }
-  /* No column height to divide up, so the panes fall back to their content — the editor keeps its
-     240px floor and nothing is stretched to fill a height that no longer exists. */
+  /* No column height to divide up, so panes use their content height. The editor wrapper remains
+     bounded and CodeMirror scrolls inside it rather than growing to its line count. */
   :where(.kit-feature) .studio-tabbed, :where(.kit-feature) .studio-pane { grid-template-rows: auto auto; }
-  :where(.kit-feature) .studio-pane-query { grid-template-rows: auto auto auto; }
-  :where(.kit-feature) .studio-pane-query .editor-host, :where(.kit-feature) .studio-pane-query .editor-host .CodeMirror { height: auto; }
+  :where(.kit-feature) .studio-pane-query { grid-template-rows: auto auto auto; overflow-y: visible; padding-right: 0; }
+  :where(.kit-feature) .studio-pane-query.is-editor-expanded { overflow-y: visible; }
+  :where(.kit-feature) .studio-pane-query .editor-wrap.is-expanded {
+    flex: 0 0 clamp(420px, 60vh, 720px);
+    flex-basis: clamp(420px, 60dvh, 720px);
+    height: clamp(420px, 60vh, 720px);
+    height: clamp(420px, 60dvh, 720px);
+    max-height: none;
+  }
 }
 
 /* CodeMirror, reskinned to this surface — the SAME skin the Me app's studios use, because two
@@ -290,6 +320,10 @@
 
 :where(.kit-feature) .editor-host .CodeMirror-focused { border-color: var(--signal); box-shadow: 0 0 0 1px color-mix(in srgb, var(--signal) 40%, transparent); }
 
+/* The editor clips its oversize scroll element; paint keyboard focus inside that boundary. */
+:where(.kit-feature) .editor-host .CodeMirror:focus-within,
+:where(.kit-feature) .session-cm .CodeMirror:focus-within { outline: 2px solid var(--ink); outline-offset: -2px; }
+
 :where(.kit-feature) .editor-host .CodeMirror-gutters { background: var(--code-bg); border-right: 1px solid var(--rule); }
 
 :where(.kit-feature) .editor-host .CodeMirror-linenumber { color: var(--faint); }
@@ -298,7 +332,7 @@
 
 :where(.kit-feature) .editor-host .CodeMirror-selected, :where(.kit-feature) .editor-host .CodeMirror-focused .CodeMirror-selected { background: color-mix(in srgb, var(--signal) 25%, transparent); }
 
-:where(.kit-feature) .cm-s-default .cm-keyword { color: var(--signal); }
+:where(.kit-feature) .cm-s-default .cm-keyword { color: var(--signal-label); }
 
 :where(.kit-feature) .cm-s-default .cm-atom { color: var(--lit); }
 
@@ -338,7 +372,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .row { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
 
-:where(.kit-feature) .field { display: flex; flex-direction: column; gap: 5px; margin-bottom: 12px; }
+:where(.kit-feature) .field { display: flex; flex-direction: column; min-width: 0; max-width: 100%; gap: 5px; margin-bottom: 12px; }
 
 :where(.kit-feature) .field > span { font-family: var(--mono); font-size: 10.5px; letter-spacing: 0.14em;
   text-transform: uppercase; color: var(--faint); }
@@ -487,9 +521,14 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .results-table th, :where(.kit-feature) .results-table td { border: 1px solid var(--rule); padding: 5px 9px;
   text-align: left; vertical-align: top; }
 
+:where(.kit-feature) .cell-object {
+  display: block; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere;
+  font-family: var(--mono); line-height: 1.45;
+}
+
 :where(.kit-feature) .results-table th {
   font-family: var(--mono); font-size: 10.5px; font-weight: 500; position: sticky; top: 0;
-  background: var(--code-bg); text-transform: uppercase; letter-spacing: 0.08em; color: var(--mid);
+  background: var(--field-bg); text-transform: uppercase; letter-spacing: 0.08em; color: var(--mid);
 }
 
 /* ── settings drawer ─────────────────────────────────────────────────────────
@@ -625,7 +664,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .ask-row { display: flex; gap: 10px; align-items: center; }
 
-:where(.kit-feature) .studio-pane-query .ask-row + .ask-row { margin-top: 10px; }
+:where(.kit-feature) .studio-pane-query .ask-row + .ask-row { margin-top: 10px; margin-bottom: 10px; }
 
 :where(.kit-feature) .ask-row input { flex: 1; min-width: 0; }
 
@@ -676,27 +715,186 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .saveview { flex-basis: 100%; border-top: 1px solid var(--hairline); margin-top: 10px; padding-top: 10px; }
 
-/* ── the views page ──────────────────────────────────────────────────────────
- * A place, not a panel: the list on the left, the view you picked and its rows
- * on the right. Same fixed-height, independently-scrolling shape as the studio,
- * for the same reason — the rows must not end up below the fold.
+/* ── the Views operation board ───────────────────────────────────────────────
+ * The landing page is grouped by realm. Selecting an operation replaces the board with one
+ * bounded workspace: a realm-local navigator and exactly one operation pane.
  */
 
-:where(.kit-feature).viewspage, :where(.kit-feature) .viewspage {
-  display: grid; grid-template-columns: 350px 1fr; gap: 20px;
-  height: calc(100vh - 320px); min-height: 420px;
+:where(.kit-feature).viewspage, :where(.kit-feature) .viewspage { min-width: 0; max-width: 100%; background: var(--paper); }
+
+:where(.kit-feature).viewspage-board { display: block; height: auto; min-height: 0; }
+
+:where(.kit-feature) .viewboard-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
+
+:where(.kit-feature) .viewboard-head h2,
+:where(.kit-feature) .viewoperation-head h2 { margin: 0 0 4px; font-size: 22px; overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewboard-head p { margin: 0; }
+
+:where(.kit-feature) .viewrealms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
+
+:where(.kit-feature).viewspage-board .viewrealm { min-height: 0; margin: 0; overflow: hidden; }
+
+:where(.kit-feature) .viewrealm.expanded { grid-column: 1 / -1; }
+
+:where(.kit-feature) .viewrealm-head {
+  display: grid; width: 100%; min-height: 70px; grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center; gap: 14px; padding: 12px 14px; border: 0; background: transparent;
+  color: var(--ink); text-align: left; cursor: pointer;
 }
 
-:where(.kit-feature) .viewspage-list { min-height: 0; overflow-y: auto; padding-right: 4px; }
+:where(.kit-feature) .viewrealm-head:hover,
+:where(.kit-feature) .viewrealm-head:focus-visible { background: color-mix(in srgb, var(--signal) 8%, transparent); }
 
-:where(.kit-feature) .viewspage-run {
-  display: grid; grid-template-rows: auto minmax(200px, 1fr);
-  gap: 20px; min-width: 0; min-height: 0; overflow-y: auto;
+:where(.kit-feature) .viewrealm-head strong { display: block; margin-bottom: 4px; font-size: 15px; }
+
+:where(.kit-feature) .viewrealm-head small { display: block; color: var(--mid); font: 11px/1.4 var(--mono); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewrealm-head .chev { color: var(--ink); font-size: 18px; }
+
+:where(.kit-feature) .viewrealm-head:focus-visible,
+:where(.kit-feature) .viewoperation-nav-link:focus-visible,
+:where(.kit-feature) .viewspage-mobile-nav > summary:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
+
+:where(.kit-feature) .viewrealm-operations {
+  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
+  padding: 12px; border-top: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 16%, transparent);
 }
 
-:where(.kit-feature) .viewspage-run > .panel { min-height: 0; display: flex; flex-direction: column; margin-bottom: 0; }
+:where(.kit-feature) .viewoperation {
+  display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: 10px; padding: 10px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--field-bg);
+}
 
-:where(.kit-feature) .viewspage-run > .panel > .panel-body { min-height: 0; overflow-y: auto; }
+:where(.kit-feature) .viewoperation-open {
+  display: grid; min-width: 0; min-height: 44px; gap: 3px; padding: 2px 0;
+  border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer;
+}
+
+:where(.kit-feature) .viewoperation-open strong { font: 650 12.5px var(--mono); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewoperation-open small { color: var(--mid); font-size: 11.5px; line-height: 1.35; overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewoperation .btn { min-height: 44px; }
+
+:where(.kit-feature).viewspage-selected {
+  display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px;
+  height: calc(100vh - 280px); min-height: 520px; align-items: start;
+}
+
+:where(.kit-feature).viewspage-selected > *,
+:where(.kit-feature) .viewspage-operation > * { min-width: 0; }
+
+:where(.kit-feature).viewspage-selected .viewspage-sidebar {
+  min-height: 0; max-height: 100%; margin: 0; overflow-y: auto; scrollbar-gutter: stable;
+}
+
+:where(.kit-feature) .viewnav-head { display: grid; gap: 3px; padding: 14px; border-bottom: 1px solid var(--rule); }
+
+:where(.kit-feature) .viewnav-head h2 { margin: 0; font-size: 17px; }
+
+:where(.kit-feature) .viewnav-head > strong { font: 650 12px var(--mono); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewnav-head > small { color: var(--mid); }
+
+:where(.kit-feature) .viewnav-head .btn { width: 100%; min-height: 44px; margin-top: 9px; }
+
+:where(.kit-feature) .viewnav-label { color: var(--mid); font: 650 10px var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
+
+:where(.kit-feature) .viewnav-section { display: grid; gap: 2px; padding: 10px; border-bottom: 1px solid var(--rule); }
+
+:where(.kit-feature) .viewnav-section:last-child { border-bottom: 0; }
+
+:where(.kit-feature) .viewnav-section > .viewnav-label { margin: 0 4px 5px; }
+
+:where(.kit-feature) .viewsibling {
+  display: grid; width: 100%; min-height: 44px; align-items: center; gap: 8px;
+  padding: 8px 10px; border: 1px solid transparent; border-radius: var(--radius);
+  background: transparent; color: var(--mid); text-align: left; cursor: pointer;
+}
+
+:where(.kit-feature) .viewsibling:hover,
+:where(.kit-feature) .viewsibling:focus-visible { border-color: var(--rule); background: color-mix(in srgb, var(--signal) 8%, transparent); }
+
+:where(.kit-feature) .viewsibling.active {
+  border-color: var(--rule); background: color-mix(in srgb, var(--signal) 14%, transparent);
+  color: var(--ink); box-shadow: inset 2px 0 var(--signal);
+}
+
+:where(.kit-feature) .viewsibling strong { font: 650 11px var(--mono); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewsibling small { color: var(--mid); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewspage-mobile-nav { display: none; min-height: 0; margin: 0 0 14px; overflow: hidden; }
+
+:where(.kit-feature) .viewspage-mobile-nav > summary {
+  display: grid; min-height: 52px; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
+  gap: 10px; padding: 10px 14px; cursor: pointer; list-style: none;
+}
+
+:where(.kit-feature) .viewspage-mobile-nav > summary::-webkit-details-marker { display: none; }
+
+:where(.kit-feature) .viewspage-mobile-nav > summary::after { color: var(--ink); content: '▾'; }
+
+:where(.kit-feature) .viewspage-mobile-nav[open] > summary { border-bottom: 1px solid var(--rule); }
+
+:where(.kit-feature) .viewspage-mobile-nav[open] > summary::after { content: '▴'; }
+
+:where(.kit-feature) .viewspage-mobile-nav > summary small { display: block; margin-top: 2px; color: var(--mid); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewspage-mobile-nav-body { max-height: 68vh; overflow-y: auto; scrollbar-gutter: stable; }
+
+:where(.kit-feature) .viewspage-operation { display: grid; min-width: 0; min-height: 0; max-height: 100%; gap: 14px; overflow-y: auto; scrollbar-gutter: stable; }
+
+:where(.kit-feature).viewspage-selected .viewspage-operation > .panel { min-height: 0; margin: 0; }
+
+:where(.kit-feature) .viewoperation-nav {
+  position: sticky; z-index: 2; top: 0; display: flex; max-width: 100%; gap: 2px; overflow-x: auto;
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper);
+}
+
+:where(.kit-feature) .viewoperation-nav-link {
+  flex: 1 0 auto; min-width: 92px; min-height: 44px; padding: 8px 13px;
+  border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--mid); cursor: pointer; white-space: nowrap;
+}
+
+:where(.kit-feature) .viewoperation-nav-link.active { border-bottom-color: var(--signal); color: var(--ink); }
+
+:where(.kit-feature) .viewoperation-sections { display: grid; min-width: 0; gap: 14px; padding-bottom: min(62dvh, 560px); }
+
+:where(.kit-feature) .viewoperation-section { min-width: 0; scroll-margin-top: 62px; }
+
+:where(.kit-feature) .viewoperation-section > .panel { min-height: 0; margin: 0; }
+
+:where(.kit-feature) .viewoperation-head { display: grid; min-height: 0; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 14px 16px; }
+
+:where(.kit-feature) .viewoperation-head > .row { justify-content: flex-end; }
+
+:where(.kit-feature) .viewoperation-head > p { grid-column: 1 / -1; margin: 0; }
+
+/* The wrapper owns scrolling; an overflowed block table would intercept sticky headers. */
+:where(.kit-feature).kit-feature-query .tablewrap,
+:where(.kit-feature) .view-results .tablewrap { max-height: min(52vh, 560px); overflow: auto; scrollbar-gutter: stable; }
+
+:where(.kit-feature).kit-feature-query .results-table,
+:where(.kit-feature) .view-results .results-table { display: table; width: max-content; min-width: 100%; margin-top: 0; overflow: visible; }
+
+:where(.kit-feature) .view-results .results-table td { max-width: 440px; overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewschema { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+
+:where(.kit-feature) .viewschema-label { min-width: 0; padding: 12px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--field-bg); }
+
+:where(.kit-feature) .viewschema-label p { margin: 10px 0; color: var(--mid); }
+
+:where(.kit-feature) .viewschema-label > small { color: var(--mid); }
+
+:where(.kit-feature) .viewschema-label dl { display: grid; grid-template-columns: minmax(100px, 1fr) auto; margin: 10px 0 0; }
+
+:where(.kit-feature) .viewschema-label dt,
+:where(.kit-feature) .viewschema-label dd { margin: 0; padding: 6px; border-top: 1px solid var(--hairline); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewschema-label dd { color: var(--mid); font-family: var(--mono); }
 
 :where(.kit-feature) .cypherbox pre { margin: 8px 0 0; padding: 10px 12px; background: var(--code-bg);
   border: 1px solid var(--rule); border-radius: var(--radius); overflow-x: auto;
@@ -706,8 +904,45 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
 
 @media (max-width: 1100px) {
-  :where(.kit-feature).viewspage, :where(.kit-feature) .viewspage { grid-template-columns: 1fr; height: auto; }
-  :where(.kit-feature) .viewspage-list, :where(.kit-feature) .viewspage-run { overflow-y: visible; }
+  :where(.kit-feature).viewspage-selected { display: block; height: auto; min-height: 0; }
+  :where(.kit-feature).viewspage-selected .viewspage-sidebar { display: none; }
+  :where(.kit-feature) .viewspage-mobile-nav { display: block; }
+  :where(.kit-feature) .viewspage-operation { max-height: none; overflow-y: visible; }
+  :where(.kit-feature) .viewoperation-head,
+  :where(.kit-feature) .viewschema { grid-template-columns: 1fr; }
+  :where(.kit-feature) .viewoperation-head > .row { justify-content: flex-start; }
+}
+
+@media (max-width: 820px) {
+  :where(.kit-feature) .viewrealms,
+  :where(.kit-feature) .viewrealm-operations { grid-template-columns: 1fr; }
+  :where(.kit-feature) .viewrealm.expanded { grid-column: auto; }
+}
+
+@media (max-width: 700px) {
+  :where(.kit-feature).viewspage-selected .btn,
+  :where(.kit-feature).viewspage-selected input,
+  :where(.kit-feature).viewspage-selected select,
+  :where(.kit-feature).viewspage-selected summary { min-height: 44px; }
+  :where(.kit-feature).viewspage-selected .cypherbox > summary { display: flex; align-items: center; }
+  :where(.kit-feature) .view-results .tablewrap { overflow-x: hidden; }
+  :where(.kit-feature) .view-results .results-table,
+  :where(.kit-feature) .view-results .results-table tbody,
+  :where(.kit-feature) .view-results .results-table tr,
+  :where(.kit-feature) .view-results .results-table td { display: block; width: 100%; min-width: 0; max-width: none; }
+  :where(.kit-feature) .view-results .results-table { table-layout: fixed; }
+  :where(.kit-feature) .view-results .results-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+  :where(.kit-feature) .view-results .results-table tr { margin-bottom: 10px; border: 1px solid var(--rule); border-radius: var(--radius); overflow: hidden; }
+  :where(.kit-feature) .view-results .results-table td { display: grid; grid-template-columns: minmax(90px, 32%) minmax(0, 1fr); gap: 10px; border: 0; border-bottom: 1px solid var(--hairline); white-space: normal; overflow-wrap: anywhere; }
+  :where(.kit-feature) .view-results .results-table td:last-child { border-bottom: 0; }
+  :where(.kit-feature) .view-results .results-table td::before { content: attr(data-label); color: var(--mid); font: 650 10px var(--mono); letter-spacing: 0.06em; text-transform: uppercase; }
+}
+
+@media (pointer: coarse) {
+  :where(.kit-feature) .viewrealm-head,
+  :where(.kit-feature) .viewoperation-open,
+  :where(.kit-feature) .viewoperation-nav-link,
+  :where(.kit-feature) .viewsibling { min-height: 44px; }
 }
 
 /* The live trace. Newest at the bottom and scrolled to, because the interesting line is the one
@@ -898,7 +1133,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .realm-list { display: flex; flex-direction: column; gap: 4px; margin-bottom: 10px; }
 
-:where(.kit-feature) .realm-row-head { display: flex; align-items: center; gap: 8px; width: 100%; text-align: left;
+:where(.kit-feature) .realm-row-head { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; width: 100%; text-align: left;
   background: transparent; border: 1px solid transparent; border-radius: 6px;
   padding: 5px 8px; cursor: pointer; color: inherit; font: inherit; }
 
@@ -911,9 +1146,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .realm-chevron { margin-left: auto; color: var(--faint); font-size: 11px; }
 
-:where(.kit-feature) .realm-row-body { display: flex; align-items: baseline; gap: 10px; padding: 2px 8px 8px 30px; }
+:where(.kit-feature) .realm-row-body { display: flex; flex-wrap: wrap; align-items: baseline; gap: 12px; padding: 8px 8px 8px 24px; }
 
-:where(.kit-feature) .realm-row-body p { margin: 0; flex: 1; font-size: 12.5px; color: var(--mid); }
+:where(.kit-feature) .realm-row-body p { margin: 0; flex: 1 1 100%; min-width: 0; overflow-wrap: anywhere; font-size: 12.5px; color: var(--mid); }
 
 /* The query a promotion actually stored — shown after Save as view when scope references were
    written out. Monospace and scrollable: it is Cypher the author will read and may copy, and it
@@ -937,7 +1172,10 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 /* ── Session (the REPL pane) ─────────────────────────────────────────────── */
 
-:where(.kit-feature) .session-transcript { max-height: none; flex: 1; min-height: 260px; }
+:where(.kit-feature) .session-transcript {
+  flex: 1 1 auto; min-height: 0; max-height: none; overflow-y: auto;
+  padding-bottom: 12px; scroll-padding-bottom: 12px;
+}
 
 :where(.kit-feature) .session-entry { padding: 2px 0; }
 
@@ -1002,7 +1240,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .realm-source { font-size: 10.5px; color: var(--faint); font-family: var(--mono); margin-left: 2px; }
 
-:where(.kit-feature) .session-mark { font-family: var(--mono); font-weight: 700; color: var(--signal); align-self: center; }
+:where(.kit-feature) .session-mark { font-family: var(--mono); font-weight: 700; color: var(--signal-label); align-self: center; }
 
 :where(.kit-feature) .session-cm .CodeMirror-placeholder { color: var(--faint) !important; font-style: italic; }
 
@@ -1016,7 +1254,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .appgroup-head .realm-chevron { margin-left: 0; flex: none; }
 
-:where(.kit-feature) .appgroup-head strong, :where(.kit-feature) .appgroup-count { flex: none; }
+:where(.kit-feature) .appgroup-head strong { flex: 0 1 auto; min-width: 0; }
+
+:where(.kit-feature) .appgroup-count { flex: none; }
 
 :where(.kit-feature) .appgroup-names { color: var(--faint); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1; }
 
@@ -1036,14 +1276,25 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   }
   :where(.kit-feature) .approw .row { justify-content: flex-end; flex-wrap: wrap; min-width: 0; }
   :where(.kit-feature) .appgroup-head { min-height: 44px; }
+  :where(.kit-feature) .saveview .field { flex: 1 1 100%; min-width: 0; }
+  :where(.kit-feature) .saveview input { width: 100%; min-width: 0; }
 }
 
 @media (max-width: 640px), (pointer: coarse) {
   :where(.kit-feature) .btn,
+  :where(.kit-feature) .btn.tiny,
   :where(.kit-feature) .app-pin,
   :where(.kit-feature) .pinchip,
   :where(.kit-feature) .appgroup-head { min-height: 44px; }
+  :where(.kit-feature) .btn { min-width: 44px; }
   :where(.kit-feature) .app-pin { width: 44px; }
+  :where(.kit-feature) .cypherbox > summary,
+  :where(.kit-feature) .queryhistory > summary { display: flex; align-items: center; min-height: 44px; }
+  :where(.kit-feature) .editor-host .CodeMirror,
+  :where(.kit-feature) .session-cm .CodeMirror { font-size: 16px; }
+  /* An open disclosure stays in flow instead of covering the preceding action row. */
+  :where(.kit-feature) .editor-help[open] { flex-basis: 100%; margin-left: 0; }
+  :where(.kit-feature) .editor-help-copy { position: static; width: 100%; margin: 8px 0 0; }
   :where(.kit-feature) input:not([type]),
   :where(.kit-feature) input[type='text'],
   :where(.kit-feature) input[type='password'],
@@ -1126,7 +1377,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .skillfilter { align-items: center; gap: 12px; flex-wrap: wrap; }
 
-:where(.kit-feature) .skillfilter input { flex: 1 1 200px; }
+:where(.kit-feature) .skillfilter .field.grow { flex: 1 1 200px; }
 
 :where(.kit-feature) .skilllist { display: flex; flex-direction: column; gap: 6px; margin: 12px 0; }
 
@@ -1151,7 +1402,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .verdict-badge { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
   border: 1px solid var(--rule); color: var(--mid); padding: 2px 6px; white-space: nowrap; }
 
-:where(.kit-feature) .verdict-badge.v-ports { border-color: var(--signal); color: var(--signal); }
+:where(.kit-feature) .verdict-badge.v-ports { border-color: var(--signal); color: var(--signal-label); }
 
 :where(.kit-feature) .verdict-badge.v-sandboxed { border-color: var(--mid); color: var(--ink); }
 
@@ -1190,7 +1441,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .stage.proposed { border-color: var(--rule); color: var(--mid); }
 
-:where(.kit-feature) .stage.watching { border-color: var(--signal); color: var(--signal); }
+:where(.kit-feature) .stage.watching { border-color: var(--signal); color: var(--signal-label); }
 
 :where(.kit-feature) .stage.acting { border-color: var(--caution); color: var(--caution); }
 
@@ -1274,7 +1525,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .skillchip:hover { border-color: var(--ink); color: var(--ink); }
 
-:where(.kit-feature) .skillchip.is-on { border-color: var(--signal); color: var(--signal); }
+:where(.kit-feature) .skillchip.is-on { border-color: var(--signal); color: var(--signal-label); }
 
 /* A realm's own failure, on its own row. The page-level status line sits below the whole realm
    list and is off-screen on any world with a few realms — so an update that failed read as an

@@ -3,8 +3,9 @@ import type { QueryStudioSurfaceProps } from '../contracts.ts';
 /**
  * @param handedOver cypher arriving from another tab (a view expanded in Views), landed once. A
  *   changing value lands again; null never clobbers what is already in the editor.
+ * @param initialCypher a starter landed once into an empty editor; unlike a handoff it never replays.
  */
-export declare function QueryStudioSurface({ services, host, handedOver, handoffRevision, onCypherChange }: QueryStudioSurfaceProps): React.JSX.Element;
+export declare function QueryStudioSurface({ services, host, handedOver, initialCypher, handoffRevision, onCypherChange }: QueryStudioSurfaceProps): React.JSX.Element;
 /**
  * Save the query in the editor as a named view. Writing one belongs HERE, next to the thing being
  * written; browsing and running them is the Views tab.
