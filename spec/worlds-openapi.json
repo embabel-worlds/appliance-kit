@@ -2480,6 +2480,141 @@
         "required" : [ "name", "status" ],
         "type" : "object"
       },
+      "KgDerivation" : {
+        "properties" : {
+          "elementId" : {
+            "type" : "string"
+          },
+          "props" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "round" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rule" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "trace" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgDerivedFiring"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "elementId", "props", "round", "rule", "trace" ],
+        "type" : "object"
+      },
+      "KgDeriveRequest" : {
+        "properties" : {
+          "cypher" : {
+            "type" : "string"
+          },
+          "derives" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "paramSpecs" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ViewParamSpec"
+            },
+            "type" : "object"
+          },
+          "params" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "rules" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgDeriveRuleWire"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "cypher", "derives", "description", "paramSpecs", "params", "rules" ],
+        "type" : "object"
+      },
+      "KgDeriveResponse" : {
+        "properties" : {
+          "derived" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgDerivedLabel"
+            },
+            "type" : "array"
+          },
+          "result" : {
+            "$ref" : "#/components/schemas/KgQueryResult"
+          }
+        },
+        "required" : [ "derived", "result" ],
+        "type" : "object"
+      },
+      "KgDeriveRuleWire" : {
+        "properties" : {
+          "derive" : {
+            "type" : "string"
+          },
+          "from" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "derive", "from" ],
+        "type" : "object"
+      },
+      "KgDerivedFiring" : {
+        "properties" : {
+          "props" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "round" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rule" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "props", "round", "rule" ],
+        "type" : "object"
+      },
+      "KgDerivedLabel" : {
+        "properties" : {
+          "derivations" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgDerivation"
+            },
+            "type" : "array"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "members" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rounds" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ruleSet" : {
+            "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "derivations", "label", "members", "rounds", "ruleSet", "truncated" ],
+        "type" : "object"
+      },
       "KgErrorResponse" : {
         "description" : "A refusal carrying only a human-readable reason.",
         "properties" : {
@@ -5959,6 +6094,64 @@
         },
         "summary" : "Force a decorator to run against one specific node, bypassing the staleness check",
         "tags" : [ "KG Decoration" ]
+      }
+    },
+    "/api/v1/admin/kg/derive" : {
+      "post" : {
+        "description" : "The rule set's derived label is visible to the query as an ordinary label; nothing persists. Invalid rule sets are refused with the validator's messages.",
+        "operationId" : "derive",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgDeriveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgDeriveResponse"
+                }
+              }
+            },
+            "description" : "The query result over the derived overlay"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The rule set failed validation; `error` carries every violation"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Execute Cypher with a caller-supplied DERIVE rule set evaluated for this query only",
+        "tags" : [ "Virtual Cypher" ]
       }
     },
     "/api/v1/admin/kg/execute" : {
@@ -15297,7 +15490,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:44007"
+    "url" : "http://localhost:33721"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
