@@ -78,9 +78,18 @@ export function useEditor(options: EditorOptions): { ref: React.RefObject<HTMLDi
     const cm = (CodeMirror as any)(ref.current, {
       mode: options.mode,
       lineNumbers: true,
+      screenReaderLabel: options.mode === 'text/typescript' ? 'Agent code' : 'Cypher query',
       viewportMargin: Infinity,
       extraKeys: { 'Cmd-Enter': run, 'Ctrl-Enter': run, 'Ctrl-Space': 'autocomplete' },
     }) as Editor
+
+    // CM5 places its input outside the scroll region. Keep the region keyboard-scrollable too.
+    const scroller = cm.getWrapperElement().querySelector<HTMLElement>('.CodeMirror-scroll')
+    if (scroller) {
+      scroller.tabIndex = 0
+      scroller.setAttribute('role', 'region')
+      scroller.setAttribute('aria-label', 'Code editor scroll area')
+    }
 
     const onChange = () => {
       if (programmatic.current) return
