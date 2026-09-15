@@ -460,7 +460,7 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
             handle.editor?.refresh();
     }, [pane, handle.editor]);
     const columns = rowColumns(rows);
-    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => (_jsx("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
+    return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", role: "tablist", children: ['query', 'results', 'session'].map((p) => (_jsx("button", { role: "tab", "aria-selected": pane === p, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => setPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: "studio-pane studio-pane-query", hidden: pane !== 'query', children: [_jsx(Ask, { onLand: land, current: () => handle.getText(), realms: schemaRealms(schema) }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
                                             const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                             return (_jsxs("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [_jsx("span", { className: "history-cypher", children: firstLine }), _jsx("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                         }) }))] }), _jsxs(StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
@@ -474,18 +474,34 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }) {
                                                 : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("div", { className: "studio-pane", hidden: pane !== 'session', children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); setPane('query'); } }) })] })] }));
 }
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
+/** The realm names the schema's labels carry — the options a new scope can be built from. */
+function schemaRealms(schema) {
+    const labels = (schema?.labels ?? []);
+    return Array.from(new Set(labels.map((l) => l.realm).filter((r) => !!r))).sort();
+}
 /**
  * Generation only, never execution. The appliance can generate and run in one call (`/ask`), but a
  * studio that ran generated Cypher before showing it would spend the user's money on a query they
  * never saw. Generate, land it in the editor, let them read it, let them press Run.
  */
-function Ask({ onLand, current }) {
+function Ask({ onLand, current, realms }) {
     const { services } = useQueryRuntime();
     const [question, setQuestion] = useState('');
     const [instruction, setInstruction] = useState('');
     const [busy, setBusy] = useState(false);
     const [status, setStatus] = useState({ tone: null, text: '' });
     const [explanation, setExplanation] = useState('');
+    // null = the appliance predates named scopes (or the list failed) — no scope UI at all, the
+    // pre-scope studio. '' = the whole world, which stays the default and the unnarrowed behaviour.
+    const [scopes, setScopes] = useState(null);
+    const [scope, setScope] = useState('');
+    const [managing, setManaging] = useState(false);
+    const loadScopes = useCallback(async () => {
+        const outcome = await services.kg.askScopes();
+        if (isOk(outcome))
+            setScopes(outcome.value);
+    }, [services]);
+    useEffect(() => { void loadScopes(); }, [loadScopes]);
     async function go(refine) {
         // Two boxes, two questions: one describes the query you want, the other the change you want
         // made to the one on screen. Sharing a box made "refine" read as a second Write.
@@ -495,7 +511,9 @@ function Ask({ onLand, current }) {
         setBusy(true);
         setExplanation('');
         setStatus({ tone: null, text: refine ? 'Revising your query…' : 'Writing the query…' });
-        const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text);
+        const outcome = refine
+            ? await services.kg.refine(current(), text, scope || undefined)
+            : await services.kg.generate(text, scope || undefined);
         setBusy(false);
         if (!isOk(outcome)) {
             return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'query refinement' : 'query generation') });
@@ -511,9 +529,61 @@ function Ask({ onLand, current }) {
             ? { tone: 'ok', text: 'Landed in the editor — read it before you run it.' }
             : { tone: 'error', text: `Landed, but it has ${(generated.violations ?? []).length} schema problem(s).` });
     }
-    return (_jsxs(StudioPanel, { title: "Ask", children: [_jsxs("div", { className: "ask-row", children: [_jsx("input", { value: question, placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
-                            void go(false); } }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), _jsxs("div", { className: "ask-row", children: [_jsx("input", { value: instruction, placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+    return (_jsxs(StudioPanel, { title: "Ask", children: [_jsxs("div", { className: "ask-row", children: [scopes !== null && scopes.length > 0 && (_jsxs("select", { className: "ask-scope", value: scope, title: "Answer within one scope \u2014 generation sees only that scope's realms' schema", onChange: (e) => setScope(e.target.value), children: [_jsx("option", { value: "", children: "Whole world" }), scopes.map((s) => (_jsx("option", { value: s.name, title: s.description || undefined, children: s.name }, s.name)))] })), _jsx("input", { value: question, placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
+                            void go(false); } }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" }), scopes !== null && (_jsx("button", { className: "btn", title: "Declare and remove named scopes", onClick: () => setManaging((m) => !m), children: "Scopes\u2026" }))] }), managing && scopes !== null && (_jsx(AskScopeManager, { scopes: scopes, realms: realms, onChanged: (created) => {
+                    void loadScopes();
+                    if (created)
+                        setScope(created);
+                    else if (scope)
+                        setScope('');
+                } })), _jsxs("div", { className: "ask-row", children: [_jsx("input", { value: instruction, placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
                             void go(true); } }), _jsx("button", { className: "btn", disabled: busy || !current().trim(), onClick: () => void go(true), children: "Refine" })] }), _jsx(Status, { tone: status.tone, children: status.text }), explanation && _jsx("p", { className: "hint", children: explanation })] }));
+}
+/**
+ * Declaring a scope here writes the SAME world-tier focus file a YAML author would — one declared
+ * realm set, addressable from chat (`/focus`) and from this surface (`scope=`). Realm options come
+ * from the schema's own labels, so the form can only offer realms that actually contribute schema;
+ * the server still validates against everything installed and refuses with the full list.
+ */
+function AskScopeManager({ scopes, realms, onChanged }) {
+    const { services } = useQueryRuntime();
+    const [name, setName] = useState('');
+    const [description, setDescription] = useState('');
+    const [picked, setPicked] = useState(new Set());
+    const [note, setNote] = useState({ tone: null, text: '' });
+    function toggle(realm) {
+        setPicked((prev) => {
+            const next = new Set(prev);
+            if (next.has(realm))
+                next.delete(realm);
+            else
+                next.add(realm);
+            return next;
+        });
+    }
+    async function create() {
+        const outcome = await services.kg.createAskScope({
+            name: name.trim(),
+            description: description.trim(),
+            realms: [...picked],
+        });
+        if (!isOk(outcome))
+            return setNote({ tone: 'error', text: failureMessage(outcome, 'scope creation') });
+        setName('');
+        setDescription('');
+        setPicked(new Set());
+        setNote({ tone: 'ok', text: `Scope '${outcome.value.name}' declared — asks can address it now.` });
+        onChanged(outcome.value.name);
+    }
+    async function remove(scopeName) {
+        const outcome = await services.kg.deleteAskScope(scopeName);
+        // A realm-shipped scope refuses here with the reason — it is removed with its realm.
+        if (!isOk(outcome))
+            return setNote({ tone: 'error', text: failureMessage(outcome, 'scope deletion') });
+        setNote({ tone: 'ok', text: `Scope '${scopeName}' deleted.` });
+        onChanged(null);
+    }
+    return (_jsxs("div", { className: "ask-scope-manager", children: [scopes.map((s) => (_jsxs("div", { className: "ask-row", children: [_jsxs("span", { className: "hint", children: [_jsx("strong", { children: s.name }), s.description ? ` — ${s.description}` : '', " \u00B7 ", (s.realms ?? []).join(', ')] }), _jsx("button", { className: "btn", onClick: () => void remove(s.name), children: "Delete" })] }, s.name))), _jsxs("div", { className: "ask-row", children: [_jsx("input", { value: name, placeholder: "scope name \u2014 lowercase and dashes, it travels in URLs and model names", onChange: (e) => setName(e.target.value) }), _jsx("input", { value: description, placeholder: "what this scope answers about", onChange: (e) => setDescription(e.target.value) })] }), realms.length > 0 ? (_jsx("div", { className: "ask-row ask-scope-realms", children: realms.map((realm) => (_jsxs("label", { className: "hint", children: [_jsx("input", { type: "checkbox", checked: picked.has(realm), onChange: () => toggle(realm) }), " ", realm] }, realm))) })) : (_jsx("p", { className: "hint", children: "No realm-contributed schema yet \u2014 a scope needs at least one installed realm." })), _jsx("div", { className: "ask-row", children: _jsx("button", { className: "btn primary", disabled: !name.trim() || picked.size === 0, onClick: () => void create(), children: "Declare scope" }) }), _jsx(Status, { tone: note.tone, children: note.text })] }));
 }
 // ── the schema browser ────────────────────────────────────────────────────────────────────────
 /**

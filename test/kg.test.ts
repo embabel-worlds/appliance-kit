@@ -219,6 +219,49 @@ describe('isBackgroundHandle identifies the handle, not the absence of a result'
   })
 })
 
+describe('KgClient named scopes (#932)', () => {
+  it('lists the named scopes an ask can be narrowed to', async () => {
+    const { kg, transport } = client([])
+    await kg.askScopes()
+    assert.deepEqual(transport.last, { method: 'GET', path: '/api/v1/admin/kg/ask/scopes' })
+  })
+
+  it('narrows generation with scope= and leaves the body alone', async () => {
+    const { kg, transport } = client()
+    await kg.generate('what invoices?', 'ledger')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/generate')
+    assert.deepEqual(transport.last.query, { scope: 'ledger' })
+    assert.deepEqual(transport.last.body, { question: 'what invoices?' })
+  })
+
+  it('an unscoped generate sends no scope at all — presence is intent', async () => {
+    const { kg, transport } = client()
+    await kg.generate('who do I know')
+    assert.deepEqual(transport.last.query, {})
+  })
+
+  it('refine narrows under the same scope', async () => {
+    const { kg, transport } = client()
+    await kg.refine('MATCH (i:Invoice) RETURN i', 'only overdue', 'ledger')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/refine')
+    assert.deepEqual(transport.last.query, { scope: 'ledger' })
+  })
+
+  it('declares a scope with its whole spec in the body', async () => {
+    const { kg, transport } = client()
+    await kg.createAskScope({ name: 'ledger', description: 'The books', realms: ['realm-ledger'] })
+    assert.equal(transport.last.method, 'POST')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/ask/scopes')
+    assert.deepEqual(transport.last.body, { name: 'ledger', description: 'The books', realms: ['realm-ledger'] })
+  })
+
+  it('deletes a named scope by its (encoded) name', async () => {
+    const { kg, transport } = client()
+    await kg.deleteAskScope('ledger')
+    assert.deepEqual(transport.last, { method: 'DELETE', path: '/api/v1/admin/kg/ask/scopes/ledger' })
+  })
+})
+
 describe('KgClient captured scopes', () => {
   it('sends captureAs in the body of a synchronous execute', async () => {
     const { kg, transport } = client()

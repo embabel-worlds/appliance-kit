@@ -267,7 +267,8 @@ export interface InteractiveHost {
 export interface QueryStudioServices {
   kg: Pick<KgClient,
     | 'runs' | 'schema' | 'validate' | 'execute' | 'kill' | 'generate' | 'refine'
-    | 'saveView' | 'scopes' | 'pinScope' | 'deleteScope'>
+    | 'saveView' | 'scopes' | 'pinScope' | 'deleteScope'
+    | 'askScopes' | 'createAskScope' | 'deleteAskScope'>
   fills: FillServices
   subscribeProgress(onEvent: (event: VcEvent) => void, signal: AbortSignal): void
 }
