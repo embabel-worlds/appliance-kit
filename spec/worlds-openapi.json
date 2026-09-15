@@ -958,6 +958,12 @@
           "format" : {
             "type" : "string"
           },
+          "headers" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
           "secret" : {
             "type" : "string"
           },
@@ -968,7 +974,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "channel", "format", "tier" ],
+        "required" : [ "channel", "format", "headers", "tier" ],
         "type" : "object"
       },
       "DiffSpec" : {
@@ -15505,7 +15511,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:35401"
+    "url" : "http://localhost:40907"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
