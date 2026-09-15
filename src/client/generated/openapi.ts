@@ -217,9 +217,47 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Answer a natural-language question by generating and executing scoped Cypher */
+        /**
+         * Answer a natural-language question by generating and executing scoped Cypher
+         * @description `scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.
+         */
         post: operations["ask_1"];
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/ask/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the named scopes the acting user's asks can be narrowed to */
+        get: operations["askScopes"];
+        put?: never;
+        /** Create a named scope (a world-tier focus) asks can be narrowed to */
+        post: operations["createAskScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/ask/scopes/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a world-tier named scope */
+        delete: operations["deleteAskScope"];
         options?: never;
         head?: never;
         patch?: never;
@@ -270,6 +308,26 @@ export interface paths {
         put?: never;
         /** Force a decorator to run against one specific node, bypassing the staleness check */
         post: operations["runFor"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/derive": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Execute Cypher with a caller-supplied DERIVE rule set evaluated for this query only
+         * @description The rule set's derived label is visible to the query as an ordinary label; nothing persists. Invalid rule sets are refused with the validator's messages.
+         */
+        post: operations["derive"];
         delete?: never;
         options?: never;
         head?: never;
@@ -424,7 +482,7 @@ export interface paths {
             cookie?: never;
         };
         /** Get the state and, once settled, the result of a background run */
-        get: operations["run_6"];
+        get: operations["run_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -740,7 +798,7 @@ export interface paths {
         put?: never;
         /**
          * Store a tour somebody exported, or a client recorded
-         * @description The body is a tour FILE, not a JSON object: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.
+         * @description `yaml` carries a tour FILE, not a JSON rendering of a tour: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship and what `/export` returned. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.
          */
         post: operations["import"];
         delete?: never;
@@ -1091,6 +1149,14 @@ export interface components {
         KgAskRequest: {
             question: string;
         };
+        /** @description A named scope: a declared realm set an ask can be narrowed to via `scope=`. */
+        KgAskScopeInfo: {
+            description: string;
+            /** @description The scope's name — the value `scope=` accepts. */
+            name: string;
+            /** @description The realm names whose schema the scoped ask sees (plus the always-on core). */
+            realms: string[];
+        };
         /** @description A handle to a run started in the background. */
         KgBackgroundHandle: {
             /** @description The question a parked run poses to its owner. Absent while running. */
@@ -1106,6 +1172,14 @@ export interface components {
             error: string;
             /** @description The accepted values for `choice`. */
             valid: string[];
+        };
+        /** @description The scope named realms that are not installed; the installed ones travel with the refusal. */
+        KgBadRealmsResponse: {
+            error: string;
+            /** @description The realm names actually installed in this world. */
+            installed: string[];
+            /** @description The requested realm names no installed realm answers to. */
+            unknown: string[];
         };
         /** @description One drafted column, and whether its entry was read or inferred. */
         KgContractColumn: {
@@ -1136,6 +1210,14 @@ export interface components {
         /** @description A refusal to draft a contract, naming what about the view made it impossible. */
         KgContractRefusal: {
             error: string;
+        };
+        /** @description A named scope to declare: a world-tier focus the ask surface can be narrowed to. */
+        KgCreateScopeRequest: {
+            description: string;
+            /** @description Slug, `[a-z0-9][a-z0-9-]*` — the value `scope=` will accept. No `+`: unencoded it decodes to a space in a query parameter. */
+            name: string;
+            /** @description Installed realm names whose schema the scope's asks see. */
+            realms: string[];
         };
         /** @description What one decoration tick did. */
         KgDecorationReport: {
@@ -1180,6 +1262,57 @@ export interface components {
             name: string;
             /** @description Always `deleted`. */
             status: string;
+        };
+        KgDerivation: {
+            elementId: string;
+            props: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            round: number;
+            /** Format: int32 */
+            rule: number;
+            trace: components["schemas"]["KgDerivedFiring"][];
+        };
+        KgDeriveRequest: {
+            cypher: string;
+            derives: string;
+            description: string;
+            name?: string;
+            paramSpecs: {
+                [key: string]: components["schemas"]["ViewParamSpec"];
+            };
+            params: {
+                [key: string]: unknown;
+            };
+            rules: components["schemas"]["KgDeriveRuleWire"][];
+        };
+        KgDeriveResponse: {
+            derived: components["schemas"]["KgDerivedLabel"][];
+            result: components["schemas"]["KgQueryResult"];
+        };
+        KgDeriveRuleWire: {
+            derive: string;
+            from: string;
+        };
+        KgDerivedFiring: {
+            props: {
+                [key: string]: unknown;
+            };
+            /** Format: int32 */
+            round: number;
+            /** Format: int32 */
+            rule: number;
+        };
+        KgDerivedLabel: {
+            derivations: components["schemas"]["KgDerivation"][];
+            label: string;
+            /** Format: int32 */
+            members: number;
+            /** Format: int32 */
+            rounds: number;
+            ruleSet: string;
+            truncated: boolean;
         };
         /** @description A refusal carrying only a human-readable reason. */
         KgErrorResponse: {
@@ -1436,8 +1569,12 @@ export interface components {
         };
         /** @description A property observed on nodes carrying a label. */
         KgSchemaProperty: {
+            /** @description True when the realm's type declares this property as an ALTERNATE KEY: it identifies the same record as the identity does, in the vocabulary the source's own readers use. A policy's `policy_identifier` is its identity; its `policy_number` is what a view shows and what a client will try to join on. Both name the same policy. Unlike the identity, an alternate key is not the dedupe key and is not required on write, so a type may declare several. Defaults false. */
+            alternateKey: boolean;
             /** @description The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing. */
             description?: string;
+            /** @description True when the realm's type declares this property as the node's IDENTITY. Two columns denote the same thing only when both project the identity of the same label; matching names prove nothing, and a client that joins on them will relate records that are not related. Defaults false so an older client reading a newer appliance loses nothing, and so an undeclared property is never mistaken for a key. */
+            identity: boolean;
             name: string;
             /** @description True when the property was missing from a non-trivial fraction of the sample. */
             sparse: boolean;
@@ -1487,6 +1624,12 @@ export interface components {
         /** @description The acting user's live captured scopes, newest first. */
         KgScopeListResponse: {
             scopes: components["schemas"]["KgScopeInfo"][];
+        };
+        /** @description The named scope does not exist in the acting user's world; the ones that do travel with the refusal. */
+        KgUnknownScopeResponse: {
+            /** @description The scope names this world declares (its focuses). */
+            available: string[];
+            error: string;
         };
         /** @description The result of validating cypher against the schema without executing it. */
         KgValidationResponse: {
@@ -1597,16 +1740,19 @@ export interface components {
             ttl?: string;
         };
         ViewParamSpec: {
+            /** @description The fixed set of values this param accepts — rendered as a select, enforced at invocation. Absent = any value of the declared type. */
+            choices?: unknown[];
             /** @description Used when an invocation omits this param. Absent = required on invocation. */
             default?: unknown;
             /** @description What the argument means — rendered verbatim as the field's hint. */
             description?: string;
             required?: boolean;
             /**
-             * @description `string`, `int`, `number` or `boolean` — the coercion applied to supplied values.
+             * @description The coercion applied to supplied values, and the form control a UI renders (int/number a number field, boolean a checkbox, date a date picker). float and double are aliases of number.
              * @default string
+             * @enum {string}
              */
-            type: string;
+            type: "string" | "int" | "number" | "float" | "double" | "boolean" | "date";
         };
     };
     responses: never;
@@ -2072,6 +2218,7 @@ export interface operations {
         parameters: {
             query?: {
                 username?: string;
+                scope?: string;
             };
             header?: never;
             path?: never;
@@ -2094,6 +2241,150 @@ export interface operations {
             };
             /** @description No authenticated principal and no resolvable username */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Unknown scope; the declared names travel with the refusal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgUnknownScopeResponse"];
+                };
+            };
+        };
+    };
+    askScopes: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The world's declared scopes; empty when none are declared */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgAskScopeInfo"][];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    createAskScope: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgCreateScopeRequest"];
+            };
+        };
+        responses: {
+            /** @description The scope as declared; `scope=<name>` accepts it immediately */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgAskScopeInfo"];
+                };
+            };
+            /** @description Bad name grammar, no realms, or realms not installed */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgBadRealmsResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description A scope with that name already exists */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    deleteAskScope: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path: {
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scope as it was before deletion */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgAskScopeInfo"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Unknown scope; the declared names travel with the refusal */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgUnknownScopeResponse"];
+                };
+            };
+            /** @description The scope is realm-shipped and is removed with its realm */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2218,6 +2509,50 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KgDecorationReport"];
+                };
+            };
+        };
+    };
+    derive: {
+        parameters: {
+            query?: {
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgDeriveRequest"];
+            };
+        };
+        responses: {
+            /** @description The query result over the derived overlay */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgDeriveResponse"];
+                };
+            };
+            /** @description The rule set failed validation; `error` carries every violation */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No authenticated principal and no resolvable username */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
         };
@@ -2364,6 +2699,7 @@ export interface operations {
         parameters: {
             query?: {
                 username?: string;
+                scope?: string;
             };
             header?: never;
             path?: never;
@@ -2441,6 +2777,7 @@ export interface operations {
         parameters: {
             query?: {
                 username?: string;
+                scope?: string;
             };
             header?: never;
             path?: never;
@@ -2553,7 +2890,7 @@ export interface operations {
             };
         };
     };
-    run_6: {
+    run_7: {
         parameters: {
             query?: {
                 username?: string;

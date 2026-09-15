@@ -49,10 +49,11 @@ class KgClient {
      * show what will run BEFORE paying for it — a caller that only sees the cypher when the whole
      * run returns looks hung.
      */
-    generate(question) {
+    generate(question, scope) {
         return this.transport.send({
             method: 'POST',
             path: `${KG}/generate`,
+            query: scope ? { scope } : {},
             body: { question },
             timeoutMs: TIMEOUTS.generate,
         });
@@ -63,10 +64,11 @@ class KgClient {
      * query it is changing, so an editor's Refine keeps what the author already had rather than
      * regenerating around it.
      */
-    refine(cypher, instruction) {
+    refine(cypher, instruction, scope) {
         return this.transport.send({
             method: 'POST',
             path: `${KG}/refine`,
+            query: scope ? { scope } : {},
             body: { cypher, instruction },
             timeoutMs: TIMEOUTS.generate,
         });
@@ -115,6 +117,23 @@ class KgClient {
             body,
             timeoutMs: TIMEOUTS.execute,
         });
+    }
+    /**
+     * The NAMED scopes an ask or generation can be narrowed to — the world's declared realm sets
+     * (its focuses), NOT the captured result-set scopes below. `generate(question, scope)` accepts
+     * any name this returns.
+     */
+    askScopes() {
+        return this.transport.send({ method: 'GET', path: `${KG}/ask/scopes` });
+    }
+    /** Declare a named scope: a world-tier focus. The server refuses bad grammar, unknown realms
+     *  (listing the installed ones), and names that already exist. */
+    createAskScope(request) {
+        return this.transport.send({ method: 'POST', path: `${KG}/ask/scopes`, body: request });
+    }
+    /** Delete a world-tier named scope. Realm-shipped scopes refuse — they are removed with their realm. */
+    deleteAskScope(name) {
+        return this.transport.send({ method: 'DELETE', path: `${KG}/ask/scopes/${encodeURIComponent(name)}` });
     }
     /** The acting user's live captured scopes, newest first. An expired scope is already absent. */
     scopes() {

@@ -625,6 +625,17 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .ask-row { display: flex; gap: 10px; align-items: center; }
 
+/* The named-scope picker and its manager. The generic `select` rule above already dresses the
+ * picker; it only needs a ceiling so a long scope name cannot squeeze the question box out. */
+:where(.kit-feature) .ask-scope { max-width: 180px; }
+:where(.kit-feature) .ask-scope-manager {
+  display: flex; flex-direction: column; gap: 8px;
+  padding: 10px; border: 1px solid var(--rule); border-radius: var(--radius);
+  margin-bottom: 10px;
+}
+:where(.kit-feature) .ask-scope-realms { flex-wrap: wrap; }
+:where(.kit-feature) .ask-scope-realms label { display: inline-flex; gap: 5px; align-items: center; }
+
 :where(.kit-feature) .studio-pane-query .ask-row + .ask-row { margin-top: 10px; }
 
 :where(.kit-feature) .ask-row input { flex: 1; min-width: 0; }

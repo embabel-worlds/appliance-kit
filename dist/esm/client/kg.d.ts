@@ -19,6 +19,8 @@ export type KgViewInvocation = Schemas['KgViewInvocationResponse'];
 export type KgDeleteViewResult = Schemas['KgDeleteViewResponse'];
 export type KgRefreshViewResult = Schemas['KgRefreshViewResponse'];
 export type KgPropertyValues = Schemas['KgPropertyValuesResponse'];
+export type KgAskScope = Schemas['KgAskScopeInfo'];
+export type KgCreateAskScope = Schemas['KgCreateScopeRequest'];
 export type KgScopeInfo = Schemas['KgScopeInfo'];
 export type KgScopeList = Schemas['KgScopeListResponse'];
 export type KgScopeDeleteResult = Schemas['KgScopeDeleteResponse'];
@@ -66,14 +68,14 @@ export declare class KgClient {
      * show what will run BEFORE paying for it — a caller that only sees the cypher when the whole
      * run returns looks hung.
      */
-    generate(question: string): Promise<Outcome<KgGenerated>>;
+    generate(question: string, scope?: string): Promise<Outcome<KgGenerated>>;
     /**
      * Revise existing cypher per an instruction, without running it — "now only the ones since
      * March". Distinct from {@link generate}, which starts from nothing: the model is given the
      * query it is changing, so an editor's Refine keeps what the author already had rather than
      * regenerating around it.
      */
-    refine(cypher: string, instruction: string): Promise<Outcome<KgGenerated>>;
+    refine(cypher: string, instruction: string, scope?: string): Promise<Outcome<KgGenerated>>;
     /**
      * The legal values of a property — the closed set, or the fact that it is too wide, or why it
      * cannot be enumerated at all. Three outcomes, and completion must tell them apart: `enumerable:
@@ -91,6 +93,17 @@ export declare class KgClient {
      * the run has not finished, NEVER because the graph is empty.
      */
     execute(cypher: string, options?: ExecuteOptions): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>;
+    /**
+     * The NAMED scopes an ask or generation can be narrowed to — the world's declared realm sets
+     * (its focuses), NOT the captured result-set scopes below. `generate(question, scope)` accepts
+     * any name this returns.
+     */
+    askScopes(): Promise<Outcome<KgAskScope[]>>;
+    /** Declare a named scope: a world-tier focus. The server refuses bad grammar, unknown realms
+     *  (listing the installed ones), and names that already exist. */
+    createAskScope(request: KgCreateAskScope): Promise<Outcome<KgAskScope>>;
+    /** Delete a world-tier named scope. Realm-shipped scopes refuse — they are removed with their realm. */
+    deleteAskScope(name: string): Promise<Outcome<KgAskScope>>;
     /** The acting user's live captured scopes, newest first. An expired scope is already absent. */
     scopes(): Promise<Outcome<KgScopeList>>;
     /** Delete a captured scope. `deleted: false` is an honest no-op, not an error. */

@@ -25,6 +25,7 @@
 import { ArrowClockwise, Question } from '@phosphor-icons/react'
 import React, { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  type KgAskScope,
   type KgQueryResult,
   type KgScopeInfo,
   isBackgroundHandle,
@@ -539,7 +540,7 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
         {/* Ask sits ABOVE the query, not beside it. Tucked into the rail it was the last thing
             anyone found, and "describe what you want" is the shortest path into this surface for
             someone who does not write Cypher — it has to be the first thing on the page. */}
-        <Ask onLand={land} current={() => handle.getText()} />
+        <Ask onLand={land} current={() => handle.getText()} realms={schemaRealms(schema)} />
         {/* HISTORY LIVES WITH THE QUERY — it is past queries, and its one action is
             "put that back in the editor". In the rail it sat below Schema, where nobody
             found it (twice); dimmed and below the editor, it hid a third time. ABOVE the
@@ -688,18 +689,36 @@ function QueryStudioBody({ handedOver, handoffRevision, onCypherChange }: Pick<Q
 
 // ── ask: English in, Cypher out ───────────────────────────────────────────────────────────────
 
+/** The realm names the schema's labels carry — the options a new scope can be built from. */
+function schemaRealms(schema: KgSchema | null): string[] {
+  const labels = (schema?.labels ?? []) as Array<{ realm?: string }>
+  return Array.from(new Set(labels.map((l) => l.realm).filter((r): r is string => !!r))).sort()
+}
+
 /**
  * Generation only, never execution. The appliance can generate and run in one call (`/ask`), but a
  * studio that ran generated Cypher before showing it would spend the user's money on a query they
  * never saw. Generate, land it in the editor, let them read it, let them press Run.
  */
-function Ask({ onLand, current }: { onLand(cypher: string): void; current(): string }) {
+function Ask({ onLand, current, realms }: { onLand(cypher: string): void; current(): string; realms: string[] }) {
   const { services } = useQueryRuntime()
   const [question, setQuestion] = useState('')
   const [instruction, setInstruction] = useState('')
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<{ tone: 'ok' | 'error' | null; text: string }>({ tone: null, text: '' })
   const [explanation, setExplanation] = useState('')
+  // null = the appliance predates named scopes (or the list failed) — no scope UI at all, the
+  // pre-scope studio. '' = the whole world, which stays the default and the unnarrowed behaviour.
+  const [scopes, setScopes] = useState<KgAskScope[] | null>(null)
+  const [scope, setScope] = useState('')
+  const [managing, setManaging] = useState(false)
+
+  const loadScopes = useCallback(async () => {
+    const outcome = await services.kg.askScopes()
+    if (isOk(outcome)) setScopes(outcome.value)
+  }, [services])
+
+  useEffect(() => { void loadScopes() }, [loadScopes])
 
   async function go(refine: boolean) {
     // Two boxes, two questions: one describes the query you want, the other the change you want
@@ -709,7 +728,9 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
     setBusy(true)
     setExplanation('')
     setStatus({ tone: null, text: refine ? 'Revising your query…' : 'Writing the query…' })
-    const outcome = refine ? await services.kg.refine(current(), text) : await services.kg.generate(text)
+    const outcome = refine
+      ? await services.kg.refine(current(), text, scope || undefined)
+      : await services.kg.generate(text, scope || undefined)
     setBusy(false)
     if (!isOk(outcome)) {
       return setStatus({ tone: 'error', text: failureMessage(outcome, refine ? 'query refinement' : 'query generation') })
@@ -728,6 +749,22 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
   return (
     <StudioPanel title="Ask">
       <div className="ask-row">
+        {/* The scope narrows GENERATION, not access: the model sees only the scope's realms'
+            schema (plus the core), so it cannot compose from what the scope excludes. Hidden
+            entirely when the appliance predates the endpoint. */}
+        {scopes !== null && scopes.length > 0 && (
+          <select
+            className="ask-scope"
+            value={scope}
+            title="Answer within one scope — generation sees only that scope's realms' schema"
+            onChange={(e) => setScope(e.target.value)}
+          >
+            <option value="">Whole world</option>
+            {scopes.map((s) => (
+              <option key={s.name} value={s.name} title={s.description || undefined}>{s.name}</option>
+            ))}
+          </select>
+        )}
         <input
           value={question}
           placeholder="which documents mention the renewal? · files about trip logistics…"
@@ -735,7 +772,23 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
           onKeyDown={(e) => { if (e.key === 'Enter') void go(false) }}
         />
         <button className="btn primary" disabled={busy} onClick={() => void go(false)}>Write the query</button>
+        {scopes !== null && (
+          <button className="btn" title="Declare and remove named scopes" onClick={() => setManaging((m) => !m)}>
+            Scopes…
+          </button>
+        )}
       </div>
+      {managing && scopes !== null && (
+        <AskScopeManager
+          scopes={scopes}
+          realms={realms}
+          onChanged={(created) => {
+            void loadScopes()
+            if (created) setScope(created)
+            else if (scope) setScope('')
+          }}
+        />
+      )}
       <div className="ask-row">
         <input
           value={instruction}
@@ -750,6 +803,98 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
       <Status tone={status.tone}>{status.text}</Status>
       {explanation && <p className="hint">{explanation}</p>}
     </StudioPanel>
+  )
+}
+
+/**
+ * Declaring a scope here writes the SAME world-tier focus file a YAML author would — one declared
+ * realm set, addressable from chat (`/focus`) and from this surface (`scope=`). Realm options come
+ * from the schema's own labels, so the form can only offer realms that actually contribute schema;
+ * the server still validates against everything installed and refuses with the full list.
+ */
+function AskScopeManager({ scopes, realms, onChanged }: {
+  scopes: KgAskScope[]
+  realms: string[]
+  onChanged(created: string | null): void
+}) {
+  const { services } = useQueryRuntime()
+  const [name, setName] = useState('')
+  const [description, setDescription] = useState('')
+  const [picked, setPicked] = useState<ReadonlySet<string>>(new Set())
+  const [note, setNote] = useState<{ tone: 'ok' | 'error' | null; text: string }>({ tone: null, text: '' })
+
+  function toggle(realm: string) {
+    setPicked((prev) => {
+      const next = new Set(prev)
+      if (next.has(realm)) next.delete(realm)
+      else next.add(realm)
+      return next
+    })
+  }
+
+  async function create() {
+    const outcome = await services.kg.createAskScope({
+      name: name.trim(),
+      description: description.trim(),
+      realms: [...picked],
+    })
+    if (!isOk(outcome)) return setNote({ tone: 'error', text: failureMessage(outcome, 'scope creation') })
+    setName('')
+    setDescription('')
+    setPicked(new Set())
+    setNote({ tone: 'ok', text: `Scope '${outcome.value.name}' declared — asks can address it now.` })
+    onChanged(outcome.value.name)
+  }
+
+  async function remove(scopeName: string) {
+    const outcome = await services.kg.deleteAskScope(scopeName)
+    // A realm-shipped scope refuses here with the reason — it is removed with its realm.
+    if (!isOk(outcome)) return setNote({ tone: 'error', text: failureMessage(outcome, 'scope deletion') })
+    setNote({ tone: 'ok', text: `Scope '${scopeName}' deleted.` })
+    onChanged(null)
+  }
+
+  return (
+    <div className="ask-scope-manager">
+      {scopes.map((s) => (
+        <div key={s.name} className="ask-row">
+          <span className="hint">
+            <strong>{s.name}</strong>
+            {s.description ? ` — ${s.description}` : ''} · {(s.realms ?? []).join(', ')}
+          </span>
+          <button className="btn" onClick={() => void remove(s.name)}>Delete</button>
+        </div>
+      ))}
+      <div className="ask-row">
+        <input
+          value={name}
+          placeholder="scope name — lowercase and dashes, it travels in URLs and model names"
+          onChange={(e) => setName(e.target.value)}
+        />
+        <input
+          value={description}
+          placeholder="what this scope answers about"
+          onChange={(e) => setDescription(e.target.value)}
+        />
+      </div>
+      {realms.length > 0 ? (
+        <div className="ask-row ask-scope-realms">
+          {realms.map((realm) => (
+            <label key={realm} className="hint">
+              <input type="checkbox" checked={picked.has(realm)} onChange={() => toggle(realm)} /> {realm}
+            </label>
+          ))}
+        </div>
+      ) : (
+        <p className="hint">No realm-contributed schema yet — a scope needs at least one installed realm.</p>
+      )}
+      <div className="ask-row">
+        <button className="btn primary" disabled={!name.trim() || picked.size === 0} onClick={() => void create()}>
+          Declare scope
+        </button>
+      </div>
+      <Status tone={note.tone}>{note.text}</Status>
+    </div>
   )
 }
 

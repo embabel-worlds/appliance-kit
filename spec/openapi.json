@@ -602,11 +602,20 @@
     },
     "/api/v1/admin/kg/ask": {
       "post": {
+        "description": "`scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.",
         "operationId": "ask_1",
         "parameters": [
           {
             "in": "query",
             "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
             "required": false,
             "schema": {
               "type": "string"
@@ -643,9 +652,201 @@
               }
             },
             "description": "No authenticated principal and no resolvable username"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description": "Unknown scope; the declared names travel with the refusal"
           }
         },
         "summary": "Answer a natural-language question by generating and executing scoped Cypher",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes": {
+      "get": {
+        "operationId": "askScopes",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/KgAskScopeInfo"
+                  },
+                  "type": "array"
+                }
+              }
+            },
+            "description": "The world's declared scopes; empty when none are declared"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "List the named scopes the acting user's asks can be narrowed to",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      },
+      "post": {
+        "operationId": "createAskScope",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KgCreateScopeRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description": "The scope as declared; `scope=<name>` accepts it immediately"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgBadRealmsResponse"
+                }
+              }
+            },
+            "description": "Bad name grammar, no realms, or realms not installed"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "A scope with that name already exists"
+          }
+        },
+        "summary": "Create a named scope (a world-tier focus) asks can be narrowed to",
+        "tags": [
+          "Virtual Cypher"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes/{name}": {
+      "delete": {
+        "operationId": "deleteAskScope",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "path",
+            "name": "name",
+            "required": true,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description": "The scope as it was before deletion"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          },
+          "404": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description": "Unknown scope; the declared names travel with the refusal"
+          },
+          "409": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "The scope is realm-shipped and is removed with its realm"
+          }
+        },
+        "summary": "Delete a world-tier named scope",
         "tags": [
           "Virtual Cypher"
         ]
@@ -799,6 +1000,68 @@
         "summary": "Force a decorator to run against one specific node, bypassing the staleness check",
         "tags": [
           "KG Decoration"
+        ]
+      }
+    },
+    "/api/v1/admin/kg/derive": {
+      "post": {
+        "description": "The rule set's derived label is visible to the query as an ordinary label; nothing persists. Invalid rule sets are refused with the validator's messages.",
+        "operationId": "derive",
+        "parameters": [
+          {
+            "in": "query",
+            "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/KgDeriveRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgDeriveResponse"
+                }
+              }
+            },
+            "description": "The query result over the derived overlay"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "The rule set failed validation; `error` carries every violation"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description": "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary": "Execute Cypher with a caller-supplied DERIVE rule set evaluated for this query only",
+        "tags": [
+          "Virtual Cypher"
         ]
       }
     },
@@ -1033,6 +1296,14 @@
             "schema": {
               "type": "string"
             }
+          },
+          {
+            "in": "query",
+            "name": "scope",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
           }
         ],
         "requestBody": {
@@ -1139,6 +1410,14 @@
           {
             "in": "query",
             "name": "username",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "scope",
             "required": false,
             "schema": {
               "type": "string"
@@ -1300,7 +1579,7 @@
     },
     "/api/v1/admin/kg/runs/{runId}": {
       "get": {
-        "operationId": "run_6",
+        "operationId": "run_7",
         "parameters": [
           {
             "in": "query",
@@ -2349,7 +2628,7 @@
     },
     "/api/v1/tours/import": {
       "post": {
-        "description": "The body is a tour FILE, not a JSON object: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
+        "description": "`yaml` carries a tour FILE, not a JSON rendering of a tour: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship and what `/export` returned. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
         "operationId": "import",
         "parameters": [
           {
@@ -3402,6 +3681,31 @@
         ],
         "type": "object"
       },
+      "KgAskScopeInfo": {
+        "description": "A named scope: a declared realm set an ask can be narrowed to via `scope=`.",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "description": "The scope's name — the value `scope=` accepts.",
+            "type": "string"
+          },
+          "realms": {
+            "description": "The realm names whose schema the scoped ask sees (plus the always-on core).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "name",
+          "realms"
+        ],
+        "type": "object"
+      },
       "KgBackgroundHandle": {
         "description": "A handle to a run started in the background.",
         "properties": {
@@ -3441,6 +3745,34 @@
         "required": [
           "error",
           "valid"
+        ],
+        "type": "object"
+      },
+      "KgBadRealmsResponse": {
+        "description": "The scope named realms that are not installed; the installed ones travel with the refusal.",
+        "properties": {
+          "error": {
+            "type": "string"
+          },
+          "installed": {
+            "description": "The realm names actually installed in this world.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "unknown": {
+            "description": "The requested realm names no installed realm answers to.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "error",
+          "installed",
+          "unknown"
         ],
         "type": "object"
       },
@@ -3518,6 +3850,31 @@
         },
         "required": [
           "error"
+        ],
+        "type": "object"
+      },
+      "KgCreateScopeRequest": {
+        "description": "A named scope to declare: a world-tier focus the ask surface can be narrowed to.",
+        "properties": {
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "description": "Slug, `[a-z0-9][a-z0-9-]*` — the value `scope=` will accept. No `+`: unencoded it decodes to a space in a query parameter.",
+            "type": "string"
+          },
+          "realms": {
+            "description": "Installed realm names whose schema the scope's asks see.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "description",
+          "name",
+          "realms"
         ],
         "type": "object"
       },
@@ -3629,6 +3986,171 @@
         "required": [
           "name",
           "status"
+        ],
+        "type": "object"
+      },
+      "KgDerivation": {
+        "properties": {
+          "elementId": {
+            "type": "string"
+          },
+          "props": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "round": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rule": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "trace": {
+            "items": {
+              "$ref": "#/components/schemas/KgDerivedFiring"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "elementId",
+          "props",
+          "round",
+          "rule",
+          "trace"
+        ],
+        "type": "object"
+      },
+      "KgDeriveRequest": {
+        "properties": {
+          "cypher": {
+            "type": "string"
+          },
+          "derives": {
+            "type": "string"
+          },
+          "description": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "paramSpecs": {
+            "additionalProperties": {
+              "$ref": "#/components/schemas/ViewParamSpec"
+            },
+            "type": "object"
+          },
+          "params": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "rules": {
+            "items": {
+              "$ref": "#/components/schemas/KgDeriveRuleWire"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "cypher",
+          "derives",
+          "description",
+          "paramSpecs",
+          "params",
+          "rules"
+        ],
+        "type": "object"
+      },
+      "KgDeriveResponse": {
+        "properties": {
+          "derived": {
+            "items": {
+              "$ref": "#/components/schemas/KgDerivedLabel"
+            },
+            "type": "array"
+          },
+          "result": {
+            "$ref": "#/components/schemas/KgQueryResult"
+          }
+        },
+        "required": [
+          "derived",
+          "result"
+        ],
+        "type": "object"
+      },
+      "KgDeriveRuleWire": {
+        "properties": {
+          "derive": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "derive",
+          "from"
+        ],
+        "type": "object"
+      },
+      "KgDerivedFiring": {
+        "properties": {
+          "props": {
+            "additionalProperties": {},
+            "type": "object"
+          },
+          "round": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rule": {
+            "format": "int32",
+            "type": "integer"
+          }
+        },
+        "required": [
+          "props",
+          "round",
+          "rule"
+        ],
+        "type": "object"
+      },
+      "KgDerivedLabel": {
+        "properties": {
+          "derivations": {
+            "items": {
+              "$ref": "#/components/schemas/KgDerivation"
+            },
+            "type": "array"
+          },
+          "label": {
+            "type": "string"
+          },
+          "members": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "rounds": {
+            "format": "int32",
+            "type": "integer"
+          },
+          "ruleSet": {
+            "type": "string"
+          },
+          "truncated": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "derivations",
+          "label",
+          "members",
+          "rounds",
+          "ruleSet",
+          "truncated"
         ],
         "type": "object"
       },
@@ -4247,9 +4769,17 @@
       "KgSchemaProperty": {
         "description": "A property observed on nodes carrying a label.",
         "properties": {
+          "alternateKey": {
+            "description": "True when the realm's type declares this property as an ALTERNATE KEY: it identifies the same record as the identity does, in the vocabulary the source's own readers use. A policy's `policy_identifier` is its identity; its `policy_number` is what a view shows and what a client will try to join on. Both name the same policy. Unlike the identity, an alternate key is not the dedupe key and is not required on write, so a type may declare several. Defaults false.",
+            "type": "boolean"
+          },
           "description": {
             "description": "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
             "type": "string"
+          },
+          "identity": {
+            "description": "True when the realm's type declares this property as the node's IDENTITY. Two columns denote the same thing only when both project the identity of the same label; matching names prove nothing, and a client that joins on them will relate records that are not related. Defaults false so an older client reading a newer appliance loses nothing, and so an undeclared property is never mistaken for a key.",
+            "type": "boolean"
           },
           "name": {
             "type": "string"
@@ -4264,6 +4794,8 @@
           }
         },
         "required": [
+          "alternateKey",
+          "identity",
           "name",
           "sparse",
           "type"
@@ -4387,6 +4919,26 @@
         },
         "required": [
           "scopes"
+        ],
+        "type": "object"
+      },
+      "KgUnknownScopeResponse": {
+        "description": "The named scope does not exist in the acting user's world; the ones that do travel with the refusal.",
+        "properties": {
+          "available": {
+            "description": "The scope names this world declares (its focuses).",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          },
+          "error": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "available",
+          "error"
         ],
         "type": "object"
       },
@@ -4679,6 +5231,11 @@
       },
       "ViewParamSpec": {
         "properties": {
+          "choices": {
+            "description": "The fixed set of values this param accepts — rendered as a select, enforced at invocation. Absent = any value of the declared type.",
+            "items": {},
+            "type": "array"
+          },
           "default": {
             "description": "Used when an invocation omits this param. Absent = required on invocation."
           },
@@ -4691,7 +5248,16 @@
           },
           "type": {
             "default": "string",
-            "description": "`string`, `int`, `number` or `boolean` — the coercion applied to supplied values.",
+            "description": "The coercion applied to supplied values, and the form control a UI renders (int/number a number field, boolean a checkbox, date a date picker). float and double are aliases of number.",
+            "enum": [
+              "string",
+              "int",
+              "number",
+              "float",
+              "double",
+              "boolean",
+              "date"
+            ],
             "type": "string"
           }
         },
