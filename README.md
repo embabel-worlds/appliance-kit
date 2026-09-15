@@ -70,7 +70,7 @@ apart from `apk add git`.
 | `./studio-kit` | hints, formatting, status, copy |
 | `./backdrop` | the living-graph canvas |
 | `./react` | optional React components and focus helpers; React 19 remains a peer dependency |
-| `./react/features` | browser-only Apps, Realms, Views, Handler Studio, Query Studio and Coding Agents surfaces |
+| `./react/features` | browser-only Apps, Realms, Views, Handler Studio, Query Studio, Coding Agents and API Keys surfaces |
 | `./css`, `./css/*` | tokens, ground, base, components, markdown |
 | `./global/*` | IIFE builds, for a renderer with no module system |
 

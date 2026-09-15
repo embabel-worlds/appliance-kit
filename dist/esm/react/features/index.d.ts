@@ -6,4 +6,5 @@ export { HandlerStudioSurface, stageOf } from './handlers/HandlerStudioSurface.t
 export { QueryStudioSurface, SaveView } from './query/QueryStudioSurface.tsx';
 export { rewoundCounter } from './query/sessionRewind.ts';
 export { CodingAgentsSurface } from './coding-agents/CodingAgentsSurface.tsx';
+export { ApiKeysSurface } from './api-keys/ApiKeysSurface.tsx';
 //# sourceMappingURL=index.d.ts.map

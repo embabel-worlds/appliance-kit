@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
+exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
 __exportStar(require("./contracts.js"), exports);
 var AppsSurface_tsx_1 = require("./apps/AppsSurface.js");
 Object.defineProperty(exports, "AppsSurface", { enumerable: true, get: function () { return AppsSurface_tsx_1.AppsSurface; } });
@@ -33,4 +33,6 @@ var sessionRewind_ts_1 = require("./query/sessionRewind.js");
 Object.defineProperty(exports, "rewoundCounter", { enumerable: true, get: function () { return sessionRewind_ts_1.rewoundCounter; } });
 var CodingAgentsSurface_tsx_1 = require("./coding-agents/CodingAgentsSurface.js");
 Object.defineProperty(exports, "CodingAgentsSurface", { enumerable: true, get: function () { return CodingAgentsSurface_tsx_1.CodingAgentsSurface; } });
+var ApiKeysSurface_tsx_1 = require("./api-keys/ApiKeysSurface.js");
+Object.defineProperty(exports, "ApiKeysSurface", { enumerable: true, get: function () { return ApiKeysSurface_tsx_1.ApiKeysSurface; } });
 //# sourceMappingURL=index.js.map

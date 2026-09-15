@@ -176,7 +176,7 @@ describe('the public browser feature entry point', () => {
   it('loads the real browser feature exports after browser globals exist', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
-      'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface',
+      'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface', 'ApiKeysSurface',
     ]) {
       assert.equal(typeof features[name], 'function', `${name} ESM export`)
     }
@@ -596,6 +596,66 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /not available|could not report|unknown/i)
     assert.equal(container.textContent.includes('secret-token'), false)
     assert.equal(rendered.every((command) => command.credential.value === 'secret-token'), true)
+  })
+
+  it('lists API keys by prefix, shows a minted key once, and revokes only after the host confirms', async () => {
+    const minted = { id: 'k2', name: 'laptop', prefix: 'emb_XyZ12345', createdAt: '2026-09-15T10:00:00Z', key: 'emb_XyZ12345abcdefghijklmnopqrstuvwxyzABCDEFG' }
+    let keys = [{ id: 'k1', name: 'deploy', prefix: 'emb_Abc12345', createdAt: '2026-09-01T09:00:00Z', lastUsedAt: null }]
+    const revoked = []
+    const copied = []
+    let allow = false
+    Object.defineProperty(navigator, 'clipboard', { configurable: true, value: { writeText: async (text) => { copied.push(text) } } })
+    const services = {
+      listKeys: async () => ok(keys),
+      mintKey: async (name) => { keys = [...keys, { ...minted, name, key: undefined, lastUsedAt: null }]; return ok(minted) },
+      revokeKey: async (id) => { revoked.push(id); keys = keys.filter((key) => key.id !== id); return ok(undefined) },
+    }
+    const host = { initialBaseUrl: 'https://world.example/', confirmRevoke: async () => allow }
+    const { container } = await render(h(features.ApiKeysSurface, { services, host }))
+    assert.equal(container.firstElementChild.classList.contains('kit-feature-api-keys'), true)
+    assert.match(container.textContent, /emb_Abc12345…/)
+    assert.match(container.textContent, /never/)
+    assert.match(container.textContent, /X-Embabel-Api-Key/)
+    assert.match(container.textContent, /https:\/\/world\.example\/api\/v1/)
+
+    // Revoke asks first, and a "no" leaves the key alone.
+    await act(async () => button(container, 'Revoke').click())
+    assert.deepEqual(revoked, [])
+    allow = true
+    await act(async () => button(container, 'Revoke').click())
+    await flush()
+    assert.deepEqual(revoked, ['k1'])
+    assert.doesNotMatch(container.textContent, /emb_Abc12345/)
+
+    // Minting: the whole key is masked on screen and whole on the clipboard, then gone on dismiss.
+    const nameField = container.querySelector('input')
+    setInput(nameField, 'laptop')
+    await act(async () => button(container, 'Create key').click())
+    await flush()
+    const reveal = container.querySelector('.keyreveal')
+    assert.ok(reveal, 'the minted key gets its own panel')
+    assert.equal(reveal.getAttribute('role'), 'dialog')
+    assert.equal(reveal.textContent.includes(minted.key), false)
+    assert.match(reveal.textContent, /emb_XyZ12345•/)
+    await act(async () => button(reveal, 'Show it').click())
+    assert.equal(reveal.textContent.includes(minted.key), true)
+    await act(async () => button(reveal, 'Copy key').click())
+    assert.deepEqual(copied, [minted.key])
+    await act(async () => button(reveal, 'Done, I have copied it').click())
+    assert.equal(container.querySelector('.keyreveal'), null)
+    assert.equal(container.textContent.includes(minted.key), false)
+    assert.match(container.textContent, /laptop/)
+  })
+
+  it('says an appliance predates API keys instead of showing an empty list', async () => {
+    const services = {
+      listKeys: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }),
+      mintKey: async () => refused('nope'),
+      revokeKey: async () => refused('nope'),
+    }
+    const { container } = await render(h(features.ApiKeysSurface, { services, host: { confirmRevoke: async () => true } }))
+    assert.match(container.textContent, /predates API keys/)
+    assert.equal(container.querySelector('form'), null)
   })
 
   it('preserves session rewind numbering after holes', () => {

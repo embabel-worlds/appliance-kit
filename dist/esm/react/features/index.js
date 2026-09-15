@@ -6,4 +6,5 @@ export { HandlerStudioSurface, stageOf } from "./handlers/HandlerStudioSurface.j
 export { QueryStudioSurface, SaveView } from "./query/QueryStudioSurface.js";
 export { rewoundCounter } from "./query/sessionRewind.js";
 export { CodingAgentsSurface } from "./coding-agents/CodingAgentsSurface.js";
+export { ApiKeysSurface } from "./api-keys/ApiKeysSurface.js";
 //# sourceMappingURL=index.js.map

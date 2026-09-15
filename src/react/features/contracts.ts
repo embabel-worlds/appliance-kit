@@ -328,3 +328,35 @@ export interface CodingAgentsSurfaceProps {
   services: CodingAgentsServices
   host: CodingAgentsHost
 }
+
+/** One of the caller's keys, as the appliance is willing to describe it after minting. */
+export interface ApiKeySummary {
+  id: string
+  name: string
+  /** The first characters of the key — enough to recognise a leaked one, never enough to use it. */
+  prefix: string
+  createdAt: string
+  lastUsedAt: string | null
+}
+
+/** The one response that carries the whole secret. The appliance never returns it again. */
+export interface MintedApiKey extends Omit<ApiKeySummary, 'lastUsedAt'> {
+  key: string
+}
+
+export interface ApiKeysServices {
+  listKeys(): Promise<Outcome<ApiKeySummary[]>>
+  mintKey(name: string): Promise<Outcome<MintedApiKey>>
+  revokeKey(id: string): Promise<Outcome<void>>
+}
+
+export interface ApiKeysHost {
+  /** The origin a caller will reach, for the usage example. Omitted, the example names a placeholder. */
+  initialBaseUrl?: string
+  confirmRevoke(key: ApiKeySummary): Promise<boolean>
+}
+
+export interface ApiKeysSurfaceProps {
+  services: ApiKeysServices
+  host: ApiKeysHost
+}
