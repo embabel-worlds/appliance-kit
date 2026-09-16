@@ -2300,6 +2300,27 @@
         "required" : [ "question" ],
         "type" : "object"
       },
+      "KgAskScopeInfo" : {
+        "description" : "A named scope: a declared realm set an ask can be narrowed to via `scope=`.",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The scope's name — the value `scope=` accepts.",
+            "type" : "string"
+          },
+          "realms" : {
+            "description" : "The realm names whose schema the scoped ask sees (plus the always-on core).",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "description", "name", "realms" ],
+        "type" : "object"
+      },
       "KgBackgroundHandle" : {
         "description" : "A handle to a run started in the background.",
         "properties" : {
@@ -2334,6 +2355,30 @@
           }
         },
         "required" : [ "error", "valid" ],
+        "type" : "object"
+      },
+      "KgBadRealmsResponse" : {
+        "description" : "The scope named realms that are not installed; the installed ones travel with the refusal.",
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          },
+          "installed" : {
+            "description" : "The realm names actually installed in this world.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "unknown" : {
+            "description" : "The requested realm names no installed realm answers to.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "error", "installed", "unknown" ],
         "type" : "object"
       },
       "KgContractColumn" : {
@@ -2400,6 +2445,27 @@
           }
         },
         "required" : [ "error" ],
+        "type" : "object"
+      },
+      "KgCreateScopeRequest" : {
+        "description" : "A named scope to declare: a world-tier focus the ask surface can be narrowed to.",
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Slug, `[a-z0-9][a-z0-9-]*` — the value `scope=` will accept. No `+`: unencoded it decodes to a space in a query parameter.",
+            "type" : "string"
+          },
+          "realms" : {
+            "description" : "Installed realm names whose schema the scope's asks see.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "description", "name", "realms" ],
         "type" : "object"
       },
       "KgDecorationReport" : {
@@ -3293,6 +3359,23 @@
         "required" : [ "scopes" ],
         "type" : "object"
       },
+      "KgUnknownScopeResponse" : {
+        "description" : "The named scope does not exist in the acting user's world; the ones that do travel with the refusal.",
+        "properties" : {
+          "available" : {
+            "description" : "The scope names this world declares (its focuses).",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "error" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "available", "error" ],
+        "type" : "object"
+      },
       "KgValidationResponse" : {
         "description" : "The result of validating cypher against the schema without executing it.",
         "properties" : {
@@ -3479,6 +3562,15 @@
           }
         },
         "required" : [ "name", "toolCount", "toolNames" ],
+        "type" : "object"
+      },
+      "MintRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
         "type" : "object"
       },
       "ModelInUse" : {
@@ -4857,6 +4949,12 @@
       }
     },
     "securitySchemes" : {
+      "apiKeyAuth" : {
+        "description" : "An API key minted in the console under Settings → API keys. Also accepted as `Authorization: Bearer <key>`.",
+        "in" : "header",
+        "name" : "X-Embabel-Api-Key",
+        "type" : "apiKey"
+      },
       "basicAuth" : {
         "description" : "The appliance's own user accounts. The Worlds console proxies these on the same origin.",
         "scheme" : "basic",
@@ -5932,10 +6030,18 @@
     },
     "/api/v1/admin/kg/ask" : {
       "post" : {
+        "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.",
         "operationId" : "ask_1",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "scope",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -5971,9 +6077,188 @@
               }
             },
             "description" : "No authenticated principal and no resolvable username"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description" : "Unknown scope; the declared names travel with the refusal"
           }
         },
         "summary" : "Answer a natural-language question by generating and executing scoped Cypher",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes" : {
+      "get" : {
+        "operationId" : "askScopes",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/KgAskScopeInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The world's declared scopes; empty when none are declared"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "List the named scopes the acting user's asks can be narrowed to",
+        "tags" : [ "Virtual Cypher" ]
+      },
+      "post" : {
+        "operationId" : "createAskScope",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgCreateScopeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as declared; `scope=<name>` accepts it immediately"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgBadRealmsResponse"
+                }
+              }
+            },
+            "description" : "Bad name grammar, no realms, or realms not installed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "A scope with that name already exists"
+          }
+        },
+        "summary" : "Create a named scope (a world-tier focus) asks can be narrowed to",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes/{name}" : {
+      "delete" : {
+        "operationId" : "deleteAskScope",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as it was before deletion"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description" : "Unknown scope; the declared names travel with the refusal"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The scope is realm-shipped and is removed with its realm"
+          }
+        },
+        "summary" : "Delete a world-tier named scope",
         "tags" : [ "Virtual Cypher" ]
       }
     },
@@ -6383,6 +6668,13 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "in" : "query",
+          "name" : "scope",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "requestBody" : {
           "content" : {
@@ -6480,6 +6772,13 @@
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "scope",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -7656,6 +7955,79 @@
         },
         "summary" : "List goals",
         "tags" : [ "Agent platform" ]
+      }
+    },
+    "/api/v1/api-keys" : {
+      "get" : {
+        "operationId" : "listApiKeys",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "This user's API keys: names and prefixes, never the keys",
+        "tags" : [ "API keys" ]
+      },
+      "post" : {
+        "operationId" : "mintApiKey",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/MintRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The request was authenticated by an API key, which cannot manage keys"
+          }
+        },
+        "summary" : "Mint a key; the response is the only time the key is shown",
+        "tags" : [ "API keys" ]
+      }
+    },
+    "/api/v1/api-keys/{id}" : {
+      "delete" : {
+        "operationId" : "revokeApiKey",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke a key immediately",
+        "tags" : [ "API keys" ]
       }
     },
     "/api/v1/artifacts" : {
@@ -15507,11 +15879,13 @@
     }
   },
   "security" : [ {
+    "apiKeyAuth" : [ ]
+  }, {
     "basicAuth" : [ ]
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43075"
+    "url" : "http://localhost:35285"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -15561,6 +15935,9 @@
   }, {
     "description" : "API discovery from a natural-language description (LLM-driven) or directly from a spec URL",
     "name" : "API Discovery"
+  }, {
+    "description" : "Keys the signed-in user mints to reach this world from code",
+    "name" : "API keys"
   }, {
     "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
     "name" : "World"
