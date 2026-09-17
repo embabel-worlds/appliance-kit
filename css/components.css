@@ -47,6 +47,7 @@
 
 .panel {
   min-width: 0;
+  overflow-wrap: anywhere;
   background: var(--panel-bg);
   border: 1px solid var(--panel-edge);
   border-radius: var(--radius-panel);
@@ -114,6 +115,8 @@ label.check {
 /* ── Status and lamps ──────────────────────────────────────────────────── */
 
 .status {
+  overflow-wrap: anywhere;
+  min-width: 0;
   font-size: 12.5px;
   color: var(--mid);
   /* Status text is a sentence, not an annotation — the mono family carries the
