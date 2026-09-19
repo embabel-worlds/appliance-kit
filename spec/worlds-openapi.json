@@ -13415,7 +13415,20 @@
                 }
               }
             },
-            "description" : "Realm not found"
+            "description" : "Nothing installed answers to that name; the message lists what is installed"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The realm is served from a manifest or directory this world does not own"
           }
         },
         "summary" : "Remove a realm",
@@ -15885,7 +15898,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39031"
+    "url" : "http://localhost:36635"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
