@@ -42,6 +42,41 @@ export interface BackdropOptions {
         wide: number;
         narrow: number;
     };
+    /**
+     * Put the graph in SPACE rather than on glass: nodes take a distance, and the far ones drift
+     * slower, sit smaller, fade into the haze and go out of focus.
+     *
+     * OFF BY DEFAULT, and that is the point. Over a flat ground the graph IS the picture and every
+     * node should be legible; over something with its own depth — a starfield behind the setup
+     * wizard — a perfectly sharp node at every distance is what makes the two look like two pictures
+     * stacked rather than one scene. So the surface that has a deep background asks for this, and
+     * nothing else changes.
+     */
+    depth?: boolean | DepthOptions;
+}
+/** How much depth, when [BackdropOptions.depth] is on. */
+export interface DepthOptions {
+    /**
+     * Blur in px at the back. Default 3.6 — enough that the far band reads as out of focus at a
+     * glance, low enough that it still reads as a graph rather than a smudge.
+     */
+    maxBlur?: number;
+    /**
+     * How many focal bands. Default 3.
+     *
+     * Bands, not per-node blur, because blur is applied PER DRAWING OPERATION: 150 individually
+     * blurred arcs is 150 filtered compositions a frame, which is where the frame budget goes. Each
+     * band is drawn sharp onto a scratch canvas and composited once through the filter, so the cost
+     * is one filtered draw per band no matter how many nodes are in it. Three is enough for the eye;
+     * more bands buy smoothness nobody sees and pay a full-canvas composite each.
+     */
+    bands?: number;
+    /**
+     * What distance fades TOWARD — the haze. Default is the deep indigo the Embabel grounds use.
+     * Set it to the dominant colour of whatever sits behind, or the far nodes will look tinted
+     * rather than distant.
+     */
+    fog?: Rgb;
 }
 /**
  * Start the backdrop on [canvas]. Returns a stop function that cancels the frame
