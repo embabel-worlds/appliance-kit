@@ -67,7 +67,8 @@ const HELP = [
   ['$contracts', 'peek a binding'],
 ] as const
 
-export function SessionPane({ onCaptured, onOpenInEditor }: {
+export function SessionPane({ onCaptured, onOpenInEditor, visible = true }: {
+  visible?: boolean
   onCaptured(): void
   onOpenInEditor(cypher: string): void
 }) {
@@ -149,6 +150,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
     const cm = (CodeMirror as any)(promptHost.current, {
       mode: 'application/x-cypher-query',
       lineNumbers: false,
+      screenReaderLabel: 'Session query',
       viewportMargin: Infinity,
       placeholder: 'MATCH (c:Chunk) — Enter runs, RETURN c implied',
       extraKeys: {
@@ -158,6 +160,10 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
         'Ctrl-Space': complete,
       },
     })
+    const scroller = cm.getScrollerElement() as HTMLElement
+    scroller.tabIndex = 0
+    scroller.setAttribute('role', 'region')
+    scroller.setAttribute('aria-label', 'Session query scroll area')
     // One line, always: a pasted multi-line query flattens rather than growing a second prompt row.
     const beforeChange = (_cm: any, change: any) => {
       if (change.text.length > 1 && change.update) change.update(change.from, change.to, [change.text.join(' ')])
@@ -182,6 +188,11 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // A retained editor mounted under [hidden] cannot measure its line height until revealed.
+  useEffect(() => {
+    if (visible) promptCm.current?.refresh()
+  }, [visible])
 
   /* The placeholder follows the session: an empty box must SAY it is the place to type, and what
    * a useful next line would be. Keyed on entries — a capture changes what "next" means. */
@@ -250,7 +261,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
       const outcome = await services.kg.pinScope(plan.pinTarget!)
       if (!active.current || generation !== operationGeneration.current) return
       setBusy(false)
-      if (!isOk(outcome)) return append({ input: line, tone: 'error', text: `✗ ${failureMessage(outcome, 'pinning')}` })
+      if (!isOk(outcome)) return append({ input: line, tone: 'error', text: `✗ ${failureMessage(outcome, 'pin the scope')}` })
       return append({ input: line, tone: 'ok', text: `⇒ $${plan.pinTarget} pinned — survives until you delete it` })
     }
 
@@ -260,7 +271,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
     if (!active.current || generation !== operationGeneration.current) return
     setBusy(false)
     if (!isOk(outcome)) {
-      return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${failureMessage(outcome, 'the session line')}` })
+      return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${failureMessage(outcome, 'run the session line')}` })
     }
     if (isBackgroundHandle(outcome.value)) {
       return append({ input: line, ran: plan.cypher, tone: 'error', text: '✗ this query is running in the background; interactive sessions require a synchronous result' })
@@ -439,7 +450,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }: {
             <div className={`session-out ${entry.tone}`}>{entry.text}</div>
             {entry.rows && entry.rows.length > 0 && (
               <details className="session-rows">
-                <summary className="hint">rows ▸</summary>
+                <summary className="hint">Rows</summary>
                 <RowTable rows={entry.rows.slice(0, 25)} columns={rowColumns(entry.rows)} />
               </details>
             )}

@@ -42,7 +42,7 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
     setLoaded(true)
     if (!result.ok) {
       setAbsent(result.kind === 'unsupported')
-      setProblem(failureMessage(result, 'API keys'))
+      setProblem(failureMessage(result, 'list API keys'))
       return
     }
     setAbsent(false)
@@ -62,7 +62,7 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
     const result = await services.mintKey(trimmed)
     setMinting(false)
     if (!result.ok) {
-      setProblem(failureMessage(result, 'API keys'))
+      setProblem(failureMessage(result, 'create an API key'))
       return
     }
     setProblem('')
@@ -77,7 +77,7 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
     const result = await services.revokeKey(key.id)
     setRevoking(null)
     if (!result.ok) {
-      setProblem(failureMessage(result, 'API keys'))
+      setProblem(failureMessage(result, 'revoke an API key'))
       return
     }
     setProblem('')
