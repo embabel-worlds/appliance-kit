@@ -43,6 +43,15 @@ export interface BackdropOptions {
         narrow: number;
     };
     /**
+     * More nodes, or fewer, against the count this picks from the window's area. 1 is that count.
+     *
+     * Density and volume pull in opposite directions and both are wanted: a field that is dense AND
+     * loud is a wall, and one that is sparse and quiet is empty. Behind onboarding the graph wants
+     * to read as a deep field of many faint things, so it asks for roughly twice the nodes at half
+     * the [brightness].
+     */
+    density?: number;
+    /**
      * Put the graph in SPACE rather than on glass: nodes take a distance, and the far ones drift
      * slower, sit smaller, fade into the haze and go out of focus.
      *
@@ -61,6 +70,15 @@ export interface DepthOptions {
      * glance, low enough that it still reads as a graph rather than a smudge.
      */
     maxBlur?: number;
+    /**
+     * Blur in px at the FRONT. Default 0: the nearest band is in focus, which is what a scene
+     * where the graph is the subject wants.
+     *
+     * Raise it where the graph is scenery and something else is the subject — a logo and a
+     * question on a card, say. A field where nothing is perfectly sharp sits behind whatever is,
+     * and the eye stops trying to read it as content.
+     */
+    minBlur?: number;
     /**
      * How many focal bands. Default 3.
      *

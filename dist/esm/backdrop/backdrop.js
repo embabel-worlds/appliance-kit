@@ -49,9 +49,11 @@ export function startBackdrop(canvas, options) {
     const line = (n) => snippets.length === 0 ? '' : snippets[((n % snippets.length) + snippets.length) % snippets.length] ?? '';
     const brightness = options.brightness ?? 1;
     const counts = options.snippetCount ?? { wide: 7, narrow: 4 };
+    const density = options.density ?? 1;
     const depth = options.depth === true ? {} : options.depth || null;
     const bands = Math.max(1, depth?.bands ?? 3);
     const maxBlur = depth?.maxBlur ?? 3.6;
+    const minBlur = depth?.minBlur ?? 0;
     const fog = depth?.fog ?? FOG;
     /*
      * Blur needs `ctx.filter`, which not every browser that runs everything else here has. Without
@@ -73,7 +75,7 @@ export function startBackdrop(canvas, options) {
         canvas.height = innerHeight * dpr;
         ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
         // Node count scales with area so a laptop and a monitor feel the same.
-        const target = Math.round((innerWidth * innerHeight) / 14000);
+        const target = Math.round(((innerWidth * innerHeight) / 14000) * density);
         // Sparse on purpose: these are glimpses, not a wall of code.
         snips = Array.from({ length: innerWidth > 1100 ? counts.wide : counts.narrow }, (_, i) => ({
             text: line(i + Math.floor(Math.random() * snippets.length)),
@@ -83,7 +85,7 @@ export function startBackdrop(canvas, options) {
             vy: -0.05 - Math.random() * 0.07,
             phase: Math.random() * Math.PI * 2,
         }));
-        nodes = Array.from({ length: Math.min(Math.max(target, 40), 150) }, () => {
+        nodes = Array.from({ length: Math.min(Math.max(target, 40), Math.round(150 * density)) }, () => {
             // Flat unless depth is on, so every node is at the front and the arithmetic below is a no-op.
             const z = depth ? Math.random() : 0;
             // Parallax, and it is what sells the distance more than the blur does: the far ones
@@ -111,8 +113,8 @@ export function startBackdrop(canvas, options) {
     };
     /** Which focal band a distance falls in: 0 is the front, [bands] - 1 the back. */
     const bandOf = (z) => Math.min(bands - 1, Math.floor(z * bands));
-    /** The blur a band is composited through. The front band is sharp, by definition. */
-    const blurOf = (band) => (bands < 2 ? 0 : (band / (bands - 1)) * maxBlur);
+    /** The blur a band is composited through: [minBlur] at the front, [maxBlur] at the back. */
+    const blurOf = (band) => bands < 2 ? minBlur : minBlur + (band / (bands - 1)) * (maxBlur - minBlur);
     /**
      * The edges of one frame, pooled.
      *
@@ -181,8 +183,21 @@ export function startBackdrop(canvas, options) {
             if (bandOf(n.z) !== band)
                 continue;
             const c = hazed(n.c, fog, n.z * 0.55);
+            /*
+             * A BLURRED DOT IS A DIMMER DOT, because blur spreads the same ink over a wider area — so a
+             * field tuned down for the background and then blurred is a field that disappears. Under
+             * depth every node carries the glow a hub carries, and a little more body, which is what
+             * keeps it visible as something LUMINOUS rather than as something faint. It is also the
+             * look: a spectral field of soft lights rather than a diagram of dots.
+             */
+            if (depth) {
+                target.beginPath();
+                target.arc(n.x, n.y, n.r * 4.2, 0, Math.PI * 2);
+                target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${0.1 * (1 - 0.3 * n.z)})`;
+                target.fill();
+            }
             target.beginPath();
-            target.arc(n.x, n.y, n.hub ? n.r * 1.9 : n.r, 0, Math.PI * 2);
+            target.arc(n.x, n.y, (n.hub ? n.r * 1.9 : n.r) * (depth ? 1.5 : 1), 0, Math.PI * 2);
             target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${(n.hub ? 1 : 0.8) * (1 - 0.32 * n.z)})`;
             target.fill();
             if (n.hub) {

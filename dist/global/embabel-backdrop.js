@@ -44,9 +44,11 @@ var EmbabelBackdrop = (() => {
     const line = (n) => snippets.length === 0 ? "" : snippets[(n % snippets.length + snippets.length) % snippets.length] ?? "";
     const brightness = options.brightness ?? 1;
     const counts = options.snippetCount ?? { wide: 7, narrow: 4 };
+    const density = options.density ?? 1;
     const depth = options.depth === true ? {} : options.depth || null;
     const bands = Math.max(1, depth?.bands ?? 3);
     const maxBlur = depth?.maxBlur ?? 3.6;
+    const minBlur = depth?.minBlur ?? 0;
     const fog = depth?.fog ?? FOG;
     const canBlur = depth !== null && "filter" in ctx;
     const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
@@ -60,7 +62,7 @@ var EmbabelBackdrop = (() => {
       canvas.width = innerWidth * dpr;
       canvas.height = innerHeight * dpr;
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      const target = Math.round(innerWidth * innerHeight / 14e3);
+      const target = Math.round(innerWidth * innerHeight / 14e3 * density);
       snips = Array.from({ length: innerWidth > 1100 ? counts.wide : counts.narrow }, (_, i) => ({
         text: line(i + Math.floor(Math.random() * snippets.length)),
         x: Math.random() * innerWidth,
@@ -69,7 +71,7 @@ var EmbabelBackdrop = (() => {
         vy: -0.05 - Math.random() * 0.07,
         phase: Math.random() * Math.PI * 2
       }));
-      nodes = Array.from({ length: Math.min(Math.max(target, 40), 150) }, () => {
+      nodes = Array.from({ length: Math.min(Math.max(target, 40), Math.round(150 * density)) }, () => {
         const z = depth ? Math.random() : 0;
         const pace = 1 - 0.75 * z * z;
         return {
@@ -92,7 +94,7 @@ var EmbabelBackdrop = (() => {
       }
     };
     const bandOf = (z) => Math.min(bands - 1, Math.floor(z * bands));
-    const blurOf = (band) => bands < 2 ? 0 : band / (bands - 1) * maxBlur;
+    const blurOf = (band) => bands < 2 ? minBlur : minBlur + band / (bands - 1) * (maxBlur - minBlur);
     const edges = [];
     let edgeCount = 0;
     const collectEdges = () => {
@@ -146,8 +148,14 @@ var EmbabelBackdrop = (() => {
       for (const n of nodes) {
         if (bandOf(n.z) !== band) continue;
         const c = hazed(n.c, fog, n.z * 0.55);
+        if (depth) {
+          target.beginPath();
+          target.arc(n.x, n.y, n.r * 4.2, 0, Math.PI * 2);
+          target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${0.1 * (1 - 0.3 * n.z)})`;
+          target.fill();
+        }
         target.beginPath();
-        target.arc(n.x, n.y, n.hub ? n.r * 1.9 : n.r, 0, Math.PI * 2);
+        target.arc(n.x, n.y, (n.hub ? n.r * 1.9 : n.r) * (depth ? 1.5 : 1), 0, Math.PI * 2);
         target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${(n.hub ? 1 : 0.8) * (1 - 0.32 * n.z)})`;
         target.fill();
         if (n.hub) {
