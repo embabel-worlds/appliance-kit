@@ -15502,6 +15502,27 @@
         "tags" : [ "World" ]
       }
     },
+    "/api/v1/world/progress" : {
+      "get" : {
+        "description" : "What a world being made for the first time is up to. Empty once there is nothing in progress.",
+        "operationId" : "provisioning",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The current phase, or an empty object"
+          }
+        },
+        "summary" : "World provisioning progress",
+        "tags" : [ "World" ]
+      }
+    },
     "/api/v1/world/skills" : {
       "get" : {
         "description" : "Returns all loaded skills with their descriptions.",
@@ -15898,7 +15919,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:44159"
+    "url" : "http://localhost:43233"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
