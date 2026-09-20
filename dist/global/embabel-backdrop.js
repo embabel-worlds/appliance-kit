@@ -45,6 +45,7 @@ var EmbabelBackdrop = (() => {
     const brightness = options.brightness ?? 1;
     const counts = options.snippetCount ?? { wide: 7, narrow: 4 };
     const density = options.density ?? 1;
+    const pace = options.pace ?? 1;
     const depth = options.depth === true ? {} : options.depth || null;
     const bands = Math.max(1, depth?.bands ?? 3);
     const maxBlur = depth?.maxBlur ?? 3.6;
@@ -73,12 +74,12 @@ var EmbabelBackdrop = (() => {
       }));
       nodes = Array.from({ length: Math.min(Math.max(target, 40), Math.round(150 * density)) }, () => {
         const z = depth ? Math.random() : 0;
-        const pace = 1 - 0.75 * z * z;
+        const drift = (1 - 0.75 * z * z) * pace;
         return {
           x: Math.random() * innerWidth,
           y: Math.random() * innerHeight,
-          vx: (Math.random() - 0.5) * 0.22 * pace,
-          vy: (Math.random() - 0.5) * 0.22 * pace,
+          vx: (Math.random() - 0.5) * 0.22 * drift,
+          vy: (Math.random() - 0.5) * 0.22 * drift,
           r: (1.1 + Math.random() * 2.2) * (1 - 0.45 * z),
           hub: Math.random() < 0.16,
           c: someColour(),

@@ -73,6 +73,15 @@ export interface BackdropOptions {
   /** How many fragments drift at once, on a wide window and a narrow one. */
   snippetCount?: { wide: number; narrow: number }
   /**
+   * How fast the field drifts, against the pace this picks. 1 is that pace.
+   *
+   * Depth already slows the far nodes by up to three quarters, which is what makes the distance
+   * read — and on a surface where the graph is scenery the whole field can end up crawling. This
+   * scales the whole field without touching the falloff, so near and far keep their relationship
+   * to each other.
+   */
+  pace?: number
+  /**
    * More nodes, or fewer, against the count this picks from the window's area. 1 is that count.
    *
    * Density and volume pull in opposite directions and both are wanted: a field that is dense AND
@@ -169,6 +178,7 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
   const brightness = options.brightness ?? 1
   const counts = options.snippetCount ?? { wide: 7, narrow: 4 }
   const density = options.density ?? 1
+  const pace = options.pace ?? 1
 
   const depth = options.depth === true ? {} : options.depth || null
   const bands = Math.max(1, depth?.bands ?? 3)
@@ -213,12 +223,12 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
       // Parallax, and it is what sells the distance more than the blur does: the far ones
       // barely move. Squared, so the near half keeps most of its pace and the falloff is felt
       // at the back rather than spread evenly across the field.
-      const pace = 1 - 0.75 * z * z
+      const drift = (1 - 0.75 * z * z) * pace
       return {
         x: Math.random() * innerWidth,
         y: Math.random() * innerHeight,
-        vx: (Math.random() - 0.5) * 0.22 * pace,
-        vy: (Math.random() - 0.5) * 0.22 * pace,
+        vx: (Math.random() - 0.5) * 0.22 * drift,
+        vy: (Math.random() - 0.5) * 0.22 * drift,
         r: (1.1 + Math.random() * 2.2) * (1 - 0.45 * z),
         hub: Math.random() < 0.16,
         c: someColour(),

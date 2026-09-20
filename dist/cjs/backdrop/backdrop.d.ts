@@ -43,6 +43,15 @@ export interface BackdropOptions {
         narrow: number;
     };
     /**
+     * How fast the field drifts, against the pace this picks. 1 is that pace.
+     *
+     * Depth already slows the far nodes by up to three quarters, which is what makes the distance
+     * read — and on a surface where the graph is scenery the whole field can end up crawling. This
+     * scales the whole field without touching the falloff, so near and far keep their relationship
+     * to each other.
+     */
+    pace?: number;
+    /**
      * More nodes, or fewer, against the count this picks from the window's area. 1 is that count.
      *
      * Density and volume pull in opposite directions and both are wanted: a field that is dense AND
