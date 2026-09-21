@@ -51,6 +51,30 @@
         "required" : [ "canRerun", "deletable", "description", "inputTypes", "name", "outputTypes", "readOnly" ],
         "type" : "object"
       },
+      "AddApiRequest" : {
+        "description" : "An API to save to the world",
+        "properties" : {
+          "auth" : {
+            "description" : "Auth scheme the API expects, e.g. bearer",
+            "type" : "string"
+          },
+          "token_env" : {
+            "description" : "Name of the environment variable holding the token",
+            "type" : "string"
+          },
+          "type" : {
+            "default" : "openapi",
+            "description" : "openapi (the default) or graphql",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The spec URL — an OpenAPI document or a GraphQL endpoint",
+            "type" : "string"
+          }
+        },
+        "required" : [ "url" ],
+        "type" : "object"
+      },
       "AddRealmRequest" : {
         "properties" : {
           "confirmed" : {
@@ -131,6 +155,17 @@
           }
         },
         "required" : [ "modes" ],
+        "type" : "object"
+      },
+      "ArtifactWriteRequest" : {
+        "description" : "An artifact's new content",
+        "properties" : {
+          "content" : {
+            "description" : "The content to store, verbatim",
+            "type" : "string"
+          }
+        },
+        "required" : [ "content" ],
         "type" : "object"
       },
       "AskRequest" : {
@@ -618,6 +653,17 @@
         "required" : [ "description", "name" ],
         "type" : "object"
       },
+      "CompileScheduleRequest" : {
+        "description" : "A schedule described in natural language",
+        "properties" : {
+          "schedule" : {
+            "description" : "The schedule in words, e.g. 'every day at 7am'",
+            "type" : "string"
+          }
+        },
+        "required" : [ "schedule" ],
+        "type" : "object"
+      },
       "ConnectApiRequest" : {
         "properties" : {
           "fields" : {
@@ -824,6 +870,17 @@
           }
         },
         "required" : [ "diffSpec", "enabled", "firstRunPolicy", "lensId", "name", "params" ],
+        "type" : "object"
+      },
+      "CreateWorldRequest" : {
+        "description" : "A new world's name",
+        "properties" : {
+          "name" : {
+            "description" : "The world's name; no slashes and no '..'",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
         "type" : "object"
       },
       "CronJobConfig" : {
@@ -3434,6 +3491,22 @@
         "required" : [ "cypher", "name" ],
         "type" : "object"
       },
+      "LearnApiRequest" : {
+        "description" : "An API to introspect",
+        "properties" : {
+          "type" : {
+            "default" : "openapi",
+            "description" : "openapi (the default) or graphql",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The spec URL — an OpenAPI document or a GraphQL endpoint",
+            "type" : "string"
+          }
+        },
+        "required" : [ "url" ],
+        "type" : "object"
+      },
       "LearnRequest" : {
         "properties" : {
           "consent" : {
@@ -3540,6 +3613,18 @@
           }
         },
         "required" : [ "bufferSize", "entries", "truncated" ],
+        "type" : "object"
+      },
+      "McpModeRequest" : {
+        "description" : "The mode a connected coding agent runs under",
+        "properties" : {
+          "mode" : {
+            "description" : "ASSISTANT or DEVELOPER",
+            "enum" : [ "ASSISTANT", "DEVELOPER" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "mode" ],
         "type" : "object"
       },
       "McpServerInfo" : {
@@ -4105,6 +4190,29 @@
           }
         },
         "required" : [ "edges", "name", "nodes", "realm" ],
+        "type" : "object"
+      },
+      "SearchMemoryRequest" : {
+        "description" : "A memory search",
+        "properties" : {
+          "minConfidence" : {
+            "default" : "0.5",
+            "description" : "Minimum similarity to include, 0..1",
+            "format" : "double",
+            "type" : "number"
+          },
+          "query" : {
+            "description" : "The text to match against the user's memories",
+            "type" : "string"
+          },
+          "topK" : {
+            "default" : "20",
+            "description" : "How many results to return; clamped to 1..30",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "query" ],
         "type" : "object"
       },
       "SensorBatchRequest" : {
@@ -6033,6 +6141,7 @@
         "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.",
         "operationId" : "ask_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6040,6 +6149,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
           "in" : "query",
           "name" : "scope",
           "required" : false,
@@ -6097,6 +6207,7 @@
       "get" : {
         "operationId" : "askScopes",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6135,6 +6246,7 @@
       "post" : {
         "operationId" : "createAskScope",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6202,6 +6314,7 @@
       "delete" : {
         "operationId" : "deleteAskScope",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6209,6 +6322,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -6465,6 +6579,7 @@
         "description" : "Three modes: background=true returns a run handle immediately and may park awaiting input; waitSeconds=N watches for that long then returns a run handle; with neither, the call is fully synchronous.",
         "operationId" : "execute",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6472,6 +6587,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Return a run handle immediately instead of waiting, and allow the run to park awaiting input.",
           "in" : "query",
           "name" : "background",
           "required" : false,
@@ -6480,6 +6596,7 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Watch the run for this many seconds, then return a handle if it has not finished. Omitted with background=false means wait indefinitely.",
           "in" : "query",
           "name" : "waitSeconds",
           "required" : false,
@@ -6662,6 +6779,7 @@
       "post" : {
         "operationId" : "generate",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6669,6 +6787,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
           "in" : "query",
           "name" : "scope",
           "required" : false,
@@ -6726,6 +6845,7 @@
       "post" : {
         "operationId" : "kill",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6733,6 +6853,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -6770,6 +6891,7 @@
       "post" : {
         "operationId" : "refine",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6777,6 +6899,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
           "in" : "query",
           "name" : "scope",
           "required" : false,
@@ -6890,6 +7013,7 @@
       "get" : {
         "operationId" : "runs_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6930,6 +7054,7 @@
       "get" : {
         "operationId" : "run_7",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6937,6 +7062,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -6984,6 +7110,7 @@
       "post" : {
         "operationId" : "answer_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -6991,6 +7118,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -7068,6 +7196,7 @@
       "get" : {
         "operationId" : "schema",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7105,6 +7234,7 @@
       "get" : {
         "operationId" : "propertyValues",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7112,6 +7242,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The node label to read the property from.",
           "in" : "path",
           "name" : "label",
           "required" : true,
@@ -7119,6 +7250,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The property name on that label.",
           "in" : "path",
           "name" : "property",
           "required" : true,
@@ -7291,6 +7423,7 @@
       "post" : {
         "operationId" : "validate",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7338,6 +7471,7 @@
       "get" : {
         "operationId" : "views_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7376,6 +7510,7 @@
       "post" : {
         "operationId" : "saveView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7433,6 +7568,7 @@
       "delete" : {
         "operationId" : "deleteView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7440,6 +7576,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -7487,6 +7624,7 @@
       "post" : {
         "operationId" : "generateViewContract",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7494,6 +7632,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -7550,6 +7689,7 @@
       "post" : {
         "operationId" : "viewInvocation",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7557,6 +7697,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -7623,6 +7764,7 @@
       "post" : {
         "operationId" : "refreshView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7630,6 +7772,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -7667,6 +7810,7 @@
       "post" : {
         "operationId" : "runView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -7674,6 +7818,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -8268,10 +8413,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/ArtifactWriteRequest"
               }
             }
           },
@@ -9055,8 +9197,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : { },
-                "type" : "object"
+                "$ref" : "#/components/schemas/SearchMemoryRequest"
               }
             }
           },
@@ -9740,10 +9881,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/McpModeRequest"
               }
             }
           },
@@ -10061,10 +10199,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/CompileScheduleRequest"
               }
             }
           },
@@ -13774,7 +13909,8 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : { },
+                "additionalProperties" : true,
+                "description" : "The verb's own result, verbatim. The shape belongs to the verb, not to this endpoint, which stores it and never reads it.",
                 "type" : "object"
               }
             }
@@ -15062,10 +15198,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/AddApiRequest"
               }
             }
           },
@@ -15105,10 +15238,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/LearnApiRequest"
               }
             }
           },
@@ -15739,10 +15869,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "additionalProperties" : {
-                  "type" : "string"
-                },
-                "type" : "object"
+                "$ref" : "#/components/schemas/CreateWorldRequest"
               }
             }
           },
@@ -15926,7 +16053,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34129"
+    "url" : "http://localhost:39807"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
