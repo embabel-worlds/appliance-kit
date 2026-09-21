@@ -51,6 +51,38 @@
         "required" : [ "canRerun", "deletable", "description", "inputTypes", "name", "outputTypes", "readOnly" ],
         "type" : "object"
       },
+      "ActivityRow" : {
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "endedAt" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "BACKGROUND", "HANDLER", "SCHEDULED", "POLL" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "mine" : {
+            "type" : "boolean"
+          },
+          "startedAt" : {
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "kind", "label", "mine", "startedAt", "state" ],
+        "type" : "object"
+      },
       "AddApiRequest" : {
         "description" : "An API to save to the world",
         "properties" : {
@@ -5409,6 +5441,29 @@
         },
         "summary" : "Update an action",
         "tags" : [ "Actions" ]
+      }
+    },
+    "/api/v1/activity" : {
+      "get" : {
+        "description" : "Running first, then recently settled, newest first. Settled work is kept briefly because \"did that work?\" is asked immediately after the thing finishes — dropping it on completion would make a fast success look like one that never ran.",
+        "operationId" : "activity",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ActivityRow"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Activity, running first"
+          }
+        },
+        "summary" : "Work in progress, and work that just finished",
+        "tags" : [ "Activity" ]
       }
     },
     "/api/v1/admin/catchup/run" : {
@@ -16129,7 +16184,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46761"
+    "url" : "http://localhost:40539"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -16305,6 +16360,9 @@
   }, {
     "description" : "Fictional records, marked and removable",
     "name" : "Sample data"
+  }, {
+    "description" : "Work the appliance is doing",
+    "name" : "Activity"
   }, {
     "description" : "Admin: start, watch and cancel slow resumable materializations of expensive queries",
     "name" : "KG Fills"
