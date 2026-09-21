@@ -8060,12 +8060,14 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "format" : "binary",
+                  "type" : "string"
                 }
               },
               "text/html" : {
                 "schema" : {
-                  "type" : "object"
+                  "format" : "binary",
+                  "type" : "string"
                 }
               }
             },
@@ -8075,12 +8077,14 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "format" : "binary",
+                  "type" : "string"
                 }
               },
               "text/html" : {
                 "schema" : {
-                  "type" : "object"
+                  "format" : "binary",
+                  "type" : "string"
                 }
               }
             },
@@ -8209,6 +8213,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -8219,6 +8224,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -8229,6 +8235,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -15919,7 +15926,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36615"
+    "url" : "http://localhost:39149"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
