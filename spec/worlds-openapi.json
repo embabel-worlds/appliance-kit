@@ -12473,6 +12473,7 @@
         "description" : "Returns the redacted envelope: RUNNING while in flight, the final result once settled.",
         "operationId" : "lensRun",
         "parameters" : [ {
+          "description" : "The background run id carried by the RUNNING envelope",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -12511,6 +12512,7 @@
         "description" : "Best-effort stop; the run settles CANCELLED.",
         "operationId" : "killLensRun",
         "parameters" : [ {
+          "description" : "The background run to stop",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -14510,6 +14512,7 @@
       "delete" : {
         "operationId" : "delete_2",
         "parameters" : [ {
+          "description" : "The watch to delete",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14535,6 +14538,7 @@
       "get" : {
         "operationId" : "get",
         "parameters" : [ {
+          "description" : "The watch to return",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14560,6 +14564,7 @@
       "patch" : {
         "operationId" : "update_1",
         "parameters" : [ {
+          "description" : "The watch to update",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14597,6 +14602,7 @@
       "get" : {
         "operationId" : "changes",
         "parameters" : [ {
+          "description" : "The watch whose changes to list",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14604,6 +14610,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Return only changes recorded after this run; omit for every change the watch has recorded",
           "in" : "query",
           "name" : "afterRunId",
           "required" : false,
@@ -14631,6 +14638,7 @@
       "get" : {
         "operationId" : "deliveries",
         "parameters" : [ {
+          "description" : "The watch whose delivery attempts to list",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14659,6 +14667,7 @@
         "description" : "Four legal parameter combinations: both run ids (baseRunId + targetRunId); both ISO instants (baseAt + targetAt); targetRunId alone compares it against the previous complete run; no parameters compares latest versus previous.",
         "operationId" : "compare",
         "parameters" : [ {
+          "description" : "The watch whose runs to compare",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14666,6 +14675,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run to compare FROM; pair it with targetRunId",
           "in" : "query",
           "name" : "baseRunId",
           "required" : false,
@@ -14673,6 +14683,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run to compare TO; given alone it is compared against the previous complete run",
           "in" : "query",
           "name" : "targetRunId",
           "required" : false,
@@ -14680,6 +14691,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "ISO instant to compare FROM, resolved to the run current at that time; pair it with targetAt",
           "in" : "query",
           "name" : "baseAt",
           "required" : false,
@@ -14688,6 +14700,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "ISO instant to compare TO, resolved to the run current at that time",
           "in" : "query",
           "name" : "targetAt",
           "required" : false,
@@ -14716,6 +14729,7 @@
       "get" : {
         "operationId" : "diff",
         "parameters" : [ {
+          "description" : "The watch that owns the diff",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14723,6 +14737,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The persisted diff to return",
           "in" : "path",
           "name" : "diffId",
           "required" : true,
@@ -14750,6 +14765,7 @@
       "get" : {
         "operationId" : "runs",
         "parameters" : [ {
+          "description" : "The watch whose runs to list",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14776,6 +14792,7 @@
         "description" : "Repeat calls with the same idempotencyKey return the original run instead of running again.",
         "operationId" : "run",
         "parameters" : [ {
+          "description" : "The watch to run now",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14812,6 +14829,7 @@
       "get" : {
         "operationId" : "run_6",
         "parameters" : [ {
+          "description" : "The watch that owns the run",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14819,6 +14837,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run to return",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -14846,6 +14865,7 @@
       "get" : {
         "operationId" : "snapshot",
         "parameters" : [ {
+          "description" : "The watch that owns the run",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14853,6 +14873,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run whose snapshot to return",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -14880,6 +14901,7 @@
       "get" : {
         "operationId" : "subject",
         "parameters" : [ {
+          "description" : "The watch that owns the run",
           "in" : "path",
           "name" : "watchId",
           "required" : true,
@@ -14887,6 +14909,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run whose snapshot holds the subject",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -14894,6 +14917,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The subject's source system, taken from the href the snapshot itself emitted; \"world\" is the local graph",
           "in" : "path",
           "name" : "source",
           "required" : true,
@@ -14901,6 +14925,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The subject's id within that source, taken from the same href",
           "in" : "path",
           "name" : "entityId",
           "required" : true,
@@ -16053,7 +16078,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39807"
+    "url" : "http://localhost:40151"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
