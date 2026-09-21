@@ -236,6 +236,34 @@
         "required" : [ "filters", "sources", "unresolvedCitations" ],
         "type" : "object"
       },
+      "AttachmentActivity" : {
+        "properties" : {
+          "filename" : {
+            "type" : "string"
+          },
+          "finishedAt" : {
+            "type" : "string"
+          },
+          "handler" : {
+            "type" : "string"
+          },
+          "stale" : {
+            "type" : "boolean"
+          },
+          "startedAt" : {
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "IMPORTING", "IMPORTED", "FAILED" ],
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "filename", "handler", "stale", "startedAt", "state", "summary" ],
+        "type" : "object"
+      },
       "AvailableSourcesResponse" : {
         "properties" : {
           "sources" : {
@@ -8954,6 +8982,29 @@
         "tags" : [ "Chat" ]
       }
     },
+    "/api/v1/chat/attachments" : {
+      "get" : {
+        "description" : "Newest first. An import runs in the background and can take over a minute, during which nothing else says it is happening — so this reports the finished ones too, which is what answers \"did it work\" after the fact.",
+        "operationId" : "attachments",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AttachmentActivity"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Ingestion records, newest first"
+          }
+        },
+        "summary" : "What has been done with the files attached to this world",
+        "tags" : [ "Chat" ]
+      }
+    },
     "/api/v1/chat/command/{command}" : {
       "post" : {
         "description" : "Executes a world slash command by sending it as a chat message. The response is delivered via the SSE stream. An SSE stream must be open before running commands.",
@@ -16078,7 +16129,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43159"
+    "url" : "http://localhost:46761"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
