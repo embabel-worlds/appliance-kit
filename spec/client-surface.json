@@ -554,10 +554,20 @@
     },
     "/api/v1/admin/kg/ask" : {
       "post" : {
+        "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.",
         "operationId" : "ask_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
+          "in" : "query",
+          "name" : "scope",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -593,9 +603,192 @@
               }
             },
             "description" : "No authenticated principal and no resolvable username"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description" : "Unknown scope; the declared names travel with the refusal"
           }
         },
         "summary" : "Answer a natural-language question by generating and executing scoped Cypher",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes" : {
+      "get" : {
+        "operationId" : "askScopes",
+        "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/KgAskScopeInfo"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The world's declared scopes; empty when none are declared"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "List the named scopes the acting user's asks can be narrowed to",
+        "tags" : [ "Virtual Cypher" ]
+      },
+      "post" : {
+        "operationId" : "createAskScope",
+        "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgCreateScopeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as declared; `scope=<name>` accepts it immediately"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgBadRealmsResponse"
+                }
+              }
+            },
+            "description" : "Bad name grammar, no realms, or realms not installed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "A scope with that name already exists"
+          }
+        },
+        "summary" : "Create a named scope (a world-tier focus) asks can be narrowed to",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/ask/scopes/{name}" : {
+      "delete" : {
+        "operationId" : "deleteAskScope",
+        "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The view's name, as `GET /views` lists it.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgAskScopeInfo"
+                }
+              }
+            },
+            "description" : "The scope as it was before deletion"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgUnknownScopeResponse"
+                }
+              }
+            },
+            "description" : "Unknown scope; the declared names travel with the refusal"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The scope is realm-shipped and is removed with its realm"
+          }
+        },
+        "summary" : "Delete a world-tier named scope",
         "tags" : [ "Virtual Cypher" ]
       }
     },
@@ -739,10 +932,10 @@
         "tags" : [ "KG Decoration" ]
       }
     },
-    "/api/v1/admin/kg/execute" : {
+    "/api/v1/admin/kg/derive" : {
       "post" : {
-        "description" : "Three modes: background=true returns a run handle immediately and may park awaiting input; waitSeconds=N watches for that long then returns a run handle; with neither, the call is fully synchronous.",
-        "operationId" : "execute",
+        "description" : "The rule set's derived label is visible to the query as an ordinary label; nothing persists. Invalid rule sets are refused with the validator's messages.",
+        "operationId" : "derive",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -750,7 +943,67 @@
           "schema" : {
             "type" : "string"
           }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/KgDeriveRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgDeriveResponse"
+                }
+              }
+            },
+            "description" : "The query result over the derived overlay"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The rule set failed validation; `error` carries every violation"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal and no resolvable username"
+          }
+        },
+        "summary" : "Execute Cypher with a caller-supplied DERIVE rule set evaluated for this query only",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/execute" : {
+      "post" : {
+        "description" : "Three modes: background=true returns a run handle immediately and may park awaiting input; waitSeconds=N watches for that long then returns a run handle; with neither, the call is fully synchronous.",
+        "operationId" : "execute",
+        "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         }, {
+          "description" : "Return a run handle immediately instead of waiting, and allow the run to park awaiting input.",
           "in" : "query",
           "name" : "background",
           "required" : false,
@@ -759,6 +1012,7 @@
             "type" : "boolean"
           }
         }, {
+          "description" : "Watch the run for this many seconds, then return a handle if it has not finished. Omitted with background=false means wait indefinitely.",
           "in" : "query",
           "name" : "waitSeconds",
           "required" : false,
@@ -791,6 +1045,16 @@
               }
             },
             "description" : "A finished result, or a run handle when `background=true`"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Bad params or args, or captureAs with background/waitSeconds"
           },
           "401" : {
             "content" : {
@@ -941,8 +1205,17 @@
       "post" : {
         "operationId" : "generate",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
+          "in" : "query",
+          "name" : "scope",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -998,6 +1271,7 @@
       "post" : {
         "operationId" : "kill",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1005,6 +1279,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -1042,8 +1317,17 @@
       "post" : {
         "operationId" : "refine",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph.",
+          "in" : "query",
+          "name" : "scope",
           "required" : false,
           "schema" : {
             "type" : "string"
@@ -1155,6 +1439,7 @@
       "get" : {
         "operationId" : "runs_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1193,8 +1478,9 @@
     },
     "/api/v1/admin/kg/runs/{runId}" : {
       "get" : {
-        "operationId" : "run_6",
+        "operationId" : "run_7",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1202,6 +1488,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -1249,6 +1536,7 @@
       "post" : {
         "operationId" : "answer_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1256,6 +1544,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The run handle returned by a background or timed-out execution.",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -1333,6 +1622,7 @@
       "get" : {
         "operationId" : "schema",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1370,6 +1660,7 @@
       "get" : {
         "operationId" : "propertyValues",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1377,6 +1668,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The node label to read the property from.",
           "in" : "path",
           "name" : "label",
           "required" : true,
@@ -1384,6 +1676,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The property name on that label.",
           "in" : "path",
           "name" : "property",
           "required" : true,
@@ -1556,6 +1849,7 @@
       "post" : {
         "operationId" : "validate",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1603,6 +1897,7 @@
       "get" : {
         "operationId" : "views_1",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1641,6 +1936,7 @@
       "post" : {
         "operationId" : "saveView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1698,6 +1994,7 @@
       "delete" : {
         "operationId" : "deleteView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1705,6 +2002,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1752,6 +2050,7 @@
       "post" : {
         "operationId" : "generateViewContract",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1759,6 +2058,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1815,6 +2115,7 @@
       "post" : {
         "operationId" : "viewInvocation",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1822,6 +2123,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1888,6 +2190,7 @@
       "post" : {
         "operationId" : "refreshView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1895,6 +2198,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -1932,6 +2236,7 @@
       "post" : {
         "operationId" : "runView",
         "parameters" : [ {
+          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -1939,6 +2244,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The view's name, as `GET /views` lists it.",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -2153,7 +2459,7 @@
     },
     "/api/v1/tours/import" : {
       "post" : {
-        "description" : "The body is a tour FILE, not a JSON object: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
+        "description" : "`yaml` carries a tour FILE, not a JSON rendering of a tour: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship and what `/export` returned. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
         "operationId" : "import",
         "parameters" : [ {
           "in" : "query",
@@ -3034,6 +3340,27 @@
       "required" : [ "question" ],
       "type" : "object"
     },
+    "KgAskScopeInfo" : {
+      "description" : "A named scope: a declared realm set an ask can be narrowed to via `scope=`.",
+      "properties" : {
+        "description" : {
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "The scope's name — the value `scope=` accepts.",
+          "type" : "string"
+        },
+        "realms" : {
+          "description" : "The realm names whose schema the scoped ask sees (plus the always-on core).",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "description", "name", "realms" ],
+      "type" : "object"
+    },
     "KgBackgroundHandle" : {
       "description" : "A handle to a run started in the background.",
       "properties" : {
@@ -3068,6 +3395,30 @@
         }
       },
       "required" : [ "error", "valid" ],
+      "type" : "object"
+    },
+    "KgBadRealmsResponse" : {
+      "description" : "The scope named realms that are not installed; the installed ones travel with the refusal.",
+      "properties" : {
+        "error" : {
+          "type" : "string"
+        },
+        "installed" : {
+          "description" : "The realm names actually installed in this world.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "unknown" : {
+          "description" : "The requested realm names no installed realm answers to.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "error", "installed", "unknown" ],
       "type" : "object"
     },
     "KgContractColumn" : {
@@ -3134,6 +3485,27 @@
         }
       },
       "required" : [ "error" ],
+      "type" : "object"
+    },
+    "KgCreateScopeRequest" : {
+      "description" : "A named scope to declare: a world-tier focus the ask surface can be narrowed to.",
+      "properties" : {
+        "description" : {
+          "type" : "string"
+        },
+        "name" : {
+          "description" : "Slug, `[a-z0-9][a-z0-9-]*` — the value `scope=` will accept. No `+`: unencoded it decodes to a space in a query parameter.",
+          "type" : "string"
+        },
+        "realms" : {
+          "description" : "Installed realm names whose schema the scope's asks see.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "description", "name", "realms" ],
       "type" : "object"
     },
     "KgDecorationReport" : {
@@ -3229,6 +3601,141 @@
       "required" : [ "name", "status" ],
       "type" : "object"
     },
+    "KgDerivation" : {
+      "properties" : {
+        "elementId" : {
+          "type" : "string"
+        },
+        "props" : {
+          "additionalProperties" : { },
+          "type" : "object"
+        },
+        "round" : {
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "rule" : {
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "trace" : {
+          "items" : {
+            "$ref" : "#/components/schemas/KgDerivedFiring"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "elementId", "props", "round", "rule", "trace" ],
+      "type" : "object"
+    },
+    "KgDeriveRequest" : {
+      "properties" : {
+        "cypher" : {
+          "type" : "string"
+        },
+        "derives" : {
+          "type" : "string"
+        },
+        "description" : {
+          "type" : "string"
+        },
+        "name" : {
+          "type" : "string"
+        },
+        "paramSpecs" : {
+          "additionalProperties" : {
+            "$ref" : "#/components/schemas/ViewParamSpec"
+          },
+          "type" : "object"
+        },
+        "params" : {
+          "additionalProperties" : { },
+          "type" : "object"
+        },
+        "rules" : {
+          "items" : {
+            "$ref" : "#/components/schemas/KgDeriveRuleWire"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "cypher", "derives", "description", "paramSpecs", "params", "rules" ],
+      "type" : "object"
+    },
+    "KgDeriveResponse" : {
+      "properties" : {
+        "derived" : {
+          "items" : {
+            "$ref" : "#/components/schemas/KgDerivedLabel"
+          },
+          "type" : "array"
+        },
+        "result" : {
+          "$ref" : "#/components/schemas/KgQueryResult"
+        }
+      },
+      "required" : [ "derived", "result" ],
+      "type" : "object"
+    },
+    "KgDeriveRuleWire" : {
+      "properties" : {
+        "derive" : {
+          "type" : "string"
+        },
+        "from" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "derive", "from" ],
+      "type" : "object"
+    },
+    "KgDerivedFiring" : {
+      "properties" : {
+        "props" : {
+          "additionalProperties" : { },
+          "type" : "object"
+        },
+        "round" : {
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "rule" : {
+          "format" : "int32",
+          "type" : "integer"
+        }
+      },
+      "required" : [ "props", "round", "rule" ],
+      "type" : "object"
+    },
+    "KgDerivedLabel" : {
+      "properties" : {
+        "derivations" : {
+          "items" : {
+            "$ref" : "#/components/schemas/KgDerivation"
+          },
+          "type" : "array"
+        },
+        "label" : {
+          "type" : "string"
+        },
+        "members" : {
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "rounds" : {
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "ruleSet" : {
+          "type" : "string"
+        },
+        "truncated" : {
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "derivations", "label", "members", "rounds", "ruleSet", "truncated" ],
+      "type" : "object"
+    },
     "KgErrorResponse" : {
       "description" : "A refusal carrying only a human-readable reason.",
       "properties" : {
@@ -3242,12 +3749,24 @@
     },
     "KgExecuteRequest" : {
       "properties" : {
+        "args" : {
+          "additionalProperties" : { },
+          "description" : "Arguments for `params`. A blank value means not supplied, so the default applies.",
+          "type" : "object"
+        },
         "captureAs" : {
           "description" : "Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only.",
           "type" : "string"
         },
         "cypher" : {
           "type" : "string"
+        },
+        "params" : {
+          "additionalProperties" : {
+            "$ref" : "#/components/schemas/ViewParamSpec"
+          },
+          "description" : "Declared parameters for the cypher, as a view declares them. Each `$name` is substituted from `args` merged over its default, exactly as when a saved view runs.",
+          "type" : "object"
         }
       },
       "required" : [ "cypher" ],
@@ -3764,9 +4283,17 @@
     "KgSchemaProperty" : {
       "description" : "A property observed on nodes carrying a label.",
       "properties" : {
+        "alternateKey" : {
+          "description" : "True when the realm's type declares this property as an ALTERNATE KEY: it identifies the same record as the identity does, in the vocabulary the source's own readers use. A policy's `policy_identifier` is its identity; its `policy_number` is what a view shows and what a client will try to join on. Both name the same policy. Unlike the identity, an alternate key is not the dedupe key and is not required on write, so a type may declare several. Defaults false.",
+          "type" : "boolean"
+        },
         "description" : {
           "description" : "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
           "type" : "string"
+        },
+        "identity" : {
+          "description" : "True when the realm's type declares this property as the node's IDENTITY. Two columns denote the same thing only when both project the identity of the same label; matching names prove nothing, and a client that joins on them will relate records that are not related. Defaults false so an older client reading a newer appliance loses nothing, and so an undeclared property is never mistaken for a key.",
+          "type" : "boolean"
         },
         "name" : {
           "type" : "string"
@@ -3780,7 +4307,7 @@
           "type" : "string"
         }
       },
-      "required" : [ "name", "sparse", "type" ],
+      "required" : [ "alternateKey", "identity", "name", "sparse", "type" ],
       "type" : "object"
     },
     "KgSchemaRelationship" : {
@@ -3882,6 +4409,23 @@
         }
       },
       "required" : [ "scopes" ],
+      "type" : "object"
+    },
+    "KgUnknownScopeResponse" : {
+      "description" : "The named scope does not exist in the acting user's world; the ones that do travel with the refusal.",
+      "properties" : {
+        "available" : {
+          "description" : "The scope names this world declares (its focuses).",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "error" : {
+          "type" : "string"
+        }
+      },
+      "required" : [ "available", "error" ],
       "type" : "object"
     },
     "KgValidationResponse" : {
@@ -4128,6 +4672,11 @@
     },
     "ViewParamSpec" : {
       "properties" : {
+        "choices" : {
+          "description" : "The fixed set of values this param accepts — rendered as a select, enforced at invocation. Absent = any value of the declared type.",
+          "items" : { },
+          "type" : "array"
+        },
         "default" : {
           "description" : "Used when an invocation omits this param. Absent = required on invocation."
         },
@@ -4140,7 +4689,8 @@
         },
         "type" : {
           "default" : "string",
-          "description" : "`string`, `int`, `number` or `boolean` — the coercion applied to supplied values.",
+          "description" : "The coercion applied to supplied values, and the form control a UI renders (int/number a number field, boolean a checkbox, date a date picker). float and double are aliases of number.",
+          "enum" : [ "string", "int", "number", "float", "double", "boolean", "date" ],
           "type" : "string"
         }
       },
