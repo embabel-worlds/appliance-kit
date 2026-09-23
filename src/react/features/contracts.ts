@@ -170,7 +170,7 @@ export interface WatchServices {
 }
 
 export interface ViewsServices {
-  kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView'> & Partial<Pick<KgClient, 'schema'>>
+  kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView' | 'execute' | 'saveView'> & Partial<Pick<KgClient, 'schema'>>
   watches: WatchServices
 }
 

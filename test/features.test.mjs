@@ -204,7 +204,7 @@ describe('the public browser feature entry point', () => {
       '.stage.acting', '.signalrow', '.signalname', '.signalfields', '.emptymenu', '.emptyroute',
       '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
       '.realm-problem', '.pinchip.is-gone', '.viewrealms', '.viewrealm-head', '.viewoperation',
-      '.viewspage-sidebar', '.viewspage-mobile-nav', '.viewoperation-nav', '.viewoperation-section', '.viewsibling', '.viewschema-label',
+      '.viewspage-sidebar', '.viewspage-mobile-nav', '.viewoperation-nav', '.viewpane', '.viewrunbar', '.viewcypher', '.viewcopy', '.viewsibling', '.viewschema-label',
       '.view-results',
     ]) assert.equal(css.includes(selector), true, `${selector} style`)
 
@@ -427,7 +427,7 @@ describe('the public browser feature entry point', () => {
     const services = c3Services(), pending = []
     services.watches.list = () => new Promise(resolve => pending.push(resolve))
     const { container, root } = await render(h(features.SavedViewsSurface, { services, host: c3Host }))
-    const watch = () => container.querySelector('.viewoperation-section[data-view-pane="watch"]')
+    const watch = () => container.querySelector('.viewpane[data-view-pane="watch"]')
     assert.match(watch().textContent, /Checking watches/)
     assert.doesNotMatch(watch().textContent, /Watch this/)
     await act(async () => pending.forEach(resolve => resolve({ ok: false, kind: 'failed', status: 503, message: 'Watch backend detail' })))
@@ -456,7 +456,7 @@ describe('the public browser feature entry point', () => {
       services.watches.runs = async () => ok([{ id: 'r1', status: 'COMPLETED' }])
       services.watches[endpoint] = async () => ({ ok: false, kind: 'failed', status: 503, message: `${endpoint} backend detail` })
       const { container } = await render(h(features.SavedViewsSurface, { services, host: c3Host }))
-      const watch = container.querySelector('.viewoperation-section[data-view-pane="watch"]')
+      const watch = container.querySelector('.viewpane[data-view-pane="watch"]')
       assert.match(watch.textContent, new RegExp(`HTTP 503.*${endpoint} backend detail`))
       assert.ok(button(watch, 'Refresh receipts'))
       assert.equal(watch.querySelector('.receipt'), null)
@@ -470,8 +470,8 @@ describe('the public browser feature entry point', () => {
     const services = c3Services(); let finish
     services.kg.runView = () => new Promise(resolve => { finish = resolve })
     const { container } = await render(h(features.SavedViewsSurface, { services, host: c3Host }))
-    await act(async () => container.querySelector('.viewoperation-section[data-view-pane="run"] .btn.primary').click())
-    const results = container.querySelector('.viewoperation-section[data-view-pane="results"]')
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    const results = container.querySelector('.viewpane[data-view-pane="results"]')
     assert.match(results.textContent, /Running/)
     assert.doesNotMatch(results.textContent, /Nothing run yet/)
     await act(async () => finish({ ok: false, kind: 'failed', status: 503, message: 'Run backend detail' }))
@@ -536,18 +536,19 @@ describe('the public browser feature entry point', () => {
 
     assert.equal(container.querySelector('.viewspage-sidebar')?.querySelectorAll('.viewsibling').length, 2)
     assert.equal(container.querySelector('.viewspage-sidebar')?.querySelectorAll('.viewpane-link').length, 0)
-    assert.equal(container.querySelector('.viewspage-mobile-nav summary')?.textContent.includes('Browse this realm'), true)
-    assert.deepEqual([...container.querySelectorAll('.viewoperation-nav button')].map((item) => item.textContent), ['Run', 'Results', 'Schema', 'Watch / receipts'])
-    assert.deepEqual([...container.querySelectorAll('.viewoperation-section')].map((item) => item.dataset.viewPane), ['run', 'results', 'schema', 'watch'])
-    assert.deepEqual([...container.querySelectorAll('.viewoperation-section .panel-head h2')].map((item) => item.textContent), ['Run', 'Results', 'Schema', 'Watch'])
-    assert.equal(container.querySelector('.viewoperation-section[data-view-pane="watch"] select')?.getAttribute('aria-label'), 'Watch schedule')
+    assert.equal(container.querySelector('.viewspage-mobile-nav summary')?.textContent.includes('Browse World'), true)
+    assert.deepEqual([...container.querySelectorAll('.viewoperation-nav button')].map((item) => item.textContent), ['Results', 'Schema', 'Watch / receipts'])
+    assert.deepEqual([...container.querySelectorAll('.viewpane')].map((item) => item.dataset.viewPane), ['results', 'schema', 'watch'])
+    assert.deepEqual([...container.querySelectorAll('.viewpane')].map((item) => item.hidden), [false, true, true], 'one pane shows at a time')
+    assert.equal(container.querySelector('.viewpane[data-view-pane="watch"] select')?.getAttribute('aria-label'), 'Watch schedule')
     assert.equal(container.querySelector('.viewoperation-head h2')?.textContent, 'Alpha')
     await act(async () => button(container, 'Schema').click())
-    assert.equal(container.querySelectorAll('.viewoperation-section').length, 4)
+    assert.equal(container.querySelector('.viewpane[data-view-pane="schema"]').hidden, false)
+    assert.equal(container.querySelector('.viewpane[data-view-pane="results"]').hidden, true)
     assert.equal(container.querySelectorAll('.viewschema-label').length, 1)
     await act(async () => button(container, 'Beta').click())
     assert.equal(container.querySelector('.viewoperation-head h2')?.textContent, 'Beta')
-    assert.equal(button(container, 'Schema').getAttribute('aria-current'), 'page')
+    assert.equal(button(container, 'Schema').getAttribute('aria-selected'), 'true')
     assert.deepEqual(navigations.slice(-3), [
       ['Alpha', 'open', false],
       ['Alpha', 'schema', true],
@@ -558,12 +559,8 @@ describe('the public browser feature entry point', () => {
     assert.deepEqual(navigations.at(-1), [null, 'open', false])
   })
 
-  it('restores a selected operation pane, scrolls its section, and can drive a run of that same operation', async () => {
-    const scrollTargets = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function (options) { scrollTargets.push([this.dataset.viewPane ?? this.dataset.pane, options]) }
-    try {
-    let route = 'Alpha/results'
+  it('restores a selected operation pane from the route and can drive a run of that same operation', async () => {
+    let route = 'Alpha/schema'
     let runs = 0
     const listeners = new Set()
     const services = {
@@ -581,32 +578,20 @@ describe('the public browser feature entry point', () => {
       onOpenInStudio() {}, onCreateHandler() {},
     }
     const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
     assert.equal(container.querySelector('.viewoperation-head h2')?.textContent, 'Alpha')
-    assert.equal(button(container, 'Results').getAttribute('aria-current'), 'page')
-    assert.equal(scrollTargets.some(([target, options]) => target === 'results' && options.inline === 'nearest'), true)
-    scrollTargets.length = 0
-    await act(async () => container.querySelector('.viewoperation-nav [data-view-pane="results"]').click())
-    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
-    assert.equal(scrollTargets.some(([target]) => target === 'results'), true, 'activating the current pane still scrolls its section')
-    assert.match(container.textContent, /Nothing run yet/)
+    assert.equal(button(container, 'Schema').getAttribute('aria-selected'), 'true')
+    assert.equal(container.querySelector('.viewpane[data-view-pane="schema"]').hidden, false)
 
     route = 'Alpha/run'
     await act(async () => { for (const listener of listeners) listener() })
     await flush()
     assert.equal(runs, 1)
-    assert.equal(button(container, 'Results').getAttribute('aria-current'), 'page')
-    assert.equal(scrollTargets.some(([target]) => target === 'results'), true)
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
+    assert.equal(button(container, 'Results').getAttribute('aria-selected'), 'true')
+    assert.equal(container.querySelector('.viewpane[data-view-pane="results"]').hidden, false)
+    assert.equal(container.querySelectorAll('.view-results tbody tr').length, 1)
   })
-
   it('preserves populated active-sibling state but resets a different sibling', async () => {
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    const reveals = []
-    HTMLElement.prototype.scrollIntoView = function () { reveals.push(this.dataset.viewPane) }
-    try {
+    {
       let route = 'Alpha'
       const calls = []
       const services = {
@@ -626,40 +611,38 @@ describe('the public browser feature entry point', () => {
         onOpenInStudio() {}, onCreateHandler() {},
       }
       const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-      await act(async () => setInput(container.querySelector('.paramform input'), '2017'))
-      await act(async () => container.querySelector('.viewoperation-section[data-view-pane="run"] .btn.primary').click())
+      await act(async () => setInput(container.querySelector('.viewrunbar input'), '2017'))
+      await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
       await flush()
       assert.deepEqual(calls, [['Alpha', { minYear: '2017' }]])
-      const watch = container.querySelector('.viewoperation-section[data-view-pane="watch"]')
+      const watch = container.querySelector('.viewpane[data-view-pane="watch"]')
       const watchText = watch.textContent
       assert.match(watchText, /watching/)
       assert.equal(watch.querySelectorAll('.receipt').length, 1)
-      for (const pane of ['run', 'results', 'schema', 'watch']) {
+      for (const pane of ['results', 'schema', 'watch']) {
         await act(async () => container.querySelector(`.viewoperation-nav [data-view-pane="${pane}"]`).click())
         await act(async () => { await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
         const routeBefore = route
-        reveals.length = 0
         await act(async () => container.querySelector('.viewspage-sidebar .viewsibling.active').click())
         await act(async () => { await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
-        assert.equal(container.querySelector('.paramform input').value, '2017')
+        assert.equal(container.querySelector('.viewrunbar input').value, '2017')
         assert.equal(container.querySelector('[data-state="view.ran"]').hidden, false)
         assert.equal(container.querySelectorAll('.view-results tbody tr').length, 1)
         assert.match(container.querySelector('.results-foot .status').textContent, /server warning/)
-        assert.equal(container.querySelector('.viewoperation-section[data-view-pane="watch"]'), watch)
+        assert.equal(container.querySelector('.viewpane[data-view-pane="watch"]'), watch)
         assert.equal(watch.textContent, watchText)
         assert.equal(route, routeBefore)
         assert.equal(container.querySelector('.viewoperation-nav-link.active').dataset.viewPane, pane)
-        assert.ok(reveals.includes(pane))
         assert.equal(calls.length, 1, 'reselection does not rerun')
       }
       await act(async () => [...container.querySelectorAll('.viewspage-sidebar .viewsibling')].find(e => e.querySelector('strong').textContent === 'Beta').click())
-      assert.equal(container.querySelector('.paramform input').value, '1984')
+      assert.equal(container.querySelector('.viewrunbar input').value, '1984')
       assert.equal(container.querySelector('[data-state="view.ran"]').hidden, true)
       assert.equal(container.querySelectorAll('.view-results tbody tr').length, 0)
       assert.equal(container.querySelector('.results-foot .status').textContent, '')
-      await act(async () => container.querySelector('.viewoperation-section[data-view-pane="run"] .btn.primary').click())
+      await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
       assert.deepEqual(calls, [['Alpha', { minYear: '2017' }], ['Beta', { minYear: '1984' }]])
-    } finally { HTMLElement.prototype.scrollIntoView = originalScrollIntoView }
+    }
   })
 
   for (const entry of ['mounted', 'cold']) it(`submits explicit run-route arguments for ${entry} views without stale state`, async () => {
@@ -693,237 +676,193 @@ describe('the public browser feature entry point', () => {
       const { container } = await render(h(features.SavedViewsSurface, { services, host }))
       if (entry === 'mounted') {
         await act(async () => {
-          const inputs = container.querySelectorAll('.paramform input')
+          const inputs = container.querySelectorAll('.viewrunbar input')
           setInput(inputs[0], '2017'); setInput(inputs[1], 'custom'); setInput(inputs[2], '')
         })
         await drive('Alpha/run?minYear=2021')
       }
       assert.deepEqual(calls, [['Alpha', { minYear: '2021', keep: entry === 'mounted' ? 'custom' : 'kept' }]])
-      assert.equal(container.querySelector('.paramform input').value, '2021')
+      assert.equal(container.querySelector('.viewrunbar input').value, '2021')
       assert.equal(container.querySelector('.viewoperation-nav-link.active').dataset.viewPane, 'results')
       assert.equal(container.querySelector('[data-state="view.ran"]').hidden, false)
 
       await drive('Alpha/run?minYear=2022&keep=&optional=next')
       assert.deepEqual(calls[1], ['Alpha', { minYear: '2022', optional: 'next' }])
-      assert.deepEqual([...container.querySelectorAll('.paramform input')].map(e => e.value), ['2022', '', 'next'])
+      assert.deepEqual([...container.querySelectorAll('.viewrunbar input')].map(e => e.value), ['2022', '', 'next'])
       await drive('Alpha/run')
       assert.deepEqual(calls[2], ['Alpha', { minYear: '2022', optional: 'next' }], 'a run without query arguments uses current supplied values')
       await drive('Beta/run?minYear=1999')
       assert.deepEqual(calls[3], ['Beta', { minYear: '1999', betaOnly: 'B' }], 'a different view uses its defaults, never the previous view or arguments')
-      assert.deepEqual([...container.querySelectorAll('.paramform input')].map(e => e.value), ['1999', 'B'])
+      assert.deepEqual([...container.querySelectorAll('.viewrunbar input')].map(e => e.value), ['1999', 'B'])
       await drive('Plain/run')
       assert.deepEqual(calls[4], ['Plain', {}], 'a parameterless view receives an empty argument object')
       assert.equal(calls.length, 5, 'every driven route executes exactly once')
     } finally { HTMLElement.prototype.scrollIntoView = originalScrollIntoView }
   })
 
-  it('C3 bottom following preserves a short pending Watch deep link and the final supported pane', async () => {
-    const frames = () => act(async () => { await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
-    for (const height of [844, 667]) for (const owned of [false, true]) for (const unsupported of [false, true]) {
-      const services = c3Services(), pending = [], navigations = []
-      services.watches.list = () => new Promise(resolve => pending.push(resolve))
-      let route = 'Alpha/watch'
-      const host = { ...c3Host, selectedView: () => route, navigateToView: (name, pane, replace) => { navigations.push([pane, replace]); route = `${name}/${pane}` } }
-      const { container, root } = await render(h(features.SavedViewsSurface, { services, host }))
-      await frames()
-      const operation = container.querySelector('.viewspage-operation')
-      operation.style.overflowY = owned ? 'auto' : 'visible'
-      const scroller = owned ? operation : document.documentElement
-      const descriptors = Object.fromEntries(['clientHeight', 'scrollHeight', 'scrollTop'].map(key => [key, Object.getOwnPropertyDescriptor(scroller, key)]))
-      try {
-        for (const [key, value] of Object.entries({ clientHeight: height, scrollHeight: height + 1000, scrollTop: 1000 })) Object.defineProperty(scroller, key, { configurable: true, writable: true, value })
-        container.querySelector('.viewoperation-nav').getBoundingClientRect = () => ({ bottom: 44 })
-        for (const [index, section] of [...container.querySelectorAll('.viewoperation-section')].entries()) section.getBoundingClientRect = () => ({ top: -200 + index * 100 })
-        const follow = async () => { (owned ? operation : window).dispatchEvent(new Event('scroll')); await frames() }
-        await follow()
-        assert.equal(route, 'Alpha/watch', `${height}: pending short Watch remains the destination`)
-        assert.equal(button(container, 'Watch / receipts').getAttribute('aria-current'), 'page')
-        await act(async () => pending.forEach(resolve => resolve(unsupported ? { ok: false, kind: 'unsupported', status: 404, message: 'Watch unavailable' } : ok([]))))
-        await follow()
-        const final = unsupported ? 'schema' : 'watch'
-        assert.equal(route, `Alpha/${final}`)
-        assert.equal(button(container, unsupported ? 'Schema' : 'Watch / receipts').getAttribute('aria-current'), 'page')
-        const count = navigations.length
-        await follow(); await follow()
-        assert.equal(navigations.length, count, 'unchanged bottom never loops or grows history')
-        scroller.scrollTop = 800
-        await follow()
-        assert.equal(route, 'Alpha/schema', 'Schema away from bottom is not forced to Watch')
-        assert.ok(navigations.every(([, replace]) => replace === true))
-        if (unsupported) {
-          services.watches.list = async () => ok([])
-          await act(async () => button(container, 'Retry watch listing').click())
-          scroller.scrollTop = 1000
-          await follow()
-          assert.equal(route, 'Alpha/watch', 'successful retry restores Watch as the final supported pane')
-        }
-      } finally {
-        for (const [key, descriptor] of Object.entries(descriptors)) { if (descriptor) Object.defineProperty(scroller, key, descriptor); else delete scroller[key] }
-        await act(async () => root.unmount())
-        activeRoots.delete(root)
-      }
+  /*
+   * The selected view's Cypher: one editor at two sizes, an edited body that runs without being
+   * saved, and saving that replaces only the user's own view — a realm's becomes a copy.
+   */
+  const editorFixture = ({ views, saveView } = {}) => {
+    const calls = { runView: [], execute: [], saveView: [], navigations: [] }
+    let route = null
+    const listeners = new Set()
+    let list = views ?? [
+      { name: 'Mine', source: 'saved', description: 'Mine', cypher: 'MATCH (b:Bill) RETURN b LIMIT $limit', materialized: false, params: { limit: { type: 'int', default: 10 } } },
+      { name: 'Stock', source: 'ledger', description: 'Stock', cypher: 'MATCH (s:Stock) RETURN s', materialized: false, params: {} },
+    ]
+    const services = {
+      kg: {
+        views: async () => ok(list),
+        schema: async () => ok({ labels: [], relationships: [] }),
+        runView: async (name, args) => { calls.runView.push([name, args]); return ok({ rows: [{ id: 'saved' }], rowCount: 1 }) },
+        execute: async (cypher, options) => { calls.execute.push([cypher, options]); return ok({ rows: [{ id: 'draft' }], rowCount: 1 }) },
+        saveView: saveView ?? (async (spec) => {
+          calls.saveView.push(spec)
+          list = [...list.filter((v) => v.name !== spec.name), { ...spec, source: 'saved' }]
+          return ok({ ok: true, name: spec.name })
+        }),
+        viewInvocation: async () => ok({ cypher: 'RETURN 1' }), deleteView: async () => ok({ deleted: true }), refreshView: async () => ok({ refreshed: true }),
+      },
+      watches: { list: async () => ok([]), create: async () => ok({}), delete: async () => ok(undefined), run: async () => ok(undefined), runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]) },
     }
+    const host = {
+      selectedView: () => route,
+      subscribeSelection: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
+      navigateToView: (name, destination) => { calls.navigations.push([name, destination]); route = name ? `${name}${destination === 'open' ? '' : `/${destination}`}` : null },
+      onOpenInStudio() {}, onCreateHandler() {},
+    }
+    const open = async (name) => {
+      route = name
+      const rendered = await render(h(features.SavedViewsSurface, { services, host }))
+      return rendered.container
+    }
+    return { calls, open }
+  }
+  const editorOf = (container) => container.querySelector('.viewcypher .CodeMirror').CodeMirror
+  const editorSize = (container) => {
+    const panel = container.querySelector('.viewcypher')
+    return panel.hidden ? 'closed' : panel.classList.contains('viewcypher-full') ? 'full' : 'mini'
+  }
+
+  it('labels where a view comes from, and offers Delete only on the user\'s own', async () => {
+    const { open } = editorFixture()
+    let container = await open('Mine')
+    assert.equal(container.querySelector('.viewtag-origin').textContent, 'Yours')
+    assert.ok(button(container, 'Delete'))
+    container.remove()
+    container = await open('Stock')
+    assert.equal(container.querySelector('.viewtag-origin').textContent, 'ledger realm')
+    assert.equal(button(container, 'Delete'), undefined)
   })
 
-  it('reveals a scroll-followed pane in the nav without fighting the document scroll', async () => {
-    const scrollTargets = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function (options) {
-      const kind = this.closest('.viewoperation-nav') ? 'nav' : 'section'
-      scrollTargets.push([kind, this.dataset.viewPane, options])
-      if (kind === 'nav') this.parentElement.scrollLeft = 45
-    }
-    try {
-      let route = 'Alpha/results'
-      const navigations = []
-      const services = {
-        kg: {
-          views: async () => ok([{ name: 'Alpha', description: 'A', cypher: 'RETURN 1', materialized: false, params: {} }]),
-          schema: async () => ok({ labels: [], relationships: [] }), runView: async () => ok({ rows: [] }),
-          viewInvocation: async () => ok({ cypher: 'RETURN 1' }), deleteView: async () => ok({ deleted: true }), refreshView: async () => ok({ refreshed: true }),
-        },
-        watches: { list: async () => ok([]), create: async () => ok({}), delete: async () => ok(undefined), run: async () => ok(undefined), runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]) },
-      }
-      const host = {
-        selectedView: () => route, subscribeSelection: () => () => {},
-        navigateToView: (name, destination, replace) => { navigations.push([name, destination, replace]); route = `${name}/${destination}` },
-        onOpenInStudio() {}, onCreateHandler() {},
-      }
-      const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
-      scrollTargets.length = 0
-      const nav = container.querySelector('.viewoperation-nav')
-      Object.defineProperty(nav, 'getBoundingClientRect', { configurable: true, value: () => ({ bottom: 44 }) })
-      for (const [index, section] of [...container.querySelectorAll('.viewoperation-section')].entries()) {
-        Object.defineProperty(section, 'getBoundingClientRect', { configurable: true, value: () => ({ top: -200 + index * 60 }) })
-      }
-
-      await act(async () => {
-        window.dispatchEvent(new Event('scroll'))
-        await new Promise((resolve) => setTimeout(resolve, 20))
-      })
-
-      assert.equal(button(container, 'Watch / receipts').getAttribute('aria-current'), 'page')
-      assert.deepEqual(navigations.at(-1), ['Alpha', 'watch', true])
-      assert.equal(nav.scrollLeft, 45)
-      assert.deepEqual(scrollTargets, [['nav', 'watch', { block: 'nearest', inline: 'nearest' }]])
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
+  it('opens the Cypher small, grows it over the results, and steps back down on Escape', async () => {
+    const { open } = editorFixture()
+    const container = await open('Mine')
+    assert.equal(editorSize(container), 'closed')
+    await act(async () => button(container, 'Cypher').click())
+    assert.equal(editorSize(container), 'mini')
+    assert.equal(editorOf(container).getValue(), 'MATCH (b:Bill) RETURN b LIMIT $limit')
+    await act(async () => button(container, 'Expand').click())
+    assert.equal(editorSize(container), 'full')
+    assert.match(container.querySelector('.viewcypher-peek').textContent, /Results underneath/)
+    assert.ok(container.querySelector('.viewoperation-body.covered'))
+    await act(async () => container.querySelector('.viewcypher').querySelector('.CodeMirror textarea').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    assert.equal(editorSize(container), 'mini', 'Escape from the full editor returns to the small one')
+    await act(async () => button(container, 'Expand').click())
+    await act(async () => button(container, 'Shrink').click())
+    assert.equal(editorSize(container), 'mini')
+    await act(async () => container.querySelector('.viewcypher').querySelector('.CodeMirror textarea').dispatchEvent(new window.KeyboardEvent('keydown', { key: 'Escape', bubbles: true })))
+    assert.equal(editorSize(container), 'closed')
   })
 
-  it('keeps scroll following enabled after reselecting the active sibling on a non-Run pane', async () => {
-    const scrollTargets = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function (options) {
-      scrollTargets.push([this.closest('.viewoperation-nav') ? 'nav' : 'section', this.dataset.viewPane, options])
-    }
-    try {
-      let route = 'Alpha'
-      const navigations = []
-      const views = [
-        { name: 'Alpha', description: 'A', cypher: 'RETURN 1', materialized: false, params: {} },
-        { name: 'Beta', description: 'B', cypher: 'RETURN 2', materialized: false, params: {} },
-      ]
-      const services = {
-        kg: {
-          views: async () => ok(views), schema: async () => ok({ labels: [], relationships: [] }), runView: async () => ok({ rows: [] }),
-          viewInvocation: async () => ok({ cypher: 'RETURN 1' }), deleteView: async () => ok({ deleted: true }), refreshView: async () => ok({ refreshed: true }),
-        },
-        watches: { list: async () => ok([]), create: async () => ok({}), delete: async () => ok(undefined), run: async () => ok(undefined), runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]) },
-      }
-      const host = {
-        selectedView: () => route, subscribeSelection: () => () => {},
-        navigateToView: (name, destination, replace) => { navigations.push([name, destination, replace]); route = name ? `${name}${destination === 'open' ? '' : `/${destination}`}` : null },
-        onOpenInStudio() {}, onCreateHandler() {},
-      }
-      const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-      await act(async () => container.querySelector('.viewoperation-nav [data-view-pane="watch"]').click())
-      await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
-      scrollTargets.length = 0
+  it('runs an edited body with the view\'s params without saving it, and Run closes the editor', async () => {
+    const { calls, open } = editorFixture()
+    const container = await open('Mine')
+    await act(async () => button(container, 'Cypher').click())
+    await act(async () => button(container, 'Expand').click())
+    await act(async () => editorOf(container).setValue('MATCH (b:Bill) RETURN b.amount LIMIT $limit'))
+    assert.match(button(container, 'Cypher').textContent, /•/, 'the Cypher button shows an unsaved edit')
+    await act(async () => setInput(container.querySelector('.viewrunbar input'), '3'))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await flush()
+    assert.deepEqual(calls.execute, [['MATCH (b:Bill) RETURN b.amount LIMIT $limit', { params: { limit: { type: 'int', default: 10 } }, args: { limit: '3' } }]])
+    assert.deepEqual(calls.runView, [])
+    assert.deepEqual(calls.saveView, [], 'running never saves')
+    assert.equal(editorSize(container), 'closed')
+    assert.match(container.querySelector('.results-foot .status').textContent, /edited query, not saved/)
 
-      await act(async () => container.querySelector('.viewspage-sidebar .viewsibling.active').click())
-      await act(async () => { await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve))) })
-      assert.equal(scrollTargets.some(([kind, pane]) => kind === 'section' && pane === 'watch'), true)
-      scrollTargets.length = 0
-
-      const nav = container.querySelector('.viewoperation-nav')
-      Object.defineProperty(nav, 'getBoundingClientRect', { configurable: true, value: () => ({ bottom: 44 }) })
-      for (const [index, section] of [...container.querySelectorAll('.viewoperation-section')].entries()) {
-        Object.defineProperty(section, 'getBoundingClientRect', { configurable: true, value: () => ({ top: -200 + index * 100 }) })
-      }
-      await act(async () => {
-        window.dispatchEvent(new Event('scroll'))
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      })
-
-      assert.equal(button(container, 'Schema').getAttribute('aria-current'), 'page')
-      assert.deepEqual(navigations.at(-1), ['Alpha', 'schema', true])
-      assert.deepEqual(scrollTargets, [['nav', 'schema', { block: 'nearest', inline: 'nearest' }]])
-
-      scrollTargets.length = 0
-      const routeBeforeResize = route
-      await act(async () => {
-        window.dispatchEvent(new Event('resize'))
-        window.dispatchEvent(new Event('scroll')) // Reflow must not cancel the queued restore.
-        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)))
-      })
-      assert.equal(route, routeBeforeResize, 'resize preserves the selected pane URL')
-      assert.deepEqual(scrollTargets, [
-        ['nav', 'schema', { block: 'nearest', inline: 'nearest' }],
-        ['section', 'schema', { block: 'start', inline: 'nearest' }],
-      ], 'resize restores the active section when its scroll owner changes')
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
+    await act(async () => button(container, 'Cypher').click())
+    await act(async () => button(container, 'Revert').click())
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await flush()
+    assert.deepEqual(calls.runView, [['Mine', { limit: '3' }]], 'an unedited view runs as saved')
   })
 
-  it('keeps ordinary operation entry visible and does not let a stale open destination block scroll following', async () => {
-    const scrollTargets = []
-    const originalScrollIntoView = HTMLElement.prototype.scrollIntoView
-    HTMLElement.prototype.scrollIntoView = function (options) { scrollTargets.push([this.dataset.viewPane, options]) }
-    try {
-      let route = 'Alpha'
-      const listeners = new Set()
-      const navigations = []
-      const services = {
-        kg: {
-          views: async () => ok([{ name: 'Alpha', description: 'A', cypher: 'RETURN 1', materialized: false, params: {} }]),
-          schema: async () => ok({ labels: [], relationships: [] }), runView: async () => ok({ rows: [] }),
-          viewInvocation: async () => ok({ cypher: 'RETURN 1' }), deleteView: async () => ok({ deleted: true }), refreshView: async () => ok({ refreshed: true }),
-        },
-        watches: { list: async () => ok([]), create: async () => ok({}), delete: async () => ok(undefined), run: async () => ok(undefined), runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]) },
-      }
-      const host = {
-        selectedView: () => route, subscribeSelection: (listener) => { listeners.add(listener); return () => listeners.delete(listener) },
-        navigateToView: (name, destination, replace) => { navigations.push([name, destination, replace]); route = name ? `${name}${destination === 'open' ? '' : `/${destination}`}` : null },
-        onOpenInStudio() {}, onCreateHandler() {},
-      }
-      const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
-      assert.deepEqual(scrollTargets, [], 'a fresh default deep link preserves the operation identity and return affordance')
-      await act(async () => button(container, 'Operation Board').click())
-      await act(async () => button(container, 'Alpha').click())
-      await act(async () => { await new Promise((resolve) => setTimeout(resolve, 20)) })
-      assert.deepEqual(scrollTargets, [], 'opening from the board preserves the operation header')
+  it('saves the user\'s own view in place, and Undo puts the previous body back', async () => {
+    const { calls, open } = editorFixture()
+    const container = await open('Mine')
+    await act(async () => button(container, 'Cypher').click())
+    assert.equal(button(container, 'Save').disabled, true, 'nothing to save until the query is edited')
+    await act(async () => editorOf(container).setValue('MATCH (b:Bill) RETURN b LIMIT 5'))
+    await act(async () => button(container, 'Save').click())
+    await flush()
+    assert.equal(calls.saveView.length, 1)
+    assert.deepEqual(
+      { name: calls.saveView[0].name, cypher: calls.saveView[0].cypher, params: calls.saveView[0].params },
+      { name: 'Mine', cypher: 'MATCH (b:Bill) RETURN b LIMIT 5', params: { limit: { type: 'int', default: 10 } } },
+    )
+    assert.match(container.querySelector('.viewcypher-note').textContent, /Saved/)
+    assert.doesNotMatch(button(container, 'Cypher').textContent, /•/)
+    await act(async () => button(container, 'Undo').click())
+    await flush()
+    assert.equal(calls.saveView[1].cypher, 'MATCH (b:Bill) RETURN b LIMIT $limit')
+    assert.equal(editorOf(container).getValue(), 'MATCH (b:Bill) RETURN b LIMIT $limit')
+    assert.match(container.querySelector('.viewcypher-note').textContent, /Restored/)
+  })
 
-      route = 'Alpha/open'
-      await act(async () => { for (const listener of listeners) listener() })
-      await flush()
-      const nav = container.querySelector('.viewoperation-nav')
-      Object.defineProperty(nav, 'getBoundingClientRect', { configurable: true, value: () => ({ bottom: 44 }) })
-      for (const [index, section] of [...container.querySelectorAll('.viewoperation-section')].entries()) {
-        Object.defineProperty(section, 'getBoundingClientRect', { configurable: true, value: () => ({ top: -200 + index * 100 }) })
-      }
-      await act(async () => {
-        window.dispatchEvent(new Event('scroll'))
-        await new Promise((resolve) => setTimeout(resolve, 20))
-      })
-      assert.equal(button(container, 'Schema').getAttribute('aria-current'), 'page')
-      assert.deepEqual(navigations.at(-1), ['Alpha', 'schema', true])
-    } finally {
-      HTMLElement.prototype.scrollIntoView = originalScrollIntoView
-    }
+  it('saves a realm view as a named copy, explaining why, and moves to the copy', async () => {
+    const { calls, open } = editorFixture()
+    const container = await open('Stock')
+    await act(async () => button(container, 'Cypher').click())
+    await act(async () => editorOf(container).setValue('MATCH (s:Stock) WHERE s.qty < 5 RETURN s'))
+    await act(async () => button(container, 'Save as copy').click())
+    const dialog = container.querySelector('.viewcopy')
+    assert.match(dialog.textContent, /comes from the ledger realm/)
+    assert.match(dialog.textContent, /updates to the ledger realm won't reach your copy/)
+    const name = dialog.querySelector('input')
+    assert.equal(name.value, 'Stock_copy')
+    assert.deepEqual(calls.saveView, [], 'opening the dialog saves nothing')
+
+    await act(async () => setInput(name, 'Mine'))
+    await act(async () => dialog.querySelector('button[type="submit"]').click())
+    assert.match(dialog.textContent, /A view named Mine already exists/)
+    await act(async () => setInput(name, '2low'))
+    await act(async () => dialog.querySelector('button[type="submit"]').click())
+    assert.match(dialog.textContent, /letters, digits and underscores/i)
+    assert.deepEqual(calls.saveView, [], 'names the appliance would refuse never leave the dialog')
+
+    await act(async () => setInput(name, 'low_stock'))
+    await act(async () => dialog.querySelector('button[type="submit"]').click())
+    await flush()
+    assert.deepEqual([calls.saveView[0].name, calls.saveView[0].cypher], ['low_stock', 'MATCH (s:Stock) WHERE s.qty < 5 RETURN s'])
+    assert.equal(container.querySelector('.viewcopy'), null)
+    assert.equal(container.querySelector('.viewoperation-head h2').textContent, 'low_stock')
+    assert.equal(container.querySelector('.viewtag-origin').textContent, 'Yours')
+    assert.deepEqual(calls.navigations.at(-1), ['low_stock', 'open'])
+    assert.match(container.querySelector('.viewcypher-note').textContent, /Saved as low_stock/)
+  })
+
+  it('keeps the dialog open with the appliance\'s reason when a copy is refused', async () => {
+    const { open } = editorFixture({ saveView: async () => refused('the body does not parse') })
+    const container = await open('Stock')
+    await act(async () => button(container, 'Cypher').click())
+    await act(async () => editorOf(container).setValue('MATCH (s'))
+    await act(async () => button(container, 'Save as copy').click())
+    await act(async () => container.querySelector('.viewcopy button[type="submit"]').click())
+    await flush()
+    assert.match(container.querySelector('.viewcopy').textContent, /Could not save 'Stock_copy'.*the body does not parse/)
   })
 
   it('runs grouped views with typed parameters and hands a typed handler draft to the host', async () => {
@@ -952,7 +891,7 @@ describe('the public browser feature entry point', () => {
     const { container } = await render(h(features.SavedViewsSurface, { services, host }))
     await act(async () => button(container, 'finance').click())
     await act(async () => button(container, 'Overdue').click())
-    await act(async () => container.querySelector('.viewspage-operation .panel .btn.primary').click())
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
     assert.deepEqual(runs, [['Overdue', { state: 'late' }]])
     assert.equal(container.querySelector('.view-results td')?.dataset.label, 'id')
     assert.equal(container.querySelectorAll('.view-results tbody tr').length, 103)

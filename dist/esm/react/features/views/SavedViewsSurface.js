@@ -5,19 +5,54 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * A view is the durable thing: someone worked out a question worth asking, named it, and now
  * anyone can ask it again with different arguments. That is not a sub-feature of the editor, so it
  * is not buried in the editor's rail — it is where you go when you want an ANSWER rather than a
- * query. Writing one is still Query Studio's job, and "Save as view" lives there.
+ * query.
  *
- * BECAUSE THERE IS NO EDITOR HERE, running is the appliance's ONE-CALL form: `runView` merges your
- * arguments over the declared defaults and returns rows. Query Studio deliberately uses the
- * two-step instead — invocation, then execute — because a studio should show you the cypher a view
- * expands to before it costs you anything. Same engine, two honest paths, and "Open in Query
- * Studio" is how you cross from this one to that one.
+ * ONE WINDOW, ONE SCROLLER. A selected view is a fixed workspace: the run bar (arguments, the
+ * Cypher, Run) stays put above three tabs — Results, Schema, Watch — and only the active tab's body
+ * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
+ * too; tabs that anchored into one long page produced exactly that double scrollbar.
+ *
+ * RUNNING. An unedited view runs through the appliance's one-call `runView`. Once its Cypher is
+ * edited, Run sends the edited body to `execute` WITH the view's declared params, so it gets the
+ * same defaults, coercion and substitution it will get once saved — trying an edit never requires
+ * saving it. Query Studio remains the place to write a query from nothing; "Open in Query Studio"
+ * is how you cross over.
+ *
+ * SAVING. Only a view the user saved themselves is saved in place. A realm's view, or one shipped
+ * with the world, is saved as a COPY under a new name — the appliance refuses to shadow it, and it
+ * would not load if it did.
  */
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
+import { isBackgroundHandle } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
 import { rowColumns, rowsToCsv, rowsToMarkdown } from "../../../vc/rows.js";
 import { formatDuration } from "../../../studio-kit/format.js";
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage } from "../studio/chrome.js";
+import { SaveCopyDialog } from "./SaveCopyDialog.js";
+import { ViewCypherEditor } from "./ViewCypherEditor.js";
+const PANE_LABELS = { results: 'Results', schema: 'Schema', watch: 'Watch / receipts' };
+/** The appliance's `source` for a view the user saved in their own world — the only kind saved in place. */
+const USER_SAVED = 'saved';
+/*
+ * Provenance grouping. `source` is the realm that shipped a view, `saved` marks one the user saved,
+ * and null means it came with this world's own config. A flat list is unreadable the moment a few
+ * realms are aboard, and the group is also the answer to "where did this come from?".
+ */
+function groupOf(v) {
+    return v.source === USER_SAVED ? 'Yours' : v.source || 'World';
+}
+/** Why this view must be saved as a copy, or null when it can be saved in place. */
+function copyReason(v) {
+    // Saving carries no contract binding, so saving over a contracted view would silently unbind it.
+    if (v.source === USER_SAVED)
+        return v.dataContract ? { kind: 'contract' } : null;
+    return v.source ? { kind: 'realm', realm: v.source } : { kind: 'world' };
+}
+const GROUP_ORDER = ['Yours', 'World'];
+function compareGroups(a, b) {
+    const rank = (name) => { const i = GROUP_ORDER.indexOf(name); return i < 0 ? GROUP_ORDER.length : i; };
+    return rank(a) - rank(b) || a.localeCompare(b);
+}
 const ViewsRuntimeContext = createContext(null);
 function useViewsRuntime() {
     const runtime = useContext(ViewsRuntimeContext);
@@ -37,14 +72,18 @@ function SavedViewsBody() {
     const [expandedRealm, setExpandedRealm] = useState(null);
     const [watchedViews, setWatchedViews] = useState(null);
     const [watchSummaryLoaded, setWatchSummaryLoaded] = useState(false);
-    const [watchSupported, setWatchSupported] = useState(true);
-    const [pane, setPane] = useState('run');
+    const [pane, setPane] = useState('results');
     const [schema, setSchema] = useState(null);
     const [schemaError, setSchemaError] = useState('');
     const [status, setStatus] = useState({ tone: null, text: '' });
     const [rows, setRows] = useState([]);
     const [ran, setRan] = useState(false);
     const [busy, setBusy] = useState(false);
+    const [editorSize, setEditorSize] = useState('closed');
+    const [edited, setEdited] = useState(false);
+    const [saveNote, setSaveNote] = useState(null);
+    const [copying, setCopying] = useState(false);
+    const editorRef = useRef(null);
     const load = useCallback(async () => {
         const outcome = await services.kg.views();
         if (!isOk(outcome))
@@ -75,7 +114,8 @@ function SavedViewsBody() {
         }
     }, [services]);
     /*
-     * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it.
+     * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it,
+     * and `/results`, `/schema`, `/watch` open that tab.
      *
      * The console's own vocabulary (place.ts owns `#tab/rest`, and Apps already reads it), which is
      * what makes a TOUR able to move this panel: a tour step says `run: view.X` and the app navigates
@@ -91,10 +131,6 @@ function SavedViewsBody() {
      */
     const hashRest = useSyncExternalStore(host.subscribeSelection, host.selectedView, host.selectedView);
     const drivenBy = useRef('');
-    const operationRef = useRef(null);
-    const paneNavRef = useRef(null);
-    const sectionRefs = useRef({});
-    const pendingPaneScroll = useRef(false);
     /** Keep the requested values explicit; React may not have committed the form update yet. */
     const pendingRun = useRef(null);
     useEffect(() => {
@@ -103,7 +139,6 @@ function SavedViewsBody() {
         const rest = hashRest;
         if (rest === drivenBy.current)
             return;
-        pendingPaneScroll.current = false;
         pendingRun.current = null;
         drivenBy.current = rest;
         // null means the host is showing another workspace. Keep this mounted surface intact so a
@@ -119,19 +154,11 @@ function SavedViewsBody() {
         if (!wanted)
             return;
         const [destination, query = ''] = tail.split('?');
-        const shouldReveal = destination === 'run' || destination === 'results' || destination === 'schema' || destination === 'watch';
-        const nextPane = destination === 'results' || destination === 'schema' || destination === 'watch'
-            ? destination
-            : 'run';
-        pendingPaneScroll.current = shouldReveal;
-        if (selected === wanted.name) {
+        const nextPane = destination === 'schema' || destination === 'watch' ? destination : 'results';
+        if (selected === wanted.name)
             setPane(nextPane);
-            if (shouldReveal && pane === nextPane)
-                requestAnimationFrame(() => revealPane(nextPane));
-        }
-        else {
-            applyView(wanted, nextPane, shouldReveal);
-        }
+        else
+            applyView(wanted, nextPane);
         // The visible form and the queued request use the same merge, without waiting for setArgs.
         const supplied = Object.fromEntries(new URLSearchParams(query));
         const nextArgs = { ...(selected === wanted.name ? args : defaultArgs(wanted)), ...supplied };
@@ -150,6 +177,12 @@ function SavedViewsBody() {
         pendingRun.current = null;
         void run(pending.args);
     }, [view, args, hashRest]);
+    // A different view puts its own saved body in the editor. The editor is mounted with the
+    // operation layout, and a child's effects run before this one, so it exists by now.
+    useEffect(() => {
+        editorRef.current?.setText(view?.cypher ?? '');
+        setEdited(false);
+    }, [view?.name]);
     const params = (view?.params ?? {});
     const referencedLabels = new Set();
     for (const match of view?.cypher?.matchAll(/:\s*`?([A-Za-z_][A-Za-z0-9_]*)`?/g) ?? []) {
@@ -159,15 +192,10 @@ function SavedViewsBody() {
     if (view?.outputLabel)
         referencedLabels.add(view.outputLabel);
     const viewSchemaLabels = (schema?.labels ?? []).filter((label) => referencedLabels.has(label.label));
-    /*
-     * Provenance grouping. `source` is the realm that shipped a view; null means it was authored in
-     * this world's own config. A flat list is unreadable the moment a few realms are aboard, and the
-     * group header is also the answer to "where did this come from?".
-     */
     const groups = {};
     for (const v of list)
-        (groups[v.source || 'World'] ??= []).push(v);
-    const groupNames = Object.keys(groups).sort((a, b) => (a === 'World' ? -1 : b === 'World' ? 1 : a.localeCompare(b)));
+        (groups[groupOf(v)] ??= []).push(v);
+    const groupNames = Object.keys(groups).sort(compareGroups);
     function routeFor(name, destination) {
         return destination === 'open' ? name : `${name}/${destination}`;
     }
@@ -181,109 +209,45 @@ function SavedViewsBody() {
         return Object.fromEntries(Object.entries((v.params ?? {}))
             .map(([k, spec]) => [k, spec?.default == null ? '' : String(spec.default)]));
     }
-    function applyView(v, nextPane, reveal) {
-        pendingPaneScroll.current = reveal;
-        setExpandedRealm(v.source || 'World');
+    function applyView(v, nextPane) {
+        setExpandedRealm(groupOf(v));
         setSelected(v.name);
         setPane(nextPane);
         setStatus({ tone: null, text: '' });
         setRows([]);
         setRan(false);
         setArgs(defaultArgs(v));
+        setEditorSize('closed');
+        setSaveNote(null);
+        setCopying(false);
     }
-    function pick(v, nextPane = pane, destination = nextPane === 'run' ? 'open' : nextPane) {
+    function pick(v, nextPane = pane, destination = nextPane === 'results' ? 'open' : nextPane) {
         if (v.name === selected)
             return showPane(nextPane);
-        applyView(v, nextPane, destination !== 'open');
+        applyView(v, nextPane);
         navigate(v.name, destination);
-    }
-    function revealPaneButton(nextPane) {
-        paneNavRef.current?.querySelector(`[data-view-pane="${nextPane}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-    function revealPane(nextPane) {
-        revealPaneButton(nextPane);
-        sectionRefs.current[nextPane]?.scrollIntoView({ block: 'start', inline: 'nearest' });
-        requestAnimationFrame(() => { pendingPaneScroll.current = false; });
     }
     function showPane(nextPane, replace = true) {
         if (!view)
             return;
-        const alreadyActive = pane === nextPane;
-        pendingPaneScroll.current = true;
         setPane(nextPane);
-        navigate(view.name, nextPane === 'run' ? 'open' : nextPane, replace);
-        if (alreadyActive)
-            requestAnimationFrame(() => revealPane(nextPane));
+        navigate(view.name, nextPane === 'results' ? 'open' : nextPane, replace);
     }
-    // URL/nav-driven panes scroll once. Scroll-driven pane changes deliberately do not set this flag,
-    // so observing the document cannot snap it back or create a render loop.
-    useEffect(() => {
-        if (!view || !pendingPaneScroll.current)
-            return;
-        const frame = requestAnimationFrame(() => revealPane(pane));
-        return () => cancelAnimationFrame(frame);
-    }, [view?.name, pane]);
-    useEffect(() => {
-        const operation = operationRef.current;
-        if (!view || !operation)
-            return;
-        let frame = 0;
-        let resizeFrame = 0;
-        const follow = () => {
-            cancelAnimationFrame(frame);
-            frame = requestAnimationFrame(() => {
-                if (pendingPaneScroll.current)
-                    return;
-                const marker = (paneNavRef.current?.getBoundingClientRect().bottom ?? 0) + 18;
-                let current = 'run';
-                const candidates = watchSupported ? ['run', 'results', 'schema', 'watch'] : ['run', 'results', 'schema'];
-                for (const candidate of candidates) {
-                    const section = sectionRefs.current[candidate];
-                    if (section && section.getBoundingClientRect().top <= marker)
-                        current = candidate;
-                }
-                const scroller = /auto|scroll/.test(window.getComputedStyle(operation).overflowY)
-                    ? operation : document.scrollingElement ?? document.documentElement;
-                // A short final section cannot reach the marker when its scroll owner runs out of room.
-                const atBottom = scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight
-                    && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
-                if (atBottom)
-                    current = candidates[candidates.length - 1];
-                if (current === pane)
-                    return;
-                setPane(current);
-                navigate(view.name, current === 'run' ? 'open' : current, true);
-                revealPaneButton(current);
-            });
-        };
-        const resize = () => {
-            // A breakpoint can move scrolling between the document and the operation column.
-            pendingPaneScroll.current = true;
-            cancelAnimationFrame(frame);
-            cancelAnimationFrame(resizeFrame);
-            resizeFrame = requestAnimationFrame(() => revealPane(pane));
-        };
-        operation.addEventListener('scroll', follow, { passive: true });
-        window.addEventListener('scroll', follow, { passive: true });
-        window.addEventListener('resize', resize);
-        return () => {
-            cancelAnimationFrame(frame);
-            cancelAnimationFrame(resizeFrame);
-            operation.removeEventListener('scroll', follow);
-            window.removeEventListener('scroll', follow);
-            window.removeEventListener('resize', resize);
-        };
-    }, [view?.name, pane, watchSupported]);
     /** A blank field means "use the declared default", NOT "pass an empty string". */
     const supplied = (values = args) => Object.fromEntries(Object.entries(values).filter(([, v]) => v !== '' && v != null));
     async function run(values = args) {
         if (!view)
             return;
+        // Running is for looking at rows, so the editor gets out of the way at either size.
+        setEditorSize('closed');
         setBusy(true);
         setRows([]);
         setRan(false);
         setStatus({ tone: null, text: 'running…' });
-        const outcome = await services.kg.runView(view.name, supplied(values));
+        const draft = edited ? editorRef.current?.getText() : undefined;
+        const outcome = draft === undefined
+            ? await services.kg.runView(view.name, supplied(values))
+            : await services.kg.execute(draft, { params, args: supplied(values) });
         setBusy(false);
         if (!isOk(outcome)) {
             setStatus({ tone: 'error', text: failureMessage(outcome, `run '${view.name}'`) });
@@ -291,6 +255,11 @@ function SavedViewsBody() {
             return;
         }
         const result = outcome.value;
+        if (isBackgroundHandle(result)) {
+            setStatus({ tone: 'error', text: 'The appliance answered with a background run instead of rows. Run again.' });
+            showPane('results', true);
+            return;
+        }
         const got = (result.rows ?? []);
         // `rowCount` is documented as required and is not always sent. The rows are the truth.
         const rowCount = result.rowCount ?? got.length;
@@ -300,6 +269,8 @@ function SavedViewsBody() {
             return;
         }
         const parts = [`${rowCount} row(s)`];
+        if (draft !== undefined)
+            parts.push('edited query, not saved');
         if (result.durationMs != null)
             parts.push(formatDuration(result.durationMs));
         for (const warning of result.warnings ?? [])
@@ -310,6 +281,69 @@ function SavedViewsBody() {
         setRows(got);
         setRan(true);
         showPane('results', true);
+    }
+    /*
+     * SAVING the editor's text as `name`. Everything but the body is carried over from the view being
+     * edited — except `outputLabel`, which the appliance infers from the body, so an edit that changes
+     * what the view returns is labelled by what it now returns. Resolves to a refusal, or null.
+     */
+    async function persist(name, cypher) {
+        if (!view)
+            return 'Choose a view first.';
+        const outcome = await services.kg.saveView({
+            name, cypher, description: view.description, params: view.params, materialized: view.materialized, ttl: view.ttl,
+        });
+        if (!isOk(outcome))
+            return failureMessage(outcome, `save '${name}'`);
+        if (!outcome.value.ok)
+            return outcome.value.note ?? `The appliance did not save '${name}'.`;
+        // Promotion can inline captured scopes, so the stored body is the one to show.
+        if (outcome.value.savedCypher)
+            editorRef.current?.setText(outcome.value.savedCypher);
+        setEdited(false);
+        await load();
+        return null;
+    }
+    async function save() {
+        if (!view || !edited)
+            return;
+        if (copyReason(view))
+            return setCopying(true);
+        const previous = view.cypher;
+        setSaveNote({ tone: null, text: 'saving…' });
+        const refused = await persist(view.name, editorRef.current?.getText() ?? '');
+        setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Saved', undo: previous });
+    }
+    /** Put the body that was there before the last save back. There is no history beyond this one. */
+    async function undoSave(previous) {
+        if (!view)
+            return;
+        editorRef.current?.setText(previous);
+        setSaveNote({ tone: null, text: 'restoring…' });
+        const refused = await persist(view.name, previous);
+        setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Restored the previous query' });
+    }
+    async function saveCopy(name) {
+        const refused = await persist(name, editorRef.current?.getText() ?? '');
+        if (refused)
+            return refused;
+        // The copy IS the query on screen, so the selection moves to it and the rows stay.
+        setCopying(false);
+        setSelected(name);
+        setExpandedRealm('Yours');
+        setSaveNote({ tone: 'ok', text: `Saved as ${name}` });
+        navigate(name, pane === 'results' ? 'open' : pane);
+        return null;
+    }
+    function onEdit(text) {
+        setEdited(text !== (view?.cypher ?? ''));
+        if (saveNote)
+            setSaveNote(null);
+    }
+    function revert() {
+        editorRef.current?.setText(view?.cypher ?? '');
+        setEdited(false);
+        setSaveNote(null);
     }
     /** Expand with these arguments and hand the runnable cypher to the editor next door. */
     async function openInStudio() {
@@ -347,22 +381,31 @@ function SavedViewsBody() {
                         const isExpanded = expandedRealm === name;
                         const materialized = realmViews.filter((candidate) => candidate.materialized).length;
                         const watched = watchedViews == null ? null : realmViews.filter((candidate) => watchedViews.has(candidate.name)).length;
-                        return (_jsxs("section", { className: `panel viewrealm${isExpanded ? ' expanded' : ''}`, children: [_jsxs("button", { className: "viewrealm-head", "data-viewgroup": name, "aria-expanded": isExpanded, onClick: () => setExpandedRealm(isExpanded ? null : name), children: [_jsxs("span", { children: [_jsx("strong", { children: name }), _jsxs("small", { children: [realmViews.length, " operations \u00B7 ", materialized, " materialized \u00B7 ", !watchSummaryLoaded ? 'watch state loading' : watched == null ? 'watch state unavailable' : `${watched} watched`] })] }), _jsx("span", { className: "chev", "aria-hidden": "true", children: isExpanded ? '−' : '+' })] }), isExpanded && (_jsx("div", { className: "viewrealm-operations", children: realmViews.map((candidate) => (_jsxs("article", { className: "viewoperation", children: [_jsxs("button", { className: "viewoperation-open", onClick: () => pick(candidate, 'run', 'open'), children: [_jsx("strong", { children: candidate.name }), _jsx("small", { children: candidate.description }), _jsxs("span", { className: "viewnote", children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }), _jsx("button", { className: "btn primary", onClick: () => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'run', 'run'); }, children: "Run" })] }, candidate.name))) }))] }, name));
+                        return (_jsxs("section", { className: `panel viewrealm${isExpanded ? ' expanded' : ''}`, children: [_jsxs("button", { className: "viewrealm-head", "data-viewgroup": name, "aria-expanded": isExpanded, onClick: () => setExpandedRealm(isExpanded ? null : name), children: [_jsxs("span", { children: [_jsx("strong", { children: name }), _jsxs("small", { children: [realmViews.length, " operations \u00B7 ", materialized, " materialized \u00B7 ", !watchSummaryLoaded ? 'watch state loading' : watched == null ? 'watch state unavailable' : `${watched} watched`] })] }), _jsx("span", { className: "chev", "aria-hidden": "true", children: isExpanded ? '−' : '+' })] }), isExpanded && (_jsx("div", { className: "viewrealm-operations", children: realmViews.map((candidate) => (_jsxs("article", { className: "viewoperation", children: [_jsxs("button", { className: "viewoperation-open", onClick: () => pick(candidate, 'results', 'open'), children: [_jsx("strong", { children: candidate.name }), _jsx("small", { children: candidate.description }), _jsxs("span", { className: "viewnote", children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }), _jsx("button", { className: "btn primary", onClick: () => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'results', 'run'); }, children: "Run" })] }, candidate.name))) }))] }, name));
                     }) }))] }));
-    const realm = view.source || 'World';
-    const siblings = groups[realm];
-    const paneLinks = [
-        ['run', 'Run'],
-        ['results', ran ? `Results · ${rows.length}` : 'Results'],
-        ['schema', 'Schema'],
-        ['watch', 'Watch / receipts'],
-    ];
-    const navigator = () => (_jsxs(_Fragment, { children: [_jsxs("div", { className: "viewnav-head", children: [_jsx("span", { className: "viewnav-label", children: "Realm" }), _jsx("h2", { children: realm }), _jsx("small", { children: "Selected operation" }), _jsx("strong", { children: view.name }), _jsx("button", { className: "btn ghost", onClick: () => { setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), _jsxs("nav", { className: "viewnav-section", "aria-label": `Other operations in ${realm}`, children: [_jsxs("span", { className: "viewnav-label", children: ["This realm \u00B7 ", siblings.length] }), siblings.map((candidate) => (_jsxs("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [_jsx("strong", { children: candidate.name }), _jsxs("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
-    return (_jsxs("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [_jsx("aside", { className: "panel viewspage-sidebar", "aria-label": `${realm} operation navigator`, children: navigator() }), _jsxs("details", { className: "panel viewspage-mobile-nav", children: [_jsx("summary", { children: _jsxs("span", { children: [_jsx("strong", { children: "Browse this realm" }), _jsxs("small", { children: [realm, " \u00B7 ", view.name] })] }) }), _jsx("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), _jsxs("div", { className: "viewspage-operation", ref: operationRef, children: [_jsxs("section", { className: "panel viewoperation-head", children: [_jsxs("div", { children: [_jsxs("span", { className: "viewnav-label", children: [realm, " \u00B7 operation"] }), _jsx("h2", { children: view.name }), _jsxs("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized' : view.outputLabel ?? 'Tabular'] })] }), _jsxs("div", { className: "row", children: [view.materialized && _jsx("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), _jsx("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), _jsx("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && _jsx("p", { className: "hint", children: view.description })] }), _jsx("nav", { className: "viewoperation-nav", "aria-label": "Operation sections", ref: paneNavRef, children: paneLinks.map(([name, label]) => (_jsx("button", { "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, "aria-current": pane === name ? 'page' : undefined, onClick: () => showPane(name), children: label }, name))) }), _jsxs("div", { className: "viewoperation-sections", children: [_jsx("section", { className: "viewoperation-section", "data-view-pane": "run", ref: (node) => { sectionRefs.current.run = node ?? undefined; }, children: _jsxs(StudioPanel, { title: "Run", children: [Object.keys(params).length === 0 ? _jsx("p", { className: "hint", children: "No parameters \u2014 runs as saved." }) : (_jsx("div", { className: "paramform", children: Object.entries(params).map(([key, spec]) => (_jsxs("label", { className: "paramrow", children: [_jsxs("span", { className: "paramname", children: [key, " ", _jsx("em", { children: spec?.type })] }), _jsx("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'no default', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })) }), spec?.description && _jsx("small", { children: spec.description })] }, key))) })), _jsx("div", { className: "row", children: _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' }) }), view.cypher && (_jsxs("details", { className: "cypherbox", open: true, children: [_jsxs("summary", { children: ["Cypher", view.materialized ? ' · materialized — reads its cache' : ''] }), _jsx("pre", { tabIndex: 0, children: _jsx("code", { children: view.cypher }) })] })), _jsx("div", { className: `status${status.tone ? ` ${status.tone}` : ''}`, children: status.text })] }) }), _jsx("section", { className: "viewoperation-section", "data-view-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: _jsxs(StudioPanel, { title: "Results", children: [_jsx("span", { "data-state": "view.ran", hidden: !ran }), !ran ? (busy ? _jsx("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' ? null : _jsx("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) : (_jsx("div", { className: "view-results", children: _jsx(RowTable, { rows: rows, columns: rowColumns(rows) }) })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && _jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] }), _jsx(Status, { tone: status.tone, children: status.text })] })] }) }), _jsx("section", { className: "viewoperation-section", "data-view-pane": "schema", ref: (node) => { sectionRefs.current.schema = node ?? undefined; }, children: _jsx(StudioPanel, { title: "Schema", aside: schema && _jsxs("span", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), children: schemaError ? _jsx(Status, { tone: "error", children: schemaError }) : schema == null ? _jsx("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? (_jsx("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : (_jsx("div", { className: "viewschema", children: viewSchemaLabels.map((label) => (_jsxs("article", { className: "viewschema-label", children: [_jsxs("div", { className: "row", children: [_jsx("strong", { children: label.label }), _jsx("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && _jsx("p", { children: label.description }), _jsxs("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && _jsx("dl", { children: label.properties.map((property) => _jsxs(React.Fragment, { children: [_jsx("dt", { children: property.name }), _jsx("dd", { children: property.type })] }, property.name)) })] }, label.label))) })) }) }), _jsx("section", { className: "viewoperation-section", "data-view-pane": "watch", ref: (node) => { sectionRefs.current.watch = node ?? undefined; }, children: _jsx(WatchPanel, { viewName: view.name, args: args, onSupportChange: setWatchSupported, onWatchChange: (watching) => setWatchedViews((current) => {
-                                        const next = new Set(current ?? []);
-                                        watching ? next.add(view.name) : next.delete(view.name);
-                                        return next;
-                                    }), onWriteAgent: (signalType) => host.onCreateHandler({ signalType, view: view.name }) }, view.name) })] })] })] }));
+    const group = groupOf(view);
+    const siblings = groups[group] ?? [view];
+    const reason = copyReason(view);
+    const ownView = view.source === USER_SAVED;
+    const paneLabel = (name) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name];
+    const navigator = () => (_jsxs(_Fragment, { children: [_jsxs("div", { className: "viewnav-head", children: [_jsx("span", { className: "viewnav-label", children: group === 'Yours' || group === 'World' ? 'Group' : 'Realm' }), _jsx("h2", { children: group }), _jsx("small", { children: "Selected operation" }), _jsx("strong", { children: view.name }), _jsx("button", { className: "btn ghost", onClick: () => { setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), _jsxs("nav", { className: "viewnav-section", "aria-label": `Other operations in ${group}`, children: [_jsxs("span", { className: "viewnav-label", children: ["In ", group, " \u00B7 ", siblings.length] }), siblings.map((candidate) => (_jsxs("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [_jsx("strong", { children: candidate.name }), _jsxs("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
+    const saveControls = (_jsxs(_Fragment, { children: [saveNote && (_jsxs("span", { className: `viewcypher-note${saveNote.tone ? ` ${saveNote.tone}` : ''}`, role: "status", children: [saveNote.text, saveNote.undo !== undefined && _jsxs(_Fragment, { children: [" \u00B7 ", _jsx("button", { className: "viewlink", onClick: () => void undoSave(saveNote.undo ?? ''), children: "Undo" })] })] })), _jsx("button", { className: `btn tiny${edited && !reason ? ' primary' : ''}`, disabled: !edited, title: reason ? 'This view is not yours to change, so your edits save as a new view' : undefined, onClick: () => void save(), children: reason ? 'Save as copy…' : 'Save' })] }));
+    return (_jsxs("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [_jsx("aside", { className: "panel viewspage-sidebar", "aria-label": `${group} operation navigator`, children: navigator() }), _jsxs("details", { className: "panel viewspage-mobile-nav", children: [_jsx("summary", { children: _jsxs("span", { children: [_jsxs("strong", { children: ["Browse ", group] }), _jsxs("small", { children: [group, " \u00B7 ", view.name] })] }) }), _jsx("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), _jsxs("div", { className: "viewspage-operation", children: [_jsxs("section", { className: "panel viewoperation-head", children: [_jsxs("div", { children: [_jsxs("span", { className: "viewnav-label", children: [group, " \u00B7 operation"] }), _jsxs("div", { className: "viewoperation-title", children: [_jsx("h2", { children: view.name }), _jsx(OriginChip, { view: view })] }), _jsxs("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized — Run reads its cache' : view.outputLabel ?? 'Tabular'] })] }), _jsxs("div", { className: "row", children: [view.materialized && _jsx("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), _jsx("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), ownView && _jsx("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && _jsx("p", { className: "hint", children: view.description })] }), _jsxs("div", { className: "viewrunbar", children: [Object.keys(params).length === 0 ? _jsx("span", { className: "hint", children: "No parameters." }) : Object.entries(params).map(([key, spec]) => (_jsxs("label", { className: "paramrow", title: spec?.description, children: [_jsxs("span", { className: "paramname", children: [key, " ", _jsx("em", { children: spec?.type })] }), _jsx("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'required', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })), onKeyDown: (event) => { if (event.key === 'Enter')
+                                            void run(); } })] }, key))), _jsxs("div", { className: "row viewrunbar-actions", children: [_jsxs("button", { className: "btn ghost viewcypher-toggle", "aria-expanded": editorSize !== 'closed', title: editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor', onClick: () => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed'), children: ['{ }', " Cypher", edited ? ' •' : ''] }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' })] })] }), _jsxs("div", { className: `viewoperation-body${editorSize === 'full' ? ' covered' : ''}`, children: [_jsx("nav", { className: "viewoperation-nav", role: "tablist", "aria-label": "Operation sections", children: Object.keys(PANE_LABELS).map((name) => (_jsx("button", { role: "tab", id: `viewtab-${name}`, "aria-controls": `viewpane-${name}`, "aria-selected": pane === name, "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, onClick: () => showPane(name), children: paneLabel(name) }, name))) }), _jsxs("section", { className: "viewpane viewpane-results", role: "tabpanel", id: "viewpane-results", "data-view-pane": "results", "aria-labelledby": "viewtab-results", hidden: pane !== 'results', children: [_jsx("span", { "data-state": "view.ran", hidden: !ran }), _jsx("div", { className: "viewpane-scroll view-results", tabIndex: 0, children: !ran ? (busy ? _jsx("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' ? null : _jsx("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) : (_jsx(RowTable, { rows: rows, columns: rowColumns(rows) })) }), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && _jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] }), _jsx(Status, { tone: status.tone, children: status.text })] })] }), _jsx("section", { className: "viewpane", role: "tabpanel", id: "viewpane-schema", "data-view-pane": "schema", "aria-labelledby": "viewtab-schema", hidden: pane !== 'schema', children: _jsxs("div", { className: "viewpane-scroll", children: [schema && _jsxs("p", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), schemaError ? _jsx(Status, { tone: "error", children: schemaError }) : schema == null ? _jsx("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? (_jsx("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : (_jsx("div", { className: "viewschema", children: viewSchemaLabels.map((label) => (_jsxs("article", { className: "viewschema-label", children: [_jsxs("div", { className: "row", children: [_jsx("strong", { children: label.label }), _jsx("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && _jsx("p", { children: label.description }), _jsxs("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && _jsx("dl", { children: label.properties.map((property) => _jsxs(React.Fragment, { children: [_jsx("dt", { children: property.name }), _jsx("dd", { children: property.type })] }, property.name)) })] }, label.label))) }))] }) }), _jsx("section", { className: "viewpane", role: "tabpanel", id: "viewpane-watch", "data-view-pane": "watch", "aria-labelledby": "viewtab-watch", hidden: pane !== 'watch', children: _jsx("div", { className: "viewpane-scroll", children: _jsx(WatchPanel, { viewName: view.name, args: args, onWatchChange: (watching) => setWatchedViews((current) => {
+                                            const next = new Set(current ?? []);
+                                            watching ? next.add(view.name) : next.delete(view.name);
+                                            return next;
+                                        }), onWriteAgent: (signalType) => host.onCreateHandler({ signalType, view: view.name }) }, view.name) }) }), _jsx(ViewCypherEditor, { ref: editorRef, size: editorSize, onSize: setEditorSize, onRun: () => void run(), onEdit: onEdit, edited: edited, saveControls: saveControls, onRevert: revert, underneath: paneLabel(pane) })] }), copying && reason && (_jsx(SaveCopyDialog, { viewName: view.name, reason: reason, taken: new Set(list.map((candidate) => candidate.name)), onSave: saveCopy, onCancel: () => setCopying(false) }))] })] }));
+}
+/** Where this view comes from, which decides whether saving replaces it or makes a copy. */
+function OriginChip({ view }) {
+    if (view.source === USER_SAVED) {
+        return _jsx("span", { className: "viewtag viewtag-origin mine", title: "Saved in your world. Saving replaces it.", children: "Yours" });
+    }
+    if (view.source) {
+        return (_jsxs("span", { className: "viewtag viewtag-origin realm", title: `Ships with the ${view.source} realm. Your edits save as a copy in your world.`, children: [view.source, " realm"] }));
+    }
+    return _jsx("span", { className: "viewtag viewtag-origin", title: "Ships with this world. Your edits save as a copy.", children: "World" });
 }
 /*
  * WATCHING A VIEW — the shortest path from a saved question to an agent.
@@ -386,7 +429,7 @@ const SCHEDULES = [
     ['0 0 9 * * MON', 'Monday mornings at 9'],
 ];
 /** As `/watches` reports one. Only the fields this panel reads. */
-function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChange }) {
+function WatchPanel({ viewName, args, onWatchChange, onWriteAgent }) {
     const { services } = useViewsRuntime();
     const [watch, setWatch] = useState(null);
     const [loading, setLoading] = useState(true);
@@ -399,12 +442,11 @@ function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChan
         setLoading(true);
         setProblem('');
         const r = await services.watches.list();
-        onSupportChange(r.ok || r.kind !== 'unsupported');
         setLoading(false);
         if (!r.ok)
             return setProblem(failureMessage(r, 'list watches'));
         setWatch(r.value.find((w) => w.lensId === viewName) ?? null);
-    }, [viewName, services, onSupportChange]);
+    }, [viewName, services]);
     useEffect(() => { void load(); }, [load]);
     async function start() {
         setBusy(true);

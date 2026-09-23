@@ -274,6 +274,8 @@ var EmbabelApplianceClient = (() => {
       if (options.waitSeconds !== void 0) query["waitSeconds"] = options.waitSeconds;
       const body = { cypher };
       if (options.captureAs !== void 0) body["captureAs"] = options.captureAs;
+      if (options.params !== void 0) body["params"] = options.params;
+      if (options.args !== void 0) body["args"] = options.args;
       return this.transport.send({
         method: "POST",
         path: `${KG}/execute`,

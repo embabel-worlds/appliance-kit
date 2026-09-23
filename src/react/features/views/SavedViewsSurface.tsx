@@ -4,17 +4,26 @@
  * A view is the durable thing: someone worked out a question worth asking, named it, and now
  * anyone can ask it again with different arguments. That is not a sub-feature of the editor, so it
  * is not buried in the editor's rail — it is where you go when you want an ANSWER rather than a
- * query. Writing one is still Query Studio's job, and "Save as view" lives there.
+ * query.
  *
- * BECAUSE THERE IS NO EDITOR HERE, running is the appliance's ONE-CALL form: `runView` merges your
- * arguments over the declared defaults and returns rows. Query Studio deliberately uses the
- * two-step instead — invocation, then execute — because a studio should show you the cypher a view
- * expands to before it costs you anything. Same engine, two honest paths, and "Open in Query
- * Studio" is how you cross from this one to that one.
+ * ONE WINDOW, ONE SCROLLER. A selected view is a fixed workspace: the run bar (arguments, the
+ * Cypher, Run) stays put above three tabs — Results, Schema, Watch — and only the active tab's body
+ * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
+ * too; tabs that anchored into one long page produced exactly that double scrollbar.
+ *
+ * RUNNING. An unedited view runs through the appliance's one-call `runView`. Once its Cypher is
+ * edited, Run sends the edited body to `execute` WITH the view's declared params, so it gets the
+ * same defaults, coercion and substitution it will get once saved — trying an edit never requires
+ * saving it. Query Studio remains the place to write a query from nothing; "Open in Query Studio"
+ * is how you cross over.
+ *
+ * SAVING. Only a view the user saved themselves is saved in place. A realm's view, or one shipped
+ * with the world, is saved as a COPY under a new name — the appliance refuses to shadow it, and it
+ * would not load if it did.
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
-import type { KgSchema, KgView, KgViewParamSpec } from '../../../client/kg.ts'
+import { isBackgroundHandle, type KgSchema, type KgView, type KgViewParamSpec } from '../../../client/kg.ts'
 import { isOk } from '../../../client/outcome.ts'
 import { rowColumns, rowsToCsv, rowsToMarkdown } from '../../../vc/rows.ts'
 import { formatDuration } from '../../../studio-kit/format.ts'
@@ -28,8 +37,37 @@ import type {
   WatchRun,
 } from '../contracts.ts'
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { SaveCopyDialog, type CopyReason } from './SaveCopyDialog.tsx'
+import { ViewCypherEditor, type EditorSize, type ViewCypherEditorHandle } from './ViewCypherEditor.tsx'
 
-type ViewPane = 'run' | 'results' | 'schema' | 'watch'
+type ViewPane = 'results' | 'schema' | 'watch'
+
+const PANE_LABELS: Record<ViewPane, string> = { results: 'Results', schema: 'Schema', watch: 'Watch / receipts' }
+
+/** The appliance's `source` for a view the user saved in their own world — the only kind saved in place. */
+const USER_SAVED = 'saved'
+
+/*
+ * Provenance grouping. `source` is the realm that shipped a view, `saved` marks one the user saved,
+ * and null means it came with this world's own config. A flat list is unreadable the moment a few
+ * realms are aboard, and the group is also the answer to "where did this come from?".
+ */
+function groupOf(v: KgView): string {
+  return v.source === USER_SAVED ? 'Yours' : v.source || 'World'
+}
+
+/** Why this view must be saved as a copy, or null when it can be saved in place. */
+function copyReason(v: KgView): CopyReason | null {
+  // Saving carries no contract binding, so saving over a contracted view would silently unbind it.
+  if (v.source === USER_SAVED) return v.dataContract ? { kind: 'contract' } : null
+  return v.source ? { kind: 'realm', realm: v.source } : { kind: 'world' }
+}
+
+const GROUP_ORDER = ['Yours', 'World']
+function compareGroups(a: string, b: string): number {
+  const rank = (name: string) => { const i = GROUP_ORDER.indexOf(name); return i < 0 ? GROUP_ORDER.length : i }
+  return rank(a) - rank(b) || a.localeCompare(b)
+}
 
 interface ViewsRuntime { services: ViewsServices; host: SavedViewsHost }
 const ViewsRuntimeContext = createContext<ViewsRuntime | null>(null)
@@ -43,6 +81,8 @@ export function SavedViewsSurface({ services, host }: SavedViewsSurfaceProps) {
   return <ViewsRuntimeContext.Provider value={{ services, host }}><SavedViewsBody /></ViewsRuntimeContext.Provider>
 }
 
+interface SaveNote { tone: 'ok' | 'error' | null; text: string; undo?: string }
+
 function SavedViewsBody() {
   const { services, host } = useViewsRuntime()
   const [views, setViews] = useState<KgView[] | null>(null)
@@ -52,14 +92,18 @@ function SavedViewsBody() {
   const [expandedRealm, setExpandedRealm] = useState<string | null>(null)
   const [watchedViews, setWatchedViews] = useState<Set<string> | null>(null)
   const [watchSummaryLoaded, setWatchSummaryLoaded] = useState(false)
-  const [watchSupported, setWatchSupported] = useState(true)
-  const [pane, setPane] = useState<ViewPane>('run')
+  const [pane, setPane] = useState<ViewPane>('results')
   const [schema, setSchema] = useState<KgSchema | null>(null)
   const [schemaError, setSchemaError] = useState('')
   const [status, setStatus] = useState<{ tone: 'ok' | 'error' | 'caution' | null; text: string }>({ tone: null, text: '' })
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
   const [ran, setRan] = useState(false)
   const [busy, setBusy] = useState(false)
+  const [editorSize, setEditorSize] = useState<EditorSize>('closed')
+  const [edited, setEdited] = useState(false)
+  const [saveNote, setSaveNote] = useState<SaveNote | null>(null)
+  const [copying, setCopying] = useState(false)
+  const editorRef = useRef<ViewCypherEditorHandle>(null)
 
   const load = useCallback(async () => {
     const outcome = await services.kg.views()
@@ -88,7 +132,8 @@ function SavedViewsBody() {
   }, [services])
 
   /*
-   * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it.
+   * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it,
+   * and `/results`, `/schema`, `/watch` open that tab.
    *
    * The console's own vocabulary (place.ts owns `#tab/rest`, and Apps already reads it), which is
    * what makes a TOUR able to move this panel: a tour step says `run: view.X` and the app navigates
@@ -105,17 +150,12 @@ function SavedViewsBody() {
   const hashRest = useSyncExternalStore(host.subscribeSelection, host.selectedView, host.selectedView)
 
   const drivenBy = useRef<string | null>('')
-  const operationRef = useRef<HTMLDivElement>(null)
-  const paneNavRef = useRef<HTMLElement>(null)
-  const sectionRefs = useRef<Partial<Record<ViewPane, HTMLElement>>>({})
-  const pendingPaneScroll = useRef(false)
   /** Keep the requested values explicit; React may not have committed the form update yet. */
   const pendingRun = useRef<{ name: string; args: Record<string, string> } | null>(null)
   useEffect(() => {
     if (!views) return
     const rest = hashRest
     if (rest === drivenBy.current) return
-    pendingPaneScroll.current = false
     pendingRun.current = null
     drivenBy.current = rest
     // null means the host is showing another workspace. Keep this mounted surface intact so a
@@ -129,17 +169,9 @@ function SavedViewsBody() {
     const wanted = views.find((candidate) => candidate.name === name)
     if (!wanted) return
     const [destination, query = ''] = tail.split('?')
-    const shouldReveal = destination === 'run' || destination === 'results' || destination === 'schema' || destination === 'watch'
-    const nextPane: ViewPane = destination === 'results' || destination === 'schema' || destination === 'watch'
-      ? destination
-      : 'run'
-    pendingPaneScroll.current = shouldReveal
-    if (selected === wanted.name) {
-      setPane(nextPane)
-      if (shouldReveal && pane === nextPane) requestAnimationFrame(() => revealPane(nextPane))
-    } else {
-      applyView(wanted, nextPane, shouldReveal)
-    }
+    const nextPane: ViewPane = destination === 'schema' || destination === 'watch' ? destination : 'results'
+    if (selected === wanted.name) setPane(nextPane)
+    else applyView(wanted, nextPane)
     // The visible form and the queued request use the same merge, without waiting for setArgs.
     const supplied = Object.fromEntries(new URLSearchParams(query))
     const nextArgs = { ...(selected === wanted.name ? args : defaultArgs(wanted)), ...supplied }
@@ -157,6 +189,14 @@ function SavedViewsBody() {
     pendingRun.current = null
     void run(pending.args)
   }, [view, args, hashRest])
+
+  // A different view puts its own saved body in the editor. The editor is mounted with the
+  // operation layout, and a child's effects run before this one, so it exists by now.
+  useEffect(() => {
+    editorRef.current?.setText(view?.cypher ?? '')
+    setEdited(false)
+  }, [view?.name])
+
   const params = (view?.params ?? {}) as Record<string, KgViewParamSpec>
   const referencedLabels = new Set<string>()
   for (const match of view?.cypher?.matchAll(/:\s*`?([A-Za-z_][A-Za-z0-9_]*)`?/g) ?? []) {
@@ -165,20 +205,15 @@ function SavedViewsBody() {
   if (view?.outputLabel) referencedLabels.add(view.outputLabel)
   const viewSchemaLabels = (schema?.labels ?? []).filter((label) => referencedLabels.has(label.label))
 
-  /*
-   * Provenance grouping. `source` is the realm that shipped a view; null means it was authored in
-   * this world's own config. A flat list is unreadable the moment a few realms are aboard, and the
-   * group header is also the answer to "where did this come from?".
-   */
   const groups: Record<string, KgView[]> = {}
-  for (const v of list) (groups[v.source || 'World'] ??= []).push(v)
-  const groupNames = Object.keys(groups).sort((a, b) => (a === 'World' ? -1 : b === 'World' ? 1 : a.localeCompare(b)))
+  for (const v of list) (groups[groupOf(v)] ??= []).push(v)
+  const groupNames = Object.keys(groups).sort(compareGroups)
 
-  function routeFor(name: string, destination: 'open' | ViewPane): string {
+  function routeFor(name: string, destination: 'open' | 'run' | ViewPane): string {
     return destination === 'open' ? name : `${name}/${destination}`
   }
 
-  function navigate(name: string | null, destination: 'open' | ViewPane, replace = false): void {
+  function navigate(name: string | null, destination: 'open' | 'run' | ViewPane, replace = false): void {
     if (!host.navigateToView) return
     drivenBy.current = name ? routeFor(name, destination) : null
     host.navigateToView(name, destination, replace)
@@ -191,107 +226,46 @@ function SavedViewsBody() {
     )
   }
 
-  function applyView(v: KgView, nextPane: ViewPane, reveal: boolean): void {
-    pendingPaneScroll.current = reveal
-    setExpandedRealm(v.source || 'World')
+  function applyView(v: KgView, nextPane: ViewPane): void {
+    setExpandedRealm(groupOf(v))
     setSelected(v.name)
     setPane(nextPane)
     setStatus({ tone: null, text: '' })
     setRows([])
     setRan(false)
     setArgs(defaultArgs(v))
+    setEditorSize('closed')
+    setSaveNote(null)
+    setCopying(false)
   }
 
-  function pick(v: KgView, nextPane: ViewPane = pane, destination: 'open' | ViewPane = nextPane === 'run' ? 'open' : nextPane): void {
+  function pick(v: KgView, nextPane: ViewPane = pane, destination: 'open' | 'run' | ViewPane = nextPane === 'results' ? 'open' : nextPane): void {
     if (v.name === selected) return showPane(nextPane)
-    applyView(v, nextPane, destination !== 'open')
+    applyView(v, nextPane)
     navigate(v.name, destination)
-  }
-
-  function revealPaneButton(nextPane: ViewPane): void {
-    paneNavRef.current?.querySelector<HTMLElement>(`[data-view-pane="${nextPane}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' })
-  }
-
-  function revealPane(nextPane: ViewPane): void {
-    revealPaneButton(nextPane)
-    sectionRefs.current[nextPane]?.scrollIntoView({ block: 'start', inline: 'nearest' })
-    requestAnimationFrame(() => { pendingPaneScroll.current = false })
   }
 
   function showPane(nextPane: ViewPane, replace = true): void {
     if (!view) return
-    const alreadyActive = pane === nextPane
-    pendingPaneScroll.current = true
     setPane(nextPane)
-    navigate(view.name, nextPane === 'run' ? 'open' : nextPane, replace)
-    if (alreadyActive) requestAnimationFrame(() => revealPane(nextPane))
+    navigate(view.name, nextPane === 'results' ? 'open' : nextPane, replace)
   }
-
-  // URL/nav-driven panes scroll once. Scroll-driven pane changes deliberately do not set this flag,
-  // so observing the document cannot snap it back or create a render loop.
-  useEffect(() => {
-    if (!view || !pendingPaneScroll.current) return
-    const frame = requestAnimationFrame(() => revealPane(pane))
-    return () => cancelAnimationFrame(frame)
-  }, [view?.name, pane])
-
-  useEffect(() => {
-    const operation = operationRef.current
-    if (!view || !operation) return
-    let frame = 0
-    let resizeFrame = 0
-    const follow = () => {
-      cancelAnimationFrame(frame)
-      frame = requestAnimationFrame(() => {
-        if (pendingPaneScroll.current) return
-        const marker = (paneNavRef.current?.getBoundingClientRect().bottom ?? 0) + 18
-        let current: ViewPane = 'run'
-        const candidates: ViewPane[] = watchSupported ? ['run', 'results', 'schema', 'watch'] : ['run', 'results', 'schema']
-        for (const candidate of candidates) {
-          const section = sectionRefs.current[candidate]
-          if (section && section.getBoundingClientRect().top <= marker) current = candidate
-        }
-        const scroller = /auto|scroll/.test(window.getComputedStyle(operation).overflowY)
-          ? operation : document.scrollingElement ?? document.documentElement
-        // A short final section cannot reach the marker when its scroll owner runs out of room.
-        const atBottom = scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight
-          && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1
-        if (atBottom) current = candidates[candidates.length - 1]!
-        if (current === pane) return
-        setPane(current)
-        navigate(view.name, current === 'run' ? 'open' : current, true)
-        revealPaneButton(current)
-      })
-    }
-    const resize = () => {
-      // A breakpoint can move scrolling between the document and the operation column.
-      pendingPaneScroll.current = true
-      cancelAnimationFrame(frame)
-      cancelAnimationFrame(resizeFrame)
-      resizeFrame = requestAnimationFrame(() => revealPane(pane))
-    }
-    operation.addEventListener('scroll', follow, { passive: true })
-    window.addEventListener('scroll', follow, { passive: true })
-    window.addEventListener('resize', resize)
-    return () => {
-      cancelAnimationFrame(frame)
-      cancelAnimationFrame(resizeFrame)
-      operation.removeEventListener('scroll', follow)
-      window.removeEventListener('scroll', follow)
-      window.removeEventListener('resize', resize)
-    }
-  }, [view?.name, pane, watchSupported])
 
   /** A blank field means "use the declared default", NOT "pass an empty string". */
   const supplied = (values = args) => Object.fromEntries(Object.entries(values).filter(([, v]) => v !== '' && v != null))
 
   async function run(values = args): Promise<void> {
     if (!view) return
+    // Running is for looking at rows, so the editor gets out of the way at either size.
+    setEditorSize('closed')
     setBusy(true)
     setRows([])
     setRan(false)
     setStatus({ tone: null, text: 'running…' })
-    const outcome = await services.kg.runView(view.name, supplied(values))
+    const draft = edited ? editorRef.current?.getText() : undefined
+    const outcome = draft === undefined
+      ? await services.kg.runView(view.name, supplied(values))
+      : await services.kg.execute(draft, { params, args: supplied(values) })
     setBusy(false)
     if (!isOk(outcome)) {
       setStatus({ tone: 'error', text: failureMessage(outcome, `run '${view.name}'`) })
@@ -299,6 +273,11 @@ function SavedViewsBody() {
       return
     }
     const result = outcome.value
+    if (isBackgroundHandle(result)) {
+      setStatus({ tone: 'error', text: 'The appliance answered with a background run instead of rows. Run again.' })
+      showPane('results', true)
+      return
+    }
     const got = (result.rows ?? []) as Array<Record<string, unknown>>
     // `rowCount` is documented as required and is not always sent. The rows are the truth.
     const rowCount = result.rowCount ?? got.length
@@ -308,6 +287,7 @@ function SavedViewsBody() {
       return
     }
     const parts = [`${rowCount} row(s)`]
+    if (draft !== undefined) parts.push('edited query, not saved')
     if (result.durationMs != null) parts.push(formatDuration(result.durationMs))
     for (const warning of result.warnings ?? []) parts.push(warning)
     if (!rowCount && result.hint) parts.push(result.hint)
@@ -315,6 +295,66 @@ function SavedViewsBody() {
     setRows(got)
     setRan(true)
     showPane('results', true)
+  }
+
+  /*
+   * SAVING the editor's text as `name`. Everything but the body is carried over from the view being
+   * edited — except `outputLabel`, which the appliance infers from the body, so an edit that changes
+   * what the view returns is labelled by what it now returns. Resolves to a refusal, or null.
+   */
+  async function persist(name: string, cypher: string): Promise<string | null> {
+    if (!view) return 'Choose a view first.'
+    const outcome = await services.kg.saveView({
+      name, cypher, description: view.description, params: view.params, materialized: view.materialized, ttl: view.ttl,
+    })
+    if (!isOk(outcome)) return failureMessage(outcome, `save '${name}'`)
+    if (!outcome.value.ok) return outcome.value.note ?? `The appliance did not save '${name}'.`
+    // Promotion can inline captured scopes, so the stored body is the one to show.
+    if (outcome.value.savedCypher) editorRef.current?.setText(outcome.value.savedCypher)
+    setEdited(false)
+    await load()
+    return null
+  }
+
+  async function save(): Promise<void> {
+    if (!view || !edited) return
+    if (copyReason(view)) return setCopying(true)
+    const previous = view.cypher
+    setSaveNote({ tone: null, text: 'saving…' })
+    const refused = await persist(view.name, editorRef.current?.getText() ?? '')
+    setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Saved', undo: previous })
+  }
+
+  /** Put the body that was there before the last save back. There is no history beyond this one. */
+  async function undoSave(previous: string): Promise<void> {
+    if (!view) return
+    editorRef.current?.setText(previous)
+    setSaveNote({ tone: null, text: 'restoring…' })
+    const refused = await persist(view.name, previous)
+    setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Restored the previous query' })
+  }
+
+  async function saveCopy(name: string): Promise<string | null> {
+    const refused = await persist(name, editorRef.current?.getText() ?? '')
+    if (refused) return refused
+    // The copy IS the query on screen, so the selection moves to it and the rows stay.
+    setCopying(false)
+    setSelected(name)
+    setExpandedRealm('Yours')
+    setSaveNote({ tone: 'ok', text: `Saved as ${name}` })
+    navigate(name, pane === 'results' ? 'open' : pane)
+    return null
+  }
+
+  function onEdit(text: string): void {
+    setEdited(text !== (view?.cypher ?? ''))
+    if (saveNote) setSaveNote(null)
+  }
+
+  function revert(): void {
+    editorRef.current?.setText(view?.cypher ?? '')
+    setEdited(false)
+    setSaveNote(null)
   }
 
   /** Expand with these arguments and hand the runnable cypher to the editor next door. */
@@ -381,14 +421,14 @@ function SavedViewsBody() {
                   <div className="viewrealm-operations">
                     {realmViews.map((candidate) => (
                       <article className="viewoperation" key={candidate.name}>
-                        <button className="viewoperation-open" onClick={() => pick(candidate, 'run', 'open')}>
+                        <button className="viewoperation-open" onClick={() => pick(candidate, 'results', 'open')}>
                           <strong>{candidate.name}</strong>
                           <small>{candidate.description}</small>
                           <span className="viewnote">
                             {Object.keys(candidate.params ?? {}).length} parameter(s) · {candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}
                           </span>
                         </button>
-                        <button className="btn primary" onClick={() => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'run', 'run') }}>Run</button>
+                        <button className="btn primary" onClick={() => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'results', 'run') }}>Run</button>
                       </article>
                     ))}
                   </div>
@@ -401,25 +441,22 @@ function SavedViewsBody() {
     </div>
   )
 
-  const realm = view.source || 'World'
-  const siblings = groups[realm]!
-  const paneLinks: Array<[ViewPane, string]> = [
-    ['run', 'Run'],
-    ['results', ran ? `Results · ${rows.length}` : 'Results'],
-    ['schema', 'Schema'],
-    ['watch', 'Watch / receipts'],
-  ]
+  const group = groupOf(view)
+  const siblings = groups[group] ?? [view]
+  const reason = copyReason(view)
+  const ownView = view.source === USER_SAVED
+  const paneLabel = (name: ViewPane) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name]
   const navigator = () => (
     <>
       <div className="viewnav-head">
-        <span className="viewnav-label">Realm</span>
-        <h2>{realm}</h2>
+        <span className="viewnav-label">{group === 'Yours' || group === 'World' ? 'Group' : 'Realm'}</span>
+        <h2>{group}</h2>
         <small>Selected operation</small>
         <strong>{view.name}</strong>
         <button className="btn ghost" onClick={() => { setSelected(null); navigate(null, 'open') }}>← Operation Board</button>
       </div>
-      <nav className="viewnav-section" aria-label={`Other operations in ${realm}`}>
-        <span className="viewnav-label">This realm · {siblings.length}</span>
+      <nav className="viewnav-section" aria-label={`Other operations in ${group}`}>
+        <span className="viewnav-label">In {group} · {siblings.length}</span>
         {siblings.map((candidate) => (
           <button key={candidate.name} className={`viewsibling${candidate.name === view.name ? ' active' : ''}`} aria-current={candidate.name === view.name ? 'page' : undefined} onClick={() => pick(candidate, pane)}>
             <strong>{candidate.name}</strong>
@@ -430,113 +467,184 @@ function SavedViewsBody() {
     </>
   )
 
+  const saveControls = (
+    <>
+      {saveNote && (
+        <span className={`viewcypher-note${saveNote.tone ? ` ${saveNote.tone}` : ''}`} role="status">
+          {saveNote.text}
+          {saveNote.undo !== undefined && <> · <button className="viewlink" onClick={() => void undoSave(saveNote.undo ?? '')}>Undo</button></>}
+        </span>
+      )}
+      <button
+        className={`btn tiny${edited && !reason ? ' primary' : ''}`}
+        disabled={!edited}
+        title={reason ? 'This view is not yours to change, so your edits save as a new view' : undefined}
+        onClick={() => void save()}
+      >
+        {reason ? 'Save as copy…' : 'Save'}
+      </button>
+    </>
+  )
+
   return (
     <div className="kit-feature kit-feature-views viewspage viewspage-selected">
-      <aside className="panel viewspage-sidebar" aria-label={`${realm} operation navigator`}>{navigator()}</aside>
+      <aside className="panel viewspage-sidebar" aria-label={`${group} operation navigator`}>{navigator()}</aside>
       <details className="panel viewspage-mobile-nav">
         <summary>
-          <span><strong>Browse this realm</strong><small>{realm} · {view.name}</small></span>
+          <span><strong>Browse {group}</strong><small>{group} · {view.name}</small></span>
         </summary>
         <div className="viewspage-mobile-nav-body">{navigator()}</div>
       </details>
-      <div className="viewspage-operation" ref={operationRef}>
+      <div className="viewspage-operation">
         <section className="panel viewoperation-head">
           <div>
-            <span className="viewnav-label">{realm} · operation</span>
-            <h2>{view.name}</h2>
-            <span className="viewnote">{Object.keys(params).length} parameter(s) · {view.materialized ? 'Materialized' : view.outputLabel ?? 'Tabular'}</span>
+            <span className="viewnav-label">{group} · operation</span>
+            <div className="viewoperation-title">
+              <h2>{view.name}</h2>
+              <OriginChip view={view} />
+            </div>
+            <span className="viewnote">{Object.keys(params).length} parameter(s) · {view.materialized ? 'Materialized — Run reads its cache' : view.outputLabel ?? 'Tabular'}</span>
           </div>
           <div className="row">
             {view.materialized && <button className="btn ghost" onClick={() => void refresh(view.name)}>Refresh cache</button>}
             <button className="btn" onClick={() => void openInStudio()}>Open in Query Studio</button>
-            <button className="btn ghost" onClick={() => void remove(view.name)}>Delete</button>
+            {ownView && <button className="btn ghost" onClick={() => void remove(view.name)}>Delete</button>}
           </div>
           {view.description && <p className="hint">{view.description}</p>}
         </section>
 
-        <nav className="viewoperation-nav" aria-label="Operation sections" ref={paneNavRef}>
-          {paneLinks.map(([name, label]) => (
-            <button key={name} data-view-pane={name} className={`viewoperation-nav-link${pane === name ? ' active' : ''}`} aria-current={pane === name ? 'page' : undefined} onClick={() => showPane(name)}>
-              {label}
-            </button>
+        <div className="viewrunbar">
+          {Object.keys(params).length === 0 ? <span className="hint">No parameters.</span> : Object.entries(params).map(([key, spec]) => (
+            <label key={key} className="paramrow" title={spec?.description}>
+              <span className="paramname">{key} <em>{spec?.type}</em></span>
+              <input
+                value={args[key] ?? ''}
+                placeholder={spec?.default != null ? `default: ${spec.default}` : 'required'}
+                onChange={(event) => setArgs((current) => ({ ...current, [key]: event.target.value }))}
+                onKeyDown={(event) => { if (event.key === 'Enter') void run() }}
+              />
+            </label>
           ))}
-        </nav>
-        <div className="viewoperation-sections">
-          <section className="viewoperation-section" data-view-pane="run" ref={(node) => { sectionRefs.current.run = node ?? undefined }}>
-          <StudioPanel title="Run">
-            {Object.keys(params).length === 0 ? <p className="hint">No parameters — runs as saved.</p> : (
-              <div className="paramform">
-                {Object.entries(params).map(([key, spec]) => (
-                  <label key={key} className="paramrow">
-                    <span className="paramname">{key} <em>{spec?.type}</em></span>
-                    <input value={args[key] ?? ''} placeholder={spec?.default != null ? `default: ${spec.default}` : 'no default'} onChange={(event) => setArgs((current) => ({ ...current, [key]: event.target.value }))} />
-                    {spec?.description && <small>{spec.description}</small>}
-                  </label>
-                ))}
-              </div>
-            )}
-            <div className="row"><button className="btn primary" disabled={busy} onClick={() => void run()}>{busy ? 'running…' : 'Run'}</button></div>
-            {view.cypher && (
-              <details className="cypherbox" open>
-                <summary>Cypher{view.materialized ? ' · materialized — reads its cache' : ''}</summary>
-                <pre tabIndex={0}><code>{view.cypher}</code></pre>
-              </details>
-            )}
-            {/* Results owns the live announcement; keep this duplicate visually available only. */}
-            <div className={`status${status.tone ? ` ${status.tone}` : ''}`}>{status.text}</div>
-          </StudioPanel>
-          </section>
+          <div className="row viewrunbar-actions">
+            <button
+              className="btn ghost viewcypher-toggle"
+              aria-expanded={editorSize !== 'closed'}
+              title={editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor'}
+              onClick={() => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed')}
+            >
+              {'{ }'} Cypher{edited ? ' •' : ''}
+            </button>
+            <button className="btn primary" disabled={busy} onClick={() => void run()}>{busy ? 'running…' : 'Run'}</button>
+          </div>
+        </div>
 
-          <section className="viewoperation-section" data-view-pane="results" ref={(node) => { sectionRefs.current.results = node ?? undefined }}>
-          <StudioPanel title="Results">
+        <div className={`viewoperation-body${editorSize === 'full' ? ' covered' : ''}`}>
+          <nav className="viewoperation-nav" role="tablist" aria-label="Operation sections">
+            {(Object.keys(PANE_LABELS) as ViewPane[]).map((name) => (
+              <button
+                key={name}
+                role="tab"
+                id={`viewtab-${name}`}
+                aria-controls={`viewpane-${name}`}
+                aria-selected={pane === name}
+                data-view-pane={name}
+                className={`viewoperation-nav-link${pane === name ? ' active' : ''}`}
+                onClick={() => showPane(name)}
+              >
+                {paneLabel(name)}
+              </button>
+            ))}
+          </nav>
+
+          <section className="viewpane viewpane-results" role="tabpanel" id="viewpane-results" data-view-pane="results" aria-labelledby="viewtab-results" hidden={pane !== 'results'}>
             <span data-state="view.ran" hidden={!ran} />
-            {!ran ? (busy ? <p className="hint">Running… Results will appear here.</p> : status.tone === 'error' ? null : <p className="hint">Nothing run yet.</p>) : rows.length === 0 ? <p className="hint">No rows.</p> : (
-              <div className="view-results"><RowTable rows={rows} columns={rowColumns(rows)} /></div>
-            )}
+            <div className="viewpane-scroll view-results" tabIndex={0}>
+              {!ran ? (busy ? <p className="hint">Running… Results will appear here.</p> : status.tone === 'error' ? null : <p className="hint">Nothing run yet.</p>) : rows.length === 0 ? <p className="hint">No rows.</p> : (
+                <RowTable rows={rows} columns={rowColumns(rows)} />
+              )}
+            </div>
             <div className="row results-foot">
               {ran && rows.length > 0 && <><CopyButton label="Copy as Markdown" text={rowsToMarkdown(rows)} /><CopyButton label="Copy as CSV" text={rowsToCsv(rows)} /></>}
               <Status tone={status.tone}>{status.text}</Status>
             </div>
-          </StudioPanel>
           </section>
 
-          <section className="viewoperation-section" data-view-pane="schema" ref={(node) => { sectionRefs.current.schema = node ?? undefined }}>
-          <StudioPanel title="Schema" aside={schema && <span className="hint">{viewSchemaLabels.length} labels used</span>}>
-            {schemaError ? <Status tone="error">{schemaError}</Status> : schema == null ? <p className="hint">loading…</p> : viewSchemaLabels.length === 0 ? (
-              <p className="hint">No declared schema labels were found in this operation's query.</p>
-            ) : (
-              <div className="viewschema">
-                {viewSchemaLabels.map((label) => (
-                  <article className="viewschema-label" key={label.label}>
-                    <div className="row"><strong>{label.label}</strong><span className="viewtag">{label.anchor === false ? 'reach-only' : 'anchor'}</span></div>
-                    {label.description && <p>{label.description}</p>}
-                    <small>{label.realm ?? 'World'} · {label.sampleCount} sampled</small>
-                    {label.properties.length > 0 && <dl>{label.properties.map((property) => <React.Fragment key={property.name}><dt>{property.name}</dt><dd>{property.type}</dd></React.Fragment>)}</dl>}
-                  </article>
-                ))}
-              </div>
-            )}
-          </StudioPanel>
+          <section className="viewpane" role="tabpanel" id="viewpane-schema" data-view-pane="schema" aria-labelledby="viewtab-schema" hidden={pane !== 'schema'}>
+            <div className="viewpane-scroll">
+              {schema && <p className="hint">{viewSchemaLabels.length} labels used</p>}
+              {schemaError ? <Status tone="error">{schemaError}</Status> : schema == null ? <p className="hint">loading…</p> : viewSchemaLabels.length === 0 ? (
+                <p className="hint">No declared schema labels were found in this operation's query.</p>
+              ) : (
+                <div className="viewschema">
+                  {viewSchemaLabels.map((label) => (
+                    <article className="viewschema-label" key={label.label}>
+                      <div className="row"><strong>{label.label}</strong><span className="viewtag">{label.anchor === false ? 'reach-only' : 'anchor'}</span></div>
+                      {label.description && <p>{label.description}</p>}
+                      <small>{label.realm ?? 'World'} · {label.sampleCount} sampled</small>
+                      {label.properties.length > 0 && <dl>{label.properties.map((property) => <React.Fragment key={property.name}><dt>{property.name}</dt><dd>{property.type}</dd></React.Fragment>)}</dl>}
+                    </article>
+                  ))}
+                </div>
+              )}
+            </div>
           </section>
 
-          <section className="viewoperation-section" data-view-pane="watch" ref={(node) => { sectionRefs.current.watch = node ?? undefined }}>
-          <WatchPanel
-            key={view.name}
-            viewName={view.name}
-            args={args}
-            onSupportChange={setWatchSupported}
-            onWatchChange={(watching) => setWatchedViews((current) => {
-              const next = new Set(current ?? [])
-              watching ? next.add(view.name) : next.delete(view.name)
-              return next
-            })}
-            onWriteAgent={(signalType) => host.onCreateHandler({ signalType, view: view.name })}
+          <section className="viewpane" role="tabpanel" id="viewpane-watch" data-view-pane="watch" aria-labelledby="viewtab-watch" hidden={pane !== 'watch'}>
+            <div className="viewpane-scroll">
+              <WatchPanel
+                key={view.name}
+                viewName={view.name}
+                args={args}
+                onWatchChange={(watching) => setWatchedViews((current) => {
+                  const next = new Set(current ?? [])
+                  watching ? next.add(view.name) : next.delete(view.name)
+                  return next
+                })}
+                onWriteAgent={(signalType) => host.onCreateHandler({ signalType, view: view.name })}
+              />
+            </div>
+          </section>
+
+          <ViewCypherEditor
+            ref={editorRef}
+            size={editorSize}
+            onSize={setEditorSize}
+            onRun={() => void run()}
+            onEdit={onEdit}
+            edited={edited}
+            saveControls={saveControls}
+            onRevert={revert}
+            underneath={paneLabel(pane)}
           />
-          </section>
         </div>
+
+        {copying && reason && (
+          <SaveCopyDialog
+            viewName={view.name}
+            reason={reason}
+            taken={new Set(list.map((candidate) => candidate.name))}
+            onSave={saveCopy}
+            onCancel={() => setCopying(false)}
+          />
+        )}
       </div>
     </div>
   )
+}
+
+/** Where this view comes from, which decides whether saving replaces it or makes a copy. */
+function OriginChip({ view }: { view: KgView }) {
+  if (view.source === USER_SAVED) {
+    return <span className="viewtag viewtag-origin mine" title="Saved in your world. Saving replaces it.">Yours</span>
+  }
+  if (view.source) {
+    return (
+      <span className="viewtag viewtag-origin realm" title={`Ships with the ${view.source} realm. Your edits save as a copy in your world.`}>
+        {view.source} realm
+      </span>
+    )
+  }
+  return <span className="viewtag viewtag-origin" title="Ships with this world. Your edits save as a copy.">World</span>
 }
 
 /*
@@ -562,10 +670,9 @@ const SCHEDULES: [string, string][] = [
 ]
 
 /** As `/watches` reports one. Only the fields this panel reads. */
-function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChange }: {
+function WatchPanel({ viewName, args, onWatchChange, onWriteAgent }: {
   viewName: string
   args: Record<string, string>
-  onSupportChange(supported: boolean): void
   onWatchChange(watching: boolean): void
   onWriteAgent(signalType: string): void
 }) {
@@ -583,11 +690,10 @@ function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChan
     setLoading(true)
     setProblem('')
     const r = await services.watches.list()
-    onSupportChange(r.ok || r.kind !== 'unsupported')
     setLoading(false)
     if (!r.ok) return setProblem(failureMessage(r, 'list watches'))
     setWatch(r.value.find((w) => w.lensId === viewName) ?? null)
-  }, [viewName, services, onSupportChange])
+  }, [viewName, services])
 
   useEffect(() => { void load() }, [load])
 

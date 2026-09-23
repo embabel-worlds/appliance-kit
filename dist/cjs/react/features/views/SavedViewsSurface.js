@@ -41,19 +41,54 @@ const jsx_runtime_1 = require("react/jsx-runtime");
  * A view is the durable thing: someone worked out a question worth asking, named it, and now
  * anyone can ask it again with different arguments. That is not a sub-feature of the editor, so it
  * is not buried in the editor's rail — it is where you go when you want an ANSWER rather than a
- * query. Writing one is still Query Studio's job, and "Save as view" lives there.
+ * query.
  *
- * BECAUSE THERE IS NO EDITOR HERE, running is the appliance's ONE-CALL form: `runView` merges your
- * arguments over the declared defaults and returns rows. Query Studio deliberately uses the
- * two-step instead — invocation, then execute — because a studio should show you the cypher a view
- * expands to before it costs you anything. Same engine, two honest paths, and "Open in Query
- * Studio" is how you cross from this one to that one.
+ * ONE WINDOW, ONE SCROLLER. A selected view is a fixed workspace: the run bar (arguments, the
+ * Cypher, Run) stays put above three tabs — Results, Schema, Watch — and only the active tab's body
+ * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
+ * too; tabs that anchored into one long page produced exactly that double scrollbar.
+ *
+ * RUNNING. An unedited view runs through the appliance's one-call `runView`. Once its Cypher is
+ * edited, Run sends the edited body to `execute` WITH the view's declared params, so it gets the
+ * same defaults, coercion and substitution it will get once saved — trying an edit never requires
+ * saving it. Query Studio remains the place to write a query from nothing; "Open in Query Studio"
+ * is how you cross over.
+ *
+ * SAVING. Only a view the user saved themselves is saved in place. A realm's view, or one shipped
+ * with the world, is saved as a COPY under a new name — the appliance refuses to shadow it, and it
+ * would not load if it did.
  */
 const react_1 = __importStar(require("react"));
+const kg_ts_1 = require("../../../client/kg.js");
 const outcome_ts_1 = require("../../../client/outcome.js");
 const rows_ts_1 = require("../../../vc/rows.js");
 const format_ts_1 = require("../../../studio-kit/format.js");
 const chrome_tsx_1 = require("../studio/chrome.js");
+const SaveCopyDialog_tsx_1 = require("./SaveCopyDialog.js");
+const ViewCypherEditor_tsx_1 = require("./ViewCypherEditor.js");
+const PANE_LABELS = { results: 'Results', schema: 'Schema', watch: 'Watch / receipts' };
+/** The appliance's `source` for a view the user saved in their own world — the only kind saved in place. */
+const USER_SAVED = 'saved';
+/*
+ * Provenance grouping. `source` is the realm that shipped a view, `saved` marks one the user saved,
+ * and null means it came with this world's own config. A flat list is unreadable the moment a few
+ * realms are aboard, and the group is also the answer to "where did this come from?".
+ */
+function groupOf(v) {
+    return v.source === USER_SAVED ? 'Yours' : v.source || 'World';
+}
+/** Why this view must be saved as a copy, or null when it can be saved in place. */
+function copyReason(v) {
+    // Saving carries no contract binding, so saving over a contracted view would silently unbind it.
+    if (v.source === USER_SAVED)
+        return v.dataContract ? { kind: 'contract' } : null;
+    return v.source ? { kind: 'realm', realm: v.source } : { kind: 'world' };
+}
+const GROUP_ORDER = ['Yours', 'World'];
+function compareGroups(a, b) {
+    const rank = (name) => { const i = GROUP_ORDER.indexOf(name); return i < 0 ? GROUP_ORDER.length : i; };
+    return rank(a) - rank(b) || a.localeCompare(b);
+}
 const ViewsRuntimeContext = (0, react_1.createContext)(null);
 function useViewsRuntime() {
     const runtime = (0, react_1.useContext)(ViewsRuntimeContext);
@@ -73,14 +108,18 @@ function SavedViewsBody() {
     const [expandedRealm, setExpandedRealm] = (0, react_1.useState)(null);
     const [watchedViews, setWatchedViews] = (0, react_1.useState)(null);
     const [watchSummaryLoaded, setWatchSummaryLoaded] = (0, react_1.useState)(false);
-    const [watchSupported, setWatchSupported] = (0, react_1.useState)(true);
-    const [pane, setPane] = (0, react_1.useState)('run');
+    const [pane, setPane] = (0, react_1.useState)('results');
     const [schema, setSchema] = (0, react_1.useState)(null);
     const [schemaError, setSchemaError] = (0, react_1.useState)('');
     const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
     const [rows, setRows] = (0, react_1.useState)([]);
     const [ran, setRan] = (0, react_1.useState)(false);
     const [busy, setBusy] = (0, react_1.useState)(false);
+    const [editorSize, setEditorSize] = (0, react_1.useState)('closed');
+    const [edited, setEdited] = (0, react_1.useState)(false);
+    const [saveNote, setSaveNote] = (0, react_1.useState)(null);
+    const [copying, setCopying] = (0, react_1.useState)(false);
+    const editorRef = (0, react_1.useRef)(null);
     const load = (0, react_1.useCallback)(async () => {
         const outcome = await services.kg.views();
         if (!(0, outcome_ts_1.isOk)(outcome))
@@ -111,7 +150,8 @@ function SavedViewsBody() {
         }
     }, [services]);
     /*
-     * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it.
+     * DRIVABLE FROM THE URL: `#views/<name>` selects a view, `#views/<name>/run` selects and runs it,
+     * and `/results`, `/schema`, `/watch` open that tab.
      *
      * The console's own vocabulary (place.ts owns `#tab/rest`, and Apps already reads it), which is
      * what makes a TOUR able to move this panel: a tour step says `run: view.X` and the app navigates
@@ -127,10 +167,6 @@ function SavedViewsBody() {
      */
     const hashRest = (0, react_1.useSyncExternalStore)(host.subscribeSelection, host.selectedView, host.selectedView);
     const drivenBy = (0, react_1.useRef)('');
-    const operationRef = (0, react_1.useRef)(null);
-    const paneNavRef = (0, react_1.useRef)(null);
-    const sectionRefs = (0, react_1.useRef)({});
-    const pendingPaneScroll = (0, react_1.useRef)(false);
     /** Keep the requested values explicit; React may not have committed the form update yet. */
     const pendingRun = (0, react_1.useRef)(null);
     (0, react_1.useEffect)(() => {
@@ -139,7 +175,6 @@ function SavedViewsBody() {
         const rest = hashRest;
         if (rest === drivenBy.current)
             return;
-        pendingPaneScroll.current = false;
         pendingRun.current = null;
         drivenBy.current = rest;
         // null means the host is showing another workspace. Keep this mounted surface intact so a
@@ -155,19 +190,11 @@ function SavedViewsBody() {
         if (!wanted)
             return;
         const [destination, query = ''] = tail.split('?');
-        const shouldReveal = destination === 'run' || destination === 'results' || destination === 'schema' || destination === 'watch';
-        const nextPane = destination === 'results' || destination === 'schema' || destination === 'watch'
-            ? destination
-            : 'run';
-        pendingPaneScroll.current = shouldReveal;
-        if (selected === wanted.name) {
+        const nextPane = destination === 'schema' || destination === 'watch' ? destination : 'results';
+        if (selected === wanted.name)
             setPane(nextPane);
-            if (shouldReveal && pane === nextPane)
-                requestAnimationFrame(() => revealPane(nextPane));
-        }
-        else {
-            applyView(wanted, nextPane, shouldReveal);
-        }
+        else
+            applyView(wanted, nextPane);
         // The visible form and the queued request use the same merge, without waiting for setArgs.
         const supplied = Object.fromEntries(new URLSearchParams(query));
         const nextArgs = { ...(selected === wanted.name ? args : defaultArgs(wanted)), ...supplied };
@@ -186,6 +213,12 @@ function SavedViewsBody() {
         pendingRun.current = null;
         void run(pending.args);
     }, [view, args, hashRest]);
+    // A different view puts its own saved body in the editor. The editor is mounted with the
+    // operation layout, and a child's effects run before this one, so it exists by now.
+    (0, react_1.useEffect)(() => {
+        editorRef.current?.setText(view?.cypher ?? '');
+        setEdited(false);
+    }, [view?.name]);
     const params = (view?.params ?? {});
     const referencedLabels = new Set();
     for (const match of view?.cypher?.matchAll(/:\s*`?([A-Za-z_][A-Za-z0-9_]*)`?/g) ?? []) {
@@ -195,15 +228,10 @@ function SavedViewsBody() {
     if (view?.outputLabel)
         referencedLabels.add(view.outputLabel);
     const viewSchemaLabels = (schema?.labels ?? []).filter((label) => referencedLabels.has(label.label));
-    /*
-     * Provenance grouping. `source` is the realm that shipped a view; null means it was authored in
-     * this world's own config. A flat list is unreadable the moment a few realms are aboard, and the
-     * group header is also the answer to "where did this come from?".
-     */
     const groups = {};
     for (const v of list)
-        (groups[v.source || 'World'] ??= []).push(v);
-    const groupNames = Object.keys(groups).sort((a, b) => (a === 'World' ? -1 : b === 'World' ? 1 : a.localeCompare(b)));
+        (groups[groupOf(v)] ??= []).push(v);
+    const groupNames = Object.keys(groups).sort(compareGroups);
     function routeFor(name, destination) {
         return destination === 'open' ? name : `${name}/${destination}`;
     }
@@ -217,109 +245,45 @@ function SavedViewsBody() {
         return Object.fromEntries(Object.entries((v.params ?? {}))
             .map(([k, spec]) => [k, spec?.default == null ? '' : String(spec.default)]));
     }
-    function applyView(v, nextPane, reveal) {
-        pendingPaneScroll.current = reveal;
-        setExpandedRealm(v.source || 'World');
+    function applyView(v, nextPane) {
+        setExpandedRealm(groupOf(v));
         setSelected(v.name);
         setPane(nextPane);
         setStatus({ tone: null, text: '' });
         setRows([]);
         setRan(false);
         setArgs(defaultArgs(v));
+        setEditorSize('closed');
+        setSaveNote(null);
+        setCopying(false);
     }
-    function pick(v, nextPane = pane, destination = nextPane === 'run' ? 'open' : nextPane) {
+    function pick(v, nextPane = pane, destination = nextPane === 'results' ? 'open' : nextPane) {
         if (v.name === selected)
             return showPane(nextPane);
-        applyView(v, nextPane, destination !== 'open');
+        applyView(v, nextPane);
         navigate(v.name, destination);
-    }
-    function revealPaneButton(nextPane) {
-        paneNavRef.current?.querySelector(`[data-view-pane="${nextPane}"]`)?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
-    }
-    function revealPane(nextPane) {
-        revealPaneButton(nextPane);
-        sectionRefs.current[nextPane]?.scrollIntoView({ block: 'start', inline: 'nearest' });
-        requestAnimationFrame(() => { pendingPaneScroll.current = false; });
     }
     function showPane(nextPane, replace = true) {
         if (!view)
             return;
-        const alreadyActive = pane === nextPane;
-        pendingPaneScroll.current = true;
         setPane(nextPane);
-        navigate(view.name, nextPane === 'run' ? 'open' : nextPane, replace);
-        if (alreadyActive)
-            requestAnimationFrame(() => revealPane(nextPane));
+        navigate(view.name, nextPane === 'results' ? 'open' : nextPane, replace);
     }
-    // URL/nav-driven panes scroll once. Scroll-driven pane changes deliberately do not set this flag,
-    // so observing the document cannot snap it back or create a render loop.
-    (0, react_1.useEffect)(() => {
-        if (!view || !pendingPaneScroll.current)
-            return;
-        const frame = requestAnimationFrame(() => revealPane(pane));
-        return () => cancelAnimationFrame(frame);
-    }, [view?.name, pane]);
-    (0, react_1.useEffect)(() => {
-        const operation = operationRef.current;
-        if (!view || !operation)
-            return;
-        let frame = 0;
-        let resizeFrame = 0;
-        const follow = () => {
-            cancelAnimationFrame(frame);
-            frame = requestAnimationFrame(() => {
-                if (pendingPaneScroll.current)
-                    return;
-                const marker = (paneNavRef.current?.getBoundingClientRect().bottom ?? 0) + 18;
-                let current = 'run';
-                const candidates = watchSupported ? ['run', 'results', 'schema', 'watch'] : ['run', 'results', 'schema'];
-                for (const candidate of candidates) {
-                    const section = sectionRefs.current[candidate];
-                    if (section && section.getBoundingClientRect().top <= marker)
-                        current = candidate;
-                }
-                const scroller = /auto|scroll/.test(window.getComputedStyle(operation).overflowY)
-                    ? operation : document.scrollingElement ?? document.documentElement;
-                // A short final section cannot reach the marker when its scroll owner runs out of room.
-                const atBottom = scroller.clientHeight > 0 && scroller.scrollHeight > scroller.clientHeight
-                    && scroller.scrollTop + scroller.clientHeight >= scroller.scrollHeight - 1;
-                if (atBottom)
-                    current = candidates[candidates.length - 1];
-                if (current === pane)
-                    return;
-                setPane(current);
-                navigate(view.name, current === 'run' ? 'open' : current, true);
-                revealPaneButton(current);
-            });
-        };
-        const resize = () => {
-            // A breakpoint can move scrolling between the document and the operation column.
-            pendingPaneScroll.current = true;
-            cancelAnimationFrame(frame);
-            cancelAnimationFrame(resizeFrame);
-            resizeFrame = requestAnimationFrame(() => revealPane(pane));
-        };
-        operation.addEventListener('scroll', follow, { passive: true });
-        window.addEventListener('scroll', follow, { passive: true });
-        window.addEventListener('resize', resize);
-        return () => {
-            cancelAnimationFrame(frame);
-            cancelAnimationFrame(resizeFrame);
-            operation.removeEventListener('scroll', follow);
-            window.removeEventListener('scroll', follow);
-            window.removeEventListener('resize', resize);
-        };
-    }, [view?.name, pane, watchSupported]);
     /** A blank field means "use the declared default", NOT "pass an empty string". */
     const supplied = (values = args) => Object.fromEntries(Object.entries(values).filter(([, v]) => v !== '' && v != null));
     async function run(values = args) {
         if (!view)
             return;
+        // Running is for looking at rows, so the editor gets out of the way at either size.
+        setEditorSize('closed');
         setBusy(true);
         setRows([]);
         setRan(false);
         setStatus({ tone: null, text: 'running…' });
-        const outcome = await services.kg.runView(view.name, supplied(values));
+        const draft = edited ? editorRef.current?.getText() : undefined;
+        const outcome = draft === undefined
+            ? await services.kg.runView(view.name, supplied(values))
+            : await services.kg.execute(draft, { params, args: supplied(values) });
         setBusy(false);
         if (!(0, outcome_ts_1.isOk)(outcome)) {
             setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, `run '${view.name}'`) });
@@ -327,6 +291,11 @@ function SavedViewsBody() {
             return;
         }
         const result = outcome.value;
+        if ((0, kg_ts_1.isBackgroundHandle)(result)) {
+            setStatus({ tone: 'error', text: 'The appliance answered with a background run instead of rows. Run again.' });
+            showPane('results', true);
+            return;
+        }
         const got = (result.rows ?? []);
         // `rowCount` is documented as required and is not always sent. The rows are the truth.
         const rowCount = result.rowCount ?? got.length;
@@ -336,6 +305,8 @@ function SavedViewsBody() {
             return;
         }
         const parts = [`${rowCount} row(s)`];
+        if (draft !== undefined)
+            parts.push('edited query, not saved');
         if (result.durationMs != null)
             parts.push((0, format_ts_1.formatDuration)(result.durationMs));
         for (const warning of result.warnings ?? [])
@@ -346,6 +317,69 @@ function SavedViewsBody() {
         setRows(got);
         setRan(true);
         showPane('results', true);
+    }
+    /*
+     * SAVING the editor's text as `name`. Everything but the body is carried over from the view being
+     * edited — except `outputLabel`, which the appliance infers from the body, so an edit that changes
+     * what the view returns is labelled by what it now returns. Resolves to a refusal, or null.
+     */
+    async function persist(name, cypher) {
+        if (!view)
+            return 'Choose a view first.';
+        const outcome = await services.kg.saveView({
+            name, cypher, description: view.description, params: view.params, materialized: view.materialized, ttl: view.ttl,
+        });
+        if (!(0, outcome_ts_1.isOk)(outcome))
+            return (0, chrome_tsx_1.failureMessage)(outcome, `save '${name}'`);
+        if (!outcome.value.ok)
+            return outcome.value.note ?? `The appliance did not save '${name}'.`;
+        // Promotion can inline captured scopes, so the stored body is the one to show.
+        if (outcome.value.savedCypher)
+            editorRef.current?.setText(outcome.value.savedCypher);
+        setEdited(false);
+        await load();
+        return null;
+    }
+    async function save() {
+        if (!view || !edited)
+            return;
+        if (copyReason(view))
+            return setCopying(true);
+        const previous = view.cypher;
+        setSaveNote({ tone: null, text: 'saving…' });
+        const refused = await persist(view.name, editorRef.current?.getText() ?? '');
+        setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Saved', undo: previous });
+    }
+    /** Put the body that was there before the last save back. There is no history beyond this one. */
+    async function undoSave(previous) {
+        if (!view)
+            return;
+        editorRef.current?.setText(previous);
+        setSaveNote({ tone: null, text: 'restoring…' });
+        const refused = await persist(view.name, previous);
+        setSaveNote(refused ? { tone: 'error', text: refused } : { tone: 'ok', text: 'Restored the previous query' });
+    }
+    async function saveCopy(name) {
+        const refused = await persist(name, editorRef.current?.getText() ?? '');
+        if (refused)
+            return refused;
+        // The copy IS the query on screen, so the selection moves to it and the rows stay.
+        setCopying(false);
+        setSelected(name);
+        setExpandedRealm('Yours');
+        setSaveNote({ tone: 'ok', text: `Saved as ${name}` });
+        navigate(name, pane === 'results' ? 'open' : pane);
+        return null;
+    }
+    function onEdit(text) {
+        setEdited(text !== (view?.cypher ?? ''));
+        if (saveNote)
+            setSaveNote(null);
+    }
+    function revert() {
+        editorRef.current?.setText(view?.cypher ?? '');
+        setEdited(false);
+        setSaveNote(null);
     }
     /** Expand with these arguments and hand the runnable cypher to the editor next door. */
     async function openInStudio() {
@@ -383,22 +417,31 @@ function SavedViewsBody() {
                         const isExpanded = expandedRealm === name;
                         const materialized = realmViews.filter((candidate) => candidate.materialized).length;
                         const watched = watchedViews == null ? null : realmViews.filter((candidate) => watchedViews.has(candidate.name)).length;
-                        return ((0, jsx_runtime_1.jsxs)("section", { className: `panel viewrealm${isExpanded ? ' expanded' : ''}`, children: [(0, jsx_runtime_1.jsxs)("button", { className: "viewrealm-head", "data-viewgroup": name, "aria-expanded": isExpanded, onClick: () => setExpandedRealm(isExpanded ? null : name), children: [(0, jsx_runtime_1.jsxs)("span", { children: [(0, jsx_runtime_1.jsx)("strong", { children: name }), (0, jsx_runtime_1.jsxs)("small", { children: [realmViews.length, " operations \u00B7 ", materialized, " materialized \u00B7 ", !watchSummaryLoaded ? 'watch state loading' : watched == null ? 'watch state unavailable' : `${watched} watched`] })] }), (0, jsx_runtime_1.jsx)("span", { className: "chev", "aria-hidden": "true", children: isExpanded ? '−' : '+' })] }), isExpanded && ((0, jsx_runtime_1.jsx)("div", { className: "viewrealm-operations", children: realmViews.map((candidate) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewoperation", children: [(0, jsx_runtime_1.jsxs)("button", { className: "viewoperation-open", onClick: () => pick(candidate, 'run', 'open'), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsx)("small", { children: candidate.description }), (0, jsx_runtime_1.jsxs)("span", { className: "viewnote", children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", onClick: () => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'run', 'run'); }, children: "Run" })] }, candidate.name))) }))] }, name));
+                        return ((0, jsx_runtime_1.jsxs)("section", { className: `panel viewrealm${isExpanded ? ' expanded' : ''}`, children: [(0, jsx_runtime_1.jsxs)("button", { className: "viewrealm-head", "data-viewgroup": name, "aria-expanded": isExpanded, onClick: () => setExpandedRealm(isExpanded ? null : name), children: [(0, jsx_runtime_1.jsxs)("span", { children: [(0, jsx_runtime_1.jsx)("strong", { children: name }), (0, jsx_runtime_1.jsxs)("small", { children: [realmViews.length, " operations \u00B7 ", materialized, " materialized \u00B7 ", !watchSummaryLoaded ? 'watch state loading' : watched == null ? 'watch state unavailable' : `${watched} watched`] })] }), (0, jsx_runtime_1.jsx)("span", { className: "chev", "aria-hidden": "true", children: isExpanded ? '−' : '+' })] }), isExpanded && ((0, jsx_runtime_1.jsx)("div", { className: "viewrealm-operations", children: realmViews.map((candidate) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewoperation", children: [(0, jsx_runtime_1.jsxs)("button", { className: "viewoperation-open", onClick: () => pick(candidate, 'results', 'open'), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsx)("small", { children: candidate.description }), (0, jsx_runtime_1.jsxs)("span", { className: "viewnote", children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", onClick: () => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'results', 'run'); }, children: "Run" })] }, candidate.name))) }))] }, name));
                     }) }))] }));
-    const realm = view.source || 'World';
-    const siblings = groups[realm];
-    const paneLinks = [
-        ['run', 'Run'],
-        ['results', ran ? `Results · ${rows.length}` : 'Results'],
-        ['schema', 'Schema'],
-        ['watch', 'Watch / receipts'],
-    ];
-    const navigator = () => ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "viewnav-head", children: [(0, jsx_runtime_1.jsx)("span", { className: "viewnav-label", children: "Realm" }), (0, jsx_runtime_1.jsx)("h2", { children: realm }), (0, jsx_runtime_1.jsx)("small", { children: "Selected operation" }), (0, jsx_runtime_1.jsx)("strong", { children: view.name }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => { setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), (0, jsx_runtime_1.jsxs)("nav", { className: "viewnav-section", "aria-label": `Other operations in ${realm}`, children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: ["This realm \u00B7 ", siblings.length] }), siblings.map((candidate) => ((0, jsx_runtime_1.jsxs)("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsxs)("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [(0, jsx_runtime_1.jsx)("aside", { className: "panel viewspage-sidebar", "aria-label": `${realm} operation navigator`, children: navigator() }), (0, jsx_runtime_1.jsxs)("details", { className: "panel viewspage-mobile-nav", children: [(0, jsx_runtime_1.jsx)("summary", { children: (0, jsx_runtime_1.jsxs)("span", { children: [(0, jsx_runtime_1.jsx)("strong", { children: "Browse this realm" }), (0, jsx_runtime_1.jsxs)("small", { children: [realm, " \u00B7 ", view.name] })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewspage-operation", ref: operationRef, children: [(0, jsx_runtime_1.jsxs)("section", { className: "panel viewoperation-head", children: [(0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: [realm, " \u00B7 operation"] }), (0, jsx_runtime_1.jsx)("h2", { children: view.name }), (0, jsx_runtime_1.jsxs)("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized' : view.outputLabel ?? 'Tabular'] })] }), (0, jsx_runtime_1.jsxs)("div", { className: "row", children: [view.materialized && (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), (0, jsx_runtime_1.jsx)("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: view.description })] }), (0, jsx_runtime_1.jsx)("nav", { className: "viewoperation-nav", "aria-label": "Operation sections", ref: paneNavRef, children: paneLinks.map(([name, label]) => ((0, jsx_runtime_1.jsx)("button", { "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, "aria-current": pane === name ? 'page' : undefined, onClick: () => showPane(name), children: label }, name))) }), (0, jsx_runtime_1.jsxs)("div", { className: "viewoperation-sections", children: [(0, jsx_runtime_1.jsx)("section", { className: "viewoperation-section", "data-view-pane": "run", ref: (node) => { sectionRefs.current.run = node ?? undefined; }, children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Run", children: [Object.keys(params).length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No parameters \u2014 runs as saved." }) : ((0, jsx_runtime_1.jsx)("div", { className: "paramform", children: Object.entries(params).map(([key, spec]) => ((0, jsx_runtime_1.jsxs)("label", { className: "paramrow", children: [(0, jsx_runtime_1.jsxs)("span", { className: "paramname", children: [key, " ", (0, jsx_runtime_1.jsx)("em", { children: spec?.type })] }), (0, jsx_runtime_1.jsx)("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'no default', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })) }), spec?.description && (0, jsx_runtime_1.jsx)("small", { children: spec.description })] }, key))) })), (0, jsx_runtime_1.jsx)("div", { className: "row", children: (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' }) }), view.cypher && ((0, jsx_runtime_1.jsxs)("details", { className: "cypherbox", open: true, children: [(0, jsx_runtime_1.jsxs)("summary", { children: ["Cypher", view.materialized ? ' · materialized — reads its cache' : ''] }), (0, jsx_runtime_1.jsx)("pre", { tabIndex: 0, children: (0, jsx_runtime_1.jsx)("code", { children: view.cypher }) })] })), (0, jsx_runtime_1.jsx)("div", { className: `status${status.tone ? ` ${status.tone}` : ''}`, children: status.text })] }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewoperation-section", "data-view-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", children: [(0, jsx_runtime_1.jsx)("span", { "data-state": "view.ran", hidden: !ran }), !ran ? (busy ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' ? null : (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) : ((0, jsx_runtime_1.jsx)("div", { className: "view-results", children: (0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: (0, rows_ts_1.rowColumns)(rows) }) })), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, rows_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, rows_ts_1.rowsToCsv)(rows) })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] })] }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewoperation-section", "data-view-pane": "schema", ref: (node) => { sectionRefs.current.schema = node ?? undefined; }, children: (0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Schema", aside: schema && (0, jsx_runtime_1.jsxs)("span", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), children: schemaError ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: schemaError }) : schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : ((0, jsx_runtime_1.jsx)("div", { className: "viewschema", children: viewSchemaLabels.map((label) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewschema-label", children: [(0, jsx_runtime_1.jsxs)("div", { className: "row", children: [(0, jsx_runtime_1.jsx)("strong", { children: label.label }), (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && (0, jsx_runtime_1.jsx)("p", { children: label.description }), (0, jsx_runtime_1.jsxs)("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && (0, jsx_runtime_1.jsx)("dl", { children: label.properties.map((property) => (0, jsx_runtime_1.jsxs)(react_1.default.Fragment, { children: [(0, jsx_runtime_1.jsx)("dt", { children: property.name }), (0, jsx_runtime_1.jsx)("dd", { children: property.type })] }, property.name)) })] }, label.label))) })) }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewoperation-section", "data-view-pane": "watch", ref: (node) => { sectionRefs.current.watch = node ?? undefined; }, children: (0, jsx_runtime_1.jsx)(WatchPanel, { viewName: view.name, args: args, onSupportChange: setWatchSupported, onWatchChange: (watching) => setWatchedViews((current) => {
-                                        const next = new Set(current ?? []);
-                                        watching ? next.add(view.name) : next.delete(view.name);
-                                        return next;
-                                    }), onWriteAgent: (signalType) => host.onCreateHandler({ signalType, view: view.name }) }, view.name) })] })] })] }));
+    const group = groupOf(view);
+    const siblings = groups[group] ?? [view];
+    const reason = copyReason(view);
+    const ownView = view.source === USER_SAVED;
+    const paneLabel = (name) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name];
+    const navigator = () => ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "viewnav-head", children: [(0, jsx_runtime_1.jsx)("span", { className: "viewnav-label", children: group === 'Yours' || group === 'World' ? 'Group' : 'Realm' }), (0, jsx_runtime_1.jsx)("h2", { children: group }), (0, jsx_runtime_1.jsx)("small", { children: "Selected operation" }), (0, jsx_runtime_1.jsx)("strong", { children: view.name }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => { setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), (0, jsx_runtime_1.jsxs)("nav", { className: "viewnav-section", "aria-label": `Other operations in ${group}`, children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: ["In ", group, " \u00B7 ", siblings.length] }), siblings.map((candidate) => ((0, jsx_runtime_1.jsxs)("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsxs)("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
+    const saveControls = ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [saveNote && ((0, jsx_runtime_1.jsxs)("span", { className: `viewcypher-note${saveNote.tone ? ` ${saveNote.tone}` : ''}`, role: "status", children: [saveNote.text, saveNote.undo !== undefined && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [" \u00B7 ", (0, jsx_runtime_1.jsx)("button", { className: "viewlink", onClick: () => void undoSave(saveNote.undo ?? ''), children: "Undo" })] })] })), (0, jsx_runtime_1.jsx)("button", { className: `btn tiny${edited && !reason ? ' primary' : ''}`, disabled: !edited, title: reason ? 'This view is not yours to change, so your edits save as a new view' : undefined, onClick: () => void save(), children: reason ? 'Save as copy…' : 'Save' })] }));
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [(0, jsx_runtime_1.jsx)("aside", { className: "panel viewspage-sidebar", "aria-label": `${group} operation navigator`, children: navigator() }), (0, jsx_runtime_1.jsxs)("details", { className: "panel viewspage-mobile-nav", children: [(0, jsx_runtime_1.jsx)("summary", { children: (0, jsx_runtime_1.jsxs)("span", { children: [(0, jsx_runtime_1.jsxs)("strong", { children: ["Browse ", group] }), (0, jsx_runtime_1.jsxs)("small", { children: [group, " \u00B7 ", view.name] })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewspage-operation", children: [(0, jsx_runtime_1.jsxs)("section", { className: "panel viewoperation-head", children: [(0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: [group, " \u00B7 operation"] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewoperation-title", children: [(0, jsx_runtime_1.jsx)("h2", { children: view.name }), (0, jsx_runtime_1.jsx)(OriginChip, { view: view })] }), (0, jsx_runtime_1.jsxs)("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized — Run reads its cache' : view.outputLabel ?? 'Tabular'] })] }), (0, jsx_runtime_1.jsxs)("div", { className: "row", children: [view.materialized && (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), (0, jsx_runtime_1.jsx)("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), ownView && (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: view.description })] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewrunbar", children: [Object.keys(params).length === 0 ? (0, jsx_runtime_1.jsx)("span", { className: "hint", children: "No parameters." }) : Object.entries(params).map(([key, spec]) => ((0, jsx_runtime_1.jsxs)("label", { className: "paramrow", title: spec?.description, children: [(0, jsx_runtime_1.jsxs)("span", { className: "paramname", children: [key, " ", (0, jsx_runtime_1.jsx)("em", { children: spec?.type })] }), (0, jsx_runtime_1.jsx)("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'required', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })), onKeyDown: (event) => { if (event.key === 'Enter')
+                                            void run(); } })] }, key))), (0, jsx_runtime_1.jsxs)("div", { className: "row viewrunbar-actions", children: [(0, jsx_runtime_1.jsxs)("button", { className: "btn ghost viewcypher-toggle", "aria-expanded": editorSize !== 'closed', title: editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor', onClick: () => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed'), children: ['{ }', " Cypher", edited ? ' •' : ''] }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: `viewoperation-body${editorSize === 'full' ? ' covered' : ''}`, children: [(0, jsx_runtime_1.jsx)("nav", { className: "viewoperation-nav", role: "tablist", "aria-label": "Operation sections", children: Object.keys(PANE_LABELS).map((name) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", id: `viewtab-${name}`, "aria-controls": `viewpane-${name}`, "aria-selected": pane === name, "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, onClick: () => showPane(name), children: paneLabel(name) }, name))) }), (0, jsx_runtime_1.jsxs)("section", { className: "viewpane viewpane-results", role: "tabpanel", id: "viewpane-results", "data-view-pane": "results", "aria-labelledby": "viewtab-results", hidden: pane !== 'results', children: [(0, jsx_runtime_1.jsx)("span", { "data-state": "view.ran", hidden: !ran }), (0, jsx_runtime_1.jsx)("div", { className: "viewpane-scroll view-results", tabIndex: 0, children: !ran ? (busy ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' ? null : (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) : ((0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: (0, rows_ts_1.rowColumns)(rows) })) }), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, rows_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, rows_ts_1.rowsToCsv)(rows) })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] })] }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-schema", "data-view-pane": "schema", "aria-labelledby": "viewtab-schema", hidden: pane !== 'schema', children: (0, jsx_runtime_1.jsxs)("div", { className: "viewpane-scroll", children: [schema && (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), schemaError ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: schemaError }) : schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : ((0, jsx_runtime_1.jsx)("div", { className: "viewschema", children: viewSchemaLabels.map((label) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewschema-label", children: [(0, jsx_runtime_1.jsxs)("div", { className: "row", children: [(0, jsx_runtime_1.jsx)("strong", { children: label.label }), (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && (0, jsx_runtime_1.jsx)("p", { children: label.description }), (0, jsx_runtime_1.jsxs)("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && (0, jsx_runtime_1.jsx)("dl", { children: label.properties.map((property) => (0, jsx_runtime_1.jsxs)(react_1.default.Fragment, { children: [(0, jsx_runtime_1.jsx)("dt", { children: property.name }), (0, jsx_runtime_1.jsx)("dd", { children: property.type })] }, property.name)) })] }, label.label))) }))] }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-watch", "data-view-pane": "watch", "aria-labelledby": "viewtab-watch", hidden: pane !== 'watch', children: (0, jsx_runtime_1.jsx)("div", { className: "viewpane-scroll", children: (0, jsx_runtime_1.jsx)(WatchPanel, { viewName: view.name, args: args, onWatchChange: (watching) => setWatchedViews((current) => {
+                                            const next = new Set(current ?? []);
+                                            watching ? next.add(view.name) : next.delete(view.name);
+                                            return next;
+                                        }), onWriteAgent: (signalType) => host.onCreateHandler({ signalType, view: view.name }) }, view.name) }) }), (0, jsx_runtime_1.jsx)(ViewCypherEditor_tsx_1.ViewCypherEditor, { ref: editorRef, size: editorSize, onSize: setEditorSize, onRun: () => void run(), onEdit: onEdit, edited: edited, saveControls: saveControls, onRevert: revert, underneath: paneLabel(pane) })] }), copying && reason && ((0, jsx_runtime_1.jsx)(SaveCopyDialog_tsx_1.SaveCopyDialog, { viewName: view.name, reason: reason, taken: new Set(list.map((candidate) => candidate.name)), onSave: saveCopy, onCancel: () => setCopying(false) }))] })] }));
+}
+/** Where this view comes from, which decides whether saving replaces it or makes a copy. */
+function OriginChip({ view }) {
+    if (view.source === USER_SAVED) {
+        return (0, jsx_runtime_1.jsx)("span", { className: "viewtag viewtag-origin mine", title: "Saved in your world. Saving replaces it.", children: "Yours" });
+    }
+    if (view.source) {
+        return ((0, jsx_runtime_1.jsxs)("span", { className: "viewtag viewtag-origin realm", title: `Ships with the ${view.source} realm. Your edits save as a copy in your world.`, children: [view.source, " realm"] }));
+    }
+    return (0, jsx_runtime_1.jsx)("span", { className: "viewtag viewtag-origin", title: "Ships with this world. Your edits save as a copy.", children: "World" });
 }
 /*
  * WATCHING A VIEW — the shortest path from a saved question to an agent.
@@ -422,7 +465,7 @@ const SCHEDULES = [
     ['0 0 9 * * MON', 'Monday mornings at 9'],
 ];
 /** As `/watches` reports one. Only the fields this panel reads. */
-function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChange }) {
+function WatchPanel({ viewName, args, onWatchChange, onWriteAgent }) {
     const { services } = useViewsRuntime();
     const [watch, setWatch] = (0, react_1.useState)(null);
     const [loading, setLoading] = (0, react_1.useState)(true);
@@ -435,12 +478,11 @@ function WatchPanel({ viewName, args, onWatchChange, onWriteAgent, onSupportChan
         setLoading(true);
         setProblem('');
         const r = await services.watches.list();
-        onSupportChange(r.ok || r.kind !== 'unsupported');
         setLoading(false);
         if (!r.ok)
             return setProblem((0, chrome_tsx_1.failureMessage)(r, 'list watches'));
         setWatch(r.value.find((w) => w.lensId === viewName) ?? null);
-    }, [viewName, services, onSupportChange]);
+    }, [viewName, services]);
     (0, react_1.useEffect)(() => { void load(); }, [load]);
     async function start() {
         setBusy(true);
