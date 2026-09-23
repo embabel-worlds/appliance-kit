@@ -42,6 +42,68 @@ export interface BackdropOptions {
         wide: number;
         narrow: number;
     };
+    /**
+     * How fast the field drifts, against the pace this picks. 1 is that pace.
+     *
+     * Depth already slows the far nodes by up to three quarters, which is what makes the distance
+     * read — and on a surface where the graph is scenery the whole field can end up crawling. This
+     * scales the whole field without touching the falloff, so near and far keep their relationship
+     * to each other.
+     */
+    pace?: number;
+    /**
+     * More nodes, or fewer, against the count this picks from the window's area. 1 is that count.
+     *
+     * Density and volume pull in opposite directions and both are wanted: a field that is dense AND
+     * loud is a wall, and one that is sparse and quiet is empty. Behind onboarding the graph wants
+     * to read as a deep field of many faint things, so it asks for roughly twice the nodes at half
+     * the [brightness].
+     */
+    density?: number;
+    /**
+     * Put the graph in SPACE rather than on glass: nodes take a distance, and the far ones drift
+     * slower, sit smaller, fade into the haze and go out of focus.
+     *
+     * OFF BY DEFAULT, and that is the point. Over a flat ground the graph IS the picture and every
+     * node should be legible; over something with its own depth — a starfield behind the setup
+     * wizard — a perfectly sharp node at every distance is what makes the two look like two pictures
+     * stacked rather than one scene. So the surface that has a deep background asks for this, and
+     * nothing else changes.
+     */
+    depth?: boolean | DepthOptions;
+}
+/** How much depth, when [BackdropOptions.depth] is on. */
+export interface DepthOptions {
+    /**
+     * Blur in px at the back. Default 3.6 — enough that the far band reads as out of focus at a
+     * glance, low enough that it still reads as a graph rather than a smudge.
+     */
+    maxBlur?: number;
+    /**
+     * Blur in px at the FRONT. Default 0: the nearest band is in focus, which is what a scene
+     * where the graph is the subject wants.
+     *
+     * Raise it where the graph is scenery and something else is the subject — a logo and a
+     * question on a card, say. A field where nothing is perfectly sharp sits behind whatever is,
+     * and the eye stops trying to read it as content.
+     */
+    minBlur?: number;
+    /**
+     * How many focal bands. Default 3.
+     *
+     * Bands, not per-node blur, because blur is applied PER DRAWING OPERATION: 150 individually
+     * blurred arcs is 150 filtered compositions a frame, which is where the frame budget goes. Each
+     * band is drawn sharp onto a scratch canvas and composited once through the filter, so the cost
+     * is one filtered draw per band no matter how many nodes are in it. Three is enough for the eye;
+     * more bands buy smoothness nobody sees and pay a full-canvas composite each.
+     */
+    bands?: number;
+    /**
+     * What distance fades TOWARD — the haze. Default is the deep indigo the Embabel grounds use.
+     * Set it to the dominant colour of whatever sits behind, or the far nodes will look tinted
+     * rather than distant.
+     */
+    fog?: Rgb;
 }
 /**
  * Start the backdrop on [canvas]. Returns a stop function that cancels the frame

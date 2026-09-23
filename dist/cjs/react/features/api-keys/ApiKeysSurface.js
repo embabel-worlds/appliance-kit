@@ -41,7 +41,7 @@ function ApiKeysSurface({ services, host }) {
         setLoaded(true);
         if (!result.ok) {
             setAbsent(result.kind === 'unsupported');
-            setProblem((0, chrome_tsx_1.failureMessage)(result, 'API keys'));
+            setProblem((0, chrome_tsx_1.failureMessage)(result, 'list API keys'));
             return;
         }
         setAbsent(false);
@@ -60,7 +60,7 @@ function ApiKeysSurface({ services, host }) {
         const result = await services.mintKey(trimmed);
         setMinting(false);
         if (!result.ok) {
-            setProblem((0, chrome_tsx_1.failureMessage)(result, 'API keys'));
+            setProblem((0, chrome_tsx_1.failureMessage)(result, 'create an API key'));
             return;
         }
         setProblem('');
@@ -75,7 +75,7 @@ function ApiKeysSurface({ services, host }) {
         const result = await services.revokeKey(key.id);
         setRevoking(null);
         if (!result.ok) {
-            setProblem((0, chrome_tsx_1.failureMessage)(result, 'API keys'));
+            setProblem((0, chrome_tsx_1.failureMessage)(result, 'revoke an API key'));
             return;
         }
         setProblem('');

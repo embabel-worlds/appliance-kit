@@ -30,6 +30,13 @@ interface Node {
   hub: boolean
   /** A colour from the palette: the graph is a network of KINDS of thing. */
   c: Rgb
+  /**
+   * How far back it sits, 0 near to 1 deep. Always assigned; it only SHOWS when
+   * [BackdropOptions.depth] is on, and reads as 0 for every node when it is off, so the flat
+   * picture is bit-for-bit what it always was rather than a special case threaded through the
+   * draw code.
+   */
+  z: number
 }
 
 /** A fragment of code or query drifting up through the graph. */
@@ -65,6 +72,69 @@ export interface BackdropOptions {
   brightness?: number
   /** How many fragments drift at once, on a wide window and a narrow one. */
   snippetCount?: { wide: number; narrow: number }
+  /**
+   * How fast the field drifts, against the pace this picks. 1 is that pace.
+   *
+   * Depth already slows the far nodes by up to three quarters, which is what makes the distance
+   * read — and on a surface where the graph is scenery the whole field can end up crawling. This
+   * scales the whole field without touching the falloff, so near and far keep their relationship
+   * to each other.
+   */
+  pace?: number
+  /**
+   * More nodes, or fewer, against the count this picks from the window's area. 1 is that count.
+   *
+   * Density and volume pull in opposite directions and both are wanted: a field that is dense AND
+   * loud is a wall, and one that is sparse and quiet is empty. Behind onboarding the graph wants
+   * to read as a deep field of many faint things, so it asks for roughly twice the nodes at half
+   * the [brightness].
+   */
+  density?: number
+  /**
+   * Put the graph in SPACE rather than on glass: nodes take a distance, and the far ones drift
+   * slower, sit smaller, fade into the haze and go out of focus.
+   *
+   * OFF BY DEFAULT, and that is the point. Over a flat ground the graph IS the picture and every
+   * node should be legible; over something with its own depth — a starfield behind the setup
+   * wizard — a perfectly sharp node at every distance is what makes the two look like two pictures
+   * stacked rather than one scene. So the surface that has a deep background asks for this, and
+   * nothing else changes.
+   */
+  depth?: boolean | DepthOptions
+}
+
+/** How much depth, when [BackdropOptions.depth] is on. */
+export interface DepthOptions {
+  /**
+   * Blur in px at the back. Default 3.6 — enough that the far band reads as out of focus at a
+   * glance, low enough that it still reads as a graph rather than a smudge.
+   */
+  maxBlur?: number
+  /**
+   * Blur in px at the FRONT. Default 0: the nearest band is in focus, which is what a scene
+   * where the graph is the subject wants.
+   *
+   * Raise it where the graph is scenery and something else is the subject — a logo and a
+   * question on a card, say. A field where nothing is perfectly sharp sits behind whatever is,
+   * and the eye stops trying to read it as content.
+   */
+  minBlur?: number
+  /**
+   * How many focal bands. Default 3.
+   *
+   * Bands, not per-node blur, because blur is applied PER DRAWING OPERATION: 150 individually
+   * blurred arcs is 150 filtered compositions a frame, which is where the frame budget goes. Each
+   * band is drawn sharp onto a scratch canvas and composited once through the filter, so the cost
+   * is one filtered draw per band no matter how many nodes are in it. Three is enough for the eye;
+   * more bands buy smoothness nobody sees and pay a full-canvas composite each.
+   */
+  bands?: number
+  /**
+   * What distance fades TOWARD — the haze. Default is the deep indigo the Embabel grounds use.
+   * Set it to the dominant colour of whatever sits behind, or the far nodes will look tinted
+   * rather than distant.
+   */
+  fog?: Rgb
 }
 
 /* Indigo, violet, green, ice. Indigo twice: an Embabel surface, not a rainbow. Named
@@ -82,6 +152,16 @@ const someColour = (): Rgb => PALETTE[(Math.random() * PALETTE.length) | 0] ?? I
 /** px at which two nodes acknowledge each other. */
 const LINK = 240
 
+/** The haze colour when the caller names none: the indigo the Embabel grounds are built on. */
+const FOG: Rgb = [16, 20, 48]
+
+/** Toward [FOG] by [amount]: 0 leaves the colour alone, 1 is pure haze. */
+const hazed = (c: Rgb, fog: Rgb, amount: number): Rgb => [
+  Math.round(c[0] + (fog[0] - c[0]) * amount),
+  Math.round(c[1] + (fog[1] - c[1]) * amount),
+  Math.round(c[2] + (fog[2] - c[2]) * amount),
+]
+
 /**
  * Start the backdrop on [canvas]. Returns a stop function that cancels the frame
  * loop and drops the resize listener — call it when the surface goes away, which
@@ -97,11 +177,29 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
     snippets.length === 0 ? '' : snippets[((n % snippets.length) + snippets.length) % snippets.length] ?? ''
   const brightness = options.brightness ?? 1
   const counts = options.snippetCount ?? { wide: 7, narrow: 4 }
+  const density = options.density ?? 1
+  const pace = options.pace ?? 1
+
+  const depth = options.depth === true ? {} : options.depth || null
+  const bands = Math.max(1, depth?.bands ?? 3)
+  const maxBlur = depth?.maxBlur ?? 3.6
+  const minBlur = depth?.minBlur ?? 0
+  const fog = depth?.fog ?? FOG
+  /*
+   * Blur needs `ctx.filter`, which not every browser that runs everything else here has. Without
+   * it the far nodes simply stay sharp: distance is still carried by size, pace and haze, which is
+   * most of the effect. A depth that silently did nothing at all — or worse, threw — would be a
+   * backdrop that vanishes on one browser.
+   */
+  const canBlur = depth !== null && 'filter' in ctx
 
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches
   let raf = 0
   let nodes: Node[] = []
   let snips: Snippet[] = []
+  /** The scratch canvas a blurred band is drawn on before it is composited. Never shown. */
+  let scratch: HTMLCanvasElement | null = null
+  let scratchCtx: CanvasRenderingContext2D | null = null
 
   const size = () => {
     const dpr = Math.min(devicePixelRatio, 2)
@@ -109,7 +207,7 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
     canvas.height = innerHeight * dpr
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0)
     // Node count scales with area so a laptop and a monitor feel the same.
-    const target = Math.round((innerWidth * innerHeight) / 14000)
+    const target = Math.round(((innerWidth * innerHeight) / 14000) * density)
     // Sparse on purpose: these are glimpses, not a wall of code.
     snips = Array.from({ length: innerWidth > 1100 ? counts.wide : counts.narrow }, (_, i) => ({
       text: line(i + Math.floor(Math.random() * snippets.length)),
@@ -119,15 +217,136 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
       vy: -0.05 - Math.random() * 0.07,
       phase: Math.random() * Math.PI * 2,
     }))
-    nodes = Array.from({ length: Math.min(Math.max(target, 40), 150) }, () => ({
-      x: Math.random() * innerWidth,
-      y: Math.random() * innerHeight,
-      vx: (Math.random() - 0.5) * 0.22,
-      vy: (Math.random() - 0.5) * 0.22,
-      r: 1.1 + Math.random() * 2.2,
-      hub: Math.random() < 0.16,
-      c: someColour(),
-    }))
+    nodes = Array.from({ length: Math.min(Math.max(target, 40), Math.round(150 * density)) }, () => {
+      // Flat unless depth is on, so every node is at the front and the arithmetic below is a no-op.
+      const z = depth ? Math.random() : 0
+      // Parallax, and it is what sells the distance more than the blur does: the far ones
+      // barely move. Squared, so the near half keeps most of its pace and the falloff is felt
+      // at the back rather than spread evenly across the field.
+      const drift = (1 - 0.75 * z * z) * pace
+      return {
+        x: Math.random() * innerWidth,
+        y: Math.random() * innerHeight,
+        vx: (Math.random() - 0.5) * 0.22 * drift,
+        vy: (Math.random() - 0.5) * 0.22 * drift,
+        r: (1.1 + Math.random() * 2.2) * (1 - 0.45 * z),
+        hub: Math.random() < 0.16,
+        c: someColour(),
+        z,
+      }
+    })
+
+    if (canBlur) {
+      scratch = scratch ?? document.createElement('canvas')
+      scratch.width = canvas.width
+      scratch.height = canvas.height
+      scratchCtx = scratch.getContext('2d')
+      scratchCtx?.setTransform(dpr, 0, 0, dpr, 0, 0)
+    }
+  }
+
+  /** Which focal band a distance falls in: 0 is the front, [bands] - 1 the back. */
+  const bandOf = (z: number): number => Math.min(bands - 1, Math.floor(z * bands))
+
+  /** The blur a band is composited through: [minBlur] at the front, [maxBlur] at the back. */
+  const blurOf = (band: number): number =>
+    bands < 2 ? minBlur : minBlur + (band / (bands - 1)) * (maxBlur - minBlur)
+
+  /**
+   * The edges of one frame, pooled.
+   *
+   * Which band an edge belongs to depends on where its endpoints are THIS frame, so the pairs
+   * cannot be worked out once at startup — but they also must not be worked out once per band,
+   * which would triple the only O(n²) loop in the file. They are collected once into objects that
+   * are reused every frame, so a backdrop that runs for hours allocates nothing per frame.
+   */
+  const edges: { a: Node; b: Node; strength: number; band: number }[] = []
+  let edgeCount = 0
+
+  const collectEdges = () => {
+    edgeCount = 0
+    for (let i = 0; i < nodes.length; i++) {
+      for (let j = i + 1; j < nodes.length; j++) {
+        const a = nodes[i]
+        const b = nodes[j]
+        // Both indices are in range by construction; the guard is for the type
+        // checker, which cannot know that, and costs a comparison per pair.
+        if (!a || !b) continue
+        const dx = a.x - b.x
+        const dy = a.y - b.y
+        const d = Math.hypot(dx, dy)
+        if (d > LINK) continue
+        // The DEEPER end decides: an edge from the front to the back is part of the back, so a
+        // sharp line never runs out of a blurred node and betrays the whole trick.
+        const band = bandOf(Math.max(a.z, b.z))
+        const slot = edges[edgeCount]
+        if (slot) {
+          slot.a = a
+          slot.b = b
+          slot.strength = (1 - d / LINK) ** 2
+          slot.band = band
+        } else {
+          edges[edgeCount] = { a, b, strength: (1 - d / LINK) ** 2, band }
+        }
+        edgeCount++
+      }
+    }
+  }
+
+  /** Everything at one distance, drawn sharp. The blur, if any, happens to the whole band after. */
+  const drawBand = (target: CanvasRenderingContext2D, band: number) => {
+    target.globalAlpha = brightness
+
+    for (let i = 0; i < edgeCount; i++) {
+      const e = edges[i]
+      if (!e || e.band !== band) continue
+      const { a, b } = e
+      // Haze by the deeper end, for the same reason the band is: one line, one distance.
+      const far = Math.max(a.z, b.z)
+      const c = hazed(
+        [
+          Math.round((a.c[0] + b.c[0]) / 2),
+          Math.round((a.c[1] + b.c[1]) / 2),
+          Math.round((a.c[2] + b.c[2]) / 2),
+        ],
+        fog,
+        far * 0.55,
+      )
+      target.strokeStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${0.75 * e.strength * (1 - 0.38 * far)})`
+      target.lineWidth = 1
+      target.beginPath()
+      target.moveTo(a.x, a.y)
+      target.lineTo(b.x, b.y)
+      target.stroke()
+    }
+
+    for (const n of nodes) {
+      if (bandOf(n.z) !== band) continue
+      const c = hazed(n.c, fog, n.z * 0.55)
+      /*
+       * A BLURRED DOT IS A DIMMER DOT, because blur spreads the same ink over a wider area — so a
+       * field tuned down for the background and then blurred is a field that disappears. Under
+       * depth every node carries the glow a hub carries, and a little more body, which is what
+       * keeps it visible as something LUMINOUS rather than as something faint. It is also the
+       * look: a spectral field of soft lights rather than a diagram of dots.
+       */
+      if (depth) {
+        target.beginPath()
+        target.arc(n.x, n.y, n.r * 4.2, 0, Math.PI * 2)
+        target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${0.1 * (1 - 0.3 * n.z)})`
+        target.fill()
+      }
+      target.beginPath()
+      target.arc(n.x, n.y, (n.hub ? n.r * 1.9 : n.r) * (depth ? 1.5 : 1), 0, Math.PI * 2)
+      target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${(n.hub ? 1 : 0.8) * (1 - 0.32 * n.z)})`
+      target.fill()
+      if (n.hub) {
+        target.beginPath()
+        target.arc(n.x, n.y, n.r * 5.5, 0, Math.PI * 2)
+        target.fillStyle = `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${0.22 * (1 - 0.32 * n.z)})`
+        target.fill()
+      }
+    }
   }
 
   const frame = () => {
@@ -146,40 +365,23 @@ export function startBackdrop(canvas: HTMLCanvasElement, options: BackdropOption
       if (n.y > h + 20) n.y = -20
     }
 
-    for (let i = 0; i < nodes.length; i++) {
-      for (let j = i + 1; j < nodes.length; j++) {
-        const a = nodes[i]
-        const b = nodes[j]
-        // Both indices are in range by construction; the guard is for the type
-        // checker, which cannot know that, and costs a comparison per pair.
-        if (!a || !b) continue
-        const dx = a.x - b.x
-        const dy = a.y - b.y
-        const d = Math.hypot(dx, dy)
-        if (d > LINK) continue
-        const strength = (1 - d / LINK) ** 2
-        const r = Math.round((a.c[0] + b.c[0]) / 2)
-        const g = Math.round((a.c[1] + b.c[1]) / 2)
-        const bl = Math.round((a.c[2] + b.c[2]) / 2)
-        ctx.strokeStyle = `rgba(${r}, ${g}, ${bl}, ${0.75 * strength})`
-        ctx.lineWidth = 1
-        ctx.beginPath()
-        ctx.moveTo(a.x, a.y)
-        ctx.lineTo(b.x, b.y)
-        ctx.stroke()
-      }
-    }
+    collectEdges()
 
-    for (const n of nodes) {
-      ctx.beginPath()
-      ctx.arc(n.x, n.y, n.hub ? n.r * 1.9 : n.r, 0, Math.PI * 2)
-      ctx.fillStyle = `rgba(${n.c[0]}, ${n.c[1]}, ${n.c[2]}, ${n.hub ? 1 : 0.8})`
-      ctx.fill()
-      if (n.hub) {
-        ctx.beginPath()
-        ctx.arc(n.x, n.y, n.r * 5.5, 0, Math.PI * 2)
-        ctx.fillStyle = `rgba(${n.c[0]}, ${n.c[1]}, ${n.c[2]}, 0.22)`
-        ctx.fill()
+    // BACK TO FRONT, so a near node overlaps a far one rather than the other way round — the
+    // one ordering rule a scene with depth cannot get wrong.
+    for (let band = bands - 1; band >= 0; band--) {
+      const blur = canBlur ? blurOf(band) : 0
+      if (blur > 0 && scratchCtx && scratch) {
+        scratchCtx.clearRect(0, 0, w, h)
+        drawBand(scratchCtx, band)
+        ctx.filter = `blur(${blur.toFixed(2)}px)`
+        // Alpha is already in the band's own pixels; compositing at 1 avoids applying it twice.
+        ctx.globalAlpha = 1
+        ctx.drawImage(scratch, 0, 0, w, h)
+        ctx.filter = 'none'
+        ctx.globalAlpha = brightness
+      } else {
+        drawBand(ctx, band)
       }
     }
 

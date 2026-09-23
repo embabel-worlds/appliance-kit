@@ -39,7 +39,7 @@ const HELP = [
     ['contracts = MATCH (d:Document) …', 'name a binding · pin contracts keeps it'],
     ['$contracts', 'peek a binding'],
 ];
-export function SessionPane({ onCaptured, onOpenInEditor }) {
+export function SessionPane({ onCaptured, onOpenInEditor, visible = true }) {
     const { services, host } = useQueryRuntime();
     const saved = useRef(host.interactive.session.read()).current;
     const [entries, setEntries] = useState(saved?.entries ?? []);
@@ -118,6 +118,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
         const cm = CodeMirror(promptHost.current, {
             mode: 'application/x-cypher-query',
             lineNumbers: false,
+            screenReaderLabel: 'Session query',
             viewportMargin: Infinity,
             placeholder: 'MATCH (c:Chunk) — Enter runs, RETURN c implied',
             extraKeys: {
@@ -127,6 +128,10 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
                 'Ctrl-Space': complete,
             },
         });
+        const scroller = cm.getScrollerElement();
+        scroller.tabIndex = 0;
+        scroller.setAttribute('role', 'region');
+        scroller.setAttribute('aria-label', 'Session query scroll area');
         // One line, always: a pasted multi-line query flattens rather than growing a second prompt row.
         const beforeChange = (_cm, change) => {
             if (change.text.length > 1 && change.update)
@@ -156,6 +161,11 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+    // A retained editor mounted under [hidden] cannot measure its line height until revealed.
+    useEffect(() => {
+        if (visible)
+            promptCm.current?.refresh();
+    }, [visible]);
     /* The placeholder follows the session: an empty box must SAY it is the place to type, and what
      * a useful next line would be. Keyed on entries — a capture changes what "next" means. */
     useEffect(() => {
@@ -220,7 +230,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
                 return;
             setBusy(false);
             if (!isOk(outcome))
-                return append({ input: line, tone: 'error', text: `✗ ${failureMessage(outcome, 'pinning')}` });
+                return append({ input: line, tone: 'error', text: `✗ ${failureMessage(outcome, 'pin the scope')}` });
             return append({ input: line, tone: 'ok', text: `⇒ $${plan.pinTarget} pinned — survives until you delete it` });
         }
         const generation = ++operationGeneration.current;
@@ -230,7 +240,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
             return;
         setBusy(false);
         if (!isOk(outcome)) {
-            return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${failureMessage(outcome, 'the session line')}` });
+            return append({ input: line, ran: plan.cypher, tone: 'error', text: `✗ ${failureMessage(outcome, 'run the session line')}` });
         }
         if (isBackgroundHandle(outcome.value)) {
             return append({ input: line, ran: plan.cypher, tone: 'error', text: '✗ this query is running in the background; interactive sessions require a synchronous result' });
@@ -353,7 +363,7 @@ export function SessionPane({ onCaptured, onOpenInEditor }) {
         host.interactive.session.write(null);
     };
     const pipeline = pipelineText(stages, returnClause);
-    return (_jsxs(StudioPanel, { title: "Interactive", aside: _jsxs("span", { className: "row", children: [_jsx("span", { className: "hint", children: "membership frozen \u00B7 values live" }), entries.length > 0 && (_jsx("button", { className: "btn ghost tiny", title: "Forget this script locally \u2014 server scopes keep their own TTL", onClick: clearSession, children: "Clear" }))] }), children: [_jsxs("div", { className: "progresslist session-transcript", ref: transcriptRef, children: [entries.length === 0 && showHelp && (_jsxs("div", { className: "hint session-help", children: [_jsx("p", { children: "Type a line, press Enter. Each set you build becomes a named binding." }), _jsx("table", { children: _jsx("tbody", { children: HELP.map(([what, does]) => (_jsxs("tr", { children: [_jsx("td", { children: _jsx("code", { children: what }) }), _jsx("td", { children: does })] }, what))) }) })] })), entries.map((entry, index) => (_jsxs("div", { className: "session-entry", children: [_jsxs("div", { className: "session-rowacts", children: [index < entries.length - 1 && (_jsxs("button", { className: "btn ghost tiny session-back", title: `Back out: drop this row and the ${entries.length - index - 1} after it`, onClick: () => void backOutFrom(entry), children: ["\u293A", entries.length - index] })), _jsx("button", { className: "btn ghost tiny session-del", title: entry.scope ? `Delete just this row and scope $${entry.scope}` : 'Delete just this row', onClick: () => void removeEntry(entry), children: "\u2715" })] }), _jsxs("div", { className: "session-input", children: ["\u00BB ", entry.input] }), entry.ran && entry.ran !== entry.input && _jsxs("div", { className: "session-ran hint", children: ["ran ", entry.ran] }), _jsx("div", { className: `session-out ${entry.tone}`, children: entry.text }), entry.rows && entry.rows.length > 0 && (_jsxs("details", { className: "session-rows", children: [_jsx("summary", { className: "hint", children: "rows \u25B8" }), _jsx(RowTable, { rows: entry.rows.slice(0, 25), columns: rowColumns(entry.rows) })] }))] }, entry.key))), busy && _jsx("div", { className: "hint", children: "running\u2026" })] }), _jsxs("div", { className: "ask-row session-prompt", children: [_jsx("span", { className: "session-mark", "aria-hidden": "true", children: "\u00BB" }), _jsx("div", { className: "session-cm", ref: promptHost }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void submit(), children: "Enter" })] }), _jsx("p", { className: "hint", children: current()
+    return (_jsxs(StudioPanel, { title: "Interactive", aside: _jsxs("span", { className: "row", children: [_jsx("span", { className: "hint", children: "membership frozen \u00B7 values live" }), entries.length > 0 && (_jsx("button", { className: "btn ghost tiny", title: "Forget this script locally \u2014 server scopes keep their own TTL", onClick: clearSession, children: "Clear" }))] }), children: [_jsxs("div", { className: "progresslist session-transcript", ref: transcriptRef, children: [entries.length === 0 && showHelp && (_jsxs("div", { className: "hint session-help", children: [_jsx("p", { children: "Type a line, press Enter. Each set you build becomes a named binding." }), _jsx("table", { children: _jsx("tbody", { children: HELP.map(([what, does]) => (_jsxs("tr", { children: [_jsx("td", { children: _jsx("code", { children: what }) }), _jsx("td", { children: does })] }, what))) }) })] })), entries.map((entry, index) => (_jsxs("div", { className: "session-entry", children: [_jsxs("div", { className: "session-rowacts", children: [index < entries.length - 1 && (_jsxs("button", { className: "btn ghost tiny session-back", title: `Back out: drop this row and the ${entries.length - index - 1} after it`, onClick: () => void backOutFrom(entry), children: ["\u293A", entries.length - index] })), _jsx("button", { className: "btn ghost tiny session-del", title: entry.scope ? `Delete just this row and scope $${entry.scope}` : 'Delete just this row', onClick: () => void removeEntry(entry), children: "\u2715" })] }), _jsxs("div", { className: "session-input", children: ["\u00BB ", entry.input] }), entry.ran && entry.ran !== entry.input && _jsxs("div", { className: "session-ran hint", children: ["ran ", entry.ran] }), _jsx("div", { className: `session-out ${entry.tone}`, children: entry.text }), entry.rows && entry.rows.length > 0 && (_jsxs("details", { className: "session-rows", children: [_jsx("summary", { className: "hint", children: "Rows" }), _jsx(RowTable, { rows: entry.rows.slice(0, 25), columns: rowColumns(entry.rows) })] }))] }, entry.key))), busy && _jsx("div", { className: "hint", children: "running\u2026" })] }), _jsxs("div", { className: "ask-row session-prompt", children: [_jsx("span", { className: "session-mark", "aria-hidden": "true", children: "\u00BB" }), _jsx("div", { className: "session-cm", ref: promptHost }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void submit(), children: "Enter" })] }), _jsx("p", { className: "hint", children: current()
                     ? `next clause of $${current().name} — WHERE ${current().variable}.… · MATCH (${current().variable})-[…]->(x:Label) · RETURN ${current().variable}.… — ⌃Space completes`
                     : 'MATCH (c:Chunk) — RETURN c is implied · ⌃Space completes from the schema' }), _jsxs("div", { className: "row", children: [_jsx("button", { className: "btn ghost tiny", disabled: !stages.length && !returnClause, onClick: () => setShowPipeline((v) => !v), children: showPipeline ? 'Hide Cypher' : 'Cypher' }), showPipeline && pipeline && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy", text: pipeline }), _jsx("button", { className: "btn ghost tiny", onClick: () => onOpenInEditor(pipeline), children: "Open in editor \u2192" })] })), pipeline && _jsx(SaveView, { current: () => pipeline })] }), showPipeline && pipeline && (
             /* The one REAL query this session has built — scope-free, anchored, what a view keeps.
