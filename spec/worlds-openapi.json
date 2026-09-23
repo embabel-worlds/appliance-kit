@@ -846,6 +846,49 @@
         } ],
         "required" : [ "activities", "stream" ]
       },
+      "ContextRequest" : {
+        "properties" : {
+          "model" : {
+            "description" : "The model the context is pinned to",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "The role the context uses",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "ContextView" : {
+        "properties" : {
+          "deploymentModel" : {
+            "type" : "string"
+          },
+          "deploymentRole" : {
+            "type" : "string"
+          },
+          "followsChat" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "resolved" : {
+            "$ref" : "#/components/schemas/ResolvedModel"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "roleInUse" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "followsChat", "id" ],
+        "type" : "object"
+      },
       "CreateLensRequest" : {
         "properties" : {
           "name" : {
@@ -1092,6 +1135,21 @@
           }
         },
         "required" : [ "channel", "format", "headers", "tier" ],
+        "type" : "object"
+      },
+      "DeploymentUse" : {
+        "properties" : {
+          "model" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          },
+          "setting" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "setting" ],
         "type" : "object"
       },
       "DiffSpec" : {
@@ -3621,6 +3679,9 @@
       },
       "LlmConfig" : {
         "properties" : {
+          "description" : {
+            "type" : "string"
+          },
           "model" : {
             "type" : "string"
           },
@@ -3734,6 +3795,24 @@
           }
         },
         "required" : [ "local", "purpose" ],
+        "type" : "object"
+      },
+      "NewRoleRequest" : {
+        "properties" : {
+          "description" : {
+            "description" : "What the role is for",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "Lowercase letters, digits and underscores, starting with a letter",
+            "type" : "string"
+          },
+          "model" : {
+            "description" : "The model it uses",
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "id", "model" ],
         "type" : "object"
       },
       "NodeRequest" : {
@@ -4177,6 +4256,93 @@
           }
         },
         "required" : [ "text" ],
+        "type" : "object"
+      },
+      "ResolvedModel" : {
+        "properties" : {
+          "local" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "local", "name" ],
+        "type" : "object"
+      },
+      "RoleModelRequest" : {
+        "properties" : {
+          "model" : {
+            "description" : "The model the role uses in this world; blank for the deployment's choice",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "RoleView" : {
+        "properties" : {
+          "custom" : {
+            "type" : "boolean"
+          },
+          "deploymentModel" : {
+            "type" : "string"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "group" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "resolved" : {
+            "$ref" : "#/components/schemas/ResolvedModel"
+          },
+          "usedBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "worldModel" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "custom", "id", "usedBy" ],
+        "type" : "object"
+      },
+      "RouterView" : {
+        "properties" : {
+          "contexts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ContextView"
+            },
+            "type" : "array"
+          },
+          "deploymentUses" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DeploymentUse"
+            },
+            "type" : "array"
+          },
+          "models" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ResolvedModel"
+            },
+            "type" : "array"
+          },
+          "roles" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RoleView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "contexts", "deploymentUses", "models", "roles" ],
         "type" : "object"
       },
       "RunSavedRequest" : {
@@ -10078,6 +10244,220 @@
         },
         "summary" : "Update notification routing",
         "tags" : [ "Config" ]
+      }
+    },
+    "/api/v1/config/router" : {
+      "get" : {
+        "description" : "Each context with the role or model it uses and the model that resolves; every role with its deployment and world model and the contexts that use it; the chat models available; and the deployment's own model settings, which no world can change yet.",
+        "operationId" : "view",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RouterView"
+                }
+              }
+            },
+            "description" : "The chain, resolved"
+          }
+        },
+        "summary" : "The whole routing chain for this world",
+        "tags" : [ "Model Router" ]
+      }
+    },
+    "/api/v1/config/router/contexts/{id}" : {
+      "put" : {
+        "description" : "Send `role` or `model`, not both. Send neither to return the context to the deployment default.",
+        "operationId" : "setContext",
+        "parameters" : [ {
+          "description" : "A context id, as `GET /config/router` lists it",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ContextRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Changed; takes effect on the next request"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Unknown context, role or model"
+          }
+        },
+        "summary" : "Point a context at a role, or pin it to a model",
+        "tags" : [ "Model Router" ]
+      }
+    },
+    "/api/v1/config/router/roles" : {
+      "post" : {
+        "description" : "A role of this world's own: a name, what it is for, and the model it uses. A context can then use it.",
+        "operationId" : "addRole",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/NewRoleRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Added"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Invalid name, taken name, or unknown model"
+          }
+        },
+        "summary" : "Add a custom role",
+        "tags" : [ "Model Router" ]
+      }
+    },
+    "/api/v1/config/router/roles/{id}" : {
+      "delete" : {
+        "description" : "Refused while a context still uses it.",
+        "operationId" : "removeRole",
+        "parameters" : [ {
+          "description" : "The custom role's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Deleted"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not a custom role"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "A context still uses it"
+          }
+        },
+        "summary" : "Delete a custom role",
+        "tags" : [ "Model Router" ]
+      },
+      "put" : {
+        "description" : "A blank `model` returns a built-in role to the deployment's choice. A custom role always needs one.",
+        "operationId" : "setRole",
+        "parameters" : [ {
+          "description" : "A role id, as `GET /config/router` lists it",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RoleModelRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Changed; takes effect on the next request"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Unknown role or model"
+          }
+        },
+        "summary" : "Choose the model a role uses in this world",
+        "tags" : [ "Model Router" ]
       }
     },
     "/api/v1/config/storage" : {
@@ -16184,7 +16564,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39615"
+    "url" : "http://localhost:35051"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -16294,6 +16674,9 @@
   }, {
     "description" : "Admin: inspect node decorators and fire them on demand instead of waiting for the scheduled tick",
     "name" : "KG Decoration"
+  }, {
+    "description" : "Contexts, roles and the models they resolve to",
+    "name" : "Model Router"
   }, {
     "description" : "Manage scheduled jobs in the world",
     "name" : "Cron"
