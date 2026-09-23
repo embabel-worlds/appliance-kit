@@ -73,6 +73,17 @@ describe('KgClient request shaping', () => {
     assert.deepEqual(transport.last.query, { waitSeconds: 5 })
   })
 
+  it("sends a view's declared params and the args for them in the body", async () => {
+    const { kg, transport } = client()
+    await kg.execute('MATCH (n) RETURN n LIMIT $limit', { params: { limit: { type: 'int', default: 10 } }, args: { limit: '5' } })
+    assert.deepEqual(transport.last.body, {
+      cypher: 'MATCH (n) RETURN n LIMIT $limit',
+      params: { limit: { type: 'int', default: 10 } },
+      args: { limit: '5' },
+    })
+    assert.deepEqual(transport.last.query, {})
+  })
+
   it('encodes run and view names into the path', async () => {
     const { kg, transport } = client()
     await kg.run('run/with slash')

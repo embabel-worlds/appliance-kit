@@ -108,6 +108,10 @@ class KgClient {
         const body = { cypher };
         if (options.captureAs !== undefined)
             body['captureAs'] = options.captureAs;
+        if (options.params !== undefined)
+            body['params'] = options.params;
+        if (options.args !== undefined)
+            body['args'] = options.args;
         return this.transport.send({
             method: 'POST',
             path: `${KG}/execute`,

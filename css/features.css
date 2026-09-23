@@ -791,13 +791,15 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewspage-mobile-nav-body { max-height: 68vh; overflow-y: auto; scrollbar-gutter: stable; }
 
-:where(.kit-feature) .viewspage-operation { display: grid; min-width: 0; min-height: 0; max-height: 100%; gap: 14px; overflow-y: auto; scrollbar-gutter: stable; }
+:where(.kit-feature) .viewspage-operation {
+  position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; gap: 10px; overflow: hidden;
+}
 
-:where(.kit-feature).viewspage-selected .viewspage-operation > .panel { min-height: 0; margin: 0; }
+:where(.kit-feature).viewspage-selected .viewspage-operation > .panel { flex: none; min-height: 0; margin: 0; }
 
 :where(.kit-feature) .viewoperation-nav {
-  position: sticky; z-index: 2; top: 0; display: flex; max-width: 100%; gap: 2px; overflow-x: auto;
-  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper);
+  display: flex; flex: none; max-width: 100%; gap: 2px; overflow-x: auto;
+  border-bottom: 1px solid var(--rule); background: var(--paper);
 }
 
 :where(.kit-feature) .viewoperation-nav-link {
@@ -807,21 +809,124 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewoperation-nav-link.active { border-bottom-color: var(--signal); color: var(--ink); }
 
-:where(.kit-feature) .viewoperation-sections { display: grid; min-width: 0; gap: 14px; padding-bottom: min(62dvh, 560px); }
-
-:where(.kit-feature) .viewoperation-section { min-width: 0; scroll-margin-top: 62px; }
-
-:where(.kit-feature) .viewoperation-section > .panel { min-height: 0; margin: 0; }
-
 :where(.kit-feature) .viewoperation-head { display: grid; min-height: 0; grid-template-columns: minmax(0, 1fr) auto; gap: 10px 14px; padding: 14px 16px; }
 
 :where(.kit-feature) .viewoperation-head > .row { justify-content: flex-end; }
 
 :where(.kit-feature) .viewoperation-head > p { grid-column: 1 / -1; margin: 0; }
 
+:where(.kit-feature) .viewoperation-title { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; }
+
+:where(.kit-feature) .viewtag-origin { align-self: center; color: var(--mid); border-color: var(--rule); }
+
+:where(.kit-feature) .viewtag-origin.realm { color: var(--caution); border-color: color-mix(in srgb, var(--caution) 45%, transparent); }
+
+:where(.kit-feature) .viewtag-origin.mine { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); }
+
+/* ── a selected view: run bar, then ONE bounded body whose active tab is the only scroller ── */
+
+:where(.kit-feature) .viewrunbar {
+  display: flex; flex: none; flex-wrap: wrap; align-items: end; gap: 10px 12px;
+  padding: 10px 14px; border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper);
+}
+
+:where(.kit-feature) .viewrunbar .paramrow { flex: 0 1 170px; min-width: 110px; }
+
+:where(.kit-feature) .viewrunbar > .hint { align-self: center; margin: 0; }
+
+:where(.kit-feature) .viewrunbar-actions { flex-wrap: nowrap; margin-left: auto; }
+
+:where(.kit-feature) .viewcypher-toggle { font-family: var(--mono); }
+
+:where(.kit-feature) .viewcypher-toggle[aria-expanded="true"] { border-color: var(--signal); color: var(--signal); }
+
+:where(.kit-feature) .viewoperation-body {
+  position: relative; display: flex; flex: 1; flex-direction: column; min-height: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); overflow: hidden;
+}
+
+:where(.kit-feature) .viewpane { display: flex; flex: 1; flex-direction: column; min-height: 0; }
+
+:where(.kit-feature) .viewpane[hidden] { display: none; }
+
+:where(.kit-feature) .viewpane-scroll { flex: 1; min-height: 0; padding: 12px 14px; overflow: auto; }
+
+:where(.kit-feature) .viewpane-results .viewpane-scroll { padding: 0; }
+
+:where(.kit-feature) .viewpane-results .viewpane-scroll > .hint { margin: 14px; }
+
+:where(.kit-feature) .viewpane-results .results-foot { flex: none; margin: 0; padding: 8px 14px; border-top: 1px solid var(--rule); }
+
+/* The pane is the scroller, so the table must not become a second one inside it. */
+:where(.kit-feature) .view-results .tablewrap { max-height: none; overflow: visible; }
+
+:where(.kit-feature) .view-results .results-table th { position: sticky; top: 0; z-index: 1; background: var(--paper); }
+
+/* Expanded, the editor covers the tabs and results, leaving this strip of them visible. */
+:where(.kit-feature) .viewoperation-body.covered > :not(.viewcypher):not(.viewcypher-peek) { opacity: 0.35; filter: saturate(0.4); pointer-events: none; }
+
+:where(.kit-feature) .viewcypher {
+  position: absolute; z-index: 4; display: flex; flex-direction: column; min-height: 0;
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper);
+  box-shadow: 0 18px 40px rgb(0 0 0 / 30%);
+}
+
+:where(.kit-feature) .viewcypher[hidden] { display: none; }
+
+:where(.kit-feature) .viewcypher-mini { top: 0; right: 10px; width: min(620px, calc(100% - 20px)); height: min(300px, calc(100% - 20px)); resize: vertical; overflow: hidden; }
+
+:where(.kit-feature) .viewcypher-full { inset: 0 0 52px 0; border-width: 0 0 1px; border-bottom-color: var(--signal); border-radius: 0; }
+
+:where(.kit-feature) .viewcypher-head {
+  display: flex; flex: none; flex-wrap: wrap; align-items: center; gap: 6px 8px;
+  padding: 6px 10px; border-bottom: 1px solid var(--rule);
+}
+
+:where(.kit-feature) .viewcypher-spacer { flex: 1; }
+
+:where(.kit-feature) .viewtag-edited { align-self: center; color: var(--signal); border-color: color-mix(in srgb, var(--signal) 45%, transparent); }
+
+:where(.kit-feature) .viewcypher-note { color: var(--mid); font-size: 11.5px; }
+
+:where(.kit-feature) .viewcypher-note.ok { color: var(--lit); }
+
+:where(.kit-feature) .viewcypher-note.error { color: var(--alert); }
+
+:where(.kit-feature) .viewlink { padding: 0; border: 0; background: none; color: var(--signal); font: inherit; text-decoration: underline; cursor: pointer; }
+
+:where(.kit-feature) .viewcypher-host { flex: 1; min-height: 0; margin: 0; border: 0; border-radius: 0; }
+
+:where(.kit-feature) .viewcypher-host .CodeMirror { height: 100%; }
+
+:where(.kit-feature) .viewcypher-peek {
+  position: absolute; z-index: 4; right: 0; bottom: 0; left: 0; height: 52px;
+  border: 0; background: color-mix(in srgb, var(--paper) 82%, transparent); color: var(--mid);
+  font: 11.5px var(--mono); cursor: pointer;
+}
+
+:where(.kit-feature) .viewcypher-peek:hover,
+:where(.kit-feature) .viewcypher-peek:focus-visible { color: var(--ink); }
+
+:where(.kit-feature) .viewcopy-scrim {
+  position: absolute; z-index: 10; inset: 0; display: grid; place-items: center; padding: 16px;
+  background: rgb(0 0 0 / 45%);
+}
+
+:where(.kit-feature) .viewcopy {
+  display: grid; width: min(460px, 100%); gap: 10px; margin: 0; padding: 18px;
+  border: 1px solid var(--rule); border-radius: var(--radius); background: var(--paper); box-shadow: 0 24px 60px rgb(0 0 0 / 45%);
+}
+
+:where(.kit-feature) .viewcopy h3 { margin: 0; font-size: 15px; overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewcopy p { margin: 0; line-height: 1.5; overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewcopy .viewcopy-error { color: var(--alert); }
+
+:where(.kit-feature) .viewcopy-actions { justify-content: flex-end; }
+
 /* The wrapper owns scrolling; an overflowed block table would intercept sticky headers. */
-:where(.kit-feature).kit-feature-query .tablewrap,
-:where(.kit-feature) .view-results .tablewrap { max-height: min(52vh, 560px); overflow: auto; scrollbar-gutter: stable; }
+:where(.kit-feature).kit-feature-query .tablewrap { max-height: min(52vh, 560px); overflow: auto; scrollbar-gutter: stable; }
 
 :where(.kit-feature).kit-feature-query .results-table,
 :where(.kit-feature) .view-results .results-table { display: table; width: max-content; min-width: 100%; margin-top: 0; overflow: visible; }
@@ -843,18 +948,13 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewschema-label dd { color: var(--mid); font-family: var(--mono); }
 
-:where(.kit-feature) .cypherbox pre { margin: 8px 0 0; padding: 10px 12px; background: var(--code-bg);
-  border: 1px solid var(--rule); border-radius: var(--radius); overflow-x: auto;
-  font-size: 11.5px; line-height: 1.5; }
-
-:where(.kit-feature) .cypherbox summary { cursor: pointer; font-family: var(--mono); font-size: 10.5px;
-  text-transform: uppercase; letter-spacing: 0.08em; color: var(--faint); }
 
 @media (max-width: 1100px) {
-  :where(.kit-feature).viewspage-selected { display: block; height: auto; min-height: 0; }
+  :where(.kit-feature).viewspage-selected { display: flex; flex-direction: column; align-items: stretch; gap: 10px; }
   :where(.kit-feature).viewspage-selected .viewspage-sidebar { display: none; }
   :where(.kit-feature) .viewspage-mobile-nav { display: block; }
-  :where(.kit-feature) .viewspage-operation { max-height: none; overflow-y: visible; }
+  :where(.kit-feature) .viewspage-mobile-nav { flex: none; margin: 0; }
+  :where(.kit-feature) .viewspage-operation { flex: 1; height: auto; }
   :where(.kit-feature) .viewoperation-head,
   :where(.kit-feature) .viewschema { grid-template-columns: 1fr; }
   :where(.kit-feature) .viewoperation-head > .row { justify-content: flex-start; }
@@ -871,7 +971,6 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   :where(.kit-feature).viewspage-selected input,
   :where(.kit-feature).viewspage-selected select,
   :where(.kit-feature).viewspage-selected summary { min-height: 44px; }
-  :where(.kit-feature).viewspage-selected .cypherbox > summary { display: flex; align-items: center; }
   :where(.kit-feature) .view-results .tablewrap { overflow-x: hidden; }
   :where(.kit-feature) .view-results .results-table,
   :where(.kit-feature) .view-results .results-table tbody,
@@ -1260,7 +1359,6 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   :where(.kit-feature) .appgroup-head { min-height: 44px; }
   :where(.kit-feature) .btn { min-width: 44px; }
   :where(.kit-feature) .app-pin { width: 44px; }
-  :where(.kit-feature) .cypherbox > summary,
   :where(.kit-feature) .queryhistory > summary { display: flex; align-items: center; min-height: 44px; }
   :where(.kit-feature) .editor-host .CodeMirror,
   :where(.kit-feature) .session-cm .CodeMirror { font-size: 16px; }
@@ -1305,15 +1403,6 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   background: color-mix(in srgb, var(--signal) 13%, transparent);
   border-left-color: var(--signal);
 }
-
-/* The cypher box sets its code in accent ink, so the page's accent-tinted
-   ::selection lands accent-on-accent and the words disappear. Here — and only
-   here — selection flips to the solid accent with the computed contrast ink,
-   which is legible for every theme by construction. */
-
-:where(.kit-feature) .cypherbox ::selection { background: var(--signal); color: var(--on-signal); }
-
-:where(.kit-feature) .cypherbox ::-moz-selection { background: var(--signal); color: var(--on-signal); }
 
 /* The one decision on the sign-in form, and it is a security decision, so it reads as a
    sentence with its consequence under it rather than as a bare "remember me". */
