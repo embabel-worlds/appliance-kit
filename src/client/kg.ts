@@ -85,6 +85,14 @@ export interface ExecuteOptions {
    * to freeze yet. The result's `capturedScope` carries what froze.
    */
   captureAs?: string
+  /**
+   * Declared parameters for the cypher, as a view declares them. With these, each `$name` is
+   * substituted from `args` merged over its default, exactly as when a saved view runs — how a
+   * view's edited body runs before it is saved. A bad argument is a 400 naming the param.
+   */
+  params?: Record<string, KgViewParamSpec>
+  /** Arguments for `params`. A blank value means not supplied, so the default applies. */
+  args?: Record<string, unknown>
 }
 
 export class KgClient {
@@ -168,6 +176,8 @@ export class KgClient {
     if (options.waitSeconds !== undefined) query['waitSeconds'] = options.waitSeconds
     const body: Record<string, unknown> = { cypher }
     if (options.captureAs !== undefined) body['captureAs'] = options.captureAs
+    if (options.params !== undefined) body['params'] = options.params
+    if (options.args !== undefined) body['args'] = options.args
     return this.transport.send({
       method: 'POST',
       path: `${KG}/execute`,
