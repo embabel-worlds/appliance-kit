@@ -2884,12 +2884,24 @@
       },
       "KgExecuteRequest" : {
         "properties" : {
+          "args" : {
+            "additionalProperties" : { },
+            "description" : "Arguments for `params`. A blank value means not supplied, so the default applies.",
+            "type" : "object"
+          },
           "captureAs" : {
             "description" : "Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only.",
             "type" : "string"
           },
           "cypher" : {
             "type" : "string"
+          },
+          "params" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ViewParamSpec"
+            },
+            "description" : "Declared parameters for the cypher, as a view declares them. Each `$name` is substituted from `args` merged over its default, exactly as when a saved view runs.",
+            "type" : "object"
           }
         },
         "required" : [ "cypher" ],
@@ -4612,6 +4624,27 @@
         "required" : [ "cited", "dates", "n", "passages", "score" ],
         "type" : "object"
       },
+      "SourceConnection" : {
+        "properties" : {
+          "fields" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "hasSecret" : {
+            "type" : "boolean"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "variant" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "fields", "hasSecret", "kind" ],
+        "type" : "object"
+      },
       "SourceDates" : {
         "properties" : {
           "createdAt" : {
@@ -4634,6 +4667,9 @@
           "confirmation" : {
             "type" : "string"
           },
+          "connected" : {
+            "type" : "boolean"
+          },
           "evidence" : {
             "additionalProperties" : {
               "type" : "string"
@@ -4641,6 +4677,9 @@
             "type" : "object"
           },
           "inferred" : {
+            "type" : "string"
+          },
+          "installedRealm" : {
             "type" : "string"
           },
           "kind" : {
@@ -4655,6 +4694,21 @@
           "name" : {
             "type" : "string"
           },
+          "neededBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "pendingReview" : {
+            "type" : "string"
+          },
+          "promotedRealms" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "reachable" : {
             "type" : "boolean"
           },
@@ -4662,7 +4716,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "asserts", "confirmation", "evidence", "inferred", "kind", "label", "learnable", "name", "reachable", "summary" ],
+        "required" : [ "asserts", "confirmation", "connected", "evidence", "inferred", "kind", "label", "learnable", "name", "neededBy", "promotedRealms", "reachable", "summary" ],
         "type" : "object"
       },
       "SourcesResponse" : {
@@ -6878,6 +6932,16 @@
               }
             },
             "description" : "A finished result, or a run handle when `background=true`"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Bad params or args, or captureAs with background/waitSeconds"
           },
           "401" : {
             "content" : {
@@ -11938,6 +12002,16 @@
             },
             "description" : "The finished result"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "Bad params or args"
+          },
           "401" : {
             "content" : {
               "application/json" : {
@@ -12578,6 +12652,53 @@
         "tags" : [ "Learning" ]
       }
     },
+    "/api/v1/learn/apis/{name}" : {
+      "put" : {
+        "operationId" : "updateLearnSourceApi",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectApiRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Spec unreachable or unparseable, or a token missing for the mode"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not an API this user connected"
+          }
+        },
+        "summary" : "Change a connected API. The spec is fetched first; a failed fetch changes nothing",
+        "tags" : [ "Learning" ]
+      }
+    },
     "/api/v1/learn/databases" : {
       "post" : {
         "operationId" : "connect",
@@ -12626,6 +12747,53 @@
         "tags" : [ "Learning" ]
       }
     },
+    "/api/v1/learn/databases/{name}" : {
+      "put" : {
+        "operationId" : "updateLearnSourceDatabase",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConnectDatabaseRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Unreachable, bad credential, no driver, or an empty schema"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not a database this user connected"
+          }
+        },
+        "summary" : "Change a connected database. Tested first; a failed test changes nothing",
+        "tags" : [ "Learning" ]
+      }
+    },
     "/api/v1/learn/sources" : {
       "get" : {
         "operationId" : "sources",
@@ -12642,6 +12810,87 @@
           }
         },
         "summary" : "Sources this appliance can reach, described from metadata alone",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/sources/{name}" : {
+      "delete" : {
+        "operationId" : "disconnectLearnSource",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Not a source this user connected"
+          }
+        },
+        "summary" : "Disconnect a source: its connection, stored secret and provisional realm",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/sources/{name}/connection" : {
+      "get" : {
+        "operationId" : "learnSourceConnection",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SourceConnection"
+                }
+              }
+            },
+            "description" : "Not a source this user connected"
+          }
+        },
+        "summary" : "How a connected source is connected, for an edit form. Secrets are never returned",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/sources/{name}/install" : {
+      "delete" : {
+        "operationId" : "uninstallLearnSourceRealm",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No provisional realm is installed for this source"
+          }
+        },
+        "summary" : "Uninstall a source's provisional realm. The connection stays",
         "tags" : [ "Learning" ]
       }
     },
@@ -12692,6 +12941,31 @@
       }
     },
     "/api/v1/learn/{id}" : {
+      "delete" : {
+        "operationId" : "discardLearnReview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such review for this user — unknown, expired, or already discarded"
+          }
+        },
+        "summary" : "Discard a held review. It wrote nothing, so this undoes nothing",
+        "tags" : [ "Learning" ]
+      },
       "get" : {
         "operationId" : "proposal",
         "parameters" : [ {
@@ -16564,7 +16838,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:35051"
+    "url" : "http://localhost:39689"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
