@@ -1,6 +1,20 @@
 {
   "components" : {
     "schemas" : {
+      "AboutResponse" : {
+        "description" : "What this server is built from.",
+        "properties" : {
+          "components" : {
+            "description" : "The server first, then the libraries it is built on",
+            "items" : {
+              "$ref" : "#/components/schemas/ComponentVersion"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "components" ],
+        "type" : "object"
+      },
       "ActionCommandConfig" : {
         "properties" : {
           "actionName" : {
@@ -722,6 +736,26 @@
           }
         },
         "required" : [ "schedule" ],
+        "type" : "object"
+      },
+      "ComponentVersion" : {
+        "description" : "One part of the running server and the build of it that is running.",
+        "properties" : {
+          "commit" : {
+            "description" : "Full git commit SHA, when the component was built with one",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Human name of the component",
+            "example" : "Embabel Agent",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Released or snapshot version, when the component carries one",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
         "type" : "object"
       },
       "ConnectApiRequest" : {
@@ -5361,6 +5395,26 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/v1/about" : {
+      "get" : {
+        "description" : "The server's commit and the versions of its libraries.",
+        "operationId" : "about",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AboutResponse"
+                }
+              }
+            },
+            "description" : "Components, server first"
+          }
+        },
+        "summary" : "Component versions",
+        "tags" : [ "About" ]
+      }
+    },
     "/api/v1/actions" : {
       "get" : {
         "description" : "Returns every action the planner knows about, with its input/output types and whether it can be deleted from here. 'deletable' is true only for actions whose YAML lives directly under this world's config/actions directory — realm-shipped and platform-defined actions report false.",
@@ -16838,7 +16892,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45053"
+    "url" : "http://localhost:42507"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -17017,6 +17071,9 @@
   }, {
     "description" : "Fictional records, marked and removable",
     "name" : "Sample data"
+  }, {
+    "description" : "What this server is built from",
+    "name" : "About"
   }, {
     "description" : "Work the appliance is doing",
     "name" : "Activity"
