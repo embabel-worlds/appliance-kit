@@ -1589,6 +1589,36 @@ describe('the public browser feature entry point', () => {
     assert.equal(rendered.every((command) => command.credential.value === 'secret-token'), true)
   })
 
+  it('names the command that wires agents, and keeps pasting as the fallback', async () => {
+    /*
+     * `embabel agents` reads the live token off the appliance and runs the agent's own `mcp add`.
+     * It existed all along; nothing in the console said so, so the only route anybody could SEE
+     * was pasting a bearer token into a config file by hand.
+     *
+     * It cannot become a button: the config lives in a home directory and neither this page nor
+     * the appliance can write there. So the paste blocks stay — for an agent on another machine,
+     * or a host without `embabel` on its path.
+     */
+    const services = {
+      probeMcp: async () => ok({ status: 'ok' }),
+      getMcpMode: async () => ok({ mode: 'DEVELOPER', modes: ['ASSISTANT', 'DEVELOPER'] }),
+      setMcpMode: async (mode) => ok({ message: `${mode} active` }),
+    }
+    const host = {
+      initialBaseUrl: 'https://world.example',
+      currentCredential: () => ({ kind: 'bearer', value: 'secret-token' }),
+      renderConnection: (command) => `${command.client} setup`,
+    }
+    const { container } = await render(h(features.CodingAgentsSurface, { services, host }))
+
+    assert.match(container.textContent, /embabel agents/, 'the command is named')
+    // The reason it beats the blob: nothing secret travels through a clipboard.
+    assert.match(container.textContent, /nothing secret goes through your clipboard/)
+    // And the fallback survives, because a command cannot reach every agent.
+    assert.match(container.textContent, /Or paste it in yourself/)
+    assert.equal(container.textContent.includes('secret-token'), false)
+  })
+
   it('lists API keys by prefix, shows a minted key once, and revokes only after the host confirms', async () => {
     const minted = { id: 'k2', name: 'laptop', prefix: 'emb_XyZ12345', createdAt: '2026-09-15T10:00:00Z', key: 'emb_XyZ12345abcdefghijklmnopqrstuvwxyzABCDEFG' }
     let keys = [{ id: 'k1', name: 'deploy', prefix: 'emb_Abc12345', createdAt: '2026-09-01T09:00:00Z', lastUsedAt: null }]

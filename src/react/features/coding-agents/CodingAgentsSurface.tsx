@@ -180,12 +180,48 @@ export function CodingAgentsSurface({
             </div>
           </div>
 
+          {/*
+            * THE COMMAND FIRST, the blob second.
+            *
+            * `embabel agents` has existed on the host all along: it reads the live token off the
+            * data volume and runs the agent's own `mcp add`, removing a stale entry first — which
+            * was built because somebody's Claude Code kept dialling the port this product used
+            * before the rebase. Nothing in the console ever said so, so the only route anybody
+            * could SEE was pasting a bearer token into a config file by hand.
+            *
+            * It is wired during first-run setup too, but only in the terminal flow: worlds mode
+            * finishes setup in the browser, where that call is never reached.
+            *
+            * It cannot be a button here. The config lives in a home directory, and neither this
+            * page nor the appliance can write there — the appliance would need the host docker
+            * socket, which is root-equivalent and not worth spending on a config file. One
+            * command that carries no credential is the whole of the improvement, and it is a
+            * large one over pasting a token.
+            */}
+          <div className="rung">
+            <span className="lamp lamp-lit" />
+            <div className="rung-body">
+              <strong>On the machine this appliance runs on</strong>
+              <p className="hint">
+                One command wires Claude Code and Codex to this world. It reads the token itself, so
+                nothing secret goes through your clipboard, and it replaces an older entry rather
+                than leaving one pointed somewhere stale.
+              </p>
+              <pre className="snippet-shown"><code>embabel agents</code></pre>
+              <p className="hint">
+                Run it again whenever a token is reissued, or after installing a second appliance.
+              </p>
+            </div>
+          </div>
+
           <div className="rung">
             <span className={`lamp lamp-${canRender ? 'lit' : 'unlit'}`} />
             <div className="rung-body">
-              <strong>Connection instructions</strong>
+              <strong>Or paste it in yourself</strong>
               <p className="hint">
-                Choose credentials, then copy the generated setup into Claude Code or Codex.
+                For an agent on another machine, one this console has no command for, or a host
+                without <code>embabel</code> on its path. Choose credentials, then copy the
+                generated setup into Claude Code or Codex.
               </p>
               <div className="row">
                 <label className="field grow">
