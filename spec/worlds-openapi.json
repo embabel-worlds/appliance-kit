@@ -10244,6 +10244,27 @@
         "tags" : [ "Config" ]
       }
     },
+    "/api/v1/config/mcp-doors" : {
+      "get" : {
+        "description" : "The absolute URLs a client is configured with: `url` is the chat door (`/mcp`, with `/mcp/chat` as the same door spelled as one of a pair) and `developerUrl` is the code door for coding agents. FIELD PRESENCE IS CAPABILITY — `developerUrl` is ABSENT when this server serves no code door, so a client degrades to the chat door rather than to a 404. Same contract, and the same resolver, as the URLs the setup API states before it closes.",
+        "operationId" : "getMcpDoors",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The doors, as absolute URLs"
+          }
+        },
+        "summary" : "Where this server's MCP doors answer",
+        "tags" : [ "Config" ]
+      }
+    },
     "/api/v1/config/mcp-mode" : {
       "get" : {
         "description" : "ASSISTANT or DEVELOPER. The default is the deployment's (Worlds declares DEVELOPER; Me leaves it ASSISTANT). Developer mode makes realm install and realm authoring guidance live, and makes MCP orientation lead with realms. Per user, which is per bearer token while a user holds one.",
@@ -16892,7 +16913,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39951"
+    "url" : "http://localhost:36897"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
