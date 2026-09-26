@@ -5269,6 +5269,37 @@
         "required" : [ "available", "effects", "selectedEffects", "voices" ],
         "type" : "object"
       },
+      "VoiceSessionView" : {
+        "properties" : {
+          "effects" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "replacements" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "speed" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "token" : {
+            "type" : "string"
+          },
+          "transcriber" : {
+            "type" : "string"
+          },
+          "voice" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "effects", "replacements", "speed", "token", "transcriber", "voice" ],
+        "type" : "object"
+      },
       "VoiceUpdateBody" : {
         "properties" : {
           "effects" : {
@@ -9860,6 +9891,19 @@
           }
         },
         "summary" : "Get aggregated usage",
+        "tags" : [ "Chat" ]
+      }
+    },
+    "/api/v1/chat/warm" : {
+      "post" : {
+        "description" : "Call when a turn is imminent (microphone opened, composer focused). Returns immediately; idempotent and cheap to repeat.",
+        "operationId" : "warm",
+        "responses" : {
+          "204" : {
+            "description" : "Warming started, or nothing to warm"
+          }
+        },
+        "summary" : "Warm the conversation path",
         "tags" : [ "Chat" ]
       }
     },
@@ -15297,6 +15341,36 @@
         "tags" : [ "Headless Invocation" ]
       }
     },
+    "/api/v1/voice/session" : {
+      "get" : {
+        "description" : "Returns a short-lived Deepgram token and the settings it is for. The durable key never leaves this appliance. Ask again for each socket.",
+        "operationId" : "session",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VoiceSessionView"
+                }
+              }
+            },
+            "description" : "The credential and the settings it is for"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/VoiceSessionView"
+                }
+              }
+            },
+            "description" : "This world has no Deepgram key — voice is not set up"
+          }
+        },
+        "summary" : "Open a voice session",
+        "tags" : [ "Voice" ]
+      }
+    },
     "/api/v1/watches" : {
       "get" : {
         "operationId" : "list_1",
@@ -16913,7 +16987,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36599"
+    "url" : "http://localhost:43169"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -16945,6 +17019,9 @@
   }, {
     "description" : "Get-to-Know-Me flow",
     "name" : "Onboarding"
+  }, {
+    "description" : "Browser voice sessions",
+    "name" : "Voice"
   }, {
     "description" : "Manage world realms",
     "name" : "Realms"
