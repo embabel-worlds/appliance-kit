@@ -4790,6 +4790,67 @@
         "required" : [ "budgetPerTick", "cypher", "label" ],
         "type" : "object"
       },
+      "SurfaceDictionary" : {
+        "properties" : {
+          "fields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "panels" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/SurfacePanel"
+            },
+            "type" : "object"
+          },
+          "surface" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "fields", "panels", "surface", "version" ],
+        "type" : "object"
+      },
+      "SurfacePanel" : {
+        "properties" : {
+          "controls" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "fields" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "controls", "fields" ],
+        "type" : "object"
+      },
+      "SurfaceResponse" : {
+        "description" : "The surface recorded, and the fields the assistant will now offer to fill",
+        "properties" : {
+          "fields" : {
+            "description" : "Field names the assistant may now fill",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "surface" : {
+            "description" : "The surface recorded",
+            "type" : "string"
+          }
+        },
+        "required" : [ "fields", "surface" ],
+        "type" : "object"
+      },
       "TextIngestRequest" : {
         "properties" : {
           "content" : {
@@ -15283,6 +15344,39 @@
         "tags" : [ "Tours" ]
       }
     },
+    "/api/v1/ui/surface" : {
+      "post" : {
+        "description" : "The surface's own tour dictionary, sent verbatim. The assistant may then offer to fill the fields it names. `states` and `dynamic` are a tour's business and are ignored. Controls are recorded and never pressed.",
+        "operationId" : "publish",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SurfaceDictionary"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SurfaceResponse"
+                }
+              }
+            },
+            "description" : "Recorded; the fields now offered are echoed back"
+          },
+          "401" : {
+            "description" : "Basic-auth challenge failed"
+          }
+        },
+        "summary" : "Declare what this screen can be told to do",
+        "tags" : [ "Surface" ]
+      }
+    },
     "/api/v1/views/{name}/invoke" : {
       "post" : {
         "description" : "Run an authored Virtual-Cypher view by name and return a redacted, typed result envelope. The runnable query is never exposed.",
@@ -16987,7 +17081,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36807"
+    "url" : "http://localhost:43221"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -17007,6 +17101,9 @@
   }, {
     "description" : "The appliance's architectural principles, as coding agents receive them",
     "name" : "Principles"
+  }, {
+    "description" : "What a connected screen says it can be told to do",
+    "name" : "Surface"
   }, {
     "description" : "The signed-in user's own scoped view of the Cypher studio surface",
     "name" : "Virtual Cypher (user)"
