@@ -2,7 +2,7 @@ import type { Outcome } from './outcome.ts'
 import type { Transport } from './transport.ts'
 
 /*
- * THE DOCUMENTS SURFACE — listing, ingesting, and asking.
+ * THE DOCUMENTS SURFACE — listing, ingesting, retagging, removing, and asking.
  *
  * THESE TYPES ARE HAND-WRITTEN, WHICH IS NOT THE RULE HERE. `kg.ts` and `handlers.ts` take every
  * type from `generated/openapi.ts`, because the assistant's contract test guards those prefixes and
@@ -39,6 +39,13 @@ export interface DocumentList {
   totalChunks?: number
 }
 
+/** What a retag left on the document: the list as the appliance stored it, trimmed and deduplicated. */
+export interface TagsResult {
+  status: 'tagged'
+  uri: string
+  tags: string[]
+}
+
 /**
  * WHICH DATE, AND WHOSE.
  *
@@ -55,13 +62,9 @@ export type DateField = 'modified' | 'created' | 'ingested'
 export interface AskRequest {
   question: string
   /**
-   * Narrow to documents carrying this TAG — the corpus to ask.
-   *
-   * ACCEPTED BUT NOT YET HONOURED BY THE APPLIANCE, and the field is kept so that stays visible:
-   * `PropertyFilter.HasElement` is not translatable by the store, so the server dropped its `tag`
-   * parameter rather than narrow nothing on one retrieval path and fail the ask on the other. See
-   * embabel/me#915. Sending it today is inert; when the operator lands, the server takes it and
-   * nothing here changes.
+   * Narrow to documents carrying this TAG — the corpus to ask. The appliance applies it on both
+   * retrieval paths, the composed answer and sources-only, as a membership test on each chunk's
+   * tags (embabel/me#915).
    *
    * One tag rather than a set, matching what the server will do: its two retrieval paths combine
    * predicates differently, so a list would mean "all of these" on one and could mean "any of
@@ -127,6 +130,20 @@ export class DocumentsClient {
     return this.transport.send({ method: 'POST', path: `${DOCS}/upload`, form, timeoutMs: INGEST_TIMEOUT_MS })
   }
 
+  /**
+   * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
+   * REPLACES what was there; an empty list removes every tag. `not_found` when the caller's world
+   * holds no document at `uri`.
+   */
+  setTags(uri: string, tags: string[]): Promise<Outcome<TagsResult>> {
+    return this.transport.send({ method: 'PUT', path: `${DOCS}/tags`, body: { uri, tags } })
+  }
+
+  /** Remove a document and everything ingested from it — chunks, figures — from the caller's world. */
+  remove(uri: string): Promise<Outcome<unknown>> {
+    return this.transport.send({ method: 'DELETE', path: DOCS, query: { uri } })
+  }
+
   /** Ingest a web page by URL — the appliance fetches and converts it. */
   ingestUrl(url: string, tags: string[] = []): Promise<Outcome<unknown>> {
     return this.transport.send({
@@ -156,9 +173,17 @@ export class DocumentsClient {
       answer: true,
     }
     if (request.tag) body['tag'] = request.tag
-    if (request.dateField) body['dateField'] = request.dateField
-    if (request.from) body['from'] = request.from
-    if (request.to) body['to'] = request.to
+    /* ONE `window` OBJECT, which is what the appliance reads. This used to send `dateField`, `from`
+       and `to` at the top level; the server's request type has no such fields and ignores unknown
+       ones, so every date filter narrowed nothing and nothing said so. The field is sent only with
+       a bound: a field alone is not a range. */
+    if (request.from || request.to) {
+      body['window'] = {
+        field: request.dateField ?? 'modified',
+        ...(request.from ? { from: request.from } : {}),
+        ...(request.to ? { to: request.to } : {}),
+      }
+    }
     if (request.topK) body['topK'] = request.topK
     return this.transport.send({
       method: 'POST',
