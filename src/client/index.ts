@@ -49,6 +49,7 @@ export type {
   DateField,
   DocumentList,
   IngestedDocument,
+  TagsResult,
 } from './documents.ts'
 
 export { HintsClient } from './hints.ts'

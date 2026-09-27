@@ -40,8 +40,26 @@ describe('DocumentsClient.ask', () => {
 
     assert.deepEqual(sent[0]!.body, {
       question: 'renewal terms', history: [], answer: true,
-      dateField: 'modified', from: '2026-01-01', to: '2026-06-30', topK: 8,
+      window: { field: 'modified', from: '2026-01-01', to: '2026-06-30' }, topK: 8,
     })
+  })
+
+  it('sends a date range as the one window object the appliance reads, never as loose fields', async () => {
+    const { transport, sent } = recordingTransport()
+    const client = new DocumentsClient(transport)
+
+    await client.ask({ question: 'q', dateField: 'created', from: '2026-03-01' })
+    const body = sent[0]!.body as Record<string, unknown>
+    assert.deepEqual(body['window'], { field: 'created', from: '2026-03-01' })
+    for (const loose of ['dateField', 'from', 'to']) assert.equal(loose in body, false, `${loose} is not a field the appliance reads`)
+
+    // A field with no bound is not a range, so no window at all.
+    await client.ask({ question: 'q', dateField: 'created' })
+    assert.equal('window' in (sent[1]!.body as Record<string, unknown>), false)
+
+    // The appliance's default field, stated rather than left to it.
+    await client.ask({ question: 'q', to: '2026-06-30' })
+    assert.deepEqual((sent[2]!.body as Record<string, unknown>)['window'], { field: 'modified', to: '2026-06-30' })
   })
 
   it('sends the corpus tag when one is chosen, and omits it when not', async () => {
@@ -68,6 +86,28 @@ describe('DocumentsClient.ask', () => {
     await new DocumentsClient(transport).ask({ question: 'q' })
 
     assert.equal(sent[0]!.headers, undefined)
+  })
+})
+
+describe('DocumentsClient.setTags and remove', () => {
+  it('replaces tags with a PUT of the whole list', async () => {
+    const { transport, sent } = recordingTransport({ status: 'tagged', uri: 'upload://w/a.pdf', tags: ['contracts'] })
+    const outcome = await new DocumentsClient(transport).setTags('upload://w/a.pdf', ['contracts'])
+
+    assert.equal(sent[0]!.method, 'PUT')
+    assert.equal(sent[0]!.path, '/api/v1/documents/tags')
+    assert.deepEqual(sent[0]!.body, { uri: 'upload://w/a.pdf', tags: ['contracts'] })
+    assert.ok(outcome.ok && outcome.value.tags[0] === 'contracts')
+  })
+
+  it('removes by uri as a query parameter, which the transport encodes', async () => {
+    const { transport, sent } = recordingTransport()
+    await new DocumentsClient(transport).remove('file:///local/contracts/a b.pdf')
+
+    assert.equal(sent[0]!.method, 'DELETE')
+    assert.equal(sent[0]!.path, '/api/v1/documents')
+    assert.deepEqual(sent[0]!.query, { uri: 'file:///local/contracts/a b.pdf' })
+    assert.equal(sent[0]!.body, undefined)
   })
 })
 

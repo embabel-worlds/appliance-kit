@@ -11,6 +11,12 @@ export interface DocumentList {
     documents: IngestedDocument[];
     totalChunks?: number;
 }
+/** What a retag left on the document: the list as the appliance stored it, trimmed and deduplicated. */
+export interface TagsResult {
+    status: 'tagged';
+    uri: string;
+    tags: string[];
+}
 /**
  * WHICH DATE, AND WHOSE.
  *
@@ -26,13 +32,9 @@ export type DateField = 'modified' | 'created' | 'ingested';
 export interface AskRequest {
     question: string;
     /**
-     * Narrow to documents carrying this TAG — the corpus to ask.
-     *
-     * ACCEPTED BUT NOT YET HONOURED BY THE APPLIANCE, and the field is kept so that stays visible:
-     * `PropertyFilter.HasElement` is not translatable by the store, so the server dropped its `tag`
-     * parameter rather than narrow nothing on one retrieval path and fail the ask on the other. See
-     * embabel/me#915. Sending it today is inert; when the operator lands, the server takes it and
-     * nothing here changes.
+     * Narrow to documents carrying this TAG — the corpus to ask. The appliance applies it on both
+     * retrieval paths, the composed answer and sources-only, as a membership test on each chunk's
+     * tags (embabel/me#915).
      *
      * One tag rather than a set, matching what the server will do: its two retrieval paths combine
      * predicates differently, so a list would mean "all of these" on one and could mean "any of
@@ -82,6 +84,14 @@ export declare class DocumentsClient {
      * method serves both rather than the Me app keeping a private upload path.
      */
     upload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[]): Promise<Outcome<unknown>>;
+    /**
+     * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
+     * REPLACES what was there; an empty list removes every tag. `not_found` when the caller's world
+     * holds no document at `uri`.
+     */
+    setTags(uri: string, tags: string[]): Promise<Outcome<TagsResult>>;
+    /** Remove a document and everything ingested from it — chunks, figures — from the caller's world. */
+    remove(uri: string): Promise<Outcome<unknown>>;
     /** Ingest a web page by URL — the appliance fetches and converts it. */
     ingestUrl(url: string, tags?: string[]): Promise<Outcome<unknown>>;
     /**
