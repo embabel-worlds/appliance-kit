@@ -129,6 +129,7 @@ export function CodingAgentsSurface({
       {frame({
         title: 'Coding agents',
         actions: <button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>,
+        refresh: () => void load(),
         children: <>
         <p className="hint">
           Connect Claude Code or Codex through MCP so it can work with your documents, graph, and realms.
