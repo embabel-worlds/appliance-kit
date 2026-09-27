@@ -329,9 +329,23 @@ export interface CodingAgentsHost {
   renderConnection(command: AgentConnection): string
 }
 
+/** The parts of a surface a host may draw in its own title row instead of the kit's. */
+export interface SurfaceFrameParts {
+  title: ReactNode
+  /** What acts on the whole surface: Refresh. */
+  actions: ReactNode
+  children: ReactNode
+}
+
 export interface CodingAgentsSurfaceProps {
   services: CodingAgentsServices
   host: CodingAgentsHost
+  /**
+   * Draws the title and actions. Omitted, the surface is a titled panel of its own. A host that
+   * already titles the place it shows the surface — a settings pane — passes one that puts
+   * `actions` on that title row and does not repeat `title`.
+   */
+  frame?: (parts: SurfaceFrameParts) => ReactNode
 }
 
 /** One of the caller's keys, as the appliance is willing to describe it after minting. */

@@ -5,6 +5,7 @@ import type {
   AgentCredential,
   CodingAgentsSurfaceProps,
   McpProbe,
+  SurfaceFrameParts,
 } from '../contracts.ts'
 import { CopyButton, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
@@ -36,6 +37,7 @@ function probeState(outcome: Outcome<McpProbe>): McpState {
 export function CodingAgentsSurface({
   services,
   host,
+  frame = StudioFrame,
 }: CodingAgentsSurfaceProps) {
   const currentCredential = host.currentCredential()
   const [mcp, setMcp] = useState<McpState | 'probing'>('probing')
@@ -124,10 +126,10 @@ export function CodingAgentsSurface({
 
   return (
     <div className="kit-feature kit-feature-coding-agents agents">
-      <StudioPanel
-        title="Coding agents"
-        aside={<button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>}
-      >
+      {frame({
+        title: 'Coding agents',
+        actions: <button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>,
+        children: <>
         <p className="hint">
           Connect Claude Code or Codex through MCP so it can work with your documents, graph, and realms.
         </p>
@@ -287,9 +289,15 @@ export function CodingAgentsSurface({
             </div>
           </div>
         </div>
-      </StudioPanel>
+        </>,
+      })}
     </div>
   )
+}
+
+/** The kit's own frame: a titled panel with the actions beside the title. */
+function StudioFrame({ title, actions, children }: SurfaceFrameParts) {
+  return <StudioPanel title={title} aside={actions}>{children}</StudioPanel>
 }
 
 function Snippet({
