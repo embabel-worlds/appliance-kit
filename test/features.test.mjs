@@ -3,7 +3,7 @@ import { readFileSync } from 'node:fs'
 import { afterEach, describe, it } from 'node:test'
 import { JSDOM } from 'jsdom'
 import postcss from 'postcss'
-import { act, createElement as h } from 'react'
+import { act, createElement as h, Fragment } from 'react'
 
 const dom = new JSDOM('<!doctype html><html><body></body></html>', {
   pretendToBeVisual: true,
@@ -1587,6 +1587,21 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /not available|could not report|unknown/i)
     assert.equal(container.textContent.includes('secret-token'), false)
     assert.equal(rendered.every((command) => command.credential.value === 'secret-token'), true)
+  })
+
+  it('lets a host that titles the page draw the title row, so Refresh is not stranded under it', async () => {
+    const services = {
+      probeMcp: async () => ok({ status: 'guarded' }),
+      getMcpMode: async () => ok({ mode: 'ASSISTANT', modes: ['ASSISTANT'] }),
+      setMcpMode: async () => ok({}),
+    }
+    const host = { initialBaseUrl: '', currentCredential: () => null, renderConnection: () => '' }
+    const frame = ({ actions, children }) => h(Fragment, null, h('div', { className: 'hostrow' }, actions), children)
+    const { container } = await render(h(features.CodingAgentsSurface, { services, host, frame }))
+    assert.equal(container.querySelector('.panel'), null, 'no panel of its own')
+    assert.equal(container.querySelector('h2'), null, 'the host already titles the page')
+    assert.equal(container.querySelector('.hostrow button').textContent, 'Refresh')
+    assert.match(container.textContent, /MCP connection/)
   })
 
   it('lists API keys by prefix, shows a minted key once, and revokes only after the host confirms', async () => {
