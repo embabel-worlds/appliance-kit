@@ -73,6 +73,10 @@
           "endedAt" : {
             "type" : "string"
           },
+          "failures" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "id" : {
             "type" : "string"
           },
@@ -86,6 +90,9 @@
           "mine" : {
             "type" : "boolean"
           },
+          "pinned" : {
+            "type" : "boolean"
+          },
           "startedAt" : {
             "type" : "string"
           },
@@ -94,7 +101,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "id", "kind", "label", "mine", "startedAt", "state" ],
+        "required" : [ "id", "kind", "label", "mine", "pinned", "startedAt", "state" ],
         "type" : "object"
       },
       "AddApiRequest" : {
@@ -1372,6 +1379,15 @@
           }
         },
         "required" : [ "authDetails", "authType", "description", "discoveredAt", "endpoints", "name", "sources", "specType", "specUrl", "synthesized" ],
+        "type" : "object"
+      },
+      "DismissPinBody" : {
+        "properties" : {
+          "label" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "label" ],
         "type" : "object"
       },
       "DismissRequest" : {
@@ -5862,10 +5878,32 @@
                 }
               }
             },
-            "description" : "Activity, running first"
+            "description" : "Pinned failures first, then activity, running first"
           }
         },
         "summary" : "Work in progress, and work that just finished",
+        "tags" : [ "Activity" ]
+      }
+    },
+    "/api/v1/activity/pins/dismiss" : {
+      "post" : {
+        "operationId" : "dismissPin",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DismissPinBody"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "204" : {
+            "description" : "Dismissed, or there was nothing pinned by that label"
+          }
+        },
+        "summary" : "Dismiss a pinned failure",
         "tags" : [ "Activity" ]
       }
     },
@@ -17168,7 +17206,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40387"
+    "url" : "http://localhost:38877"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
