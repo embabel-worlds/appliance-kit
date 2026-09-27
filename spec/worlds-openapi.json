@@ -14017,6 +14017,16 @@
               }
             },
             "description" : "Notification created"
+          },
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/NotificationNode"
+                }
+              }
+            },
+            "description" : "Received, but the admission filter judged it below the user's bar; nothing was stored"
           }
         },
         "summary" : "Create a notification for the authenticated user",
@@ -17158,7 +17168,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34935"
+    "url" : "http://localhost:40387"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
