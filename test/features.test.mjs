@@ -1604,6 +1604,21 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /MCP connection/)
   })
 
+  it('hands a host that draws its own Refresh what Refresh does', async () => {
+    let probes = 0
+    const services = {
+      probeMcp: async () => { probes += 1; return ok({ status: 'guarded' }) },
+      getMcpMode: async () => ok({ mode: 'ASSISTANT', modes: ['ASSISTANT'] }),
+      setMcpMode: async () => ok({}),
+    }
+    const host = { initialBaseUrl: '', currentCredential: () => null, renderConnection: () => '' }
+    const frame = ({ refresh, children }) => h(Fragment, null, h('button', { className: 'hostrefresh', onClick: refresh }, 'Reload'), children)
+    const { container } = await render(h(features.CodingAgentsSurface, { services, host, frame }))
+    const before = probes
+    await act(async () => container.querySelector('.hostrefresh').click())
+    assert.equal(probes, before + 1, 'the host button reloads the surface')
+  })
+
   it('lists API keys by prefix, shows a minted key once, and revokes only after the host confirms', async () => {
     const minted = { id: 'k2', name: 'laptop', prefix: 'emb_XyZ12345', createdAt: '2026-09-15T10:00:00Z', key: 'emb_XyZ12345abcdefghijklmnopqrstuvwxyzABCDEFG' }
     let keys = [{ id: 'k1', name: 'deploy', prefix: 'emb_Abc12345', createdAt: '2026-09-01T09:00:00Z', lastUsedAt: null }]

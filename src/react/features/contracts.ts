@@ -332,8 +332,13 @@ export interface CodingAgentsHost {
 /** The parts of a surface a host may draw in its own title row instead of the kit's. */
 export interface SurfaceFrameParts {
   title: ReactNode
-  /** What acts on the whole surface: Refresh. */
+  /** What acts on the whole surface: Refresh, drawn in the kit's own controls. */
   actions: ReactNode
+  /**
+   * What Refresh does, for a host that draws its own control instead of `actions` — so a Refresh
+   * on a host's title row is that host's button, like every other one there.
+   */
+  refresh: () => void
   children: ReactNode
 }
 
