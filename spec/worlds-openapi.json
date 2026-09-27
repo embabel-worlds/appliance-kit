@@ -239,6 +239,10 @@
           "question" : {
             "type" : "string"
           },
+          "tag" : {
+            "description" : "Narrow to documents carrying this tag, whether or not an answer is composed.",
+            "type" : "string"
+          },
           "topK" : {
             "format" : "int32",
             "type" : "integer"
@@ -4849,6 +4853,39 @@
           }
         },
         "required" : [ "fields", "surface" ],
+        "type" : "object"
+      },
+      "TagsRequest" : {
+        "properties" : {
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "tags", "uri" ],
+        "type" : "object"
+      },
+      "TagsResponse" : {
+        "properties" : {
+          "status" : {
+            "type" : "string"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "status", "tags", "uri" ],
         "type" : "object"
       },
       "TextIngestRequest" : {
@@ -11517,6 +11554,46 @@
         "tags" : [ "Documents" ]
       }
     },
+    "/api/v1/documents/tags" : {
+      "put" : {
+        "description" : "Set the tags on an ingested document and every chunk of it, without re-ingesting. The list replaces what was there; blanks are dropped and duplicates collapsed; an empty list removes all tags.",
+        "operationId" : "setTags",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TagsRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagsResponse"
+                }
+              }
+            },
+            "description" : "Tags replaced; the body carries the tags now set"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TagsResponse"
+                }
+              }
+            },
+            "description" : "No document at that URI in the caller's world"
+          }
+        },
+        "summary" : "Replace a document's tags",
+        "tags" : [ "Documents" ]
+      }
+    },
     "/api/v1/documents/text" : {
       "post" : {
         "description" : "Create a document from inline text content, saved to the world's data/documents directory under the given name; an existing file of that name is overwritten.",
@@ -17081,7 +17158,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46059"
+    "url" : "http://localhost:44203"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
