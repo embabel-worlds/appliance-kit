@@ -200,9 +200,13 @@ describe('ingest timeouts — a queued ingest is not a failed one (appliance-kit
     const appliance = queueingAppliance()
     const client = new DocumentsClient(new HttpTransport({ baseUrl: '', fetch: appliance.fetch }))
 
-    const upload = client.upload('stuck.pdf', new Uint8Array([1]))
-    mock.timers.tick(DEFAULT_INGEST_TIMEOUT_MS)
-    const outcome = await upload
+    const upload = tracked(client.upload('stuck.pdf', new Uint8Array([1])))
+    mock.timers.tick(DEFAULT_INGEST_TIMEOUT_MS - 1)
+    await settle()
+    assert.equal(upload.state.done, false, 'the kit gave up before its own deadline')
+
+    mock.timers.tick(1)
+    const outcome = await upload.promise
 
     assert.equal(outcome.ok, false)
     assert.equal(!outcome.ok && outcome.kind, 'unreachable')
