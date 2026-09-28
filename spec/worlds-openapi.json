@@ -65,6 +65,45 @@
         "required" : [ "canRerun", "deletable", "description", "inputTypes", "name", "outputTypes", "readOnly" ],
         "type" : "object"
       },
+      "ActivityJobStats" : {
+        "properties" : {
+          "failures" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "kind" : {
+            "enum" : [ "BACKGROUND", "HANDLER", "SCHEDULED", "POLL" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "lastEndedAt" : {
+            "type" : "string"
+          },
+          "maxMs" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "mine" : {
+            "type" : "boolean"
+          },
+          "p50Ms" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "p95Ms" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "runs" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "failures", "kind", "label", "lastEndedAt", "maxMs", "mine", "p50Ms", "p95Ms", "runs" ],
+        "type" : "object"
+      },
       "ActivityRow" : {
         "properties" : {
           "detail" : {
@@ -102,6 +141,25 @@
           }
         },
         "required" : [ "id", "kind", "label", "mine", "pinned", "startedAt", "state" ],
+        "type" : "object"
+      },
+      "ActivityStats" : {
+        "properties" : {
+          "jobs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ActivityJobStats"
+            },
+            "type" : "array"
+          },
+          "runsPerJob" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "since" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "jobs", "runsPerJob" ],
         "type" : "object"
       },
       "AddApiRequest" : {
@@ -934,6 +992,73 @@
         "required" : [ "followsChat", "id" ],
         "type" : "object"
       },
+      "ConversionFailure" : {
+        "properties" : {
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "converter" : {
+            "type" : "string"
+          },
+          "document" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "at", "converter", "document", "reason" ],
+        "type" : "object"
+      },
+      "ConversionStatus" : {
+        "description" : "Which converter turns documents into structured text, and how it is doing",
+        "properties" : {
+          "converter" : {
+            "description" : "The active converter's name; 'none' when documents go straight to flat text extraction",
+            "type" : "string"
+          },
+          "docling" : {
+            "$ref" : "#/components/schemas/DoclingStatus"
+          },
+          "failuresSinceStart" : {
+            "description" : "Conversions that failed and fell back to flat text since the app started",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "recentFailures" : {
+            "description" : "The most recent of those, newest last",
+            "items" : {
+              "$ref" : "#/components/schemas/ConversionFailure"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "converter", "docling", "failuresSinceStart", "recentFailures" ],
+        "type" : "object"
+      },
+      "CpuStatus" : {
+        "description" : "CPU load, as fractions of what this JVM may use",
+        "properties" : {
+          "processLoad" : {
+            "description" : "This app's share of the CPU it may use, 0.0–1.0. Null when not yet measured.",
+            "format" : "double",
+            "type" : "number"
+          },
+          "processors" : {
+            "description" : "Processors available to the JVM",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "systemLoad" : {
+            "description" : "The whole machine's load, 0.0–1.0 — in a container, the container's quota. Null when not yet measured.",
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "required" : [ "processors" ],
+        "type" : "object"
+      },
       "CreateLensRequest" : {
         "properties" : {
           "name" : {
@@ -1446,6 +1571,21 @@
           }
         },
         "required" : [ "count", "max", "total" ],
+        "type" : "object"
+      },
+      "DoclingStatus" : {
+        "description" : "The docling conversion service",
+        "properties" : {
+          "inUse" : {
+            "description" : "Whether docling is the active converter",
+            "type" : "boolean"
+          },
+          "reachable" : {
+            "description" : "Whether docling answered its health check just now. Null when it is not in use and was not asked.",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "inUse" ],
         "type" : "object"
       },
       "EdgeRequest" : {
@@ -2311,6 +2451,28 @@
           }
         },
         "required" : [ "allLocal", "cloudProviders", "models", "summary" ],
+        "type" : "object"
+      },
+      "IngestStatus" : {
+        "description" : "The heap budget document ingests share, and the queue behind it",
+        "properties" : {
+          "budgetBytes" : {
+            "description" : "Heap concurrent ingests may reserve",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "inUseBytes" : {
+            "description" : "Heap reserved by ingests running now",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "waiting" : {
+            "description" : "Ingests waiting for a running one to finish",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "budgetBytes", "inUseBytes", "waiting" ],
         "type" : "object"
       },
       "InstallRequest" : {
@@ -3836,6 +3998,38 @@
         "required" : [ "name", "toolCount", "toolNames" ],
         "type" : "object"
       },
+      "MemoryStatus" : {
+        "description" : "The JVM heap and the container it runs in",
+        "properties" : {
+          "containerLimitBytes" : {
+            "description" : "The container's memory limit from cgroup v2. Null when unlimited or unreadable.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "containerUsedBytes" : {
+            "description" : "Memory the container uses now, from cgroup v2. Null when unreadable.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "heapAfterGcBytes" : {
+            "description" : "Heap in use straight after the most recent garbage collection — the closest cheap reading of what the app actually holds. Null until the first collection.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "heapMaxBytes" : {
+            "description" : "The heap ceiling (-Xmx, or MaxRAMPercentage of the container). Null if the JVM sets none.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "heapUsedBytes" : {
+            "description" : "Heap in use now, garbage included; rises and falls between collections",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "heapUsedBytes" ],
+        "type" : "object"
+      },
       "MintRequest" : {
         "properties" : {
           "name" : {
@@ -4871,6 +5065,25 @@
         "required" : [ "fields", "surface" ],
         "type" : "object"
       },
+      "SystemStatus" : {
+        "description" : "Memory, CPU, the document ingest queue, and document conversion, read now",
+        "properties" : {
+          "conversion" : {
+            "$ref" : "#/components/schemas/ConversionStatus"
+          },
+          "cpu" : {
+            "$ref" : "#/components/schemas/CpuStatus"
+          },
+          "ingest" : {
+            "$ref" : "#/components/schemas/IngestStatus"
+          },
+          "memory" : {
+            "$ref" : "#/components/schemas/MemoryStatus"
+          }
+        },
+        "required" : [ "conversion", "cpu", "ingest", "memory" ],
+        "type" : "object"
+      },
       "TagsRequest" : {
         "properties" : {
           "tags" : {
@@ -5904,6 +6117,26 @@
           }
         },
         "summary" : "Dismiss a pinned failure",
+        "tags" : [ "Activity" ]
+      }
+    },
+    "/api/v1/activity/stats" : {
+      "get" : {
+        "description" : "Per job: runs counted, failures among them, median, 95th percentile and longest duration, slowest tail first. Over each job's most recent runs since the app started; `since` is when the oldest run counted began, null when nothing has run.",
+        "operationId" : "stats",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityStats"
+                }
+              }
+            },
+            "description" : "Per-job durations, slowest tail first"
+          }
+        },
+        "summary" : "How long each job takes",
         "tags" : [ "Activity" ]
       }
     },
@@ -8588,6 +8821,26 @@
         },
         "summary" : "Realm runtime and JVM metrics",
         "tags" : [ "Realm observability" ]
+      }
+    },
+    "/api/v1/admin/system" : {
+      "get" : {
+        "description" : "Heap after the last collection against its ceiling, the container's memory limit, the ingest budget in use and how many ingests wait for it, and whether docling answers and has failed recently. A null value is unknown, never zero.",
+        "operationId" : "status_4",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SystemStatus"
+                }
+              }
+            },
+            "description" : "The appliance's current system status"
+          }
+        },
+        "summary" : "Memory, ingest queue and document conversion health",
+        "tags" : [ "Diagnostics" ]
       }
     },
     "/api/v1/agent-platform/agents" : {
@@ -17206,7 +17459,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37409"
+    "url" : "http://localhost:35989"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
