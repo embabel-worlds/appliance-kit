@@ -1,8 +1,9 @@
 import assert from 'node:assert/strict'
-import { describe, it } from 'node:test'
-import { DocumentsClient, newOperationId } from '../src/client/documents.ts'
+import { afterEach, beforeEach, describe, it, mock } from 'node:test'
+import { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from '../src/client/documents.ts'
 import { classifySource } from '../src/client/citations.ts'
-import type { RequestSpec } from '../src/client/transport.ts'
+import { ApplianceClient } from '../src/client/index.ts'
+import { HttpTransport, type RequestSpec } from '../src/client/transport.ts'
 
 /** Records the spec each call produced; the shape of the REQUEST is what these tests are about. */
 function recordingTransport(reply: unknown = {}) {
@@ -128,6 +129,131 @@ describe('DocumentsClient.upload', () => {
     await new DocumentsClient(transport).upload('x.txt', new Uint8Array([1]), ['tax, 2026', ' papers ', ''])
 
     assert.deepEqual(sent[0]!.form!.getAll('tags'), ['tax, 2026', 'papers'])
+  })
+})
+
+/**
+ * A fake appliance that holds every request open until the test answers it, as a real one does
+ * while an ingest waits for its share of the heap budget. It honours the abort signal the way
+ * fetch does, so the ONLY thing that can end a request early is the kit's own timer.
+ */
+function queueingAppliance() {
+  const pending: Array<{ url: string; answer: (body: unknown) => void }> = []
+  const fetch = (url: string | URL | Request, init?: RequestInit) =>
+    new Promise<Response>((resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => {
+        const abort = new Error('aborted')
+        abort.name = 'AbortError'
+        reject(abort)
+      })
+      pending.push({
+        url: String(url),
+        answer: (body) => resolve({ ok: true, status: 200, text: async () => JSON.stringify(body) } as Response),
+      })
+    })
+  return { pending, fetch: fetch as unknown as typeof globalThis.fetch }
+}
+
+/** Lets a settled promise's continuations run, so "still pending" is a fact rather than a race. */
+const settle = () => new Promise<void>((resolve) => setImmediate(resolve))
+
+function tracked<T>(promise: Promise<T>) {
+  const state = { done: false }
+  promise.then(() => { state.done = true }, () => { state.done = true })
+  return { promise, state }
+}
+
+describe('ingest timeouts — a queued ingest is not a failed one (appliance-kit#16)', () => {
+  beforeEach(() => mock.timers.enable({ apis: ['setTimeout'] }))
+  afterEach(() => mock.timers.reset())
+
+  const OLD_TIMEOUT_MS = 300_000
+
+  it('does not fail an upload held open past the old five minutes', async () => {
+    const appliance = queueingAppliance()
+    const client = new DocumentsClient(new HttpTransport({ baseUrl: '', fetch: appliance.fetch }))
+
+    const upload = tracked(client.upload('big-book.pdf', new Uint8Array([1, 2, 3])))
+    mock.timers.tick(OLD_TIMEOUT_MS * 4) // twenty minutes queued behind two other books
+    await settle()
+    assert.equal(upload.state.done, false, 'the kit gave up on an ingest that was only queued')
+
+    appliance.pending[0]!.answer({ uri: 'upload://w/big-book.pdf' })
+    const outcome = await upload.promise
+    assert.equal(outcome.ok, true)
+  })
+
+  it('does not fail a URL ingest held open past the old five minutes', async () => {
+    const appliance = queueingAppliance()
+    const client = new DocumentsClient(new HttpTransport({ baseUrl: '', fetch: appliance.fetch }))
+
+    const ingest = tracked(client.ingestUrl('https://example.org/report'))
+    mock.timers.tick(OLD_TIMEOUT_MS + 1)
+    await settle()
+    assert.equal(ingest.state.done, false)
+
+    appliance.pending[0]!.answer({})
+    assert.equal((await ingest.promise).ok, true)
+  })
+
+  it('still ends a request that is genuinely stuck, at the default, and says the ingest may still land', async () => {
+    const appliance = queueingAppliance()
+    const client = new DocumentsClient(new HttpTransport({ baseUrl: '', fetch: appliance.fetch }))
+
+    const upload = client.upload('stuck.pdf', new Uint8Array([1]))
+    mock.timers.tick(DEFAULT_INGEST_TIMEOUT_MS)
+    const outcome = await upload
+
+    assert.equal(outcome.ok, false)
+    assert.equal(!outcome.ok && outcome.kind, 'unreachable')
+    assert.equal(
+      !outcome.ok && outcome.message,
+      'The ingest did not finish within 60 min. The appliance may still be queueing or ingesting it and can '
+        + 'still complete it — check the documents list before sending it again.',
+    )
+  })
+
+  it('honours a short timeout the caller passes for one call', async () => {
+    const appliance = queueingAppliance()
+    const client = new DocumentsClient(new HttpTransport({ baseUrl: '', fetch: appliance.fetch }))
+
+    const upload = client.upload('a.pdf', new Uint8Array([1]), [], { timeoutMs: 5_000 })
+    mock.timers.tick(5_000)
+    const outcome = await upload
+    assert.equal(outcome.ok, false)
+    assert.match(!outcome.ok ? outcome.message : '', /did not finish within 5 s\. The appliance may still/)
+
+    const ingest = client.ingestUrl('https://example.org/x', [], { timeoutMs: 90_000 })
+    mock.timers.tick(90_000)
+    assert.match(((await ingest) as { message: string }).message, /within 90 s\./)
+  })
+
+  it('honours a timeout set once for the client, and a per-call one over it', async () => {
+    const appliance = queueingAppliance()
+    const client = ApplianceClient.forAppliance(
+      { baseUrl: 'http://appliance', fetch: appliance.fetch },
+      { documents: { ingestTimeoutMs: 120_000 } },
+    )
+
+    const upload = client.documents.upload('a.pdf', new Uint8Array([1]))
+    mock.timers.tick(120_000)
+    assert.match(((await upload) as { message: string }).message, /within 2 min\./)
+
+    const longer = tracked(client.documents.upload('b.pdf', new Uint8Array([1]), [], { timeoutMs: 600_000 }))
+    mock.timers.tick(120_000)
+    await settle()
+    assert.equal(longer.state.done, false, 'the per-call timeout wins over the client one')
+    appliance.pending[1]!.answer({})
+    assert.equal((await longer.promise).ok, true)
+  })
+
+  it('leaves every other request on the generic timeout sentence', async () => {
+    const appliance = queueingAppliance()
+    const transport = new HttpTransport({ baseUrl: '', fetch: appliance.fetch, timeoutMs: 1_000 })
+
+    const listing = new DocumentsClient(transport).list()
+    mock.timers.tick(1_000)
+    assert.equal(((await listing) as { message: string }).message, 'The appliance did not answer within 1000ms')
   })
 })
 

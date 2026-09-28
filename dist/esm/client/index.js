@@ -9,7 +9,7 @@ export { HttpTransport, basicAuth } from "./transport.js";
 export { createSseParser } from "./sse.js";
 export { isOk, expect, ok } from "./outcome.js";
 export { KgClient, isBackgroundHandle } from "./kg.js";
-export { DocumentsClient, newOperationId } from "./documents.js";
+export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from "./documents.js";
 export { HintsClient } from "./hints.js";
 export { ToursClient } from "./tours.js";
 export { classifySource } from "./citations.js";
@@ -28,21 +28,21 @@ export class ApplianceClient {
     documents;
     hints;
     tours;
-    constructor(transport) {
+    constructor(transport, options = {}) {
         this.transport = transport;
         this.kg = new KgClient(transport);
         this.handlers = new HandlersClient(transport);
-        this.documents = new DocumentsClient(transport);
+        this.documents = new DocumentsClient(transport, options.documents);
         this.hints = new HintsClient(transport);
         this.tours = new ToursClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
-    static sameOrigin(config = {}) {
-        return new ApplianceClient(new HttpTransport({ ...config, baseUrl: '' }));
+    static sameOrigin(config = {}, options = {}) {
+        return new ApplianceClient(new HttpTransport({ ...config, baseUrl: '' }), options);
     }
     /** The Me main process's configuration: an explicit appliance URL and its credential. */
-    static forAppliance(config) {
-        return new ApplianceClient(new HttpTransport(config));
+    static forAppliance(config, options = {}) {
+        return new ApplianceClient(new HttpTransport(config), options);
     }
 }
 //# sourceMappingURL=index.js.map

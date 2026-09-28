@@ -91,7 +91,7 @@ export class HttpTransport {
         catch (cause) {
             const aborted = cause instanceof Error && cause.name === 'AbortError';
             return failure('unreachable', aborted
-                ? `The appliance did not answer within ${timeoutMs}ms`
+                ? (spec.timeoutMessage ?? `The appliance did not answer within ${timeoutMs}ms`)
                 : `Could not reach the appliance: ${cause instanceof Error ? cause.message : String(cause)}`);
         }
         finally {
