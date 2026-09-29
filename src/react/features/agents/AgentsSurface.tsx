@@ -92,7 +92,7 @@ export function AgentsSurface({ services, host, initialAgent }: AgentsSurfacePro
   const agent = agents.find((a) => a.name === selected) ?? null
 
   return (
-    <div className="kit-feature kit-feature-agents agents">
+    <div className="kit-feature kit-feature-agents agentdesk">
       <StudioPanel
         title="Colleagues"
         aside={<button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>}

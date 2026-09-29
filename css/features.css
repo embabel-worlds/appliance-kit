@@ -1608,9 +1608,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
    uses, and the pill beside each routine is what it actually runs at, which can be lower than
    what was chosen until the agent's needs are met. */
 
-:where(.kit-feature).agents, :where(.kit-feature) .agents { display: grid; grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.6fr); gap: 20px; align-items: start; }
+:where(.kit-feature).agentdesk, :where(.kit-feature) .agentdesk { display: grid; grid-template-columns: minmax(240px, 0.8fr) minmax(0, 1.6fr); gap: 20px; align-items: start; }
 
-@media (max-width: 860px) { :where(.kit-feature).agents, :where(.kit-feature) .agents { grid-template-columns: 1fr; } }
+@media (max-width: 860px) { :where(.kit-feature).agentdesk, :where(.kit-feature) .agentdesk { grid-template-columns: 1fr; } }
 
 :where(.kit-feature) .agentroster { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 
@@ -1655,6 +1655,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .agent-facts dd { margin: 0; }
 
 :where(.kit-feature) .agent-routines tr.is-missing td { color: var(--faint); text-decoration: line-through; }
+
+/* A stage pill is one phrase; broken across lines in a narrow column it reads as three words. */
+:where(.kit-feature) .agent-routines .pill { white-space: nowrap; }
 
 :where(.kit-feature) .agent-duties { margin: 4px 0 12px 16px; padding: 0; font-size: 12.5px; }
 
