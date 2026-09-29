@@ -1207,6 +1207,32 @@ describe('the public browser feature entry point', () => {
     assert.equal(enableCalls, 1)
   })
 
+  it('opens a routine asked for from outside once per request, so a re-render keeps the edits', async () => {
+    const opened = []
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({ yours: [{ name: 'note-failure', active: true, autonomous: false }], available: [] }),
+        open: async (name) => { opened.push(name); return ok({ name, source: `// ${name}`, signalType: '*' }) },
+        validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'), saveHandler: async () => refused('no'),
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+    }
+    const request = { name: 'note-failure', n: 1 }
+    const { root } = await render(h(features.HandlerStudioSurface, { services, openRequest: request }))
+    await flush()
+    assert.deepEqual(opened, ['note-failure'])
+    await act(async () => root.render(h(features.HandlerStudioSurface, { services, openRequest: { ...request } })))
+    await flush()
+    assert.deepEqual(opened, ['note-failure'])
+    await act(async () => root.render(h(features.HandlerStudioSurface, { services, openRequest: { name: 'note-failure', n: 2 } })))
+    await flush()
+    assert.deepEqual(opened, ['note-failure', 'note-failure'])
+  })
+
   it('covers query validation, scopes, fills, interactive execution and disposal', async () => {
     let invalidExecuteCalls = 0
     let schemaLoads = 0

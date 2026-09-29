@@ -121,10 +121,10 @@ function useHandlerRuntime() {
         throw new Error('HandlerStudioSurface runtime is missing');
     return runtime;
 }
-export function HandlerStudioSurface({ services, draft, onDraftConsumed, }) {
-    return (_jsx(HandlerRuntimeContext.Provider, { value: { services }, children: _jsx(HandlerStudioBody, { draft: draft, onDraftConsumed: onDraftConsumed }) }));
+export function HandlerStudioSurface({ services, draft, onDraftConsumed, openRequest, }) {
+    return (_jsx(HandlerRuntimeContext.Provider, { value: { services }, children: _jsx(HandlerStudioBody, { draft: draft, onDraftConsumed: onDraftConsumed, openRequest: openRequest }) }));
 }
-function HandlerStudioBody({ draft, onDraftConsumed }) {
+function HandlerStudioBody({ draft, onDraftConsumed, openRequest }) {
     const { services } = useHandlerRuntime();
     const [surface, setSurface] = useState(undefined);
     const [catalogue, setCatalogue] = useState(undefined);
@@ -229,6 +229,15 @@ function HandlerStudioBody({ draft, onDraftConsumed }) {
         seeded.current = true;
         handle.setText(STARTER);
     }, [handle]);
+    /* Asked from outside, by an agent's routine. Waits for the editor, since opening writes into it,
+       and answers each request once so a re-render does not reopen over the person's edits. */
+    const answered = useRef(0);
+    useEffect(() => {
+        if (!openRequest || !handle.editor || openRequest.n === answered.current)
+            return;
+        answered.current = openRequest.n;
+        void open(openRequest.name);
+    }, [openRequest, handle]);
     const loadHandlers = useCallback(async () => {
         const generation = ++handlersGeneration.current;
         setListLoading(true);

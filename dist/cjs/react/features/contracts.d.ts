@@ -220,6 +220,14 @@ export interface HandlerStudioSurfaceProps {
     services: HandlerStudioServices;
     draft?: HandlerDraft | null;
     onDraftConsumed?(): void;
+    /**
+     * Open a routine by name, as its row's Open would. `n` distinguishes asking twice for the same
+     * routine, which must reopen it: the person may have wandered off to another in between.
+     */
+    openRequest?: {
+        name: string;
+        n: number;
+    } | null;
 }
 export interface QueryHistoryEntry {
     cypher: string;

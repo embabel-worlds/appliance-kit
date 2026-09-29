@@ -145,15 +145,16 @@ export function HandlerStudioSurface({
   services,
   draft,
   onDraftConsumed,
+  openRequest,
 }: HandlerStudioSurfaceProps) {
   return (
     <HandlerRuntimeContext.Provider value={{ services }}>
-      <HandlerStudioBody draft={draft} onDraftConsumed={onDraftConsumed} />
+      <HandlerStudioBody draft={draft} onDraftConsumed={onDraftConsumed} openRequest={openRequest} />
     </HandlerRuntimeContext.Provider>
   )
 }
 
-function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | null; onDraftConsumed?(): void }) {
+function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<HandlerStudioSurfaceProps, 'services'>) {
   const { services } = useHandlerRuntime()
   const [surface, setSurface] = useState<GatewaySurface | null | undefined>(undefined)
   const [catalogue, setCatalogue] = useState<SignalType[] | null | undefined>(undefined)
@@ -264,6 +265,15 @@ function HandlerStudioBody({ draft, onDraftConsumed }: { draft?: HandlerDraft | 
     seeded.current = true
     handle.setText(STARTER)
   }, [handle])
+
+  /* Asked from outside, by an agent's routine. Waits for the editor, since opening writes into it,
+     and answers each request once so a re-render does not reopen over the person's edits. */
+  const answered = useRef(0)
+  useEffect(() => {
+    if (!openRequest || !handle.editor || openRequest.n === answered.current) return
+    answered.current = openRequest.n
+    void open(openRequest.name)
+  }, [openRequest, handle])
 
   const loadHandlers = useCallback(async () => {
     const generation = ++handlersGeneration.current
