@@ -22,6 +22,13 @@ export interface IngestedDocument {
     ingestedAt?: string | null;
     /** What this document was ingested under. The set of these across the listing IS the corpus list. */
     tags?: string[];
+    /** How many chunks the document holds. Absent from an older appliance. */
+    chunks?: number | null;
+    /**
+     * How many of those chunks have no embedding, and so never come back from a semantic search. Zero
+     * for a complete document; above zero, {@link DocumentsClient.startEmbedMissing} repairs it.
+     */
+    chunksWithoutEmbeddings?: number | null;
 }
 export interface DocumentList {
     documents: IngestedDocument[];
@@ -121,6 +128,15 @@ export declare class DocumentsClient {
     startUpload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[]): Promise<Outcome<IngestJob>>;
     /** {@link startUpload} for a web page: the appliance fetches it as part of the job. */
     startIngestUrl(url: string, tags?: string[]): Promise<Outcome<IngestJob>>;
+    /**
+     * Embed the chunks of an already-ingested document that have no embedding, without re-ingesting
+     * it. Answers at once with a JOB, followed like any other ingest; on success the job's
+     * `chunksWithoutEmbeddings` says how many are still missing, which is zero when the repair took.
+     *
+     * A document the caller's world does not hold is `refused` with status 404. An appliance with
+     * nothing to embed with is `refused` with status 409; its reason is in the body's `message`.
+     */
+    startEmbedMissing(uri: string): Promise<Outcome<IngestJob>>;
     /**
      * Where one job has got. A job the appliance does not know — it restarted since, or never had
      * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.

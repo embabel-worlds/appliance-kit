@@ -498,6 +498,17 @@ var EmbabelApplianceClient = (() => {
       });
     }
     /**
+     * Embed the chunks of an already-ingested document that have no embedding, without re-ingesting
+     * it. Answers at once with a JOB, followed like any other ingest; on success the job's
+     * `chunksWithoutEmbeddings` says how many are still missing, which is zero when the repair took.
+     *
+     * A document the caller's world does not hold is `refused` with status 404. An appliance with
+     * nothing to embed with is `refused` with status 409; its reason is in the body's `message`.
+     */
+    startEmbedMissing(uri) {
+      return this.transport.send({ method: "POST", path: `${DOCS}/embed-missing`, body: { uri }, timeoutMs: START_INGEST_TIMEOUT_MS });
+    }
+    /**
      * Where one job has got. A job the appliance does not know — it restarted since, or never had
      * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.
      */
