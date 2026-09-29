@@ -392,7 +392,7 @@ var EmbabelApplianceClient = (() => {
       signal?.addEventListener("abort", done, { once: true });
     });
   }
-  var movement = (job) => `${job.state}|${job.updatedAt}|${job.progress?.done ?? ""}/${job.progress?.total ?? ""}`;
+  var movement = (job) => `${job.state}|${job.updatedAt}|${job.progress?.done ?? ""}/${job.progress?.total ?? ""}|${job.resumes ?? 0}`;
   var jobIsGone = (failure2) => failure2.kind === "unsupported" || failure2.kind === "refused" && failure2.status === 404;
   async function followIngest(id, read, options = {}) {
     const pollMs = options.pollMs ?? DEFAULT_INGEST_POLL_MS;
@@ -402,6 +402,8 @@ var EmbabelApplianceClient = (() => {
     let seen = "";
     let movedAt = Date.now();
     let misses = 0;
+    let resumesAtStart = null;
+    let resumed = false;
     while (!signal?.aborted) {
       const outcome = await read(id);
       if (signal?.aborted) break;
@@ -409,22 +411,29 @@ var EmbabelApplianceClient = (() => {
         misses = 0;
         const job = outcome.value;
         last = job;
+        resumesAtStart ??= job.resumes ?? 0;
+        if ((job.resumes ?? 0) > resumesAtStart) resumed = true;
         const now = movement(job);
         if (now !== seen) {
           seen = now;
           movedAt = Date.now();
         }
         if (job.state === "succeeded" || job.state === "failed") {
-          onUpdate?.({ job, unreachable: null, stalled: false });
+          onUpdate?.({ job, unreachable: null, stalled: false, resumed });
           return { outcome: job.state, job };
         }
-        onUpdate?.({ job, unreachable: null, stalled: Date.now() - movedAt >= stalledAfterMs });
+        onUpdate?.({ job, unreachable: null, stalled: Date.now() - movedAt >= stalledAfterMs, resumed });
         await pause(pollMs, signal);
       } else if (jobIsGone(outcome)) {
         return { outcome: "lost", id, message: outcome.message, last };
       } else {
         misses += 1;
-        onUpdate?.({ job: last, unreachable: outcome, stalled: last !== null && Date.now() - movedAt >= stalledAfterMs });
+        onUpdate?.({
+          job: last,
+          unreachable: outcome,
+          stalled: last !== null && Date.now() - movedAt >= stalledAfterMs,
+          resumed
+        });
         await pause(Math.min(pollMs * 2 ** misses, MAX_BACKOFF_MS), signal);
       }
     }
