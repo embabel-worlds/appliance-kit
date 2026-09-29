@@ -73,6 +73,49 @@ describe('followIngest — a job ends when the appliance says so, never on a clo
     assert.equal(ended.outcome === 'lost' && ended.last?.state, 'embedding')
   })
 
+  it('follows a job through an appliance restart: same id back, earlier stage, then done', async () => {
+    const down = failure('unreachable', 'Could not reach the appliance: ECONNREFUSED')
+    const appliance = scripted(
+      ok(job('embedding', 't1', { progress: { done: 900, total: 2111 } })),
+      down, down, failure('failed', 'The appliance failed (502)', 502), down,
+      ok(job('queued', 't2', { resumes: 1 })),
+      ok(job('embedding', 't3', { resumes: 1, progress: { done: 1200, total: 2111 } })),
+      ok(job('succeeded', 't4', { resumes: 1, uri: 'upload://w/big-book.epub' })),
+    )
+    const updates: IngestFollowUpdate[] = []
+    const result = followIngest('j1', appliance.read, { onUpdate: (u) => updates.push(u) })
+    await run(120_000)
+
+    const ended = await result
+    assert.equal(ended.outcome, 'succeeded', 'a restart the appliance survived is not a lost job')
+    assert.equal(ended.outcome === 'succeeded' && ended.job.resumes, 1)
+    const answered = updates.filter((u) => u.unreachable === null)
+    assert.deepEqual(answered.map((u) => u.job?.state), ['embedding', 'queued', 'embedding', 'succeeded'])
+    assert.deepEqual(answered.map((u) => u.resumed), [false, true, true, true])
+    assert.ok(updates.some((u) => u.unreachable !== null && !u.resumed), 'while down, nothing is claimed yet')
+  })
+
+  it('does not call a job resumed for restarts it survived before following began', async () => {
+    const appliance = scripted(ok(job('embedding', 't1', { resumes: 2 })), ok(job('succeeded', 't2', { resumes: 2 })))
+    const updates: IngestFollowUpdate[] = []
+    const result = followIngest('j1', appliance.read, { onUpdate: (u) => updates.push(u) })
+    await run(4_000)
+
+    await result
+    assert.deepEqual(updates.map((u) => u.resumed), [false, false])
+    assert.equal(updates.at(-1)?.job?.resumes, 2)
+  })
+
+  it('treats an appliance that reports no resumes as never resumed', async () => {
+    const appliance = scripted(ok(job('embedding', 't1')), ok(job('succeeded', 't2')))
+    const updates: IngestFollowUpdate[] = []
+    const result = followIngest('j1', appliance.read, { onUpdate: (u) => updates.push(u) })
+    await run(4_000)
+
+    await result
+    assert.ok(updates.every((u) => u.resumed === false))
+  })
+
   it('keeps following through an appliance that cannot be reached, and says so meanwhile', async () => {
     const down = failure('unreachable', 'Could not reach the appliance: ECONNREFUSED')
     const appliance = scripted(
