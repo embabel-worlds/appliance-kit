@@ -47,7 +47,7 @@ const KEYWORDS = [
   'gateway', 'signal', 'trigger', 'now', 'dryRun', 'console.log', 'JSON.stringify',
 ]
 
-const STARTER = `// A handler reacts: \`signal\` is the triggering event (or undefined on a cron
+const STARTER = `// A routine reacts: \`signal\` is the triggering event (or undefined on a cron
 // tick), and \`gateway.*\` is your typed surface — Ctrl-Space completes both.
 // Dry-run is observe-only: effects are suppressed, output comes back here.
 
@@ -281,7 +281,7 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
     const outcome = await services.handlers.list()
     if (!active.current || generation !== handlersGeneration.current) return
     setListLoading(false)
-    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'list agents'))
+    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'list routines'))
     setListError('')
     setYours(outcome.value.yours ?? [])
     setAvailable(outcome.value.available ?? [])
@@ -359,7 +359,7 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
 
   async function open(name: string) {
     const outcome = await services.handlers.open(name)
-    if (!isOk(outcome)) return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'open the agent') })
+    if (!isOk(outcome)) return setRunStatus({ tone: 'error', text: failureMessage(outcome, 'open the routine') })
     const spec: HandlerSource = outcome.value
     handle.setText(spec.source ?? '')
     setOpenName(spec.name ?? name)
@@ -373,7 +373,7 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
 
   async function setEnabled(name: string, enabled: boolean) {
     const outcome = await services.handlers.setEnabled(name, enabled)
-    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'change whether this agent is enabled'))
+    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'change whether this routine runs'))
     void loadHandlers()
   }
 
@@ -412,14 +412,14 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
   }
 
   async function adopt(name: string) {
-    if (!confirm(`Start watching with the realm agent '${name}'? It will be adopted into yours.`)) return
+    if (!confirm(`Observe the realm routine '${name}'? It runs against real events with every write held back.`)) return
     await setEnabled(name, true)
   }
 
   async function remove(name: string) {
     if (!confirm(`Delete the agent '${name}'?`)) return
     const outcome = await services.handlers.delete(name)
-    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'delete the agent'))
+    if (!isOk(outcome)) return setListError(failureMessage(outcome, 'delete the routine'))
     if (openName === name) setOpenName(null)
     void loadHandlers()
   }
@@ -451,7 +451,7 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
              current={() => handle.getText()}
              installed={installed} skills={skills} onSkills={setSkills} />
         <StudioPanel
-          title={openName ? `Agent · ${openName}` : 'Agent'}
+          title={openName ? `Routine · ${openName}` : 'Routine'}
           aside={<Status tone={validity.tone}>{validity.text}</Status>}
         >
           <div className="editor-host" ref={editorRef} />
@@ -472,8 +472,8 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
             <CopyButton label="Copy" text={handle.getText()} />
           </div>
           <p className="hint">
-            Dry run suppresses effects. Saving stores the handler; enabling lets it run, and
-            “May act” permits effects.
+            Dry run suppresses effects. Saving stores the routine; its stage decides whether it runs,
+            and only on duty may it write.
           </p>
           <Status tone={runStatus.tone}>{runStatus.text}</Status>
         </StudioPanel>
@@ -528,6 +528,9 @@ export function stageOf(h: { active: boolean; autonomous: boolean }): Stage {
   return h.autonomous ? 'acting' : 'watching'
 }
 
+/* The agent ladder's words. The stage keys stay as they are because hosts count by them. */
+const STAGE_WORDS: Record<Stage, string> = { proposed: 'off duty', watching: 'observing', acting: 'on duty' }
+
 const STAGE_SAYS: Record<Stage, string> = {
   proposed: 'Saved and idle. It fires at nothing and changes nothing.',
   watching: 'Live, observe-only. It runs for real on real events and logs what it WOULD do.',
@@ -549,9 +552,9 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
   onDelete(name: string): void
 }) {
   return (
-    <StudioPanel title="Agents">
-      <button className="btn primary" onClick={onNew}>New agent</button>
-      {loading ? <Status tone={null}>Loading agents…</Status> : error ? <Status tone="error">{error}</Status> : (
+    <StudioPanel title="Routines">
+      <button className="btn primary" onClick={onNew}>New routine</button>
+      {loading ? <Status tone={null}>Loading routines…</Status> : error ? <Status tone="error">{error}</Status> : (
         <>
           {yours.length === 0 && available.length === 0 && (
             /*
@@ -563,7 +566,7 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
              * point is to own one agent today, not to write the best one.
              */
             <div className="emptymenu">
-              <p className="hint">No agents are listed in this world yet. Three ways to start:</p>
+              <p className="hint">No routines in this world yet. Three ways to start:</p>
               <a className="emptyroute" href="#views">
                 <strong>Watch a saved view</strong>
                 <small>a question you already trust, on a schedule — it publishes a signal when the answer moves</small>
@@ -573,8 +576,8 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
                 <small>the Ask above writes it, type-checks it against this world, and lands it in the editor</small>
               </button>
               <a className="emptyroute" href="#realms">
-                <strong>Install a realm that ships agents</strong>
-                <small>a realm brings its own — observe-only until you adopt them</small>
+                <strong>Install a realm that ships routines</strong>
+                <small>a realm brings its own, and they run observing until you put them on duty</small>
               </a>
             </div>
           )}
@@ -587,7 +590,7 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
                   {h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger'}
                   {h.schedule ? ` · cron ${h.schedule}` : ''}
                   {' · '}
-                  <span className={`stage ${stageOf(h)}`} title={STAGE_SAYS[stageOf(h)]}>{stageOf(h)}</span>
+                  <span className={`stage ${stageOf(h)}`} title={STAGE_SAYS[stageOf(h)]}>{STAGE_WORDS[stageOf(h)]}</span>
                 </small>
               </button>
               {/* State-changing verbs say the state they produce; acting remains visibly distinct. */}
@@ -596,13 +599,13 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
                 title={STAGE_SAYS[stageOf(h) === 'proposed' ? 'watching' : stageOf(h) === 'watching' ? 'acting' : 'proposed']}
                 onClick={() => onChangeStage(h)}
               >
-                {stageOf(h) === 'proposed' ? 'Start watching' : stageOf(h) === 'watching' ? 'Start acting' : 'Stand down'}
+                {stageOf(h) === 'proposed' ? 'Observe' : stageOf(h) === 'watching' ? 'Put on duty' : 'Stand down'}
               </button>
               <button className="btn ghost tiny" onClick={() => onDelete(h.name)}>Delete</button>
             </div>
           ))}
           {yours.some((handler) => stageOf(handler) === 'acting') && (
-            <p className="hint">Acting agents must stand down before returning to watching.</p>
+            <p className="hint">A routine on duty must stand down before it can go back to observing.</p>
           )}
           {available.length > 0 && <div className="subhead">available to adopt</div>}
           {available.map((h) => (
@@ -613,7 +616,7 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
               </button>
               {/* A realm handler can only be adopted or left alone — deleting someone else's
                   shipped handler is not this console's to offer. */}
-              <button className="btn tiny arm" title={STAGE_SAYS.watching} onClick={() => onAdopt(h.name)}>Start watching</button>
+              <button className="btn tiny arm" title={STAGE_SAYS.watching} onClick={() => onAdopt(h.name)}>Observe</button>
             </div>
           ))}
         </>
@@ -748,7 +751,7 @@ function SkillPicker({ installed, chosen, onChange }: {
       <p className="hint">
         {chosen.length === 0
           ? 'No skills bundled.'
-          : `${chosen.length} bundled and saved with this handler.`}
+          : `${chosen.length} bundled and saved with this routine.`}
       </p>
     </div>
   )
@@ -863,7 +866,7 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, onSav
           <span>Name</span>
           <input value={name} readOnly={opened !== null} aria-describedby={opened ? 'handler-name-help' : undefined}
                  placeholder="pr-triage" onChange={(e) => setName(e.target.value)} />
-          {opened && <small className="hint" id="handler-name-help">Name identifies this agent. Saving updates it in place.</small>}
+          {opened && <small className="hint" id="handler-name-help">Name identifies this routine. Saving updates it in place.</small>}
         </label>
         <label className="field">
           <span>Fires on</span>
@@ -889,16 +892,16 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, onSav
         </label>
         <label className="field checkbox">
           <input type="checkbox" checked={autonomous} onChange={(e) => setAutonomous(e.target.checked)} />
-          <span>May act — apply real effects, not just observe</span>
+          <span>On duty — apply real effects, not just observe</span>
         </label>
       </div>
-      <button className="btn" disabled={busy} onClick={() => void save()}>{busy ? 'saving…' : 'Save agent'}</button>
+      <button className="btn" disabled={busy} onClick={() => void save()}>{busy ? 'saving…' : 'Save routine'}</button>
       {skills.length > 0 && (
         <p className="hint">Bundled skills: {skills.join(', ')} — saved with it, and used when you refine it.</p>
       )}
       <p className="hint">
-        Saving keeps this handler proposed. Enable it to observe events; select “May act” to permit
-        effects.
+        A new routine is saved off duty. Observe it to run it against real events with writes held
+        back; put it on duty to let it write.
       </p>
       <Status tone={status.tone}>{status.text}</Status>
     </StudioPanel>

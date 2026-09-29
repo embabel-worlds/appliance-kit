@@ -943,16 +943,16 @@ describe('the public browser feature entry point', () => {
     assert.equal(fields[0].value, existing.name)
     assert.equal(fields[0].readOnly, true)
     assert.equal(fields[0].disabled, false)
-    assert.match(container.textContent, /Name identifies this agent\. Saving updates it in place\./)
+    assert.match(container.textContent, /Name identifies this routine\. Saving updates it in place\./)
     assert.equal(fields[1].value, existing.signalType)
     assert.equal(fields[2].value, existing.schedule)
     assert.equal(fields[3].checked, true)
 
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saved, [existing])
 
-    await act(async () => button(container, 'New agent').click())
+    await act(async () => button(container, 'New routine').click())
     const freshFields = [...container.querySelectorAll('.saveform input')]
     assert.equal(freshFields[0].value, '')
     assert.equal(freshFields[0].readOnly, false)
@@ -994,11 +994,11 @@ describe('the public browser feature entry point', () => {
     await act(async () => form()[3].click())
     await act(async () => button(container, 'collections').click())
     await act(async () => editor.setValue("console.log('first')"))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.equal(form()[0].readOnly, true)
 
-    await act(async () => button(container, 'New agent').click())
+    await act(async () => button(container, 'New routine').click())
     assert.equal(form()[0].value, '')
     assert.equal(form()[0].readOnly, false)
     assert.equal(form()[1].value, '')
@@ -1009,7 +1009,7 @@ describe('the public browser feature entry point', () => {
 
     await act(async () => setInput(form()[0], 'second-agent'))
     await act(async () => editor.setValue("console.log('second')"))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saved.map(({ name }) => name), ['first-agent', 'second-agent'])
   })
@@ -1039,17 +1039,17 @@ describe('the public browser feature entry point', () => {
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
     await act(async () => button(container, 'watcher').click())
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Put on duty').click())
     await flush()
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saves.map(({ autonomous }) => autonomous), [true, true])
 
     await act(async () => button(container, 'Stand down').click())
     await flush()
-    await act(async () => button(container, 'Start watching').click())
+    await act(async () => button(container, 'Observe').click())
     await flush()
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(enabled, [['watcher', false], ['watcher', true]])
     assert.deepEqual(saves.map(({ autonomous }) => autonomous), [true, true, false, false])
@@ -1085,17 +1085,17 @@ describe('the public browser feature entry point', () => {
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
     assert.deepEqual(
       [...container.querySelectorAll('.handler-row .btn')].map((candidate) => candidate.textContent.trim()),
-      ['Start watching', 'Delete', 'Start acting', 'Delete', 'Stand down', 'Delete', 'Start watching'],
+      ['Observe', 'Delete', 'Put on duty', 'Delete', 'Stand down', 'Delete', 'Observe'],
     )
 
-    await act(async () => button(container, 'Start watching').click())
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Observe').click())
+    await act(async () => button(container, 'Put on duty').click())
     await act(async () => button(container, 'Stand down').click())
     await flush()
     assert.deepEqual(enabled, [['idle', true], ['actor', false]])
     assert.deepEqual(opened, ['watcher'])
     assert.deepEqual(saved, [{ ...source('watcher', false), autonomous: true }])
-    assert.match(container.textContent, /Acting agents must stand down before returning to watching/)
+    assert.match(container.textContent, /A routine on duty must stand down before it can go back to observing/)
 
     globalThis.confirm = () => false
     await act(async () => [...container.querySelectorAll('.handler-row')].at(-1).querySelector('button.btn').click())
@@ -1157,7 +1157,7 @@ describe('the public browser feature entry point', () => {
       signalTypes: async () => ok([]), worldSkills: async () => ok([]),
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Put on duty').click())
     await flush()
     assert.match(container.textContent, /Start acting is unavailable: Could not open the agent \(HTTP 400\)\. source is locked/)
   })
@@ -1195,15 +1195,15 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /observed/)
     const name = [...container.querySelectorAll('input')].find((input) => input.placeholder === 'pr-triage')
     await act(async () => setInput(name, 'triage'))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.match(container.textContent, /validation failed/)
     assert.equal(enableCalls, 0)
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.match(container.textContent, /saved/)
     assert.equal(enableCalls, 0)
-    await act(async () => button(container, 'Start watching').click())
+    await act(async () => button(container, 'Observe').click())
     assert.equal(enableCalls, 1)
   })
 
@@ -1779,10 +1779,10 @@ describe('the public browser feature entry point', () => {
       signalTypes: async () => ok([]), worldSkills: async () => ok([]),
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
-    assert.match(container.textContent, /Loading agents/)
+    assert.match(container.textContent, /Loading routines/)
     assert.doesNotMatch(container.textContent, /No agents are listed|Nothing runs unattended/)
     await act(async () => finish(ok({ yours: [], available: [] })))
-    assert.match(container.textContent, /No agents are listed/)
+    assert.match(container.textContent, /No routines in this world yet/)
   })
 
   it('offers realm-list recovery and excludes stale update targets after recovery', async () => {
