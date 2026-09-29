@@ -17,6 +17,14 @@ export interface IngestJob {
     title?: string | null;
     /** The appliance's own sentence for why a `failed` job failed. */
     error?: string | null;
+    /**
+     * On a `succeeded` job, how many chunks the document was cut into, and how many of those could
+     * not be embedded. A document with chunks it could not embed is still ingested — it is kept, not
+     * failed — but those chunks miss semantic search, so a client should say so rather than draw it
+     * as done. {@link DocumentsClient.startEmbedMissing} embeds them. Absent from an older appliance.
+     */
+    chunks?: number | null;
+    chunksWithoutEmbeddings?: number | null;
     startedAt: string;
     /** When the appliance last saw this job move: a stage change or a progress tick. */
     updatedAt: string;
