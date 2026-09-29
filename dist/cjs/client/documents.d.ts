@@ -1,3 +1,4 @@
+import { type FollowIngestOptions, type IngestJob, type IngestResult } from './ingests.ts';
 import type { Outcome } from './outcome.ts';
 import type { Transport } from './transport.ts';
 /**
@@ -110,6 +111,26 @@ export declare class DocumentsClient {
      * method serves both rather than the Me app keeping a private upload path.
      */
     upload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[], options?: IngestOptions): Promise<Outcome<unknown>>;
+    /**
+     * Start ingesting one file and return at once with the JOB, which {@link followIngest} follows
+     * to its end. Prefer this to {@link upload}: it has no deadline to guess, and it says where the
+     * document has got.
+     *
+     * An appliance older than ingest jobs answers `unsupported` — fall back to {@link upload} there.
+     */
+    startUpload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[]): Promise<Outcome<IngestJob>>;
+    /** {@link startUpload} for a web page: the appliance fetches it as part of the job. */
+    startIngestUrl(url: string, tags?: string[]): Promise<Outcome<IngestJob>>;
+    /**
+     * Where one job has got. A job the appliance does not know — it restarted since, or never had
+     * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.
+     */
+    ingestJob(id: string): Promise<Outcome<IngestJob>>;
+    /**
+     * Follow a job until the appliance says it ended, or no longer knows it. No deadline: see
+     * `ingests.ts` for why, and for what `stalled` does and does not mean.
+     */
+    followIngest(id: string, options?: FollowIngestOptions): Promise<IngestResult>;
     /**
      * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
      * REPLACES what was there; an empty list removes every tag. `not_found` when the caller's world
