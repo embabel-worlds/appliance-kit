@@ -14,7 +14,9 @@ export { DEFAULT_INGEST_POLL_MS, DEFAULT_INGEST_STALLED_AFTER_MS, followIngest }
 export { HintsClient } from "./hints.js";
 export { ToursClient } from "./tours.js";
 export { classifySource } from "./citations.js";
+export { AgentsClient } from "./agents.js";
 export { HandlersClient } from "./handlers.js";
+import { AgentsClient as AgentsClientImpl } from "./agents.js";
 import { DocumentsClient } from "./documents.js";
 import { HandlersClient } from "./handlers.js";
 import { HintsClient } from "./hints.js";
@@ -25,6 +27,7 @@ import { HttpTransport } from "./transport.js";
 export class ApplianceClient {
     transport;
     kg;
+    agents;
     handlers;
     documents;
     hints;
@@ -32,6 +35,7 @@ export class ApplianceClient {
     constructor(transport, options = {}) {
         this.transport = transport;
         this.kg = new KgClient(transport);
+        this.agents = new AgentsClientImpl(transport);
         this.handlers = new HandlersClient(transport);
         this.documents = new DocumentsClient(transport, options.documents);
         this.hints = new HintsClient(transport);

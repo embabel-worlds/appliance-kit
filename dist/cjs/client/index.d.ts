@@ -16,9 +16,12 @@ export { ToursClient } from './tours.ts';
 export type { TourSummary, TourStepView, TourListResponse, TourStepStatusResponse, TourDeletedResponse, } from './tours.ts';
 export { classifySource } from './citations.ts';
 export type { CitedSource, SourceKind } from './citations.ts';
+export { AgentsClient } from './agents.ts';
+export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion } from './agents.ts';
 export { HandlersClient } from './handlers.ts';
 export type { HandlerAvailable, HandlerDryRunResult, HandlerEnabledResult, HandlerGenerated, HandlerList, HandlerListing, HandlerMutationResult, HandlerRanAgainst, HandlerSaveRequest, HandlerScheduleResult, HandlerSource, HandlerValidation, } from './handlers.ts';
 export type { components, paths } from './generated/openapi.ts';
+import { AgentsClient as AgentsClientImpl } from './agents.ts';
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts';
 import { HandlersClient } from './handlers.ts';
 import { HintsClient } from './hints.ts';
@@ -33,6 +36,7 @@ export interface ApplianceClientOptions {
 export declare class ApplianceClient {
     readonly transport: Transport;
     readonly kg: KgClient;
+    readonly agents: AgentsClientImpl;
     readonly handlers: HandlersClient;
     readonly documents: DocumentsClient;
     readonly hints: HintsClient;

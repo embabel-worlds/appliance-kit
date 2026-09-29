@@ -248,6 +248,7 @@ describe('the public browser feature entry point', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
       'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface', 'ApiKeysSurface',
+      'AgentsSurface',
     ]) {
       assert.equal(typeof features[name], 'function', `${name} ESM export`)
     }
@@ -1786,6 +1787,82 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /started a background run/)
     assert.doesNotMatch(container.textContent, /try Smart search again/)
     assert.equal(container.querySelector('.status.caution').getAttribute('role'), 'status')
+  })
+
+  it('shows each agent at the stage it runs, lifts a refusal into view, and signs only after the host confirms', async () => {
+    const routine = (name, stage, firing) => ({ name, description: '', trigger: 'every day at 08:00', stage, firing, missing: false })
+    const base = {
+      job: 'chase overdue invoices', routing: '', persona: null, owners: ['priya'], operators: [], state: 'active',
+      origin: 'world', duties: [], signedBy: null, signedAt: null,
+    }
+    let chaser = {
+      ...base, name: 'chaser', sponsor: null, stage: 'on', version: 0, unsignedChanges: [],
+      routines: [routine('note-failure', 'on', 'off')], needs: ['a sponsor', "its sponsor's signature on version 1"],
+    }
+    const gathered = {
+      ...base, name: 'github', job: 'routines from github', sponsor: null, stage: 'observing', version: 0, unsignedChanges: [], origin: 'migrated',
+      routines: [routine('review-brief', 'observing', 'observing')], needs: ['a sponsor'],
+    }
+    const staged = []
+    const signed = []
+    let allow = false
+    const services = {
+      listAgents: async () => ok([chaser, gathered]),
+      setStage: async (name, stage, r) => {
+        staged.push([name, stage, r])
+        return refused('chaser cannot go on duty yet. It needs its sponsor\'s signature on version 1.')
+      },
+      sign: async (name) => {
+        signed.push(name)
+        chaser = { ...chaser, sponsor: 'priya', version: 1, signedBy: 'priya', signedAt: '2026-09-29T10:00:00Z', needs: [], routines: [routine('note-failure', 'on', 'on')] }
+        return ok(chaser)
+      },
+      versions: async () => ok([{ version: 1, signedBy: 'priya', signedAt: '2026-09-29T10:00:00Z', digest: 'abc', routines: ['note-failure'] }]),
+    }
+    const { container } = await render(h(features.AgentsSurface, { services, host: { confirmSign: async () => allow } }))
+    assert.equal(container.firstElementChild.classList.contains('kit-feature-agents'), true)
+    assert.doesNotMatch(container.textContent, /handler/i)
+
+    // Chosen on duty, but nothing fires: the pill says off duty and the needs say why.
+    assert.match(container.textContent, /Before it can go on duty, it needs/)
+    assert.match(container.textContent, /signature on version 1/)
+    assert.match(container.querySelector('.agent-routines').textContent, /off duty/)
+    assert.match(container.textContent, /gathered from existing routines/)
+
+    // A refused raise shows the appliance's own sentence.
+    await act(async () => button(container, 'Observing').click())
+    await flush()
+    assert.deepEqual(staged, [['chaser', 'observing', undefined]])
+    assert.match(container.textContent, /cannot go on duty yet/)
+
+    // Signing waits for the host, then replaces the agent with the server's answer.
+    await act(async () => button(container, 'Sign version 1').click())
+    await flush()
+    assert.deepEqual(signed, [])
+    allow = true
+    await act(async () => button(container, 'Sign version 1').click())
+    await flush()
+    assert.deepEqual(signed, ['chaser'])
+    assert.match(container.textContent, /Running version 1, signed by priya/)
+    assert.doesNotMatch(container.textContent, /cannot go on duty yet/)
+
+    await act(async () => button(container, 'Earlier versions').click())
+    await flush()
+    assert.match(container.querySelector('.agent-history').textContent, /Version 1 · priya/)
+
+    // A gathered agent has no version to sign: it is signed by writing it down as a real agent.
+    await act(async () => button(container, 'routines from github').click())
+    await flush()
+    assert.equal(button(container, 'Sign version'), undefined)
+  })
+
+  it('says an appliance predates agents instead of showing an empty roster', async () => {
+    const services = {
+      listAgents: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }),
+      setStage: async () => refused('nope'), sign: async () => refused('nope'), versions: async () => refused('nope'),
+    }
+    const { container } = await render(h(features.AgentsSurface, { services }))
+    assert.match(container.textContent, /Could not list agents\. This appliance is older than this feature/)
   })
 
   it('preserves session rewind numbering after holes', () => {

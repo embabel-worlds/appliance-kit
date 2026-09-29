@@ -7,4 +7,5 @@ export { QueryStudioSurface, SaveView } from './query/QueryStudioSurface.tsx';
 export { rewoundCounter } from './query/sessionRewind.ts';
 export { CodingAgentsSurface } from './coding-agents/CodingAgentsSurface.tsx';
 export { ApiKeysSurface } from './api-keys/ApiKeysSurface.tsx';
+export { AgentsSurface, StagePill } from './agents/AgentsSurface.tsx';
 //# sourceMappingURL=index.d.ts.map

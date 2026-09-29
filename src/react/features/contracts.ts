@@ -10,6 +10,7 @@ import type {
   KgClient,
   KgQueryResult,
 } from '../../client/kg.ts'
+import type { Agent, AgentStage, AgentVersion } from '../../client/agents.ts'
 import type { Outcome } from '../../client/outcome.ts'
 import type { TourSummary } from '../../client/tours.ts'
 import type { VcEvent } from '../../vc/events.ts'
@@ -384,3 +385,25 @@ export interface ApiKeysSurfaceProps {
   services: ApiKeysServices
   host: ApiKeysHost
 }
+
+export interface AgentsServices {
+  listAgents(): Promise<Outcome<Agent[]>>
+  setStage(name: string, stage: AgentStage, routine?: string): Promise<Outcome<Agent>>
+  sign(name: string): Promise<Outcome<Agent>>
+  versions(name: string): Promise<Outcome<AgentVersion[]>>
+}
+
+export interface AgentsHost {
+  /** Open a routine's body for editing. Omitted, routines are read-only on this surface. */
+  editRoutine?(routine: string): void
+  /** Ask before signing, because the signed version becomes what runs. Omitted, signing asks nothing. */
+  confirmSign?(agent: Agent): Promise<boolean>
+}
+
+export interface AgentsSurfaceProps {
+  services: AgentsServices
+  host?: AgentsHost
+  /** An agent to open first, by name. */
+  initialAgent?: string
+}
+
