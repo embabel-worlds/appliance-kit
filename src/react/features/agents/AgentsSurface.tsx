@@ -44,7 +44,7 @@ function when(iso: string | null): string {
 }
 
 /** The highest stage any routine actually fires at: what the agent is doing, in one pill. */
-function firing(agent: Agent): AgentStage {
+export function firingOf(agent: Agent): AgentStage {
   if (agent.routines.some((r) => r.firing === 'on')) return 'on'
   if (agent.routines.some((r) => r.firing === 'observing')) return 'observing'
   return 'off'
@@ -120,7 +120,7 @@ export function AgentsSurface({ services, host, initialAgent }: AgentsSurfacePro
                     <span className="agentrow-name">{a.name}</span>
                     <span className="agentrow-job">{a.job}</span>
                     <span className="agentrow-meta">
-                      <StagePill stage={firing(a)} />
+                      <StagePill stage={firingOf(a)} />
                       {a.origin === 'migrated' && <span className="agentrow-tag">gathered from existing routines</span>}
                       {a.origin !== 'world' && a.origin !== 'migrated' && <span className="agentrow-tag">from {a.origin}</span>}
                       {a.needs.length > 0 && <span className="agentrow-needs">needs {a.needs.length === 1 ? 'one thing' : `${a.needs.length} things`}</span>}
@@ -194,7 +194,7 @@ function AgentDetail({
   const signable = declared && (agent.version === 0 || agent.unsignedChanges.length > 0)
 
   return (
-    <StudioPanel title={agent.name} aside={<StagePill stage={firing(agent)} />}>
+    <StudioPanel title={agent.name} aside={<StagePill stage={firingOf(agent)} />}>
       <p className="agent-job">{agent.job}</p>
 
       <div className="row agent-stage">

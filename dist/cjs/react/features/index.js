@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
+exports.firingOf = exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
 __exportStar(require("./contracts.js"), exports);
 var AppsSurface_tsx_1 = require("./apps/AppsSurface.js");
 Object.defineProperty(exports, "AppsSurface", { enumerable: true, get: function () { return AppsSurface_tsx_1.AppsSurface; } });
@@ -38,4 +38,5 @@ Object.defineProperty(exports, "ApiKeysSurface", { enumerable: true, get: functi
 var AgentsSurface_tsx_1 = require("./agents/AgentsSurface.js");
 Object.defineProperty(exports, "AgentsSurface", { enumerable: true, get: function () { return AgentsSurface_tsx_1.AgentsSurface; } });
 Object.defineProperty(exports, "StagePill", { enumerable: true, get: function () { return AgentsSurface_tsx_1.StagePill; } });
+Object.defineProperty(exports, "firingOf", { enumerable: true, get: function () { return AgentsSurface_tsx_1.firingOf; } });
 //# sourceMappingURL=index.js.map

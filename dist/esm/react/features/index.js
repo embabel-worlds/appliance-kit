@@ -7,5 +7,5 @@ export { QueryStudioSurface, SaveView } from "./query/QueryStudioSurface.js";
 export { rewoundCounter } from "./query/sessionRewind.js";
 export { CodingAgentsSurface } from "./coding-agents/CodingAgentsSurface.js";
 export { ApiKeysSurface } from "./api-keys/ApiKeysSurface.js";
-export { AgentsSurface, StagePill } from "./agents/AgentsSurface.js";
+export { AgentsSurface, StagePill, firingOf } from "./agents/AgentsSurface.js";
 //# sourceMappingURL=index.js.map

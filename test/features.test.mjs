@@ -248,7 +248,7 @@ describe('the public browser feature entry point', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
       'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface', 'ApiKeysSurface',
-      'AgentsSurface',
+      'AgentsSurface', 'StagePill', 'firingOf',
     ]) {
       assert.equal(typeof features[name], 'function', `${name} ESM export`)
     }
