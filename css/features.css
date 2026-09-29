@@ -1500,11 +1500,11 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .stage { font-family: var(--mono); font-size: 9.5px; letter-spacing: 0.1em; text-transform: uppercase;
   border: 1px solid var(--rule); color: var(--mid); padding: 2px 6px; white-space: nowrap; }
 
-:where(.kit-feature) .stage.proposed { border-color: var(--rule); color: var(--mid); }
+:where(.kit-feature) .stage.proposed, :where(.kit-feature) .stage.off { border-color: var(--rule); color: var(--mid); }
 
-:where(.kit-feature) .stage.watching { border-color: var(--signal); color: var(--signal-label); }
+:where(.kit-feature) .stage.watching, :where(.kit-feature) .stage.observing { border-color: var(--signal); color: var(--signal-label); }
 
-:where(.kit-feature) .stage.acting { border-color: var(--caution); color: var(--caution); }
+:where(.kit-feature) .stage.acting, :where(.kit-feature) .stage.on { border-color: var(--caution); color: var(--caution); }
 
 /* An honest gap, said in the panel that would otherwise pretend. */
 

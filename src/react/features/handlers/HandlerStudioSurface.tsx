@@ -35,6 +35,7 @@ import * as Vc from '../../../vc/index.ts'
 import type { HandlerDraft, HandlerStudioServices, HandlerStudioSurfaceProps, SignalType, WorldSkill } from '../contracts.ts'
 import { CodeMirror, useEditor } from '../studio/editor.ts'
 import { CopyButton, Status, StudioPanel, failureMessage, isAbsent } from '../studio/chrome.tsx'
+import type { Agent, AgentStage } from '../../../client/agents.ts'
 
 /** `try { … } catch { '' }` as an expression — used where a bad value must not break a render. */
 function runCatching(f: () => string): string {
@@ -146,15 +147,16 @@ export function HandlerStudioSurface({
   draft,
   onDraftConsumed,
   openRequest,
+  onOpenAgent,
 }: HandlerStudioSurfaceProps) {
   return (
     <HandlerRuntimeContext.Provider value={{ services }}>
-      <HandlerStudioBody draft={draft} onDraftConsumed={onDraftConsumed} openRequest={openRequest} />
+      <HandlerStudioBody draft={draft} onDraftConsumed={onDraftConsumed} openRequest={openRequest} onOpenAgent={onOpenAgent} />
     </HandlerRuntimeContext.Provider>
   )
 }
 
-function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<HandlerStudioSurfaceProps, 'services'>) {
+function HandlerStudioBody({ draft, onDraftConsumed, openRequest, onOpenAgent }: Omit<HandlerStudioSurfaceProps, 'services'>) {
   const { services } = useHandlerRuntime()
   const [surface, setSurface] = useState<GatewaySurface | null | undefined>(undefined)
   const [catalogue, setCatalogue] = useState<SignalType[] | null | undefined>(undefined)
@@ -166,6 +168,8 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
   const [available, setAvailable] = useState<HandlerAvailable[]>([])
   const [listError, setListError] = useState('')
   const [listLoading, setListLoading] = useState(true)
+  /* Routine name -> the agent holding it and the stage it runs at; null when this appliance has no agents. */
+  const [holders, setHolders] = useState<Holders | null>(null)
   const [openName, setOpenName] = useState<string | null>(null)
   const [opened, setOpened] = useState<HandlerSource | null>(null)
   const [formEpoch, setFormEpoch] = useState(0)
@@ -278,9 +282,10 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
   const loadHandlers = useCallback(async () => {
     const generation = ++handlersGeneration.current
     setListLoading(true)
-    const outcome = await services.handlers.list()
+    const [outcome, agents] = await Promise.all([services.handlers.list(), services.listAgents?.()])
     if (!active.current || generation !== handlersGeneration.current) return
     setListLoading(false)
+    setHolders(agents && isOk(agents) && Array.isArray(agents.value) ? holdersOf(agents.value) : null)
     if (!isOk(outcome)) return setListError(failureMessage(outcome, 'list routines'))
     setListError('')
     setYours(outcome.value.yours ?? [])
@@ -433,6 +438,8 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
           error={listError}
           loading={listLoading}
           openName={openName}
+          holders={holders}
+          onOpenAgent={onOpenAgent}
           onOpen={(n) => void open(n)}
           onNew={newAgent}
           onChangeStage={(h) => void changeStage(h)}
@@ -491,6 +498,7 @@ function HandlerStudioBody({ draft, onDraftConsumed, openRequest }: Omit<Handler
           defaultSignalType={signalType}
           catalogue={catalogue ?? null}
           skills={skills}
+          ladder={holders !== null}
           onSaved={(saved) => {
             setOpenName(saved.name)
             setOpened({
@@ -537,14 +545,52 @@ const STAGE_SAYS: Record<Stage, string> = {
   acting: 'Live and permitted to apply effects. This is the state with consequences.',
 }
 
+/* One routine's place on the agent ladder, as the Agents surface reports it. */
+interface Holder { agent: string; firing: AgentStage }
+type Holders = Map<string, Holder>
+
+/* Every routine by name, with the agent holding it: the one source of its stage when agents exist. */
+function holdersOf(agents: Agent[]): Holders {
+  const map: Holders = new Map()
+  for (const agent of agents) for (const r of agent.routines) map.set(r.name, { agent: agent.name, firing: r.firing })
+  return map
+}
+
+const LADDER_WORDS: Record<AgentStage, string> = { off: 'off duty', observing: 'observing', on: 'on duty' }
+
+/*
+ * The stage, read-only. With agents it is set in one place, on the agent, because a second switch
+ * here was overridden the moment the agent had a stage of its own, and showed a stage that was not
+ * what ran.
+ */
+function LadderStage({ holder }: { holder?: Holder }) {
+  if (!holder) return <span className="stage" title="Not held by any agent yet">no agent yet</span>
+  return (
+    <span className={`stage ${holder.firing}`} title={`Set on its agent, ${holder.agent}`}>
+      {LADDER_WORDS[holder.firing]}
+    </span>
+  )
+}
+
+function AgentLink({ holder, onOpenAgent }: { holder?: Holder; onOpenAgent?(agent: string): void }) {
+  if (!holder || !onOpenAgent) return null
+  return (
+    <button className="btn tiny ghost" title="Its stage is set on its agent" onClick={() => onOpenAgent(holder.agent)}>
+      {holder.agent} ›
+    </button>
+  )
+}
+
 // ── the handlers list ─────────────────────────────────────────────────────────────────────────
 
-function HandlersList({ yours, available, error, loading, openName, onOpen, onNew, onChangeStage, onAdopt, onDelete }: {
+function HandlersList({ yours, available, error, loading, openName, holders, onOpenAgent, onOpen, onNew, onChangeStage, onAdopt, onDelete }: {
   yours: HandlerListing[]
   available: HandlerAvailable[]
   error: string
   loading: boolean
   openName: string | null
+  holders: Holders | null
+  onOpenAgent?(agent: string): void
   onOpen(name: string): void
   onNew(): void
   onChangeStage(handler: HandlerListing): void
@@ -590,10 +636,13 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
                   {h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger'}
                   {h.schedule ? ` · cron ${h.schedule}` : ''}
                   {' · '}
-                  <span className={`stage ${stageOf(h)}`} title={STAGE_SAYS[stageOf(h)]}>{STAGE_WORDS[stageOf(h)]}</span>
+                  {holders
+                    ? <LadderStage holder={holders.get(h.name)} />
+                    : <span className={`stage ${stageOf(h)}`} title={STAGE_SAYS[stageOf(h)]}>{STAGE_WORDS[stageOf(h)]}</span>}
                 </small>
               </button>
-              {/* State-changing verbs say the state they produce; acting remains visibly distinct. */}
+              {holders ? <AgentLink holder={holders.get(h.name)} onOpenAgent={onOpenAgent} /> : (
+              /* State-changing verbs say the state they produce; acting remains visibly distinct. */
               <button
                 className={`btn tiny ${stageOf(h) === 'acting' ? 'ghost' : 'arm'}`}
                 title={STAGE_SAYS[stageOf(h) === 'proposed' ? 'watching' : stageOf(h) === 'watching' ? 'acting' : 'proposed']}
@@ -601,10 +650,11 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
               >
                 {stageOf(h) === 'proposed' ? 'Observe' : stageOf(h) === 'watching' ? 'Put on duty' : 'Stand down'}
               </button>
+              )}
               <button className="btn ghost tiny" onClick={() => onDelete(h.name)}>Delete</button>
             </div>
           ))}
-          {yours.some((handler) => stageOf(handler) === 'acting') && (
+          {!holders && yours.some((handler) => stageOf(handler) === 'acting') && (
             <p className="hint">A routine on duty must stand down before it can go back to observing.</p>
           )}
           {available.length > 0 && <div className="subhead">available to adopt</div>}
@@ -612,11 +662,16 @@ function HandlersList({ yours, available, error, loading, openName, onOpen, onNe
             <div className="handler-row" key={h.name}>
               <button className="handlername" onClick={() => onOpen(h.name)}>
                 <strong>{h.name}</strong>
-                <small>{h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger'} · from a realm</small>
+                <small>
+                  {h.signalType && h.signalType !== '*' ? `on ${h.signalType}` : 'no trigger'} · from a realm
+                  {holders && <>{' · '}<LadderStage holder={holders.get(h.name)} /></>}
+                </small>
               </button>
-              {/* A realm handler can only be adopted or left alone — deleting someone else's
-                  shipped handler is not this console's to offer. */}
-              <button className="btn tiny arm" title={STAGE_SAYS.watching} onClick={() => onAdopt(h.name)}>Observe</button>
+              {/* A realm routine can only be adopted or left alone — deleting someone else's
+                  shipped routine is not this console's to offer. With agents, adopting is the agent's. */}
+              {holders
+                ? <AgentLink holder={holders.get(h.name)} onOpenAgent={onOpenAgent} />
+                : <button className="btn tiny arm" title={STAGE_SAYS.watching} onClick={() => onAdopt(h.name)}>Observe</button>}
             </div>
           ))}
         </>
@@ -813,8 +868,10 @@ function SurfacePanel({ surface }: { surface: GatewaySurface | null | undefined 
  * changes nothing; the moment it is on, it runs unattended on real events. That is a different
  * decision from "keep this text", and it reads as one.
  */
-function SavePanel({ source, opened, defaultSignalType, catalogue, skills, onSaved }: {
+function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladder, onSaved }: {
   source(): string
+  /** Agents set the stage: the form keeps what was stored and offers no switch of its own. */
+  ladder: boolean
   opened: HandlerSource | null
   defaultSignalType: string
   /** The live catalogue, so the trigger is completed from what exists rather than remembered. */
@@ -890,18 +947,21 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, onSav
           <input value={schedule} placeholder="0 0 9 * * * · blank = not scheduled"
                  onChange={(e) => setSchedule(e.target.value)} />
         </label>
-        <label className="field checkbox">
-          <input type="checkbox" checked={autonomous} onChange={(e) => setAutonomous(e.target.checked)} />
-          <span>On duty — apply real effects, not just observe</span>
-        </label>
+        {!ladder && (
+          <label className="field checkbox">
+            <input type="checkbox" checked={autonomous} onChange={(e) => setAutonomous(e.target.checked)} />
+            <span>On duty — apply real effects, not just observe</span>
+          </label>
+        )}
       </div>
       <button className="btn" disabled={busy} onClick={() => void save()}>{busy ? 'saving…' : 'Save routine'}</button>
       {skills.length > 0 && (
         <p className="hint">Bundled skills: {skills.join(', ')} — saved with it, and used when you refine it.</p>
       )}
       <p className="hint">
-        A new routine is saved off duty. Observe it to run it against real events with writes held
-        back; put it on duty to let it write.
+        {ladder
+          ? 'Saving puts the routine under an agent, and that agent’s stage decides whether it runs and whether it may write. An edit to a signed agent’s routine waits for the next signature.'
+          : 'A new routine is saved off duty. Observe it to run it against real events with writes held back; put it on duty to let it write.'}
       </p>
       <Status tone={status.tone}>{status.text}</Status>
     </StudioPanel>

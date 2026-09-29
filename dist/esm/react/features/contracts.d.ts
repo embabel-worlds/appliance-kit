@@ -215,6 +215,12 @@ export interface HandlerStudioServices {
     gatewayInterfaces(): Promise<Outcome<string>>;
     signalTypes(): Promise<Outcome<SignalType[]>>;
     worldSkills(): Promise<Outcome<WorldSkill[]>>;
+    /**
+     * The world's agents. Given, and answered, the studio shows each routine at the stage its agent
+     * runs it and sends a stage change to the agent instead of offering its own switch. Omitted or
+     * unanswered (an appliance older than agents), the studio keeps its own on/off controls.
+     */
+    listAgents?(): Promise<Outcome<Agent[]>>;
 }
 export interface HandlerStudioSurfaceProps {
     services: HandlerStudioServices;
@@ -228,6 +234,8 @@ export interface HandlerStudioSurfaceProps {
         name: string;
         n: number;
     } | null;
+    /** Open the agent that holds a routine, where its stage is set. Omitted, the studio names the agent without a way to it. */
+    onOpenAgent?(agent: string): void;
 }
 export interface QueryHistoryEntry {
     cypher: string;

@@ -1162,6 +1162,48 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /Start acting is unavailable: Could not open the agent \(HTTP 400\)\. source is locked/)
   })
 
+  it('leaves the stage to the agent when there are agents, and keeps its own switch when there are not', async () => {
+    const opened = []
+    const base = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({
+          yours: [{ name: 'chase', active: true, autonomous: false, signalType: 'InvoiceOverdue' }],
+          available: [{ name: 'review-brief', signalType: 'GitHubReviewRequested' }],
+        }),
+        open: async () => refused('absent'), validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'), saveHandler: async () => refused('no'),
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+    }
+    const routine = (name, firing) => ({ name, description: '', trigger: '', stage: firing, firing, missing: false })
+    const withAgents = {
+      ...base,
+      listAgents: async () => ok([
+        { name: 'dunning', routines: [routine('chase', 'on')] },
+        { name: 'github', routines: [routine('review-brief', 'observing')] },
+      ]),
+    }
+    const { container } = await render(h(features.HandlerStudioSurface, { services: withAgents, onOpenAgent: (a) => opened.push(a) }))
+    const list = container.querySelector('.studio-side')
+    assert.match(list.textContent, /on duty/)
+    assert.match(list.textContent, /observing/)
+    for (const legacy of ['Observe', 'Put on duty', 'Stand down']) assert.equal(button(list, legacy), undefined, legacy)
+    await act(async () => button(list, 'dunning').click())
+    await act(async () => button(list, 'github').click())
+    assert.deepEqual(opened, ['dunning', 'github'])
+    assert.equal([...container.querySelectorAll('input[type=checkbox]')].length, 0)
+    assert.match(container.textContent, /that agent’s stage decides whether it runs/)
+
+    const older = { ...base, listAgents: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }) }
+    const again = await render(h(features.HandlerStudioSurface, { services: older }))
+    const legacyList = again.container.querySelector('.studio-side')
+    assert.ok(button(legacyList, 'Put on duty'), 'an appliance without agents keeps the studio switch')
+    assert.ok(button(legacyList, 'Observe'))
+  })
+
   it('dry-runs handlers and keeps a successful save disabled until explicit enable', async () => {
     let enableCalls = 0
     let saved = false
