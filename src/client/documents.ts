@@ -1,3 +1,4 @@
+import { type FollowIngestOptions, type IngestJob, type IngestResult, followIngest } from './ingests.ts'
 import type { Outcome } from './outcome.ts'
 import type { Transport } from './transport.ts'
 
@@ -38,6 +39,14 @@ const ASK_TIMEOUT_MS = 180_000
  * request that is genuinely stuck is failed, just not one that is queued.
  */
 export const DEFAULT_INGEST_TIMEOUT_MS = 3_600_000
+
+const INGESTS = `${DOCS}/ingests`
+
+/**
+ * Starting an ingest job returns once the appliance HAS the document — the file saved, the URL
+ * recorded — not once it has read it. Two minutes is for the bytes: a 50 MB upload over a slow link.
+ */
+const START_INGEST_TIMEOUT_MS = 120_000
 
 export interface IngestedDocument {
   uri: string
@@ -141,6 +150,17 @@ function ingestTimeoutMessage(timeoutMs: number): string {
     + 'queueing or ingesting it and can still complete it — check the documents list before sending it again.'
 }
 
+/** The multipart body both upload paths send. */
+function uploadForm(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags: string[]): FormData {
+  const form = new FormData()
+  const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart])
+  form.append('file', blob, filename)
+  // One repeated field rather than a joined string: a tag containing a comma would otherwise
+  // silently become two tags.
+  for (const tag of tags.filter((t) => t.trim())) form.append('tags', tag.trim())
+  return form
+}
+
 export class DocumentsClient {
   private readonly ingestTimeoutMs: number
 
@@ -167,13 +187,53 @@ export class DocumentsClient {
     tags: string[] = [],
     options: IngestOptions = {},
   ): Promise<Outcome<unknown>> {
-    const form = new FormData()
-    const blob = bytes instanceof Blob ? bytes : new Blob([bytes as BlobPart])
-    form.append('file', blob, filename)
-    // One repeated field rather than a joined string: a tag containing a comma would otherwise
-    // silently become two tags.
-    for (const tag of tags.filter((t) => t.trim())) form.append('tags', tag.trim())
-    return this.transport.send({ method: 'POST', path: `${DOCS}/upload`, form, ...this.ingestDeadline(options) })
+    return this.transport.send({
+      method: 'POST',
+      path: `${DOCS}/upload`,
+      form: uploadForm(filename, bytes, tags),
+      ...this.ingestDeadline(options),
+    })
+  }
+
+  /**
+   * Start ingesting one file and return at once with the JOB, which {@link followIngest} follows
+   * to its end. Prefer this to {@link upload}: it has no deadline to guess, and it says where the
+   * document has got.
+   *
+   * An appliance older than ingest jobs answers `unsupported` — fall back to {@link upload} there.
+   */
+  startUpload(
+    filename: string,
+    bytes: ArrayBuffer | Uint8Array | Blob,
+    tags: string[] = [],
+  ): Promise<Outcome<IngestJob>> {
+    return this.transport.send({ method: 'POST', path: INGESTS, form: uploadForm(filename, bytes, tags), timeoutMs: START_INGEST_TIMEOUT_MS })
+  }
+
+  /** {@link startUpload} for a web page: the appliance fetches it as part of the job. */
+  startIngestUrl(url: string, tags: string[] = []): Promise<Outcome<IngestJob>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${INGESTS}/url`,
+      body: { url, tags: tags.filter((t) => t.trim()) },
+      timeoutMs: START_INGEST_TIMEOUT_MS,
+    })
+  }
+
+  /**
+   * Where one job has got. A job the appliance does not know — it restarted since, or never had
+   * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.
+   */
+  ingestJob(id: string): Promise<Outcome<IngestJob>> {
+    return this.transport.send({ method: 'GET', path: `${INGESTS}/${encodeURIComponent(id)}` })
+  }
+
+  /**
+   * Follow a job until the appliance says it ended, or no longer knows it. No deadline: see
+   * `ingests.ts` for why, and for what `stalled` does and does not mean.
+   */
+  followIngest(id: string, options: FollowIngestOptions = {}): Promise<IngestResult> {
+    return followIngest(id, (job) => this.ingestJob(job), options)
   }
 
   /**

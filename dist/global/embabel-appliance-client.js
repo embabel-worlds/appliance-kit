@@ -22,6 +22,8 @@ var EmbabelApplianceClient = (() => {
   var index_exports = {};
   __export(index_exports, {
     ApplianceClient: () => ApplianceClient,
+    DEFAULT_INGEST_POLL_MS: () => DEFAULT_INGEST_POLL_MS,
+    DEFAULT_INGEST_STALLED_AFTER_MS: () => DEFAULT_INGEST_STALLED_AFTER_MS,
     DEFAULT_INGEST_TIMEOUT_MS: () => DEFAULT_INGEST_TIMEOUT_MS,
     DocumentsClient: () => DocumentsClient,
     HandlersClient: () => HandlersClient,
@@ -33,6 +35,7 @@ var EmbabelApplianceClient = (() => {
     classifySource: () => classifySource,
     createSseParser: () => createSseParser,
     expect: () => expect,
+    followIngest: () => followIngest,
     isBackgroundHandle: () => isBackgroundHandle,
     isOk: () => isOk,
     newOperationId: () => newOperationId,
@@ -373,10 +376,67 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/ingests.ts
+  var DEFAULT_INGEST_POLL_MS = 2e3;
+  var DEFAULT_INGEST_STALLED_AFTER_MS = 6e5;
+  var MAX_BACKOFF_MS = 3e4;
+  function pause(ms, signal) {
+    return new Promise((resolve) => {
+      if (signal?.aborted) return resolve();
+      const done = () => {
+        clearTimeout(timer);
+        signal?.removeEventListener("abort", done);
+        resolve();
+      };
+      const timer = setTimeout(done, ms);
+      signal?.addEventListener("abort", done, { once: true });
+    });
+  }
+  var movement = (job) => `${job.state}|${job.updatedAt}|${job.progress?.done ?? ""}/${job.progress?.total ?? ""}`;
+  var jobIsGone = (failure2) => failure2.kind === "unsupported" || failure2.kind === "refused" && failure2.status === 404;
+  async function followIngest(id, read, options = {}) {
+    const pollMs = options.pollMs ?? DEFAULT_INGEST_POLL_MS;
+    const stalledAfterMs = options.stalledAfterMs ?? DEFAULT_INGEST_STALLED_AFTER_MS;
+    const { signal, onUpdate } = options;
+    let last = null;
+    let seen = "";
+    let movedAt = Date.now();
+    let misses = 0;
+    while (!signal?.aborted) {
+      const outcome = await read(id);
+      if (signal?.aborted) break;
+      if (outcome.ok) {
+        misses = 0;
+        const job = outcome.value;
+        last = job;
+        const now = movement(job);
+        if (now !== seen) {
+          seen = now;
+          movedAt = Date.now();
+        }
+        if (job.state === "succeeded" || job.state === "failed") {
+          onUpdate?.({ job, unreachable: null, stalled: false });
+          return { outcome: job.state, job };
+        }
+        onUpdate?.({ job, unreachable: null, stalled: Date.now() - movedAt >= stalledAfterMs });
+        await pause(pollMs, signal);
+      } else if (jobIsGone(outcome)) {
+        return { outcome: "lost", id, message: outcome.message, last };
+      } else {
+        misses += 1;
+        onUpdate?.({ job: last, unreachable: outcome, stalled: last !== null && Date.now() - movedAt >= stalledAfterMs });
+        await pause(Math.min(pollMs * 2 ** misses, MAX_BACKOFF_MS), signal);
+      }
+    }
+    return { outcome: "aborted", id, last };
+  }
+
   // src/client/documents.ts
   var DOCS = "/api/v1/documents";
   var ASK_TIMEOUT_MS = 18e4;
   var DEFAULT_INGEST_TIMEOUT_MS = 36e5;
+  var INGESTS = `${DOCS}/ingests`;
+  var START_INGEST_TIMEOUT_MS = 12e4;
   function duration(ms) {
     if (ms >= 6e4 && ms % 6e4 === 0) return `${ms / 6e4} min`;
     if (ms >= 1e3 && ms % 1e3 === 0) return `${ms / 1e3} s`;
@@ -384,6 +444,13 @@ var EmbabelApplianceClient = (() => {
   }
   function ingestTimeoutMessage(timeoutMs) {
     return `The ingest did not finish within ${duration(timeoutMs)}. The appliance may still be queueing or ingesting it and can still complete it \u2014 check the documents list before sending it again.`;
+  }
+  function uploadForm(filename, bytes, tags) {
+    const form = new FormData();
+    const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
+    form.append("file", blob, filename);
+    for (const tag of tags.filter((t) => t.trim())) form.append("tags", tag.trim());
+    return form;
   }
   var DocumentsClient = class {
     constructor(transport, options = {}) {
@@ -404,11 +471,45 @@ var EmbabelApplianceClient = (() => {
      * method serves both rather than the Me app keeping a private upload path.
      */
     upload(filename, bytes, tags = [], options = {}) {
-      const form = new FormData();
-      const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
-      form.append("file", blob, filename);
-      for (const tag of tags.filter((t) => t.trim())) form.append("tags", tag.trim());
-      return this.transport.send({ method: "POST", path: `${DOCS}/upload`, form, ...this.ingestDeadline(options) });
+      return this.transport.send({
+        method: "POST",
+        path: `${DOCS}/upload`,
+        form: uploadForm(filename, bytes, tags),
+        ...this.ingestDeadline(options)
+      });
+    }
+    /**
+     * Start ingesting one file and return at once with the JOB, which {@link followIngest} follows
+     * to its end. Prefer this to {@link upload}: it has no deadline to guess, and it says where the
+     * document has got.
+     *
+     * An appliance older than ingest jobs answers `unsupported` — fall back to {@link upload} there.
+     */
+    startUpload(filename, bytes, tags = []) {
+      return this.transport.send({ method: "POST", path: INGESTS, form: uploadForm(filename, bytes, tags), timeoutMs: START_INGEST_TIMEOUT_MS });
+    }
+    /** {@link startUpload} for a web page: the appliance fetches it as part of the job. */
+    startIngestUrl(url, tags = []) {
+      return this.transport.send({
+        method: "POST",
+        path: `${INGESTS}/url`,
+        body: { url, tags: tags.filter((t) => t.trim()) },
+        timeoutMs: START_INGEST_TIMEOUT_MS
+      });
+    }
+    /**
+     * Where one job has got. A job the appliance does not know — it restarted since, or never had
+     * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.
+     */
+    ingestJob(id) {
+      return this.transport.send({ method: "GET", path: `${INGESTS}/${encodeURIComponent(id)}` });
+    }
+    /**
+     * Follow a job until the appliance says it ended, or no longer knows it. No deadline: see
+     * `ingests.ts` for why, and for what `stalled` does and does not mean.
+     */
+    followIngest(id, options = {}) {
+      return followIngest(id, (job) => this.ingestJob(job), options);
     }
     /**
      * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list

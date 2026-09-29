@@ -10,6 +10,7 @@ export { createSseParser } from "./sse.js";
 export { isOk, expect, ok } from "./outcome.js";
 export { KgClient, isBackgroundHandle } from "./kg.js";
 export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from "./documents.js";
+export { DEFAULT_INGEST_POLL_MS, DEFAULT_INGEST_STALLED_AFTER_MS, followIngest } from "./ingests.js";
 export { HintsClient } from "./hints.js";
 export { ToursClient } from "./tours.js";
 export { classifySource } from "./citations.js";

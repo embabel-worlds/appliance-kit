@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -24,6 +24,10 @@ var documents_ts_1 = require("./documents.js");
 Object.defineProperty(exports, "DEFAULT_INGEST_TIMEOUT_MS", { enumerable: true, get: function () { return documents_ts_1.DEFAULT_INGEST_TIMEOUT_MS; } });
 Object.defineProperty(exports, "DocumentsClient", { enumerable: true, get: function () { return documents_ts_1.DocumentsClient; } });
 Object.defineProperty(exports, "newOperationId", { enumerable: true, get: function () { return documents_ts_1.newOperationId; } });
+var ingests_ts_1 = require("./ingests.js");
+Object.defineProperty(exports, "DEFAULT_INGEST_POLL_MS", { enumerable: true, get: function () { return ingests_ts_1.DEFAULT_INGEST_POLL_MS; } });
+Object.defineProperty(exports, "DEFAULT_INGEST_STALLED_AFTER_MS", { enumerable: true, get: function () { return ingests_ts_1.DEFAULT_INGEST_STALLED_AFTER_MS; } });
+Object.defineProperty(exports, "followIngest", { enumerable: true, get: function () { return ingests_ts_1.followIngest; } });
 var hints_ts_1 = require("./hints.js");
 Object.defineProperty(exports, "HintsClient", { enumerable: true, get: function () { return hints_ts_1.HintsClient; } });
 var tours_ts_1 = require("./tours.js");

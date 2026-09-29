@@ -42,6 +42,8 @@ export type {
 } from './kg.ts'
 
 export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from './documents.ts'
+export { DEFAULT_INGEST_POLL_MS, DEFAULT_INGEST_STALLED_AFTER_MS, followIngest } from './ingests.ts'
+export type { FollowIngestOptions, IngestFollowUpdate, IngestJob, IngestJobState, IngestResult } from './ingests.ts'
 export type {
   Answer,
   AskRequest,
