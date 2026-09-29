@@ -41,13 +41,15 @@ export type {
   KgViewParamSpec,
 } from './kg.ts'
 
-export { DocumentsClient, newOperationId } from './documents.ts'
+export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from './documents.ts'
 export type {
   Answer,
   AskRequest,
   Citation,
   DateField,
   DocumentList,
+  DocumentsClientOptions,
+  IngestOptions,
   IngestedDocument,
   TagsResult,
 } from './documents.ts'
@@ -85,12 +87,17 @@ export type {
 
 export type { components, paths } from './generated/openapi.ts'
 
-import { DocumentsClient } from './documents.ts'
+import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
 import { HintsClient } from './hints.ts'
 import { KgClient } from './kg.ts'
 import { ToursClient } from './tours.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
+
+/** Settings for the sub-clients, as opposed to the transport's. */
+export interface ApplianceClientOptions {
+  documents?: DocumentsClientOptions
+}
 
 /** Everything the appliance offers, per connection. One more sub-client lands here per surface. */
 export class ApplianceClient {
@@ -100,21 +107,21 @@ export class ApplianceClient {
   readonly hints: HintsClient
   readonly tours: ToursClient
 
-  constructor(readonly transport: Transport) {
+  constructor(readonly transport: Transport, options: ApplianceClientOptions = {}) {
     this.kg = new KgClient(transport)
     this.handlers = new HandlersClient(transport)
-    this.documents = new DocumentsClient(transport)
+    this.documents = new DocumentsClient(transport, options.documents)
     this.hints = new HintsClient(transport)
     this.tours = new ToursClient(transport)
   }
 
   /** The console's configuration: relative URLs, same origin, ambient credentials. */
-  static sameOrigin(config: Omit<HttpTransportConfig, 'baseUrl'> = {}): ApplianceClient {
-    return new ApplianceClient(new HttpTransport({ ...config, baseUrl: '' }))
+  static sameOrigin(config: Omit<HttpTransportConfig, 'baseUrl'> = {}, options: ApplianceClientOptions = {}): ApplianceClient {
+    return new ApplianceClient(new HttpTransport({ ...config, baseUrl: '' }), options)
   }
 
   /** The Me main process's configuration: an explicit appliance URL and its credential. */
-  static forAppliance(config: HttpTransportConfig): ApplianceClient {
-    return new ApplianceClient(new HttpTransport(config))
+  static forAppliance(config: HttpTransportConfig, options: ApplianceClientOptions = {}): ApplianceClient {
+    return new ApplianceClient(new HttpTransport(config), options)
   }
 }

@@ -23,6 +23,12 @@ export interface RequestSpec {
     headers?: Record<string, string>;
     /** Overrides the transport default. Generation and execution can legitimately take minutes. */
     timeoutMs?: number;
+    /**
+     * What to say when `timeoutMs` runs out, in place of the generic "did not answer". For a request
+     * whose work carries on after the kit stops waiting — an ingest — the generic sentence reads as
+     * "it failed", and the truth is "it may still land".
+     */
+    timeoutMessage?: string;
 }
 /** What every client method talks to. Implement this to put the calls somewhere else — IPC, a test double. */
 export interface Transport {

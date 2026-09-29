@@ -22,6 +22,7 @@ var EmbabelApplianceClient = (() => {
   var index_exports = {};
   __export(index_exports, {
     ApplianceClient: () => ApplianceClient,
+    DEFAULT_INGEST_TIMEOUT_MS: () => DEFAULT_INGEST_TIMEOUT_MS,
     DocumentsClient: () => DocumentsClient,
     HandlersClient: () => HandlersClient,
     HintsClient: () => HintsClient,
@@ -118,7 +119,7 @@ var EmbabelApplianceClient = (() => {
         const aborted = cause instanceof Error && cause.name === "AbortError";
         return failure(
           "unreachable",
-          aborted ? `The appliance did not answer within ${timeoutMs}ms` : `Could not reach the appliance: ${cause instanceof Error ? cause.message : String(cause)}`
+          aborted ? spec.timeoutMessage ?? `The appliance did not answer within ${timeoutMs}ms` : `Could not reach the appliance: ${cause instanceof Error ? cause.message : String(cause)}`
         );
       } finally {
         clearTimeout(timer);
@@ -375,11 +376,21 @@ var EmbabelApplianceClient = (() => {
   // src/client/documents.ts
   var DOCS = "/api/v1/documents";
   var ASK_TIMEOUT_MS = 18e4;
-  var INGEST_TIMEOUT_MS = 3e5;
+  var DEFAULT_INGEST_TIMEOUT_MS = 36e5;
+  function duration(ms) {
+    if (ms >= 6e4 && ms % 6e4 === 0) return `${ms / 6e4} min`;
+    if (ms >= 1e3 && ms % 1e3 === 0) return `${ms / 1e3} s`;
+    return `${ms}ms`;
+  }
+  function ingestTimeoutMessage(timeoutMs) {
+    return `The ingest did not finish within ${duration(timeoutMs)}. The appliance may still be queueing or ingesting it and can still complete it \u2014 check the documents list before sending it again.`;
+  }
   var DocumentsClient = class {
-    constructor(transport) {
+    constructor(transport, options = {}) {
       this.transport = transport;
+      this.ingestTimeoutMs = options.ingestTimeoutMs ?? DEFAULT_INGEST_TIMEOUT_MS;
     }
+    ingestTimeoutMs;
     /** Everything ingested, with the chunk total the graph holds for it. */
     list() {
       return this.transport.send({ method: "GET", path: DOCS });
@@ -392,12 +403,12 @@ var EmbabelApplianceClient = (() => {
      * structured-cloneable in the shape that matters. Bytes plus a name is the intersection, so one
      * method serves both rather than the Me app keeping a private upload path.
      */
-    upload(filename, bytes, tags = []) {
+    upload(filename, bytes, tags = [], options = {}) {
       const form = new FormData();
       const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
       form.append("file", blob, filename);
       for (const tag of tags.filter((t) => t.trim())) form.append("tags", tag.trim());
-      return this.transport.send({ method: "POST", path: `${DOCS}/upload`, form, timeoutMs: INGEST_TIMEOUT_MS });
+      return this.transport.send({ method: "POST", path: `${DOCS}/upload`, form, ...this.ingestDeadline(options) });
     }
     /**
      * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
@@ -412,13 +423,17 @@ var EmbabelApplianceClient = (() => {
       return this.transport.send({ method: "DELETE", path: DOCS, query: { uri } });
     }
     /** Ingest a web page by URL — the appliance fetches and converts it. */
-    ingestUrl(url, tags = []) {
+    ingestUrl(url, tags = [], options = {}) {
       return this.transport.send({
         method: "POST",
         path: `${DOCS}/url`,
         body: { url, tags: tags.filter((t) => t.trim()) },
-        timeoutMs: INGEST_TIMEOUT_MS
+        ...this.ingestDeadline(options)
       });
+    }
+    ingestDeadline(options) {
+      const timeoutMs = options.timeoutMs ?? this.ingestTimeoutMs;
+      return { timeoutMs, timeoutMessage: ingestTimeoutMessage(timeoutMs) };
     }
     /**
      * Ask the ingested documents, with citations.
@@ -680,11 +695,11 @@ var EmbabelApplianceClient = (() => {
 
   // src/client/index.ts
   var ApplianceClient = class _ApplianceClient {
-    constructor(transport) {
+    constructor(transport, options = {}) {
       this.transport = transport;
       this.kg = new KgClient(transport);
       this.handlers = new HandlersClient(transport);
-      this.documents = new DocumentsClient(transport);
+      this.documents = new DocumentsClient(transport, options.documents);
       this.hints = new HintsClient(transport);
       this.tours = new ToursClient(transport);
     }
@@ -694,12 +709,12 @@ var EmbabelApplianceClient = (() => {
     hints;
     tours;
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
-    static sameOrigin(config = {}) {
-      return new _ApplianceClient(new HttpTransport({ ...config, baseUrl: "" }));
+    static sameOrigin(config = {}, options = {}) {
+      return new _ApplianceClient(new HttpTransport({ ...config, baseUrl: "" }), options);
     }
     /** The Me main process's configuration: an explicit appliance URL and its credential. */
-    static forAppliance(config) {
-      return new _ApplianceClient(new HttpTransport(config));
+    static forAppliance(config, options = {}) {
+      return new _ApplianceClient(new HttpTransport(config), options);
     }
   };
   return __toCommonJS(index_exports);

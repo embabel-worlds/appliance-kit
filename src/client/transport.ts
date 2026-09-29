@@ -40,6 +40,12 @@ export interface RequestSpec {
   headers?: Record<string, string>
   /** Overrides the transport default. Generation and execution can legitimately take minutes. */
   timeoutMs?: number
+  /**
+   * What to say when `timeoutMs` runs out, in place of the generic "did not answer". For a request
+   * whose work carries on after the kit stops waiting — an ingest — the generic sentence reads as
+   * "it failed", and the truth is "it may still land".
+   */
+  timeoutMessage?: string
 }
 
 /** What every client method talks to. Implement this to put the calls somewhere else — IPC, a test double. */
@@ -155,7 +161,7 @@ export class HttpTransport implements Transport {
       return failure(
         'unreachable',
         aborted
-          ? `The appliance did not answer within ${timeoutMs}ms`
+          ? (spec.timeoutMessage ?? `The appliance did not answer within ${timeoutMs}ms`)
           : `Could not reach the appliance: ${cause instanceof Error ? cause.message : String(cause)}`,
       )
     } finally {

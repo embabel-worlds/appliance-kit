@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.newOperationId = exports.DocumentsClient = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -21,6 +21,7 @@ var kg_ts_1 = require("./kg.js");
 Object.defineProperty(exports, "KgClient", { enumerable: true, get: function () { return kg_ts_1.KgClient; } });
 Object.defineProperty(exports, "isBackgroundHandle", { enumerable: true, get: function () { return kg_ts_1.isBackgroundHandle; } });
 var documents_ts_1 = require("./documents.js");
+Object.defineProperty(exports, "DEFAULT_INGEST_TIMEOUT_MS", { enumerable: true, get: function () { return documents_ts_1.DEFAULT_INGEST_TIMEOUT_MS; } });
 Object.defineProperty(exports, "DocumentsClient", { enumerable: true, get: function () { return documents_ts_1.DocumentsClient; } });
 Object.defineProperty(exports, "newOperationId", { enumerable: true, get: function () { return documents_ts_1.newOperationId; } });
 var hints_ts_1 = require("./hints.js");
@@ -45,21 +46,21 @@ class ApplianceClient {
     documents;
     hints;
     tours;
-    constructor(transport) {
+    constructor(transport, options = {}) {
         this.transport = transport;
         this.kg = new kg_ts_2.KgClient(transport);
         this.handlers = new handlers_ts_2.HandlersClient(transport);
-        this.documents = new documents_ts_2.DocumentsClient(transport);
+        this.documents = new documents_ts_2.DocumentsClient(transport, options.documents);
         this.hints = new hints_ts_2.HintsClient(transport);
         this.tours = new tours_ts_2.ToursClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
-    static sameOrigin(config = {}) {
-        return new ApplianceClient(new transport_ts_2.HttpTransport({ ...config, baseUrl: '' }));
+    static sameOrigin(config = {}, options = {}) {
+        return new ApplianceClient(new transport_ts_2.HttpTransport({ ...config, baseUrl: '' }), options);
     }
     /** The Me main process's configuration: an explicit appliance URL and its credential. */
-    static forAppliance(config) {
-        return new ApplianceClient(new transport_ts_2.HttpTransport(config));
+    static forAppliance(config, options = {}) {
+        return new ApplianceClient(new transport_ts_2.HttpTransport(config), options);
     }
 }
 exports.ApplianceClient = ApplianceClient;

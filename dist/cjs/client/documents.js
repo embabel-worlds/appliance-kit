@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.DocumentsClient = void 0;
+exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = void 0;
 exports.newOperationId = newOperationId;
 /*
  * THE DOCUMENTS SURFACE — listing, ingesting, retagging, removing, and asking.
@@ -22,12 +22,43 @@ exports.newOperationId = newOperationId;
 const DOCS = '/api/v1/documents';
 /** Retrieval and answering run a bounded LLM loop; three minutes is not a hang. */
 const ASK_TIMEOUT_MS = 180_000;
-/** Conversion, chunking and embedding, for a file that may be a large PDF. */
-const INGEST_TIMEOUT_MS = 300_000;
+/**
+ * AN HOUR, BECAUSE THE REQUEST COVERS THE QUEUE AS WELL AS THE WORK.
+ *
+ * An ingest request stays open until the document is converted, chunked and embedded, and the
+ * appliance admits ingests against a heap budget (embabel/me#1681): on a small machine a large book
+ * needs the whole budget and runs alone, and everything sent alongside it waits, with no deadline
+ * of its own on the server. The console sends three at a time, so one request can be waiting behind
+ * two whole ingests before its own starts. Five minutes covered the work of one file and not the
+ * wait, and a file waiting its turn was reported as failed (appliance-kit#16).
+ *
+ * An hour is the ceiling the console already has: its nginx gives `/api/` a one-hour
+ * `proxy_read_timeout`, so a longer wait here would be cut by the proxy anyway. It still ends: a
+ * request that is genuinely stuck is failed, just not one that is queued.
+ */
+exports.DEFAULT_INGEST_TIMEOUT_MS = 3_600_000;
+/** `3_600_000` reads as "60 min", `90_000` as "90 s": a person reads this, not a log parser. */
+function duration(ms) {
+    if (ms >= 60_000 && ms % 60_000 === 0)
+        return `${ms / 60_000} min`;
+    if (ms >= 1_000 && ms % 1_000 === 0)
+        return `${ms / 1_000} s`;
+    return `${ms}ms`;
+}
+/**
+ * The timeout says what is true: the kit stopped waiting, and the appliance did not necessarily
+ * stop working. Reported as a plain failure, a person sends the file again and ingests it twice.
+ */
+function ingestTimeoutMessage(timeoutMs) {
+    return `The ingest did not finish within ${duration(timeoutMs)}. The appliance may still be `
+        + 'queueing or ingesting it and can still complete it — check the documents list before sending it again.';
+}
 class DocumentsClient {
     transport;
-    constructor(transport) {
+    ingestTimeoutMs;
+    constructor(transport, options = {}) {
         this.transport = transport;
+        this.ingestTimeoutMs = options.ingestTimeoutMs ?? exports.DEFAULT_INGEST_TIMEOUT_MS;
     }
     /** Everything ingested, with the chunk total the graph holds for it. */
     list() {
@@ -41,7 +72,7 @@ class DocumentsClient {
      * structured-cloneable in the shape that matters. Bytes plus a name is the intersection, so one
      * method serves both rather than the Me app keeping a private upload path.
      */
-    upload(filename, bytes, tags = []) {
+    upload(filename, bytes, tags = [], options = {}) {
         const form = new FormData();
         const blob = bytes instanceof Blob ? bytes : new Blob([bytes]);
         form.append('file', blob, filename);
@@ -49,7 +80,7 @@ class DocumentsClient {
         // silently become two tags.
         for (const tag of tags.filter((t) => t.trim()))
             form.append('tags', tag.trim());
-        return this.transport.send({ method: 'POST', path: `${DOCS}/upload`, form, timeoutMs: INGEST_TIMEOUT_MS });
+        return this.transport.send({ method: 'POST', path: `${DOCS}/upload`, form, ...this.ingestDeadline(options) });
     }
     /**
      * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
@@ -64,13 +95,17 @@ class DocumentsClient {
         return this.transport.send({ method: 'DELETE', path: DOCS, query: { uri } });
     }
     /** Ingest a web page by URL — the appliance fetches and converts it. */
-    ingestUrl(url, tags = []) {
+    ingestUrl(url, tags = [], options = {}) {
         return this.transport.send({
             method: 'POST',
             path: `${DOCS}/url`,
             body: { url, tags: tags.filter((t) => t.trim()) },
-            timeoutMs: INGEST_TIMEOUT_MS,
+            ...this.ingestDeadline(options),
         });
+    }
+    ingestDeadline(options) {
+        const timeoutMs = options.timeoutMs ?? this.ingestTimeoutMs;
+        return { timeoutMs, timeoutMessage: ingestTimeoutMessage(timeoutMs) };
     }
     /**
      * Ask the ingested documents, with citations.

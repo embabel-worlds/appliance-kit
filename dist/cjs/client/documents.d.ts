@@ -1,5 +1,20 @@
 import type { Outcome } from './outcome.ts';
 import type { Transport } from './transport.ts';
+/**
+ * AN HOUR, BECAUSE THE REQUEST COVERS THE QUEUE AS WELL AS THE WORK.
+ *
+ * An ingest request stays open until the document is converted, chunked and embedded, and the
+ * appliance admits ingests against a heap budget (embabel/me#1681): on a small machine a large book
+ * needs the whole budget and runs alone, and everything sent alongside it waits, with no deadline
+ * of its own on the server. The console sends three at a time, so one request can be waiting behind
+ * two whole ingests before its own starts. Five minutes covered the work of one file and not the
+ * wait, and a file waiting its turn was reported as failed (appliance-kit#16).
+ *
+ * An hour is the ceiling the console already has: its nginx gives `/api/` a one-hour
+ * `proxy_read_timeout`, so a longer wait here would be cut by the proxy anyway. It still ends: a
+ * request that is genuinely stuck is failed, just not one that is queued.
+ */
+export declare const DEFAULT_INGEST_TIMEOUT_MS = 3600000;
 export interface IngestedDocument {
     uri: string;
     title?: string | null;
@@ -70,9 +85,20 @@ export interface Answer {
     filters: Record<string, unknown>;
     sources: Citation[];
 }
+/** Per-client settings. */
+export interface DocumentsClientOptions {
+    /** How long an ingest may stay open, queue included. Defaults to {@link DEFAULT_INGEST_TIMEOUT_MS}. */
+    ingestTimeoutMs?: number;
+}
+/** Per-call settings for `upload` and `ingestUrl`. */
+export interface IngestOptions {
+    /** Overrides the client's ingest timeout for this one request. */
+    timeoutMs?: number;
+}
 export declare class DocumentsClient {
     private readonly transport;
-    constructor(transport: Transport);
+    private readonly ingestTimeoutMs;
+    constructor(transport: Transport, options?: DocumentsClientOptions);
     /** Everything ingested, with the chunk total the graph holds for it. */
     list(): Promise<Outcome<DocumentList>>;
     /**
@@ -83,7 +109,7 @@ export declare class DocumentsClient {
      * structured-cloneable in the shape that matters. Bytes plus a name is the intersection, so one
      * method serves both rather than the Me app keeping a private upload path.
      */
-    upload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[]): Promise<Outcome<unknown>>;
+    upload(filename: string, bytes: ArrayBuffer | Uint8Array | Blob, tags?: string[], options?: IngestOptions): Promise<Outcome<unknown>>;
     /**
      * Replace a document's tags, on the document and every chunk, without re-ingesting it. The list
      * REPLACES what was there; an empty list removes every tag. `not_found` when the caller's world
@@ -93,7 +119,8 @@ export declare class DocumentsClient {
     /** Remove a document and everything ingested from it — chunks, figures — from the caller's world. */
     remove(uri: string): Promise<Outcome<unknown>>;
     /** Ingest a web page by URL — the appliance fetches and converts it. */
-    ingestUrl(url: string, tags?: string[]): Promise<Outcome<unknown>>;
+    ingestUrl(url: string, tags?: string[], options?: IngestOptions): Promise<Outcome<unknown>>;
+    private ingestDeadline;
     /**
      * Ask the ingested documents, with citations.
      *
