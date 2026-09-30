@@ -868,6 +868,9 @@ function SurfacePanel({ surface }: { surface: GatewaySurface | null | undefined 
  * changes nothing; the moment it is on, it runs unattended on real events. That is a different
  * decision from "keep this text", and it reads as one.
  */
+/* Six space-separated cron fields, as Spring reads them. Anything else is words to compile. */
+const CRON_SHAPE = /^(?:[\dA-Z*,/\-?LW#]+\s+){5}[\dA-Z*,/\-?LW#]+$/
+
 function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladder, onSaved }: {
   source(): string
   /** Agents set the stage: the form keeps what was stored and offers no switch of its own. */
@@ -887,6 +890,31 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
   const [autonomous, setAutonomous] = useState(false)
   const [busy, setBusy] = useState(false)
   const [status, setStatus] = useState<{ tone: 'ok' | 'error' | null; text: string }>({ tone: null, text: '' })
+  /* The last words compiled and what they became, so saving does not ask the model again. */
+  const compiled = useRef<{ from: string; cron: string } | null>(null)
+  const [scheduleSays, setScheduleSays] = useState<{ tone: 'ok' | 'error' | null; text: string }>({ tone: null, text: '' })
+
+  /*
+   * The schedule as cron: blank is no schedule (null), cron passes through, and words are compiled
+   * by the appliance. Undefined means it could not be made into cron, and why is on screen. Compiled
+   * when the field settles, so the cron is visible before Save rather than discovered after.
+   */
+  async function resolveSchedule(text: string): Promise<string | null | undefined> {
+    if (!text) { setScheduleSays({ tone: null, text: '' }); return null }
+    if (CRON_SHAPE.test(text)) { setScheduleSays({ tone: null, text: '' }); return text }
+    if (compiled.current?.from === text) return compiled.current.cron
+    if (!services.compileSchedule) {
+      setScheduleSays({ tone: 'error', text: 'Write the schedule as a six-field cron, such as 0 0 8 * * MON-FRI.' })
+      return undefined
+    }
+    setScheduleSays({ tone: null, text: 'turning that into cron…' })
+    const r = await services.compileSchedule(text)
+    if (!r.ok) { setScheduleSays({ tone: 'error', text: failureMessage(r, 'check the schedule') }); return undefined }
+    if (!r.value.cron) { setScheduleSays({ tone: 'error', text: r.value.error || 'That does not read as a schedule.' }); return undefined }
+    compiled.current = { from: text, cron: r.value.cron }
+    setScheduleSays({ tone: 'ok', text: `→ ${r.value.cron}` })
+    return r.value.cron
+  }
 
   // An opened name is identity, not an editable label: changing it would create a second agent.
   useEffect(() => {
@@ -898,14 +926,19 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
 
   async function save() {
     const handlerName = name.trim()
-    if (!handlerName) return setStatus({ tone: 'error', text: 'a handler needs a name' })
+    if (!handlerName) return setStatus({ tone: 'error', text: 'a routine needs a name' })
     setBusy(true)
+    const cron = await resolveSchedule(schedule.trim())
+    if (cron === undefined) {
+      setBusy(false)
+      return setStatus({ tone: 'error', text: 'Fix the schedule first.' })
+    }
     const request = {
       ...opened,
       name: opened?.name ?? handlerName,
       source: source(),
       signalType: signalType.trim() || '*',
-      schedule: schedule.trim() || undefined,
+      schedule: cron ?? undefined,
       autonomous,
       skills,
     }
@@ -943,9 +976,14 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
           </datalist>
         </label>
         <label className="field">
-          <span>Cron</span>
-          <input value={schedule} placeholder="0 0 9 * * * · blank = not scheduled"
-                 onChange={(e) => setSchedule(e.target.value)} />
+          <span>Schedule</span>
+          <input value={schedule}
+                 placeholder={services.compileSchedule
+                   ? 'every weekday at 8 · or cron · blank = not scheduled'
+                   : '0 0 9 * * * · blank = not scheduled'}
+                 onChange={(e) => setSchedule(e.target.value)}
+                 onBlur={() => void resolveSchedule(schedule.trim())} />
+          {scheduleSays.text && <Status tone={scheduleSays.tone}>{scheduleSays.text}</Status>}
         </label>
         {!ladder && (
           <label className="field checkbox">

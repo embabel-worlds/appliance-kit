@@ -23,6 +23,7 @@ var EmbabelApplianceClient = (() => {
   __export(index_exports, {
     AgentsClient: () => AgentsClient,
     ApplianceClient: () => ApplianceClient,
+    CronClient: () => CronClient,
     DEFAULT_INGEST_POLL_MS: () => DEFAULT_INGEST_POLL_MS,
     DEFAULT_INGEST_STALLED_AFTER_MS: () => DEFAULT_INGEST_STALLED_AFTER_MS,
     DEFAULT_INGEST_TIMEOUT_MS: () => DEFAULT_INGEST_TIMEOUT_MS,
@@ -683,6 +684,16 @@ var EmbabelApplianceClient = (() => {
     return { kind: "opaque", label: uri };
   }
 
+  // src/client/cron.ts
+  var CronClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    compileSchedule(schedule) {
+      return this.transport.send({ method: "POST", path: "/api/v1/cron/compile-schedule", body: { schedule }, timeoutMs: 6e4 });
+    }
+  };
+
   // src/client/agents.ts
   var AGENTS = "/api/v1/agents";
   var AgentsClient = class {
@@ -843,6 +854,7 @@ var EmbabelApplianceClient = (() => {
       this.transport = transport;
       this.kg = new KgClient(transport);
       this.agents = new AgentsClient(transport);
+      this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
       this.hints = new HintsClient(transport);
@@ -850,6 +862,7 @@ var EmbabelApplianceClient = (() => {
     }
     kg;
     agents;
+    cron;
     handlers;
     documents;
     hints;

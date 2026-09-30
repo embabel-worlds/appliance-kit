@@ -54,7 +54,7 @@ test('every kit failure caller supplies an infinitive action, including hook and
     }
     for (const call of calls.filter(c => c.expression.text === 'failureMessage')) { count++; checkArgument(call.arguments[1]) }
   }
-  assert.equal(count, 41)
+  assert.equal(count, 42)
   assert.throws(() => check('saved views'))
   assert.throws(() => check('listing documents'))
 })

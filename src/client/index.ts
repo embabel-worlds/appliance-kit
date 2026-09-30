@@ -71,6 +71,8 @@ export type {
 export { classifySource } from './citations.ts'
 export type { CitedSource, SourceKind } from './citations.ts'
 
+export { CronClient } from './cron.ts'
+export type { CompiledSchedule } from './cron.ts'
 export { AgentsClient } from './agents.ts'
 export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion } from './agents.ts'
 
@@ -93,6 +95,7 @@ export type {
 export type { components, paths } from './generated/openapi.ts'
 
 import { AgentsClient as AgentsClientImpl } from './agents.ts'
+import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
 import { HintsClient } from './hints.ts'
@@ -109,6 +112,7 @@ export interface ApplianceClientOptions {
 export class ApplianceClient {
   readonly kg: KgClient
   readonly agents: AgentsClientImpl
+  readonly cron: CronClientImpl
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
   readonly hints: HintsClient
@@ -117,6 +121,7 @@ export class ApplianceClient {
   constructor(readonly transport: Transport, options: ApplianceClientOptions = {}) {
     this.kg = new KgClient(transport)
     this.agents = new AgentsClientImpl(transport)
+    this.cron = new CronClientImpl(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)
     this.hints = new HintsClient(transport)

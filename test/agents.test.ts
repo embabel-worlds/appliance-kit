@@ -1,6 +1,7 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { AgentsClient } from '../src/client/agents.ts'
+import { CronClient } from '../src/client/cron.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -50,5 +51,14 @@ describe('AgentsClient', () => {
     const gone = failure('unsupported', 'no such route', 404)
     const result = await new AgentsClient(new RecordingTransport(gone)).sign('chaser')
     assert.deepEqual(result, gone)
+  })
+})
+
+describe('CronClient', () => {
+  it('sends the words as they were written and allows the model its time', async () => {
+    const transport = new RecordingTransport(ok({ cron: '0 0 8 * * MON-FRI' }))
+    const result = await new CronClient(transport).compileSchedule('every weekday at 8')
+    assert.deepEqual(transport.sent, [{ method: 'POST', path: '/api/v1/cron/compile-schedule', body: { schedule: 'every weekday at 8' }, timeoutMs: 60_000 }])
+    assert.deepEqual(result, { ok: true, value: { cron: '0 0 8 * * MON-FRI' } })
   })
 })

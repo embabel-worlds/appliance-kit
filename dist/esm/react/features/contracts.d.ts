@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
 import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion } from '../../client/agents.ts';
+import type { CompiledSchedule } from '../../client/cron.ts';
 import type { Outcome } from '../../client/outcome.ts';
 import type { TourSummary } from '../../client/tours.ts';
 import type { VcEvent } from '../../vc/events.ts';
@@ -221,6 +222,11 @@ export interface HandlerStudioServices {
      * unanswered (an appliance older than agents), the studio keeps its own on/off controls.
      */
     listAgents?(): Promise<Outcome<Agent[]>>;
+    /**
+     * Turn a schedule in words into cron. Given, the save form takes "every weekday at 8" as well as
+     * cron; omitted (an older host), it takes cron only and says so.
+     */
+    compileSchedule?(schedule: string): Promise<Outcome<CompiledSchedule>>;
 }
 export interface HandlerStudioSurfaceProps {
     services: HandlerStudioServices;

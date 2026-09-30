@@ -602,6 +602,8 @@ function SurfacePanel({ surface }) {
  * changes nothing; the moment it is on, it runs unattended on real events. That is a different
  * decision from "keep this text", and it reads as one.
  */
+/* Six space-separated cron fields, as Spring reads them. Anything else is words to compile. */
+const CRON_SHAPE = /^(?:[\dA-Z*,/\-?LW#]+\s+){5}[\dA-Z*,/\-?LW#]+$/;
 function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladder, onSaved }) {
     const { services } = useHandlerRuntime();
     const [name, setName] = (0, react_1.useState)(opened?.name ?? '');
@@ -610,6 +612,43 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
     const [autonomous, setAutonomous] = (0, react_1.useState)(false);
     const [busy, setBusy] = (0, react_1.useState)(false);
     const [status, setStatus] = (0, react_1.useState)({ tone: null, text: '' });
+    /* The last words compiled and what they became, so saving does not ask the model again. */
+    const compiled = (0, react_1.useRef)(null);
+    const [scheduleSays, setScheduleSays] = (0, react_1.useState)({ tone: null, text: '' });
+    /*
+     * The schedule as cron: blank is no schedule (null), cron passes through, and words are compiled
+     * by the appliance. Undefined means it could not be made into cron, and why is on screen. Compiled
+     * when the field settles, so the cron is visible before Save rather than discovered after.
+     */
+    async function resolveSchedule(text) {
+        if (!text) {
+            setScheduleSays({ tone: null, text: '' });
+            return null;
+        }
+        if (CRON_SHAPE.test(text)) {
+            setScheduleSays({ tone: null, text: '' });
+            return text;
+        }
+        if (compiled.current?.from === text)
+            return compiled.current.cron;
+        if (!services.compileSchedule) {
+            setScheduleSays({ tone: 'error', text: 'Write the schedule as a six-field cron, such as 0 0 8 * * MON-FRI.' });
+            return undefined;
+        }
+        setScheduleSays({ tone: null, text: 'turning that into cron…' });
+        const r = await services.compileSchedule(text);
+        if (!r.ok) {
+            setScheduleSays({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(r, 'check the schedule') });
+            return undefined;
+        }
+        if (!r.value.cron) {
+            setScheduleSays({ tone: 'error', text: r.value.error || 'That does not read as a schedule.' });
+            return undefined;
+        }
+        compiled.current = { from: text, cron: r.value.cron };
+        setScheduleSays({ tone: 'ok', text: `→ ${r.value.cron}` });
+        return r.value.cron;
+    }
     // An opened name is identity, not an editable label: changing it would create a second agent.
     (0, react_1.useEffect)(() => {
         setName(opened?.name ?? '');
@@ -620,14 +659,19 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
     async function save() {
         const handlerName = name.trim();
         if (!handlerName)
-            return setStatus({ tone: 'error', text: 'a handler needs a name' });
+            return setStatus({ tone: 'error', text: 'a routine needs a name' });
         setBusy(true);
+        const cron = await resolveSchedule(schedule.trim());
+        if (cron === undefined) {
+            setBusy(false);
+            return setStatus({ tone: 'error', text: 'Fix the schedule first.' });
+        }
         const request = {
             ...opened,
             name: opened?.name ?? handlerName,
             source: source(),
             signalType: signalType.trim() || '*',
-            schedule: schedule.trim() || undefined,
+            schedule: cron ?? undefined,
             autonomous,
             skills,
         };
@@ -641,7 +685,9 @@ function SavePanel({ source, opened, defaultSignalType, catalogue, skills, ladde
     }
     return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Save", children: [(0, jsx_runtime_1.jsxs)("div", { className: "saveform", children: [(0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Name" }), (0, jsx_runtime_1.jsx)("input", { value: name, readOnly: opened !== null, "aria-describedby": opened ? 'handler-name-help' : undefined, placeholder: "pr-triage", onChange: (e) => setName(e.target.value) }), opened && (0, jsx_runtime_1.jsx)("small", { className: "hint", id: "handler-name-help", children: "Name identifies this routine. Saving updates it in place." })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Fires on" }), (0, jsx_runtime_1.jsx)("input", { value: signalType, list: "signal-types", placeholder: catalogue && catalogue.length > 0
                                     ? `${catalogue[0].typeName} · blank = no signal trigger`
-                                    : 'PullRequestOpened · blank = no signal trigger', onChange: (e) => setSignalType(e.target.value) }), (0, jsx_runtime_1.jsx)("datalist", { id: "signal-types", children: (catalogue ?? []).map((t) => (0, jsx_runtime_1.jsx)("option", { value: t.typeName }, t.typeName)) })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Cron" }), (0, jsx_runtime_1.jsx)("input", { value: schedule, placeholder: "0 0 9 * * * \u00B7 blank = not scheduled", onChange: (e) => setSchedule(e.target.value) })] }), !ladder && ((0, jsx_runtime_1.jsxs)("label", { className: "field checkbox", children: [(0, jsx_runtime_1.jsx)("input", { type: "checkbox", checked: autonomous, onChange: (e) => setAutonomous(e.target.checked) }), (0, jsx_runtime_1.jsx)("span", { children: "On duty \u2014 apply real effects, not just observe" })] }))] }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy, onClick: () => void save(), children: busy ? 'saving…' : 'Save routine' }), skills.length > 0 && ((0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["Bundled skills: ", skills.join(', '), " \u2014 saved with it, and used when you refine it."] })), (0, jsx_runtime_1.jsx)("p", { className: "hint", children: ladder
+                                    : 'PullRequestOpened · blank = no signal trigger', onChange: (e) => setSignalType(e.target.value) }), (0, jsx_runtime_1.jsx)("datalist", { id: "signal-types", children: (catalogue ?? []).map((t) => (0, jsx_runtime_1.jsx)("option", { value: t.typeName }, t.typeName)) })] }), (0, jsx_runtime_1.jsxs)("label", { className: "field", children: [(0, jsx_runtime_1.jsx)("span", { children: "Schedule" }), (0, jsx_runtime_1.jsx)("input", { value: schedule, placeholder: services.compileSchedule
+                                    ? 'every weekday at 8 · or cron · blank = not scheduled'
+                                    : '0 0 9 * * * · blank = not scheduled', onChange: (e) => setSchedule(e.target.value), onBlur: () => void resolveSchedule(schedule.trim()) }), scheduleSays.text && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: scheduleSays.tone, children: scheduleSays.text })] }), !ladder && ((0, jsx_runtime_1.jsxs)("label", { className: "field checkbox", children: [(0, jsx_runtime_1.jsx)("input", { type: "checkbox", checked: autonomous, onChange: (e) => setAutonomous(e.target.checked) }), (0, jsx_runtime_1.jsx)("span", { children: "On duty \u2014 apply real effects, not just observe" })] }))] }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy, onClick: () => void save(), children: busy ? 'saving…' : 'Save routine' }), skills.length > 0 && ((0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["Bundled skills: ", skills.join(', '), " \u2014 saved with it, and used when you refine it."] })), (0, jsx_runtime_1.jsx)("p", { className: "hint", children: ladder
                     ? 'Saving puts the routine under an agent, and that agent’s stage decides whether it runs and whether it may write. An edit to a signed agent’s routine waits for the next signature.'
                     : 'A new routine is saved off duty. Observe it to run it against real events with writes held back; put it on duty to let it write.' }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] }));
 }

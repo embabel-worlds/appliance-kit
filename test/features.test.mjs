@@ -12,7 +12,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 for (const key of [
   'window', 'document', 'navigator', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement',
-  'Event', 'KeyboardEvent', 'MouseEvent', 'MutationObserver', 'Node', 'Range', 'CSS',
+  'Event', 'FocusEvent', 'KeyboardEvent', 'MouseEvent', 'MutationObserver', 'Node', 'Range', 'CSS',
 ]) {
   Object.defineProperty(globalThis, key, {
     configurable: true,
@@ -1202,6 +1202,65 @@ describe('the public browser feature entry point', () => {
     const legacyList = again.container.querySelector('.studio-side')
     assert.ok(button(legacyList, 'Put on duty'), 'an appliance without agents keeps the studio switch')
     assert.ok(button(legacyList, 'Observe'))
+  })
+
+  it('saves a schedule written in words as the cron it compiles to, and refuses words that are not one', async () => {
+    const compiled = []
+    const saved = []
+    const services = (compileSchedule) => ({
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({ yours: [], available: [] }), open: async () => refused('absent'),
+        validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'),
+      saveHandler: async (request) => { saved.push(request.schedule); return ok({ ok: true, message: 'saved' }) },
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+      ...(compileSchedule ? { compileSchedule } : {}),
+    })
+    const compile = async (words) => {
+      compiled.push(words)
+      return ok(words === 'every weekday at 8' ? { cron: '0 0 8 * * MON-FRI' } : { error: 'That is not a schedule.' })
+    }
+    const fill = async (container, name, scheduleText) => {
+      const inputs = [...container.querySelectorAll('.saveform input')]
+      await act(async () => setInput(inputs.find((i) => i.placeholder === 'pr-triage'), name))
+      const field = inputs.find((i) => /not scheduled/.test(i.placeholder))
+      await act(async () => setInput(field, scheduleText))
+      return field
+    }
+
+    const { container } = await render(h(features.HandlerStudioSurface, { services: services(compile) }))
+    const field = await fill(container, 'digest', 'every weekday at 8')
+    await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })))
+    await flush()
+    assert.match(container.querySelector('.saveform').textContent, /→ 0 0 8 \* \* MON-FRI/)
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.deepEqual(saved, ['0 0 8 * * MON-FRI'])
+    assert.deepEqual(compiled, ['every weekday at 8'], 'saving reuses what was compiled on blur')
+
+    await act(async () => setInput(field, '0 30 7 * * *'))
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.deepEqual(saved.at(-1), '0 30 7 * * *')
+    assert.equal(compiled.length, 1, 'cron is not sent to the model')
+
+    await act(async () => setInput(field, 'whenever it feels right'))
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.equal(saved.length, 2, 'words that are not a schedule are not saved')
+    assert.match(container.textContent, /That is not a schedule\./)
+    assert.match(container.textContent, /Fix the schedule first\./)
+
+    const older = await render(h(features.HandlerStudioSurface, { services: services(null) }))
+    await fill(older.container, 'digest', 'every weekday at 8')
+    await act(async () => button(older.container, 'Save routine').click())
+    await flush()
+    assert.equal(saved.length, 2)
+    assert.match(older.container.textContent, /six-field cron/)
   })
 
   it('dry-runs handlers and keeps a successful save disabled until explicit enable', async () => {
