@@ -8,7 +8,7 @@ export { KgClient, isBackgroundHandle } from './kg.ts';
 export type { ExecuteOptions, KgAnswerAccepted, KgBackgroundHandle, KgDeleteViewResult, KgGenerated, KgInFlightRun, KgKillResult, KgPropertyValues, KgQueryResult, KgRefreshViewResult, KgRunChoice, KgRunState, KgSaveViewRequest, KgSaveViewResult, KgSchema, KgScopeDeleteResult, KgScopeInfo, KgScopeList, KgValidation, KgView, KgViewInvocation, KgViewParamSpec, } from './kg.ts';
 export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from './documents.ts';
 export { DEFAULT_INGEST_POLL_MS, DEFAULT_INGEST_STALLED_AFTER_MS, followIngest } from './ingests.ts';
-export type { FollowIngestOptions, IngestFollowUpdate, IngestJob, IngestJobState, IngestResult } from './ingests.ts';
+export type { FollowIngestOptions, IngestFollowUpdate, IngestJob, IngestJobList, IngestJobState, IngestResult } from './ingests.ts';
 export type { Answer, AskRequest, Citation, DateField, DocumentList, DocumentsClientOptions, IngestOptions, IngestedDocument, TagsResult, } from './documents.ts';
 export { HintsClient } from './hints.ts';
 export type { Hint, HintAction, HintSurface } from './hints.ts';

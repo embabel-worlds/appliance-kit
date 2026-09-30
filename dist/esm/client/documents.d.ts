@@ -1,4 +1,4 @@
-import { type FollowIngestOptions, type IngestJob, type IngestResult } from './ingests.ts';
+import { type FollowIngestOptions, type IngestJob, type IngestJobList, type IngestResult } from './ingests.ts';
 import type { Outcome } from './outcome.ts';
 import type { Transport } from './transport.ts';
 /**
@@ -137,6 +137,14 @@ export declare class DocumentsClient {
      * nothing to embed with is `refused` with status 409; its reason is in the body's `message`.
      */
     startEmbedMissing(uri: string): Promise<Outcome<IngestJob>>;
+    /**
+     * The caller's ingest jobs, newest first: the ones still running and the ones that ended within
+     * the appliance's retention window. This is how a client that was closed mid-batch finds its
+     * batch again — the jobs outlive the page that started them.
+     *
+     * An appliance older than ingest jobs answers `unsupported`.
+     */
+    listIngests(): Promise<Outcome<IngestJobList>>;
     /**
      * Where one job has got. A job the appliance does not know — it restarted since, or never had
      * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.

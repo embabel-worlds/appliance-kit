@@ -1,4 +1,4 @@
-import { type FollowIngestOptions, type IngestJob, type IngestResult, followIngest } from './ingests.ts'
+import { type FollowIngestOptions, type IngestJob, type IngestJobList, type IngestResult, followIngest } from './ingests.ts'
 import type { Outcome } from './outcome.ts'
 import type { Transport } from './transport.ts'
 
@@ -237,6 +237,17 @@ export class DocumentsClient {
    */
   startEmbedMissing(uri: string): Promise<Outcome<IngestJob>> {
     return this.transport.send({ method: 'POST', path: `${DOCS}/embed-missing`, body: { uri }, timeoutMs: START_INGEST_TIMEOUT_MS })
+  }
+
+  /**
+   * The caller's ingest jobs, newest first: the ones still running and the ones that ended within
+   * the appliance's retention window. This is how a client that was closed mid-batch finds its
+   * batch again — the jobs outlive the page that started them.
+   *
+   * An appliance older than ingest jobs answers `unsupported`.
+   */
+  listIngests(): Promise<Outcome<IngestJobList>> {
+    return this.transport.send({ method: 'GET', path: INGESTS })
   }
 
   /**

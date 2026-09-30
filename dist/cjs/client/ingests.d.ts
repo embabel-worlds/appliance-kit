@@ -35,6 +35,10 @@ export interface IngestJob {
     /** When the appliance last saw this job move: a stage change or a progress tick. */
     updatedAt: string;
 }
+/** `GET /api/v1/documents/ingests`: the caller's jobs, newest first. */
+export interface IngestJobList {
+    jobs: IngestJob[];
+}
 /** How a followed ingest ended. Never an exception: a lost job is an answer, not an error. */
 export type IngestResult = {
     outcome: 'succeeded';
