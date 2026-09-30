@@ -125,6 +125,16 @@ export class DocumentsClient {
         return this.transport.send({ method: 'POST', path: `${DOCS}/embed-missing`, body: { uri }, timeoutMs: START_INGEST_TIMEOUT_MS });
     }
     /**
+     * The caller's ingest jobs, newest first: the ones still running and the ones that ended within
+     * the appliance's retention window. This is how a client that was closed mid-batch finds its
+     * batch again — the jobs outlive the page that started them.
+     *
+     * An appliance older than ingest jobs answers `unsupported`.
+     */
+    listIngests() {
+        return this.transport.send({ method: 'GET', path: INGESTS });
+    }
+    /**
      * Where one job has got. A job the appliance does not know — it restarted since, or never had
      * it — is `refused` with status 404, which is what {@link followIngest} reports as `lost`.
      */
