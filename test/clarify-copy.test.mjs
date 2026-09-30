@@ -37,7 +37,7 @@ test('studio failures distinguish access, missing capability and connection reco
 test('every kit failure caller supplies an infinitive action, including hook and refinement alternatives', () => {
   const root = new URL('../src/', import.meta.url)
   let count = 0
-  const check = action => assert.match(action, /^(list|check|load|save|dry-run|open|change|delete|run|prepare|refresh|stop|refine|generate|start|capture|pin|create|revoke) /)
+  const check = action => assert.match(action, /^(list|check|load|save|dry-run|open|change|delete|run|prepare|refresh|stop|refine|generate|start|capture|pin|create|revoke|sign) /)
   for (const path of readdirSync(root, { recursive: true }).filter(p => p.endsWith('.tsx'))) {
     const source = ts.createSourceFile(path, readFileSync(new URL(path, root), 'utf8'), ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX)
     const calls = []
@@ -54,7 +54,7 @@ test('every kit failure caller supplies an infinitive action, including hook and
     }
     for (const call of calls.filter(c => c.expression.text === 'failureMessage')) { count++; checkArgument(call.arguments[1]) }
   }
-  assert.equal(count, 37)
+  assert.equal(count, 42)
   assert.throws(() => check('saved views'))
   assert.throws(() => check('listing documents'))
 })

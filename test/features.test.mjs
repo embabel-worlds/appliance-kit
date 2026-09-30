@@ -12,7 +12,7 @@ const dom = new JSDOM('<!doctype html><html><body></body></html>', {
 
 for (const key of [
   'window', 'document', 'navigator', 'HTMLElement', 'HTMLButtonElement', 'HTMLInputElement',
-  'Event', 'KeyboardEvent', 'MouseEvent', 'MutationObserver', 'Node', 'Range', 'CSS',
+  'Event', 'FocusEvent', 'KeyboardEvent', 'MouseEvent', 'MutationObserver', 'Node', 'Range', 'CSS',
 ]) {
   Object.defineProperty(globalThis, key, {
     configurable: true,
@@ -248,6 +248,7 @@ describe('the public browser feature entry point', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
       'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface', 'ApiKeysSurface',
+      'AgentsSurface', 'StagePill', 'firingOf',
     ]) {
       assert.equal(typeof features[name], 'function', `${name} ESM export`)
     }
@@ -942,16 +943,16 @@ describe('the public browser feature entry point', () => {
     assert.equal(fields[0].value, existing.name)
     assert.equal(fields[0].readOnly, true)
     assert.equal(fields[0].disabled, false)
-    assert.match(container.textContent, /Name identifies this agent\. Saving updates it in place\./)
+    assert.match(container.textContent, /Name identifies this routine\. Saving updates it in place\./)
     assert.equal(fields[1].value, existing.signalType)
     assert.equal(fields[2].value, existing.schedule)
     assert.equal(fields[3].checked, true)
 
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saved, [existing])
 
-    await act(async () => button(container, 'New agent').click())
+    await act(async () => button(container, 'New routine').click())
     const freshFields = [...container.querySelectorAll('.saveform input')]
     assert.equal(freshFields[0].value, '')
     assert.equal(freshFields[0].readOnly, false)
@@ -993,11 +994,11 @@ describe('the public browser feature entry point', () => {
     await act(async () => form()[3].click())
     await act(async () => button(container, 'collections').click())
     await act(async () => editor.setValue("console.log('first')"))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.equal(form()[0].readOnly, true)
 
-    await act(async () => button(container, 'New agent').click())
+    await act(async () => button(container, 'New routine').click())
     assert.equal(form()[0].value, '')
     assert.equal(form()[0].readOnly, false)
     assert.equal(form()[1].value, '')
@@ -1008,7 +1009,7 @@ describe('the public browser feature entry point', () => {
 
     await act(async () => setInput(form()[0], 'second-agent'))
     await act(async () => editor.setValue("console.log('second')"))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saved.map(({ name }) => name), ['first-agent', 'second-agent'])
   })
@@ -1038,17 +1039,17 @@ describe('the public browser feature entry point', () => {
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
     await act(async () => button(container, 'watcher').click())
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Put on duty').click())
     await flush()
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(saves.map(({ autonomous }) => autonomous), [true, true])
 
     await act(async () => button(container, 'Stand down').click())
     await flush()
-    await act(async () => button(container, 'Start watching').click())
+    await act(async () => button(container, 'Observe').click())
     await flush()
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.deepEqual(enabled, [['watcher', false], ['watcher', true]])
     assert.deepEqual(saves.map(({ autonomous }) => autonomous), [true, true, false, false])
@@ -1084,17 +1085,17 @@ describe('the public browser feature entry point', () => {
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
     assert.deepEqual(
       [...container.querySelectorAll('.handler-row .btn')].map((candidate) => candidate.textContent.trim()),
-      ['Start watching', 'Delete', 'Start acting', 'Delete', 'Stand down', 'Delete', 'Start watching'],
+      ['Observe', 'Delete', 'Put on duty', 'Delete', 'Stand down', 'Delete', 'Observe'],
     )
 
-    await act(async () => button(container, 'Start watching').click())
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Observe').click())
+    await act(async () => button(container, 'Put on duty').click())
     await act(async () => button(container, 'Stand down').click())
     await flush()
     assert.deepEqual(enabled, [['idle', true], ['actor', false]])
     assert.deepEqual(opened, ['watcher'])
     assert.deepEqual(saved, [{ ...source('watcher', false), autonomous: true }])
-    assert.match(container.textContent, /Acting agents must stand down before returning to watching/)
+    assert.match(container.textContent, /A routine on duty must stand down before it can go back to observing/)
 
     globalThis.confirm = () => false
     await act(async () => [...container.querySelectorAll('.handler-row')].at(-1).querySelector('button.btn').click())
@@ -1156,9 +1157,110 @@ describe('the public browser feature entry point', () => {
       signalTypes: async () => ok([]), worldSkills: async () => ok([]),
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
-    await act(async () => button(container, 'Start acting').click())
+    await act(async () => button(container, 'Put on duty').click())
     await flush()
     assert.match(container.textContent, /Start acting is unavailable: Could not open the agent \(HTTP 400\)\. source is locked/)
+  })
+
+  it('leaves the stage to the agent when there are agents, and keeps its own switch when there are not', async () => {
+    const opened = []
+    const base = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({
+          yours: [{ name: 'chase', active: true, autonomous: false, signalType: 'InvoiceOverdue' }],
+          available: [{ name: 'review-brief', signalType: 'GitHubReviewRequested' }],
+        }),
+        open: async () => refused('absent'), validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'), saveHandler: async () => refused('no'),
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+    }
+    const routine = (name, firing) => ({ name, description: '', trigger: '', stage: firing, firing, missing: false })
+    const withAgents = {
+      ...base,
+      listAgents: async () => ok([
+        { name: 'dunning', routines: [routine('chase', 'on')] },
+        { name: 'github', routines: [routine('review-brief', 'observing')] },
+      ]),
+    }
+    const { container } = await render(h(features.HandlerStudioSurface, { services: withAgents, onOpenAgent: (a) => opened.push(a) }))
+    const list = container.querySelector('.studio-side')
+    assert.match(list.textContent, /on duty/)
+    assert.match(list.textContent, /observing/)
+    for (const legacy of ['Observe', 'Put on duty', 'Stand down']) assert.equal(button(list, legacy), undefined, legacy)
+    await act(async () => button(list, 'dunning').click())
+    await act(async () => button(list, 'github').click())
+    assert.deepEqual(opened, ['dunning', 'github'])
+    assert.equal([...container.querySelectorAll('input[type=checkbox]')].length, 0)
+    assert.match(container.textContent, /that agent’s stage decides whether it runs/)
+
+    const older = { ...base, listAgents: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }) }
+    const again = await render(h(features.HandlerStudioSurface, { services: older }))
+    const legacyList = again.container.querySelector('.studio-side')
+    assert.ok(button(legacyList, 'Put on duty'), 'an appliance without agents keeps the studio switch')
+    assert.ok(button(legacyList, 'Observe'))
+  })
+
+  it('saves a schedule written in words as the cron it compiles to, and refuses words that are not one', async () => {
+    const compiled = []
+    const saved = []
+    const services = (compileSchedule) => ({
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({ yours: [], available: [] }), open: async () => refused('absent'),
+        validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'),
+      saveHandler: async (request) => { saved.push(request.schedule); return ok({ ok: true, message: 'saved' }) },
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+      ...(compileSchedule ? { compileSchedule } : {}),
+    })
+    const compile = async (words) => {
+      compiled.push(words)
+      return ok(words === 'every weekday at 8' ? { cron: '0 0 8 * * MON-FRI' } : { error: 'That is not a schedule.' })
+    }
+    const fill = async (container, name, scheduleText) => {
+      const inputs = [...container.querySelectorAll('.saveform input')]
+      await act(async () => setInput(inputs.find((i) => i.placeholder === 'pr-triage'), name))
+      const field = inputs.find((i) => /not scheduled/.test(i.placeholder))
+      await act(async () => setInput(field, scheduleText))
+      return field
+    }
+
+    const { container } = await render(h(features.HandlerStudioSurface, { services: services(compile) }))
+    const field = await fill(container, 'digest', 'every weekday at 8')
+    await act(async () => field.dispatchEvent(new FocusEvent('focusout', { bubbles: true })))
+    await flush()
+    assert.match(container.querySelector('.saveform').textContent, /→ 0 0 8 \* \* MON-FRI/)
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.deepEqual(saved, ['0 0 8 * * MON-FRI'])
+    assert.deepEqual(compiled, ['every weekday at 8'], 'saving reuses what was compiled on blur')
+
+    await act(async () => setInput(field, '0 30 7 * * *'))
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.deepEqual(saved.at(-1), '0 30 7 * * *')
+    assert.equal(compiled.length, 1, 'cron is not sent to the model')
+
+    await act(async () => setInput(field, 'whenever it feels right'))
+    await act(async () => button(container, 'Save routine').click())
+    await flush()
+    assert.equal(saved.length, 2, 'words that are not a schedule are not saved')
+    assert.match(container.textContent, /That is not a schedule\./)
+    assert.match(container.textContent, /Fix the schedule first\./)
+
+    const older = await render(h(features.HandlerStudioSurface, { services: services(null) }))
+    await fill(older.container, 'digest', 'every weekday at 8')
+    await act(async () => button(older.container, 'Save routine').click())
+    await flush()
+    assert.equal(saved.length, 2)
+    assert.match(older.container.textContent, /six-field cron/)
   })
 
   it('dry-runs handlers and keeps a successful save disabled until explicit enable', async () => {
@@ -1194,16 +1296,42 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /observed/)
     const name = [...container.querySelectorAll('input')].find((input) => input.placeholder === 'pr-triage')
     await act(async () => setInput(name, 'triage'))
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.match(container.textContent, /validation failed/)
     assert.equal(enableCalls, 0)
-    await act(async () => button(container, 'Save agent').click())
+    await act(async () => button(container, 'Save routine').click())
     await flush()
     assert.match(container.textContent, /saved/)
     assert.equal(enableCalls, 0)
-    await act(async () => button(container, 'Start watching').click())
+    await act(async () => button(container, 'Observe').click())
     assert.equal(enableCalls, 1)
+  })
+
+  it('opens a routine asked for from outside once per request, so a re-render keeps the edits', async () => {
+    const opened = []
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }) },
+      handlers: {
+        list: async () => ok({ yours: [{ name: 'note-failure', active: true, autonomous: false }], available: [] }),
+        open: async (name) => { opened.push(name); return ok({ name, source: `// ${name}`, signalType: '*' }) },
+        validate: async () => ok({ valid: true, violations: [], durationMs: 1 }),
+        dryRun: async () => refused('no'), setEnabled: async () => refused('no'), delete: async () => refused('no'),
+      },
+      generateHandler: async () => refused('no'), saveHandler: async () => refused('no'),
+      gatewayInterfaces: async () => ok('export interface GatewayContext {}'),
+      signalTypes: async () => ok([]), worldSkills: async () => ok([]),
+    }
+    const request = { name: 'note-failure', n: 1 }
+    const { root } = await render(h(features.HandlerStudioSurface, { services, openRequest: request }))
+    await flush()
+    assert.deepEqual(opened, ['note-failure'])
+    await act(async () => root.render(h(features.HandlerStudioSurface, { services, openRequest: { ...request } })))
+    await flush()
+    assert.deepEqual(opened, ['note-failure'])
+    await act(async () => root.render(h(features.HandlerStudioSurface, { services, openRequest: { name: 'note-failure', n: 2 } })))
+    await flush()
+    assert.deepEqual(opened, ['note-failure', 'note-failure'])
   })
 
   it('covers query validation, scopes, fills, interactive execution and disposal', async () => {
@@ -1752,10 +1880,10 @@ describe('the public browser feature entry point', () => {
       signalTypes: async () => ok([]), worldSkills: async () => ok([]),
     }
     const { container } = await render(h(features.HandlerStudioSurface, { services }))
-    assert.match(container.textContent, /Loading agents/)
+    assert.match(container.textContent, /Loading routines/)
     assert.doesNotMatch(container.textContent, /No agents are listed|Nothing runs unattended/)
     await act(async () => finish(ok({ yours: [], available: [] })))
-    assert.match(container.textContent, /No agents are listed/)
+    assert.match(container.textContent, /No routines in this world yet/)
   })
 
   it('offers realm-list recovery and excludes stale update targets after recovery', async () => {
@@ -1786,6 +1914,82 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /started a background run/)
     assert.doesNotMatch(container.textContent, /try Smart search again/)
     assert.equal(container.querySelector('.status.caution').getAttribute('role'), 'status')
+  })
+
+  it('shows each agent at the stage it runs, lifts a refusal into view, and signs only after the host confirms', async () => {
+    const routine = (name, stage, firing) => ({ name, description: '', trigger: 'every day at 08:00', stage, firing, missing: false })
+    const base = {
+      job: 'chase overdue invoices', routing: '', persona: null, owners: ['priya'], operators: [], state: 'active',
+      origin: 'world', duties: [], signedBy: null, signedAt: null,
+    }
+    let chaser = {
+      ...base, name: 'chaser', sponsor: null, stage: 'on', version: 0, unsignedChanges: [],
+      routines: [routine('note-failure', 'on', 'off')], needs: ['a sponsor', "its sponsor's signature on version 1"],
+    }
+    const gathered = {
+      ...base, name: 'github', job: 'routines from github', sponsor: null, stage: 'observing', version: 0, unsignedChanges: [], origin: 'migrated',
+      routines: [routine('review-brief', 'observing', 'observing')], needs: ['a sponsor'],
+    }
+    const staged = []
+    const signed = []
+    let allow = false
+    const services = {
+      listAgents: async () => ok([chaser, gathered]),
+      setStage: async (name, stage, r) => {
+        staged.push([name, stage, r])
+        return refused('chaser cannot go on duty yet. It needs its sponsor\'s signature on version 1.')
+      },
+      sign: async (name) => {
+        signed.push(name)
+        chaser = { ...chaser, sponsor: 'priya', version: 1, signedBy: 'priya', signedAt: '2026-09-29T10:00:00Z', needs: [], routines: [routine('note-failure', 'on', 'on')] }
+        return ok(chaser)
+      },
+      versions: async () => ok([{ version: 1, signedBy: 'priya', signedAt: '2026-09-29T10:00:00Z', digest: 'abc', routines: ['note-failure'] }]),
+    }
+    const { container } = await render(h(features.AgentsSurface, { services, host: { confirmSign: async () => allow } }))
+    assert.equal(container.firstElementChild.classList.contains('kit-feature-agents'), true)
+    assert.doesNotMatch(container.textContent, /handler/i)
+
+    // Chosen on duty, but nothing fires: the pill says off duty and the needs say why.
+    assert.match(container.textContent, /Before it can go on duty, it needs/)
+    assert.match(container.textContent, /signature on version 1/)
+    assert.match(container.querySelector('.agent-routines').textContent, /off duty/)
+    assert.match(container.textContent, /gathered from existing routines/)
+
+    // A refused raise shows the appliance's own sentence.
+    await act(async () => button(container, 'Observing').click())
+    await flush()
+    assert.deepEqual(staged, [['chaser', 'observing', undefined]])
+    assert.match(container.textContent, /cannot go on duty yet/)
+
+    // Signing waits for the host, then replaces the agent with the server's answer.
+    await act(async () => button(container, 'Sign version 1').click())
+    await flush()
+    assert.deepEqual(signed, [])
+    allow = true
+    await act(async () => button(container, 'Sign version 1').click())
+    await flush()
+    assert.deepEqual(signed, ['chaser'])
+    assert.match(container.textContent, /Running version 1, signed by priya/)
+    assert.doesNotMatch(container.textContent, /cannot go on duty yet/)
+
+    await act(async () => button(container, 'Earlier versions').click())
+    await flush()
+    assert.match(container.querySelector('.agent-history').textContent, /Version 1 · priya/)
+
+    // A gathered agent has no version to sign: it is signed by writing it down as a real agent.
+    await act(async () => button(container, 'routines from github').click())
+    await flush()
+    assert.equal(button(container, 'Sign version'), undefined)
+  })
+
+  it('says an appliance predates agents instead of showing an empty roster', async () => {
+    const services = {
+      listAgents: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }),
+      setStage: async () => refused('nope'), sign: async () => refused('nope'), versions: async () => refused('nope'),
+    }
+    const { container } = await render(h(features.AgentsSurface, { services }))
+    assert.match(container.textContent, /Could not list agents\. This appliance is older than this feature/)
   })
 
   it('preserves session rewind numbering after holes', () => {

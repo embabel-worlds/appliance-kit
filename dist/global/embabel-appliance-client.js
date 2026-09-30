@@ -21,7 +21,9 @@ var EmbabelApplianceClient = (() => {
   // src/client/index.ts
   var index_exports = {};
   __export(index_exports, {
+    AgentsClient: () => AgentsClient,
     ApplianceClient: () => ApplianceClient,
+    CronClient: () => CronClient,
     DEFAULT_INGEST_POLL_MS: () => DEFAULT_INGEST_POLL_MS,
     DEFAULT_INGEST_STALLED_AFTER_MS: () => DEFAULT_INGEST_STALLED_AFTER_MS,
     DEFAULT_INGEST_TIMEOUT_MS: () => DEFAULT_INGEST_TIMEOUT_MS,
@@ -702,6 +704,58 @@ var EmbabelApplianceClient = (() => {
     return { kind: "opaque", label: uri };
   }
 
+  // src/client/cron.ts
+  var CronClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    compileSchedule(schedule) {
+      return this.transport.send({ method: "POST", path: "/api/v1/cron/compile-schedule", body: { schedule }, timeoutMs: 6e4 });
+    }
+  };
+
+  // src/client/agents.ts
+  var AGENTS = "/api/v1/agents";
+  var AgentsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    list() {
+      return this.transport.send({ method: "GET", path: AGENTS });
+    }
+    get(name) {
+      return this.transport.send({ method: "GET", path: `${AGENTS}/${encodeURIComponent(name)}` });
+    }
+    /** Move an agent, or one routine it holds, on the ladder. Lowering is always allowed. */
+    setStage(name, stage, routine) {
+      return this.agentOrRefusal(
+        this.transport.send({
+          method: "POST",
+          path: `${AGENTS}/${encodeURIComponent(name)}/stage`,
+          body: routine ? { stage, routine } : { stage }
+        })
+      );
+    }
+    /** Sign the agent as it stands now, as its next version. */
+    sign(name) {
+      return this.agentOrRefusal(
+        this.transport.send({ method: "POST", path: `${AGENTS}/${encodeURIComponent(name)}/sign`, body: {} })
+      );
+    }
+    versions(name) {
+      return this.transport.send({ method: "GET", path: `${AGENTS}/${encodeURIComponent(name)}/versions` });
+    }
+    async agentOrRefusal(pending) {
+      const outcome = await pending;
+      if (!outcome.ok) {
+        const refused = outcome.body?.refused;
+        return refused ? failure("refused", refused, outcome.status, outcome.body) : outcome;
+      }
+      const agent = outcome.value.agent;
+      return agent ? { ok: true, value: agent } : failure("refused", outcome.value.refused ?? "Refused", 200, outcome.value);
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -819,12 +873,16 @@ var EmbabelApplianceClient = (() => {
     constructor(transport, options = {}) {
       this.transport = transport;
       this.kg = new KgClient(transport);
+      this.agents = new AgentsClient(transport);
+      this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
       this.hints = new HintsClient(transport);
       this.tours = new ToursClient(transport);
     }
     kg;
+    agents;
+    cron;
     handlers;
     documents;
     hints;

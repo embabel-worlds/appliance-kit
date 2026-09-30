@@ -10,6 +10,8 @@ import type {
   KgClient,
   KgQueryResult,
 } from '../../client/kg.ts'
+import type { Agent, AgentStage, AgentVersion } from '../../client/agents.ts'
+import type { CompiledSchedule } from '../../client/cron.ts'
 import type { Outcome } from '../../client/outcome.ts'
 import type { TourSummary } from '../../client/tours.ts'
 import type { VcEvent } from '../../vc/events.ts'
@@ -211,12 +213,30 @@ export interface HandlerStudioServices {
   gatewayInterfaces(): Promise<Outcome<string>>
   signalTypes(): Promise<Outcome<SignalType[]>>
   worldSkills(): Promise<Outcome<WorldSkill[]>>
+  /**
+   * The world's agents. Given, and answered, the studio shows each routine at the stage its agent
+   * runs it and sends a stage change to the agent instead of offering its own switch. Omitted or
+   * unanswered (an appliance older than agents), the studio keeps its own on/off controls.
+   */
+  listAgents?(): Promise<Outcome<Agent[]>>
+  /**
+   * Turn a schedule in words into cron. Given, the save form takes "every weekday at 8" as well as
+   * cron; omitted (an older host), it takes cron only and says so.
+   */
+  compileSchedule?(schedule: string): Promise<Outcome<CompiledSchedule>>
 }
 
 export interface HandlerStudioSurfaceProps {
   services: HandlerStudioServices
   draft?: HandlerDraft | null
   onDraftConsumed?(): void
+  /**
+   * Open a routine by name, as its row's Open would. `n` distinguishes asking twice for the same
+   * routine, which must reopen it: the person may have wandered off to another in between.
+   */
+  openRequest?: { name: string; n: number } | null
+  /** Open the agent that holds a routine, where its stage is set. Omitted, the studio names the agent without a way to it. */
+  onOpenAgent?(agent: string): void
 }
 
 export interface QueryHistoryEntry {
@@ -384,3 +404,25 @@ export interface ApiKeysSurfaceProps {
   services: ApiKeysServices
   host: ApiKeysHost
 }
+
+export interface AgentsServices {
+  listAgents(): Promise<Outcome<Agent[]>>
+  setStage(name: string, stage: AgentStage, routine?: string): Promise<Outcome<Agent>>
+  sign(name: string): Promise<Outcome<Agent>>
+  versions(name: string): Promise<Outcome<AgentVersion[]>>
+}
+
+export interface AgentsHost {
+  /** Open a routine's body for editing. Omitted, routines are read-only on this surface. */
+  editRoutine?(routine: string): void
+  /** Ask before signing, because the signed version becomes what runs. Omitted, signing asks nothing. */
+  confirmSign?(agent: Agent): Promise<boolean>
+}
+
+export interface AgentsSurfaceProps {
+  services: AgentsServices
+  host?: AgentsHost
+  /** An agent to open first, by name. */
+  initialAgent?: string
+}
+
