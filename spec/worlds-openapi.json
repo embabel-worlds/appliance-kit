@@ -231,6 +231,72 @@
         "required" : [ "actions", "description", "goals", "name" ],
         "type" : "object"
       },
+      "AgentView" : {
+        "properties" : {
+          "duties" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DutyView"
+            },
+            "type" : "array"
+          },
+          "job" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "needs" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "operators" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "origin" : {
+            "type" : "string"
+          },
+          "owners" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "persona" : {
+            "type" : "string"
+          },
+          "routines" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RoutineView"
+            },
+            "type" : "array"
+          },
+          "routing" : {
+            "type" : "string"
+          },
+          "sponsor" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "draft", "submitted", "active", "suspended", "retired" ],
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "duties", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "version" ],
+        "type" : "object"
+      },
       "AnnotateDryRunRequest" : {
         "properties" : {
           "params" : {
@@ -1586,6 +1652,34 @@
           }
         },
         "required" : [ "inUse" ],
+        "type" : "object"
+      },
+      "DutyView" : {
+        "properties" : {
+          "every" : {
+            "type" : "string"
+          },
+          "holds" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "holds", "name", "stage", "status", "text" ],
         "type" : "object"
       },
       "EdgeRequest" : {
@@ -4750,6 +4844,32 @@
           }
         },
         "required" : [ "contexts", "deploymentUses", "models", "roles" ],
+        "type" : "object"
+      },
+      "RoutineView" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "firing" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "missing" : {
+            "type" : "boolean"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "trigger" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "firing", "missing", "name", "stage", "trigger" ],
         "type" : "object"
       },
       "RunSavedRequest" : {
@@ -8996,7 +9116,7 @@
     "/api/v1/agent-platform/agents" : {
       "get" : {
         "description" : "Returns every agent the platform hosts, each with its own actions and goals nested inline.",
-        "operationId" : "listAgents",
+        "operationId" : "listAgents_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -9037,6 +9157,67 @@
         },
         "summary" : "List goals",
         "tags" : [ "Agent platform" ]
+      }
+    },
+    "/api/v1/agents" : {
+      "get" : {
+        "description" : "Declared agents, realm-shipped agents, and existing routines gathered into the agent they belong to.",
+        "operationId" : "listAgents",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List the agents in your world",
+        "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}" : {
+      "get" : {
+        "operationId" : "getAgent",
+        "parameters" : [ {
+          "description" : "The agent's name, as the list returns it",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentView"
+                }
+              }
+            },
+            "description" : "The agent"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentView"
+                }
+              }
+            },
+            "description" : "No agent of that name in your world"
+          }
+        },
+        "summary" : "One agent in your world",
+        "tags" : [ "Agents" ]
       }
     },
     "/api/v1/api-keys" : {
@@ -17841,7 +18022,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45145"
+    "url" : "http://localhost:39705"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -17903,6 +18084,9 @@
   }, {
     "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
     "name" : "World"
+  }, {
+    "description" : "The colleagues in your world",
+    "name" : "Agents"
   }, {
     "description" : "Serve world images",
     "name" : "Images"
