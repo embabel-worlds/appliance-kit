@@ -1753,6 +1753,38 @@
         "required" : [ "provider" ],
         "type" : "object"
       },
+      "EmbedMissingRequest" : {
+        "properties" : {
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "uri" ],
+        "type" : "object"
+      },
+      "EmbeddingsStatus" : {
+        "description" : "The embedding model, where it runs, and whether every stored chunk has the embedding vector search needs",
+        "properties" : {
+          "chunksWithoutEmbedding" : {
+            "description" : "Chunks stored with no embedding, which vector search cannot return — left by an embedding request that failed during ingest. A re-embed, which runs only when the embedding model changes, fills them. Null when the graph could not be read; refreshed at most every 30 seconds.",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "model" : {
+            "description" : "The embedding model in use. Null when none is configured, so document features are off.",
+            "type" : "string"
+          },
+          "modelRunner" : {
+            "$ref" : "#/components/schemas/ModelRunnerActivity",
+            "description" : "What Docker Model Runner says about its embedding model now. Null when the model is not served by Docker Model Runner, or it did not answer."
+          },
+          "provider" : {
+            "description" : "Who serves that model: 'onnx' runs inside the app; 'Docker' is Docker Model Runner on the host",
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "EngineFieldWire" : {
         "properties" : {
           "default" : {
@@ -2453,6 +2485,87 @@
         "required" : [ "allLocal", "cloudProviders", "models", "summary" ],
         "type" : "object"
       },
+      "IngestJobList" : {
+        "properties" : {
+          "jobs" : {
+            "items" : {
+              "$ref" : "#/components/schemas/IngestJobView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "jobs" ],
+        "type" : "object"
+      },
+      "IngestJobMissing" : {
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "IngestJobProgress" : {
+        "properties" : {
+          "done" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "done", "total" ],
+        "type" : "object"
+      },
+      "IngestJobView" : {
+        "properties" : {
+          "chunks" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "chunksWithoutEmbeddings" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "progress" : {
+            "$ref" : "#/components/schemas/IngestJobProgress"
+          },
+          "resumes" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "startedAt" : {
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "queued", "waiting_for_memory", "converting", "writing", "embedding", "succeeded", "failed" ],
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "type" : "string"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "name", "resumes", "startedAt", "state", "updatedAt" ],
+        "type" : "object"
+      },
       "IngestStatus" : {
         "description" : "The heap budget document ingests share, and the queue behind it",
         "properties" : {
@@ -2473,6 +2586,22 @@
           }
         },
         "required" : [ "budgetBytes", "inUseBytes", "waiting" ],
+        "type" : "object"
+      },
+      "IngestUnavailable" : {
+        "properties" : {
+          "embeddings" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "embeddings", "message", "status" ],
         "type" : "object"
       },
       "InstallRequest" : {
@@ -3913,6 +4042,9 @@
           "model" : {
             "type" : "string"
           },
+          "reasoningEffort" : {
+            "type" : "string"
+          },
           "role" : {
             "type" : "string"
           },
@@ -4055,6 +4187,21 @@
           }
         },
         "required" : [ "local", "purpose" ],
+        "type" : "object"
+      },
+      "ModelRunnerActivity" : {
+        "description" : "Docker Model Runner's embedding model, as its own process list reports it",
+        "properties" : {
+          "busy" : {
+            "description" : "Whether that model is serving a request now. It runs on the host, outside the app's container, so its CPU is not in the cpu figures.",
+            "type" : "boolean"
+          },
+          "loaded" : {
+            "description" : "Whether an embedding model is loaded. Model Runner loads one on the first request and unloads it when idle.",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "busy", "loaded" ],
         "type" : "object"
       },
       "NewRoleRequest" : {
@@ -5066,13 +5213,16 @@
         "type" : "object"
       },
       "SystemStatus" : {
-        "description" : "Memory, CPU, the document ingest queue, and document conversion, read now",
+        "description" : "Memory, CPU, the document ingest queue, document conversion, and embedding coverage, read now",
         "properties" : {
           "conversion" : {
             "$ref" : "#/components/schemas/ConversionStatus"
           },
           "cpu" : {
             "$ref" : "#/components/schemas/CpuStatus"
+          },
+          "embeddings" : {
+            "$ref" : "#/components/schemas/EmbeddingsStatus"
           },
           "ingest" : {
             "$ref" : "#/components/schemas/IngestStatus"
@@ -5081,7 +5231,7 @@
             "$ref" : "#/components/schemas/MemoryStatus"
           }
         },
-        "required" : [ "conversion", "cpu", "ingest", "memory" ],
+        "required" : [ "conversion", "cpu", "embeddings", "ingest", "memory" ],
         "type" : "object"
       },
       "TagsRequest" : {
@@ -6458,7 +6608,7 @@
     },
     "/api/v1/admin/handlers/list" : {
       "post" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "responses" : {
           "200" : {
             "content" : {
@@ -7135,7 +7285,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_9",
+        "operationId" : "list_10",
         "responses" : {
           "200" : {
             "content" : {
@@ -7414,7 +7564,7 @@
     },
     "/api/v1/admin/kg/fills" : {
       "get" : {
-        "operationId" : "list_4",
+        "operationId" : "list_5",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -8053,7 +8203,7 @@
     },
     "/api/v1/admin/kg/scopes" : {
       "get" : {
-        "operationId" : "list_8",
+        "operationId" : "list_9",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -8825,7 +8975,7 @@
     },
     "/api/v1/admin/system" : {
       "get" : {
-        "description" : "Heap after the last collection against its ceiling, the container's memory limit, the ingest budget in use and how many ingests wait for it, and whether docling answers and has failed recently. A null value is unknown, never zero.",
+        "description" : "Heap after the last collection against its ceiling, the container's memory limit, the ingest budget in use and how many ingests wait for it, and whether docling answers and has failed recently, and how many stored chunks have no embedding. A null value is unknown, never zero.",
         "operationId" : "status_4",
         "responses" : {
           "200" : {
@@ -10404,7 +10554,7 @@
     },
     "/api/v1/config/chat" : {
       "get" : {
-        "description" : "Returns the chat model and temperature configuration.",
+        "description" : "Returns chat model, temperature, and optional reasoning effort.",
         "operationId" : "getChatConfig",
         "responses" : {
           "200" : {
@@ -10423,7 +10573,7 @@
         "tags" : [ "Config" ]
       },
       "put" : {
-        "description" : "Sets the chat model and/or temperature, persisted to config.yml. A chat config that carries a role resolves the role first and ignores a plain model value; use PUT /chat-model to change what the user talks to.",
+        "description" : "Sets chat model, temperature, and optional reasoning effort, persisted to config.yml. A JSON null counts as omitted for every field; a blank model or role still names that field. The effort changes only when the body names reasoningEffort: a value sets it, an empty string clears it, and omitting it keeps it. A body whose only named field is reasoningEffort changes just the effort; any other body, even {}, replaces model, role, and temperature, so {} returns them to the deployment default. A chat config that carries a role resolves the role first and ignores a plain model value; use PUT /chat-model to change what the user talks to.",
         "operationId" : "updateChatConfig",
         "requestBody" : {
           "content" : {
@@ -10454,7 +10604,7 @@
     },
     "/api/v1/config/chat-model" : {
       "put" : {
-        "description" : "Pins the chat model for this world, clearing any role pin so the choice cannot be silently overridden. Blank model clears it and inherits the deployment default.",
+        "description" : "Pins the chat model for this world, clearing any role pin so the choice cannot be silently overridden. Blank model clears it and inherits the deployment default; temperature and reasoning effort are kept. A body that names reasoningEffort, even as an empty string, is rejected: set the effort with PUT /chat.",
         "operationId" : "setChatModel",
         "requestBody" : {
           "content" : {
@@ -10477,6 +10627,17 @@
               }
             },
             "description" : "Chat model updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The body names a reasoning effort"
           }
         },
         "summary" : "Set the model chat uses",
@@ -10569,7 +10730,7 @@
     },
     "/api/v1/config/llm-roles/{roleId}" : {
       "put" : {
-        "description" : "Maps a role (e.g. code_best) to a model for this world. Send a body with both model and role blank to clear the override (inherit the deployment default).",
+        "description" : "Maps a role (e.g. code_best) to a model for this world. Send a body with both model and role blank to clear the override (inherit the deployment default). Nothing reads a role's reasoning effort, so a body that names reasoningEffort, even as an empty string, is rejected.",
         "operationId" : "updateLlmRole",
         "parameters" : [ {
           "in" : "path",
@@ -10600,6 +10761,17 @@
               }
             },
             "description" : "Role override updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The body names a reasoning effort"
           }
         },
         "summary" : "Set or clear an LLM role override",
@@ -10608,7 +10780,7 @@
     },
     "/api/v1/config/llms" : {
       "get" : {
-        "description" : "Returns LLM settings for chat, actionCompilerLlm, memoryLlm, apiExplorerLlm, codingLlm, fallbackCodingLlm, rankerLlm, and lensLlm.",
+        "description" : "Returns model, temperature, and reasoning effort for chat, actionCompilerLlm, memoryLlm, apiExplorerLlm, codingLlm, fallbackCodingLlm, rankerLlm, plannerLlm, and lensLlm.",
         "operationId" : "getLlmConfigs",
         "responses" : {
           "200" : {
@@ -10629,7 +10801,7 @@
     },
     "/api/v1/config/llms/{purpose}" : {
       "put" : {
-        "description" : "Sets model and/or temperature for one of: chat, actionCompilerLlm, memoryLlm, apiExplorerLlm, codingLlm, fallbackCodingLlm, rankerLlm, lensLlm.",
+        "description" : "Sets model, temperature, and optional reasoning effort for one of: chat, actionCompilerLlm, memoryLlm, apiExplorerLlm, codingLlm, fallbackCodingLlm, rankerLlm, plannerLlm, lensLlm. A JSON null counts as omitted for every field; a blank model or role still names that field. The effort changes only when the body names reasoningEffort: a value sets it, an empty string clears it, and omitting it keeps it. A body whose only named field is reasoningEffort changes just the effort; any other body, even {}, replaces model, role, and temperature, so {} returns them to the deployment default. Nothing reads the actionCompilerLlm, memoryLlm, or apiExplorerLlm setting at runtime, so any reasoningEffort for them, even an empty string, is rejected with 400.",
         "operationId" : "updateLlmConfig",
         "parameters" : [ {
           "in" : "path",
@@ -10670,7 +10842,7 @@
                 }
               }
             },
-            "description" : "Unknown purpose"
+            "description" : "Unknown purpose, unsupported reasoning effort, or reasoning effort on a purpose that does not use it"
           }
         },
         "summary" : "Update LLM config for a purpose",
@@ -10840,7 +11012,7 @@
     },
     "/api/v1/config/router/contexts/{id}" : {
       "put" : {
-        "description" : "Send `role` or `model`, not both. Send neither to return the context to the deployment default.",
+        "description" : "Send `role` or `model`, not both. Send neither to return the context to the deployment default; its reasoning effort is kept.",
         "operationId" : "setContext",
         "parameters" : [ {
           "description" : "A context id, as `GET /config/router` lists it",
@@ -11845,6 +12017,216 @@
         "tags" : [ "Documents" ]
       }
     },
+    "/api/v1/documents/embed-missing" : {
+      "post" : {
+        "description" : "Embeds only the chunks the document was stored without a vector for, without ingesting it again. Answers 202 with a job to follow at GET /documents/ingests/{id}; it settles with the chunks still missing.",
+        "operationId" : "embedMissing",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/EmbedMissingRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobView"
+                }
+              }
+            },
+            "description" : "Accepted; the job, queued"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobMissing"
+                }
+              }
+            },
+            "description" : "The caller's world holds no document at that uri"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestUnavailable"
+                }
+              }
+            },
+            "description" : "Nothing can embed; not started"
+          }
+        },
+        "summary" : "Embed a document's missing chunks as a job",
+        "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/documents/ingests" : {
+      "get" : {
+        "description" : "The caller's running jobs, and those finished within the retention window, newest first.",
+        "operationId" : "list_4",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobList"
+                }
+              }
+            },
+            "description" : "The caller's jobs"
+          }
+        },
+        "summary" : "List ingest jobs",
+        "tags" : [ "Documents" ]
+      },
+      "post" : {
+        "description" : "Answers 202 once the file is received, with a job to follow at GET /documents/ingests/{id}, rather than holding the request until the document is written.",
+        "operationId" : "upload",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "fromOrgDomain",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "tags",
+          "required" : false,
+          "schema" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "multipart/form-data" : {
+              "schema" : {
+                "properties" : {
+                  "file" : {
+                    "format" : "binary",
+                    "type" : "string"
+                  }
+                },
+                "required" : [ "file" ],
+                "type" : "object"
+              }
+            }
+          }
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobView"
+                }
+              }
+            },
+            "description" : "Accepted; the job, queued"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestUnavailable"
+                }
+              }
+            },
+            "description" : "Nothing can embed; not started"
+          }
+        },
+        "summary" : "Upload a file to ingest as a job",
+        "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/documents/ingests/url" : {
+      "post" : {
+        "description" : "Answers 202 at once with a job to follow at GET /documents/ingests/{id}.",
+        "operationId" : "ingestUrl_1",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/UrlIngestRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "202" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobView"
+                }
+              }
+            },
+            "description" : "Accepted; the job, queued"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestUnavailable"
+                }
+              }
+            },
+            "description" : "Nothing can embed; not started"
+          }
+        },
+        "summary" : "Ingest a page by URL as a job",
+        "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/documents/ingests/{id}" : {
+      "get" : {
+        "description" : "Where the caller's ingest has got: its stage, embedding progress, and how it ended.",
+        "operationId" : "job",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobView"
+                }
+              }
+            },
+            "description" : "The job"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/IngestJobMissing"
+                }
+              }
+            },
+            "description" : "No such job for the caller"
+          }
+        },
+        "summary" : "Read an ingest job",
+        "tags" : [ "Documents" ]
+      }
+    },
     "/api/v1/documents/tags" : {
       "put" : {
         "description" : "Set the tags on an ingested document and every chunk of it, without re-ingesting. The list replaces what was there; blanks are dropped and duplicates collapsed; an empty list removes all tags.",
@@ -11909,7 +12291,7 @@
                 }
               }
             },
-            "description" : "Document ingested"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           },
           "500" : {
             "content" : {
@@ -11975,7 +12357,7 @@
                 }
               }
             },
-            "description" : "File ingested"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           }
         },
         "summary" : "Upload and ingest a file",
@@ -12006,7 +12388,7 @@
                 }
               }
             },
-            "description" : "Document ingested"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           },
           "500" : {
             "content" : {
@@ -12173,7 +12555,7 @@
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "responses" : {
           "200" : {
             "content" : {
@@ -15502,7 +15884,7 @@
     "/api/v1/tours" : {
       "get" : {
         "description" : "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "parameters" : [ {
           "in" : "query",
           "name" : "username",
@@ -17459,7 +17841,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40573"
+    "url" : "http://localhost:45837"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",

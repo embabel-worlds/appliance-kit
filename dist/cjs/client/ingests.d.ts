@@ -17,6 +17,20 @@ export interface IngestJob {
     title?: string | null;
     /** The appliance's own sentence for why a `failed` job failed. */
     error?: string | null;
+    /**
+     * On a `succeeded` job, how many chunks the document was cut into, and how many of those could
+     * not be embedded. A document with chunks it could not embed is still ingested — it is kept, not
+     * failed — but those chunks miss semantic search, so a client should say so rather than draw it
+     * as done. {@link DocumentsClient.startEmbedMissing} embeds them. Absent from an older appliance.
+     */
+    chunks?: number | null;
+    chunksWithoutEmbeddings?: number | null;
+    /**
+     * How many appliance restarts this job has survived: it was picked up again, under the same id,
+     * and may have gone back to an earlier stage. Absent from an appliance that does not keep jobs
+     * across a restart — there a restart makes the job `lost` instead.
+     */
+    resumes?: number;
     startedAt: string;
     /** When the appliance last saw this job move: a stage change or a progress tick. */
     updatedAt: string;
@@ -57,6 +71,11 @@ export interface IngestFollowUpdate {
     unreachable: Failure | null;
     /** Nothing has moved for `stalledAfterMs`. Informational: following carries on. */
     stalled: boolean;
+    /**
+     * The appliance restarted while this was being followed and picked the job up again: its
+     * `resumes` rose since following began. Stays true once seen, so a row can keep saying so.
+     */
+    resumed: boolean;
 }
 export interface FollowIngestOptions {
     onUpdate?: (update: IngestFollowUpdate) => void;

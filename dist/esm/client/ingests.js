@@ -18,7 +18,7 @@ function pause(ms, signal) {
     });
 }
 /** The fields that say a job moved. `updatedAt` alone would do, if every appliance stamped it. */
-const movement = (job) => `${job.state}|${job.updatedAt}|${job.progress?.done ?? ''}/${job.progress?.total ?? ''}`;
+const movement = (job) => `${job.state}|${job.updatedAt}|${job.progress?.done ?? ''}/${job.progress?.total ?? ''}|${job.resumes ?? 0}`;
 /**
  * A poll's failure that means the appliance does not know this job. A documented 404 is `refused`;
  * a route the appliance no longer has is `unsupported` — the job cannot be followed there either.
@@ -33,6 +33,9 @@ export async function followIngest(id, read, options = {}) {
     let seen = '';
     let movedAt = Date.now();
     let misses = 0;
+    // The restarts the job had already survived when following began; more than that is a resume seen here.
+    let resumesAtStart = null;
+    let resumed = false;
     while (!signal?.aborted) {
         const outcome = await read(id);
         if (signal?.aborted)
@@ -41,16 +44,19 @@ export async function followIngest(id, read, options = {}) {
             misses = 0;
             const job = outcome.value;
             last = job;
+            resumesAtStart ??= job.resumes ?? 0;
+            if ((job.resumes ?? 0) > resumesAtStart)
+                resumed = true;
             const now = movement(job);
             if (now !== seen) {
                 seen = now;
                 movedAt = Date.now();
             }
             if (job.state === 'succeeded' || job.state === 'failed') {
-                onUpdate?.({ job, unreachable: null, stalled: false });
+                onUpdate?.({ job, unreachable: null, stalled: false, resumed });
                 return { outcome: job.state, job };
             }
-            onUpdate?.({ job, unreachable: null, stalled: Date.now() - movedAt >= stalledAfterMs });
+            onUpdate?.({ job, unreachable: null, stalled: Date.now() - movedAt >= stalledAfterMs, resumed });
             await pause(pollMs, signal);
         }
         else if (jobIsGone(outcome)) {
@@ -58,7 +64,12 @@ export async function followIngest(id, read, options = {}) {
         }
         else {
             misses += 1;
-            onUpdate?.({ job: last, unreachable: outcome, stalled: last !== null && Date.now() - movedAt >= stalledAfterMs });
+            onUpdate?.({
+                job: last,
+                unreachable: outcome,
+                stalled: last !== null && Date.now() - movedAt >= stalledAfterMs,
+                resumed,
+            });
             await pause(Math.min(pollMs * 2 ** misses, MAX_BACKOFF_MS), signal);
         }
     }

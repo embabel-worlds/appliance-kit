@@ -54,6 +54,13 @@ export interface IngestedDocument {
   ingestedAt?: string | null
   /** What this document was ingested under. The set of these across the listing IS the corpus list. */
   tags?: string[]
+  /** How many chunks the document holds. Absent from an older appliance. */
+  chunks?: number | null
+  /**
+   * How many of those chunks have no embedding, and so never come back from a semantic search. Zero
+   * for a complete document; above zero, {@link DocumentsClient.startEmbedMissing} repairs it.
+   */
+  chunksWithoutEmbeddings?: number | null
 }
 
 export interface DocumentList {
@@ -218,6 +225,18 @@ export class DocumentsClient {
       body: { url, tags: tags.filter((t) => t.trim()) },
       timeoutMs: START_INGEST_TIMEOUT_MS,
     })
+  }
+
+  /**
+   * Embed the chunks of an already-ingested document that have no embedding, without re-ingesting
+   * it. Answers at once with a JOB, followed like any other ingest; on success the job's
+   * `chunksWithoutEmbeddings` says how many are still missing, which is zero when the repair took.
+   *
+   * A document the caller's world does not hold is `refused` with status 404. An appliance with
+   * nothing to embed with is `refused` with status 409; its reason is in the body's `message`.
+   */
+  startEmbedMissing(uri: string): Promise<Outcome<IngestJob>> {
+    return this.transport.send({ method: 'POST', path: `${DOCS}/embed-missing`, body: { uri }, timeoutMs: START_INGEST_TIMEOUT_MS })
   }
 
   /**
