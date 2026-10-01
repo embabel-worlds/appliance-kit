@@ -179,8 +179,18 @@ export interface WatchServices {
     deliveries(id: string): Promise<Outcome<WatchDelivery[]>>;
 }
 export interface ViewsServices {
-    kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView' | 'execute' | 'saveView'> & Partial<Pick<KgClient, 'schema'>>;
+    /**
+     * `kill` and `runs` are what make a running view stoppable. Optional, so a host that predates
+     * them still compiles — without `kill` the surface offers no Cancel rather than one that fails.
+     */
+    kg: Pick<KgClient, 'views' | 'runView' | 'viewInvocation' | 'deleteView' | 'refreshView' | 'execute' | 'saveView'> & Partial<Pick<KgClient, 'schema' | 'kill' | 'runs'>>;
     watches: WatchServices;
+    /**
+     * The engine's live trace, as Query Studio takes it. Given, a slow run shows the step it is on,
+     * and Cancel names the run by the id the trace bound. Omitted, a slow run shows only how long it
+     * has been, and Cancel finds the run through `kg.runs`.
+     */
+    subscribeProgress?(onEvent: (event: VcEvent) => void, signal: AbortSignal): void;
 }
 export interface HandlerDraft {
     signalType: string;
