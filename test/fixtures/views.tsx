@@ -4,6 +4,7 @@ import '../../css/index.css'
 import '../../css/features.css'
 import { ok, type Outcome } from '../../src/client/outcome.ts'
 import type { KgView } from '../../src/client/kg.ts'
+import type { VcEvent } from '../../src/vc/events.ts'
 import { SavedViewsSurface } from '../../src/react/features/views/SavedViewsSurface.tsx'
 import type { SavedViewsDestination, ViewsServices } from '../../src/react/features/contracts.ts'
 
@@ -31,6 +32,8 @@ let views: KgView[] = [
     cypher: 'MATCH (b:Bill)-[:BILLED_BY]->(o:Organization)\nWHERE b.status <> \'paid\'\nRETURN o.name AS customer, b.amount AS amount, b.due AS due\nLIMIT $limit',
     params: { limit: { type: 'int', default: 50 } },
   },
+  // Never answers on its own: the run to look at the wait line, the trace and Cancel with.
+  { name: 'slow_digest', source: 'ledger', materialized: false, description: 'A cold view that runs until it is cancelled.', cypher: 'MATCH (d:Digest) RETURN d', params: {} },
   { name: 'meetings_this_week', materialized: false, description: 'Meetings on the calendar this week.', cypher: 'MATCH (m:Meeting) RETURN m', params: {} },
 ]
 
@@ -47,13 +50,30 @@ const rows = names.map((customer, i) => ({
 }))
 const result = (label: string): Outcome<any> => ok({ rows: rows.map((row) => ({ ...row, via: label })), rowCount: rows.length, durationMs: 42 })
 
+/* One slow run at a time: a trace line every two seconds until it is killed, then the KILLED answer. */
+let emit: (event: VcEvent) => void = () => {}
+let slow: { stop(): void } | null = null
+function runSlowly(): Promise<Outcome<any>> {
+  return new Promise((resolve) => {
+    const envelope = { queryId: 'slow-1', userId: 'fixture', atMs: 0 }
+    let seq = 0
+    emit({ ...envelope, type: 'query.started', seq: seq++, cypher: 'MATCH (d:Digest) RETURN d' } as VcEvent)
+    const timer = setInterval(() => emit({
+      ...envelope, type: 'producer.progress', seq: seq++, producer: 'digest', unit: 'documents', current: seq, total: 40,
+    } as VcEvent), 2000)
+    slow = { stop() { clearInterval(timer); slow = null; resolve(ok({ rows: [], rowCount: 0, reason: 'KILLED' })) } }
+  })
+}
+
 let route: string | null = 'open_invoices_by_customer'
 const listeners = new Set<() => void>()
 const services: ViewsServices = {
   kg: {
     views: async () => ok(views),
     schema: async () => ok({ labels: [], relationships: [] } as any),
-    runView: async () => result('saved'),
+    runView: async (name) => name === 'slow_digest' ? runSlowly() : result('saved'),
+    kill: async (runId) => { const live = slow; live?.stop(); return ok({ runId, killed: live !== null }) },
+    runs: async () => ok([]),
     execute: async () => result('edited'),
     saveView: async (spec) => {
       views = [...views.filter((v) => v.name !== spec.name), { ...spec, source: 'saved', params: spec.params ?? {}, description: spec.description ?? '', materialized: false } as KgView]
@@ -63,6 +83,7 @@ const services: ViewsServices = {
     deleteView: async () => ok({ deleted: true } as any),
     refreshView: async () => ok({ refreshed: true } as any),
   } as ViewsServices['kg'],
+  subscribeProgress: (onEvent) => { emit = onEvent },
   watches: {
     list: async () => ok([]), create: async () => ok({} as any), delete: async () => ok(undefined), run: async () => ok(undefined),
     runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]),

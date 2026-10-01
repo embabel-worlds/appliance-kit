@@ -857,6 +857,14 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewpane-results .results-foot { flex: none; margin: 0; padding: 8px 14px; border-top: 1px solid var(--rule); }
 
+/* A run still going: how long there has been no result, and the trace where the rows will land.
+   The pane is the scroller here too, so the trace drops the height cap it has in Query Studio. */
+:where(.kit-feature) .viewrun-wait { flex: none; font-variant-numeric: tabular-nums; }
+
+:where(.kit-feature) .viewrun-step { color: var(--mid); overflow-wrap: anywhere; }
+
+:where(.kit-feature) .viewrun-trace { max-height: none; overflow: visible; margin: 14px; }
+
 /* The pane is the scroller, so the table must not become a second one inside it. */
 :where(.kit-feature) .view-results .tablewrap { max-height: none; overflow: visible; }
 

@@ -11,6 +11,10 @@
  * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
  * too; tabs that anchored into one long page produced exactly that double scrollbar.
  *
+ * WAITING. A run that is slow says how long there has been no result and the last step the engine
+ * reported, shows the trace where the rows will land, and can be cancelled. Leaving a view cancels
+ * its run without asking: the answer would arrive for a view nobody is looking at.
+ *
  * RUNNING. An unedited view runs through the appliance's one-call `runView`. Once its Cypher is
  * edited, Run sends the edited body to `execute` WITH the view's declared params, so it gets the
  * same defaults, coercion and substitution it will get once saved — trying an edit never requires
@@ -37,6 +41,8 @@ import type {
   WatchRun,
 } from '../contracts.ts'
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { useRunProgress } from '../studio/progress.ts'
+import { RunWait, cancelRun } from './runWait.tsx'
 import { SaveCopyDialog, type CopyReason } from './SaveCopyDialog.tsx'
 import { ViewCypherEditor, type EditorSize, type ViewCypherEditorHandle } from './ViewCypherEditor.tsx'
 
@@ -81,6 +87,9 @@ export function SavedViewsSurface({ services, host }: SavedViewsSurfaceProps) {
   return <ViewsRuntimeContext.Provider value={{ services, host }}><SavedViewsBody /></ViewsRuntimeContext.Provider>
 }
 
+/** A host that gives no trace: the run is still timed and still cancellable, just not narrated. */
+const NO_TRACE = (): void => {}
+
 interface SaveNote { tone: 'ok' | 'error' | null; text: string; undo?: string }
 
 function SavedViewsBody() {
@@ -99,11 +108,28 @@ function SavedViewsBody() {
   const [rows, setRows] = useState<Array<Record<string, unknown>>>([])
   const [ran, setRan] = useState(false)
   const [busy, setBusy] = useState(false)
+  /** When the run in flight began, on the monotonic clock; null when nothing is running. */
+  const [startedAt, setStartedAt] = useState<number | null>(null)
+  const [cancelling, setCancelling] = useState(false)
+  const progress = useRunProgress(services.subscribeProgress ?? NO_TRACE)
+  /* Refs, because the run that reads them awaits across renders: which run owns the screen, the
+     id the trace bound for it, and the edited text it was sent as. */
+  const runGeneration = useRef(0)
+  const running = useRef(false)
+  const boundRunId = useRef<string | null>(null)
+  boundRunId.current = progress.runId
+  const runningDraft = useRef<string | null>(null)
   const [editorSize, setEditorSize] = useState<EditorSize>('closed')
   const [edited, setEdited] = useState(false)
   const [saveNote, setSaveNote] = useState<SaveNote | null>(null)
   const [copying, setCopying] = useState(false)
   const editorRef = useRef<ViewCypherEditorHandle>(null)
+  const traceRef = useRef<HTMLDivElement>(null)
+  // The newest line is the one being read, and the pane is the only scroller.
+  useEffect(() => {
+    const pane = traceRef.current?.parentElement
+    if (pane) pane.scrollTop = pane.scrollHeight
+  }, [progress.lines])
 
   const load = useCallback(async () => {
     const outcome = await services.kg.views()
@@ -162,6 +188,7 @@ function SavedViewsBody() {
     // Query Studio or Agents handoff can return to the operation, arguments and results.
     if (rest === null) return
     if (!rest) {
+      abandonRun()
       setSelected(null)
       return
     }
@@ -226,7 +253,32 @@ function SavedViewsBody() {
     )
   }
 
+  /*
+   * LEAVING A VIEW MID-RUN cancels the run, without asking. Its answer is disowned first, so a
+   * late reply cannot write another view's rows; then the appliance is told to stop, because a run
+   * nobody is waiting on is only cost. Work already materialized is kept either way.
+   *
+   * ONLY BY THE ID THE TRACE BOUND. Cancel may fall back to the appliance's list of runs, because
+   * the person pressing it is looking at the run. Here the next run is usually a moment behind, and
+   * a guess made from that list could land on it instead.
+   */
+  function abandonRun(): void {
+    if (!running.current) return
+    running.current = false
+    runGeneration.current += 1
+    const runId = boundRunId.current
+    progress.end()
+    setBusy(false)
+    setStartedAt(null)
+    setCancelling(false)
+    if (runId) void cancelRun(services.kg, runId, null)
+  }
+  const abandonOnUnmount = useRef(abandonRun)
+  abandonOnUnmount.current = abandonRun
+  useEffect(() => () => abandonOnUnmount.current(), [])
+
   function applyView(v: KgView, nextPane: ViewPane): void {
+    abandonRun()
     setExpandedRealm(groupOf(v))
     setSelected(v.name)
     setPane(nextPane)
@@ -258,18 +310,41 @@ function SavedViewsBody() {
     if (!view) return
     // Running is for looking at rows, so the editor gets out of the way at either size.
     setEditorSize('closed')
+    // Enter in an argument field runs again mid-run; the earlier run is then nobody's.
+    abandonRun()
+    const generation = ++runGeneration.current
+    running.current = true
     setBusy(true)
+    setCancelling(false)
     setRows([])
     setRan(false)
-    setStatus({ tone: null, text: 'running…' })
+    setStatus({ tone: null, text: '' })
     const draft = edited ? editorRef.current?.getText() : undefined
+    runningDraft.current = draft ?? null
+    progress.begin()
+    setStartedAt(performance.now())
     const outcome = draft === undefined
       ? await services.kg.runView(view.name, supplied(values))
       : await services.kg.execute(draft, { params, args: supplied(values) })
+    // Abandoned for another view, or superseded: this answer belongs to nothing on screen.
+    if (generation !== runGeneration.current) return
+    running.current = false
+    /* Read before the trace is closed. An id still bound means the engine never reported the run
+       over — so a failure here is the client giving up, not the run ending. */
+    const unfinished = boundRunId.current
+    // The trace stops; its lines stay, as the account of where the wait went.
+    progress.end()
     setBusy(false)
+    setStartedAt(null)
+    setCancelling(false)
     if (!isOk(outcome)) {
-      setStatus({ tone: 'error', text: failureMessage(outcome, `run '${view.name}'`) })
+      const text = failureMessage(outcome, `run '${view.name}'`)
+      setStatus({ tone: 'error', text })
       showPane('results', true)
+      // A deadline passing here must not leave the run going where nothing can stop it.
+      if (unfinished && (await cancelRun(services.kg, unfinished, null)).accepted && generation === runGeneration.current) {
+        setStatus({ tone: 'error', text: `${text} The query was still running, so it was cancelled; work already materialized is kept.` })
+      }
       return
     }
     const result = outcome.value
@@ -281,6 +356,13 @@ function SavedViewsBody() {
     const got = (result.rows ?? []) as Array<Record<string, unknown>>
     // `rowCount` is documented as required and is not always sent. The rows are the truth.
     const rowCount = result.rowCount ?? got.length
+    /* A KILLED run comes back 200 with no error and no rows, so the generic path would report
+       "0 row(s)" — and zero rows because you cancelled is not zero rows because the graph is empty. */
+    if (result.reason === 'KILLED') {
+      setStatus({ tone: 'caution', text: `Cancelled. ${result.hint ?? 'Work already materialized is kept — run it again to resume from there.'}` })
+      showPane('results', true)
+      return
+    }
     if (result.error) {
       setStatus({ tone: 'error', text: result.error })
       showPane('results', true)
@@ -295,6 +377,21 @@ function SavedViewsBody() {
     setRows(got)
     setRan(true)
     showPane('results', true)
+  }
+
+  /*
+   * Cancel is a REQUEST: the engine checks between steps, so the status says what is being waited
+   * for rather than freezing. The run's own answer, when it lands, replaces whatever is said here.
+   */
+  async function cancel(): Promise<void> {
+    const generation = runGeneration.current
+    setCancelling(true)
+    setStatus({ tone: null, text: 'Cancelling — the engine checks between steps, so this can take a moment…' })
+    const result = await cancelRun(services.kg, boundRunId.current, runningDraft.current)
+    if (generation !== runGeneration.current || !running.current) return
+    if (result.accepted) return setStatus({ tone: null, text: 'Cancel requested — waiting for the run to confirm it stopped…' })
+    setCancelling(false)
+    setStatus({ tone: 'caution', text: result.text })
   }
 
   /*
@@ -371,6 +468,7 @@ function SavedViewsBody() {
     if (!confirm(`Delete the view '${name}'?`)) return
     const outcome = await services.kg.deleteView(name)
     if (!isOk(outcome)) return setStatus({ tone: 'error', text: failureMessage(outcome, 'delete this view') })
+    abandonRun()
     setSelected(null)
     navigate(null, 'open')
     void load()
@@ -453,7 +551,7 @@ function SavedViewsBody() {
         <h2>{group}</h2>
         <small>Selected operation</small>
         <strong>{view.name}</strong>
-        <button className="btn ghost" onClick={() => { setSelected(null); navigate(null, 'open') }}>← Operation Board</button>
+        <button className="btn ghost" onClick={() => { abandonRun(); setSelected(null); navigate(null, 'open') }}>← Operation Board</button>
       </div>
       <nav className="viewnav-section" aria-label={`Other operations in ${group}`}>
         <span className="viewnav-label">In {group} · {siblings.length}</span>
@@ -535,6 +633,11 @@ function SavedViewsBody() {
               {'{ }'} Cypher{edited ? ' •' : ''}
             </button>
             <button className="btn primary" disabled={busy} onClick={() => void run()}>{busy ? 'running…' : 'Run'}</button>
+            {/* Only while there is a run to cancel, and only where the host can cancel one. It stays
+                clickable while cancelling: a second press is harmless, and greying it out reads as a hang. */}
+            {busy && services.kg.kill && (
+              <button className="btn ghost" data-view-cancel onClick={() => void cancel()}>{cancelling ? 'cancelling…' : 'Cancel'}</button>
+            )}
           </div>
         </div>
 
@@ -559,12 +662,22 @@ function SavedViewsBody() {
           <section className="viewpane viewpane-results" role="tabpanel" id="viewpane-results" data-view-pane="results" aria-labelledby="viewtab-results" hidden={pane !== 'results'}>
             <span data-state="view.ran" hidden={!ran} />
             <div className="viewpane-scroll view-results" tabIndex={0}>
-              {!ran ? (busy ? <p className="hint">Running… Results will appear here.</p> : status.tone === 'error' ? null : <p className="hint">Nothing run yet.</p>) : rows.length === 0 ? <p className="hint">No rows.</p> : (
+              {!ran ? (busy ? <p className="hint">Running… Results will appear here.</p> : status.tone === 'error' || status.tone === 'caution' ? null : <p className="hint">Nothing run yet.</p>) : rows.length === 0 ? <p className="hint">No rows.</p> : (
                 <RowTable rows={rows} columns={rowColumns(rows)} />
+              )}
+              {/* The trace stands where the rows will land, and stays when none do: a run that
+                  failed or was cancelled owes the account of how far it got. */}
+              {!ran && progress.lines.length > 0 && (
+                <div className="progresslist viewrun-trace" ref={traceRef} aria-label="What the engine has done so far">
+                  {progress.lines.map((line) => (
+                    <div className={`progressline${line.failed ? ' failed' : ''}`} key={line.key}>{line.text}</div>
+                  ))}
+                </div>
               )}
             </div>
             <div className="row results-foot">
               {ran && rows.length > 0 && <><CopyButton label="Copy as Markdown" text={rowsToMarkdown(rows)} /><CopyButton label="Copy as CSV" text={rowsToCsv(rows)} /></>}
+              {busy && startedAt != null && <RunWait startedAt={startedAt} lastStep={progress.lines.at(-1)?.text ?? null} />}
               <Status tone={status.tone}>{status.text}</Status>
             </div>
           </section>
