@@ -5073,6 +5073,19 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "SetStageRequest" : {
+        "properties" : {
+          "routine" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "stage" ],
+        "type" : "object"
+      },
       "SignalTypeInfo" : {
         "properties" : {
           "count" : {
@@ -5251,6 +5264,17 @@
           "timeout" : {
             "format" : "int64",
             "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
+      "StageResponse" : {
+        "properties" : {
+          "agent" : {
+            "$ref" : "#/components/schemas/AgentView"
+          },
+          "refused" : {
+            "type" : "string"
           }
         },
         "type" : "object"
@@ -9217,6 +9241,65 @@
           }
         },
         "summary" : "One agent in your world",
+        "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/stage" : {
+      "post" : {
+        "description" : "Off never fires; observing runs with writes suppressed; on may write. Lowering is always allowed.",
+        "operationId" : "setAgentStage",
+        "parameters" : [ {
+          "description" : "The agent's name, as the list returns it",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SetStageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "The agent after the change"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "No such agent, or no such routine on it"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "Refused, with the reason: what the agent still needs, or a sponsor raising what only owners may"
+          }
+        },
+        "summary" : "Move an agent or one of its routines on the ladder",
         "tags" : [ "Agents" ]
       }
     },
@@ -18022,7 +18105,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39705"
+    "url" : "http://localhost:46699"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
