@@ -30,6 +30,15 @@ describe('describeVcEvent says what the engine is doing', () => {
     )
   })
 
+  it('says a fused search, and the steps that end an ask, in words', () => {
+    const step = (name: string, detail: string, results?: number) =>
+      describeVcEvent({ ...base, type: 'retrieval.step', step: name, detail, results } as VcEvent)
+    assert.equal(step('search', 'renewal notice period', 12), 'Searching: renewal notice period — 12 results')
+    assert.equal(step('retry', 'nothing retrieved; searching again'), 'Trying again: nothing retrieved; searching again')
+    assert.equal(step('verify', 're-quoting 2 unverified figure(s)'), 'Checking the figures: re-quoting 2 unverified figure(s)')
+    assert.equal(step('answered', 'from 3 document(s)'), 'Answered: from 3 document(s)')
+  })
+
   it('keeps an unmapped step legible rather than dropping it', () => {
     assert.equal(
       describeVcEvent({ ...base, type: 'retrieval.step', step: 'some_new_step', detail: 'x' } as VcEvent),
