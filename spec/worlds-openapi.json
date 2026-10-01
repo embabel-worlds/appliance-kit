@@ -231,6 +231,31 @@
         "required" : [ "actions", "description", "goals", "name" ],
         "type" : "object"
       },
+      "AgentVersionView" : {
+        "properties" : {
+          "digest" : {
+            "type" : "string"
+          },
+          "routines" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "signedAt" : {
+            "type" : "string"
+          },
+          "signedBy" : {
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "digest", "routines", "signedAt", "signedBy", "version" ],
+        "type" : "object"
+      },
       "AgentView" : {
         "properties" : {
           "duties" : {
@@ -278,6 +303,12 @@
           "routing" : {
             "type" : "string"
           },
+          "signedAt" : {
+            "type" : "string"
+          },
+          "signedBy" : {
+            "type" : "string"
+          },
           "sponsor" : {
             "type" : "string"
           },
@@ -289,12 +320,18 @@
             "enum" : [ "draft", "submitted", "active", "suspended", "retired" ],
             "type" : "string"
           },
+          "unsignedChanges" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "version" : {
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "duties", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "version" ],
+        "required" : [ "duties", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "unsignedChanges", "version" ],
         "type" : "object"
       },
       "AnnotateDryRunRequest" : {
@@ -9199,7 +9236,20 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "Every agent in your world, with its stage and needs"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
           }
         },
         "summary" : "List the agents in your world",
@@ -9229,6 +9279,16 @@
             },
             "description" : "The agent"
           },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentView"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -9241,6 +9301,65 @@
           }
         },
         "summary" : "One agent in your world",
+        "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/sign" : {
+      "post" : {
+        "description" : "Only its sponsor or an owner may sign. Refused when nothing has changed since the last signature.",
+        "operationId" : "signAgent",
+        "parameters" : [ {
+          "description" : "The agent's name, as the list returns it",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "The agent, now running the new version"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "No declared agent of that name in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "Refused, with the reason"
+          }
+        },
+        "summary" : "Sign the agent as its next version",
         "tags" : [ "Agents" ]
       }
     },
@@ -9278,6 +9397,16 @@
             },
             "description" : "The agent after the change"
           },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/StageResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -9300,6 +9429,63 @@
           }
         },
         "summary" : "Move an agent or one of its routines on the ladder",
+        "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/versions" : {
+      "get" : {
+        "operationId" : "agentVersions",
+        "parameters" : [ {
+          "description" : "The agent's name, as the list returns it",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentVersionView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The versions; empty when it has never been signed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentVersionView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentVersionView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No declared agent of that name in your world"
+          }
+        },
+        "summary" : "Every signed version of an agent, newest first",
         "tags" : [ "Agents" ]
       }
     },
@@ -18105,7 +18291,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46699"
+    "url" : "http://localhost:34417"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
