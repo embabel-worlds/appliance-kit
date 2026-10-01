@@ -203,7 +203,7 @@ describe('the public browser feature entry point', () => {
     for (const selector of [
       '.stage.acting', '.signalrow', '.signalname', '.signalfields', '.emptymenu', '.emptyroute',
       '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
-      '.realm-problem', '.pinchip.is-gone', '.viewrealms', '.viewrealm-head', '.viewoperation',
+      '.realm-problem', '.pinchip.is-gone', '.viewnav-filter', '.viewnav-list', '.viewspage-none',
       '.viewspage-sidebar', '.viewspage-mobile-nav', '.viewoperation-nav', '.viewpane', '.viewrunbar', '.viewcypher', '.viewcopy', '.viewsibling', '.viewschema-label',
       '.view-results',
     ]) assert.equal(css.includes(selector), true, `${selector} style`)
@@ -214,8 +214,7 @@ describe('the public browser feature entry point', () => {
     assert.ok(ruleFor(':where(.kit-feature).viewspage').nodes.some((node) =>
       node.type === 'decl' && node.prop === 'background' && node.value === 'var(--paper)'),
     'Views text needs opaque backing against bright graph nodes')
-    for (const selector of [':where(.kit-feature) .viewrealm-head:focus-visible',
-      ':where(.kit-feature) .viewoperation-nav-link:focus-visible',
+    for (const selector of [':where(.kit-feature) .viewoperation-nav-link:focus-visible',
       ':where(.kit-feature) .viewspage-mobile-nav > summary:focus-visible']) {
       assert.ok(root.nodes.some((rule) => rule.type === 'rule' && rule.selectors.includes(selector)
         && rule.nodes.some((node) => node.prop === 'box-shadow' && node.value === 'inset 0 0 0 2px var(--ink)')),
@@ -361,7 +360,7 @@ describe('the public browser feature entry point', () => {
     assert.equal(updates, 1)
   })
 
-  it('lands on an eight-realm operation board and expands one realm across 103 live views', async () => {
+  it('lists 103 live views from eight realms under one filter, with none to open first', async () => {
     const sizes = { World: 25, drugtrials: 6, 'gov-au': 22, 'gov-uk': 13, impromptu: 4, movie: 13, 'realm-esg': 17, 'realm-sec': 3 }
     const views = Object.entries(sizes).flatMap(([source, count]) => Array.from({ length: count }, (_, index) => ({
       name: `${source}-${index}`,
@@ -386,16 +385,31 @@ describe('the public browser feature entry point', () => {
     const host = { selectedView: () => null, subscribeSelection: () => () => {}, onOpenInStudio() {}, onCreateHandler() {} }
     const { container } = await render(h(features.SavedViewsSurface, { services, host }))
 
-    assert.equal(container.querySelector('.viewboard-head h2')?.textContent, 'Operation Board')
-    assert.equal(container.querySelectorAll('.viewrealm').length, 8)
-    assert.equal(container.querySelectorAll('.viewoperation').length, 0)
-    assert.match(button(container, 'World').textContent, /25 operations.*1 materialized.*1 watched/)
+    const sidebar = container.querySelector('.viewspage-sidebar')
+    const rows = () => [...sidebar.querySelectorAll('.viewsibling')]
+    const groups = () => [...sidebar.querySelectorAll('.viewnav-section')].map((section) => section.querySelector('.viewnav-label').textContent)
+    assert.equal(container.querySelector('h2'), null, 'the window is already titled, and nothing is chosen yet')
+    assert.match(container.querySelector('.viewspage-none').textContent, /Choose a view/)
+    assert.equal(rows().length, 103, 'every view is in the list, with no group to open first')
+    assert.deepEqual(groups(), ['World · 25', 'drugtrials · 6', 'gov-au · 22', 'gov-uk · 13', 'impromptu · 4', 'movie · 13', 'realm-esg · 17', 'realm-sec · 3'])
+    assert.equal(rows()[0].querySelector('small').textContent, 'World operation 0', 'a row says what the view answers')
+    assert.equal(rows().filter((row) => row.querySelector('.viewtag')?.textContent === 'watched').length, 1)
 
-    await act(async () => button(container, 'World').click())
-    assert.equal(container.querySelectorAll('.viewoperation').length, 25)
-    await act(async () => button(container, 'movie').click())
-    assert.equal(container.querySelectorAll('.viewoperation').length, 13)
-    assert.equal(button(container, 'World').getAttribute('aria-expanded'), 'false')
+    const filter = sidebar.querySelector('.viewnav-filter input')
+    assert.equal(filter.placeholder, 'Filter 103 views')
+    await act(async () => setInput(filter, 'MOVIE'))
+    assert.deepEqual(groups(), ['movie · 13'], 'the filter reads the group as well as the name')
+    await act(async () => setInput(filter, 'operation 12'))
+    assert.deepEqual(rows().map((row) => row.querySelector('strong').textContent), ['World-12', 'gov-au-12', 'gov-uk-12', 'movie-12', 'realm-esg-12'])
+    await act(async () => setInput(filter, 'nothing like this'))
+    assert.equal(rows().length, 0)
+    assert.match(sidebar.textContent, /No view matches “nothing like this”/)
+
+    await act(async () => setInput(filter, 'movie-3'))
+    await act(async () => rows()[0].click())
+    assert.equal(container.querySelector('.viewoperation-head h2').textContent, 'movie-3')
+    assert.equal(rows()[0].getAttribute('aria-current'), 'page')
+    assert.equal(filter.value, 'movie-3', 'choosing a view keeps the filter, so the list does not jump')
   })
 
   it('keeps a malformed selected view without cypher usable', async () => {
@@ -618,7 +632,7 @@ describe('the public browser feature entry point', () => {
     assert.doesNotMatch(container.textContent, /Watch stopped|Nothing is publishing/)
   })
 
-  it('keeps only sibling navigation in the realm and renders ordered operation sections under a top nav', async () => {
+  it('keeps every view in the list beside the chosen one and renders ordered operation sections under a top nav', async () => {
     const navigations = []
     const listeners = new Set()
     let route = null
@@ -649,12 +663,12 @@ describe('the public browser feature entry point', () => {
       onOpenInStudio() {}, onCreateHandler() {},
     }
     const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-    await act(async () => button(container, 'World').click())
     await act(async () => button(container, 'Alpha').click())
 
-    assert.equal(container.querySelector('.viewspage-sidebar')?.querySelectorAll('.viewsibling').length, 2)
+    assert.equal(container.querySelector('.viewspage-sidebar')?.querySelectorAll('.viewsibling').length, 3, 'another realm\'s views stay one click away')
+    assert.deepEqual([...container.querySelectorAll('.viewspage-sidebar .viewnav-section')].map((section) => section.dataset.viewgroup), ['World', 'movie'])
     assert.equal(container.querySelector('.viewspage-sidebar')?.querySelectorAll('.viewpane-link').length, 0)
-    assert.equal(container.querySelector('.viewspage-mobile-nav summary')?.textContent.includes('Browse World'), true)
+    assert.equal(container.querySelector('.viewspage-mobile-nav summary')?.textContent.includes('Browse viewsWorld · Alpha'), true)
     assert.deepEqual([...container.querySelectorAll('.viewoperation-nav button')].map((item) => item.textContent), ['Results', 'Schema', 'Watch / receipts'])
     assert.deepEqual([...container.querySelectorAll('.viewpane')].map((item) => item.dataset.viewPane), ['results', 'schema', 'watch'])
     assert.deepEqual([...container.querySelectorAll('.viewpane')].map((item) => item.hidden), [false, true, true], 'one pane shows at a time')
@@ -672,9 +686,6 @@ describe('the public browser feature entry point', () => {
       ['Alpha', 'schema', true],
       ['Beta', 'schema', false],
     ])
-    await act(async () => button(container, 'Operation Board').click())
-    assert.equal(container.querySelector('.viewboard-head h2')?.textContent, 'Operation Board')
-    assert.deepEqual(navigations.at(-1), [null, 'open', false])
   })
 
   it('restores a selected operation pane from the route and can drive a run of that same operation', async () => {
@@ -872,6 +883,7 @@ describe('the public browser feature entry point', () => {
     container.remove()
     container = await open('Stock')
     assert.equal(container.querySelector('.viewtag-origin').textContent, 'ledger realm')
+    assert.deepEqual([...container.querySelector('.viewtag-origin').classList], ['viewtag', 'viewtag-origin', 'from-realm'], 'no bare `realm` class: a host styles its realm cards with that name')
     assert.equal(button(container, 'Delete'), undefined)
   })
 
@@ -1007,7 +1019,6 @@ describe('the public browser feature entry point', () => {
       onOpenInStudio() {}, onCreateHandler: (draft) => drafts.push(draft),
     }
     const { container } = await render(h(features.SavedViewsSurface, { services, host }))
-    await act(async () => button(container, 'finance').click())
     await act(async () => button(container, 'Overdue').click())
     await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
     assert.deepEqual(runs, [['Overdue', { state: 'late' }]])

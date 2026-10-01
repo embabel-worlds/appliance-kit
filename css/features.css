@@ -662,67 +662,17 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .saveview { flex-basis: 100%; border-top: 1px solid var(--hairline); margin-top: 10px; padding-top: 10px; }
 
-/* ── the Views operation board ───────────────────────────────────────────────
- * The landing page is grouped by realm. Selecting an operation replaces the board with one
- * bounded workspace: a realm-local navigator and exactly one operation pane.
+/* ── Views: a list and a detail ─────────────────────────────────────────────
+ * Every view is in the list on the left, grouped by where it came from, under one filter. The list
+ * scrolls on its own, so choosing another view never means scrolling the page back to find it.
  */
 
 :where(.kit-feature).viewspage, :where(.kit-feature) .viewspage { min-width: 0; max-width: 100%; background: var(--paper); }
 
-:where(.kit-feature).viewspage-board { display: block; height: auto; min-height: 0; }
-
-:where(.kit-feature) .viewboard-head { display: flex; align-items: end; justify-content: space-between; gap: 16px; margin-bottom: 14px; }
-
-:where(.kit-feature) .viewboard-head h2,
 :where(.kit-feature) .viewoperation-head h2 { margin: 0 0 4px; font-size: 22px; overflow-wrap: anywhere; }
 
-:where(.kit-feature) .viewboard-head p { margin: 0; }
-
-:where(.kit-feature) .viewrealms { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; align-items: start; }
-
-:where(.kit-feature).viewspage-board .viewrealm { min-height: 0; margin: 0; overflow: hidden; }
-
-:where(.kit-feature) .viewrealm.expanded { grid-column: 1 / -1; }
-
-:where(.kit-feature) .viewrealm-head {
-  display: grid; width: 100%; min-height: 70px; grid-template-columns: minmax(0, 1fr) auto;
-  align-items: center; gap: 14px; padding: 12px 14px; border: 0; background: transparent;
-  color: var(--ink); text-align: left; cursor: pointer;
-}
-
-:where(.kit-feature) .viewrealm-head:hover,
-:where(.kit-feature) .viewrealm-head:focus-visible { background: color-mix(in srgb, var(--signal) 8%, transparent); }
-
-:where(.kit-feature) .viewrealm-head strong { display: block; margin-bottom: 4px; font-size: 15px; }
-
-:where(.kit-feature) .viewrealm-head small { display: block; color: var(--mid); font: 11px/1.4 var(--mono); overflow-wrap: anywhere; }
-
-:where(.kit-feature) .viewrealm-head .chev { color: var(--ink); font-size: 18px; }
-
-:where(.kit-feature) .viewrealm-head:focus-visible,
 :where(.kit-feature) .viewoperation-nav-link:focus-visible,
 :where(.kit-feature) .viewspage-mobile-nav > summary:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); }
-
-:where(.kit-feature) .viewrealm-operations {
-  display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px;
-  padding: 12px; border-top: 1px solid var(--rule); background: color-mix(in srgb, var(--paper) 16%, transparent);
-}
-
-:where(.kit-feature) .viewoperation {
-  display: grid; min-width: 0; grid-template-columns: minmax(0, 1fr) auto; align-items: center;
-  gap: 10px; padding: 10px; border: 1px solid var(--hairline); border-radius: var(--radius); background: var(--field-bg);
-}
-
-:where(.kit-feature) .viewoperation-open {
-  display: grid; min-width: 0; min-height: 44px; gap: 3px; padding: 2px 0;
-  border: 0; background: transparent; color: var(--ink); text-align: left; cursor: pointer;
-}
-
-:where(.kit-feature) .viewoperation-open strong { font: 650 12.5px var(--mono); overflow-wrap: anywhere; }
-
-:where(.kit-feature) .viewoperation-open small { color: var(--mid); font-size: 11.5px; line-height: 1.35; overflow-wrap: anywhere; }
-
-:where(.kit-feature) .viewoperation .btn { min-height: 44px; }
 
 :where(.kit-feature).viewspage-selected {
   display: grid; grid-template-columns: 300px minmax(0, 1fr); gap: 16px;
@@ -733,18 +683,17 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .viewspage-operation > * { min-width: 0; }
 
 :where(.kit-feature).viewspage-selected .viewspage-sidebar {
-  min-height: 0; max-height: 100%; margin: 0; overflow-y: auto; scrollbar-gutter: stable;
+  display: flex; flex-direction: column; min-height: 0; max-height: 100%; margin: 0; overflow: hidden;
 }
 
-:where(.kit-feature) .viewnav-head { display: grid; gap: 3px; padding: 14px; border-bottom: 1px solid var(--rule); }
+/* The filter stays put; only the views under it scroll. */
+:where(.kit-feature) .viewnav-list { flex: 1; min-height: 0; overflow-y: auto; scrollbar-gutter: stable; }
 
-:where(.kit-feature) .viewnav-head h2 { margin: 0; font-size: 17px; }
+:where(.kit-feature) .viewnav-filter { flex: none; padding: 10px; border-bottom: 1px solid var(--rule); }
 
-:where(.kit-feature) .viewnav-head > strong { font: 650 12px var(--mono); overflow-wrap: anywhere; }
+:where(.kit-feature) .viewnav-filter input { width: 100%; box-sizing: border-box; }
 
-:where(.kit-feature) .viewnav-head > small { color: var(--mid); }
-
-:where(.kit-feature) .viewnav-head .btn { width: 100%; min-height: 44px; margin-top: 9px; }
+:where(.kit-feature) .viewnav-none { margin: 14px; }
 
 :where(.kit-feature) .viewnav-label { color: var(--mid); font: 650 10px var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
 
@@ -770,7 +719,19 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewsibling strong { font: 650 11px var(--mono); overflow-wrap: anywhere; }
 
-:where(.kit-feature) .viewsibling small { color: var(--mid); overflow-wrap: anywhere; }
+:where(.kit-feature) .viewsibling strong,
+:where(.kit-feature) .viewsibling small { display: block; min-width: 0; }
+
+/* One secondary line (the description), cut with an ellipsis; the whole of it is the row's title. */
+:where(.kit-feature) .viewsibling small { color: var(--mid); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* The name, with "watched" at its end when it is; the description under both. */
+:where(.kit-feature) .viewsibling { grid-template-columns: minmax(0, 1fr) auto; gap: 3px 8px; }
+
+:where(.kit-feature) .viewsibling small { grid-column: 1 / -1; }
+
+/* Nothing chosen yet: the detail side says so, quietly, in the middle of where a view will be. */
+:where(.kit-feature) .viewspage-none { align-items: center; justify-content: center; }
 
 :where(.kit-feature) .viewspage-mobile-nav { display: none; min-height: 0; margin: 0 0 14px; overflow: hidden; }
 
@@ -789,7 +750,7 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewspage-mobile-nav > summary small { display: block; margin-top: 2px; color: var(--mid); overflow-wrap: anywhere; }
 
-:where(.kit-feature) .viewspage-mobile-nav-body { max-height: 68vh; overflow-y: auto; scrollbar-gutter: stable; }
+:where(.kit-feature) .viewspage-mobile-nav-body { display: flex; flex-direction: column; max-height: 68vh; }
 
 :where(.kit-feature) .viewspage-operation {
   position: relative; display: flex; flex-direction: column; min-width: 0; min-height: 0; height: 100%; gap: 10px; overflow: hidden;
@@ -819,9 +780,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewtag-origin { align-self: center; color: var(--mid); border-color: var(--rule); }
 
-:where(.kit-feature) .viewtag-origin.realm { color: var(--caution); border-color: color-mix(in srgb, var(--caution) 45%, transparent); }
+:where(.kit-feature) .viewtag-origin.from-realm { color: var(--caution); border-color: color-mix(in srgb, var(--caution) 45%, transparent); }
 
-:where(.kit-feature) .viewtag-origin.mine { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); }
+:where(.kit-feature) .viewtag-origin.from-you { color: var(--lit); border-color: color-mix(in srgb, var(--lit) 40%, transparent); }
 
 /* ── a selected view: run bar, then ONE bounded body whose active tab is the only scroller ── */
 
@@ -968,12 +929,6 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
   :where(.kit-feature) .viewoperation-head > .row { justify-content: flex-start; }
 }
 
-@media (max-width: 820px) {
-  :where(.kit-feature) .viewrealms,
-  :where(.kit-feature) .viewrealm-operations { grid-template-columns: 1fr; }
-  :where(.kit-feature) .viewrealm.expanded { grid-column: auto; }
-}
-
 @media (max-width: 700px) {
   :where(.kit-feature).viewspage-selected .btn,
   :where(.kit-feature).viewspage-selected input,
@@ -993,8 +948,6 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 }
 
 @media (pointer: coarse) {
-  :where(.kit-feature) .viewrealm-head,
-  :where(.kit-feature) .viewoperation-open,
   :where(.kit-feature) .viewoperation-nav-link,
   :where(.kit-feature) .viewsibling { min-height: 44px; }
 }
