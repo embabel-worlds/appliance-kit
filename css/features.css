@@ -697,11 +697,15 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewnav-label { color: var(--mid); font: 650 10px var(--mono); letter-spacing: 0.09em; text-transform: uppercase; }
 
-:where(.kit-feature) .viewnav-section { display: grid; gap: 2px; padding: 10px; border-bottom: 1px solid var(--rule); }
+:where(.kit-feature) .viewnav-section { display: grid; gap: 2px; padding: 0 10px 10px; }
 
-:where(.kit-feature) .viewnav-section:last-child { border-bottom: 0; }
-
-:where(.kit-feature) .viewnav-section > .viewnav-label { margin: 0 4px 5px; }
+/* A group's heading is a bar that stays at the top of the list while its views scroll under it, and
+   is pushed off by the next group's — so the list always says whose views are on screen. Opaque,
+   because rows pass beneath it. */
+:where(.kit-feature) .viewnav-section > .viewnav-label {
+  position: sticky; top: 0; z-index: 1; margin: 0 -10px 6px; padding: 7px 14px 6px;
+  border-bottom: 1px solid var(--rule); background: color-mix(in srgb, var(--ink) 5%, var(--paper));
+}
 
 :where(.kit-feature) .viewsibling {
   display: grid; width: 100%; min-height: 44px; align-items: center; gap: 8px;

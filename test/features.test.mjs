@@ -214,6 +214,9 @@ describe('the public browser feature entry point', () => {
     assert.ok(ruleFor(':where(.kit-feature).viewspage').nodes.some((node) =>
       node.type === 'decl' && node.prop === 'background' && node.value === 'var(--paper)'),
     'Views text needs opaque backing against bright graph nodes')
+    const heading = ruleFor(':where(.kit-feature) .viewnav-section > .viewnav-label')
+    assert.ok(heading.nodes.some((node) => node.prop === 'position' && node.value === 'sticky'), 'a group heading stays on screen while its views scroll')
+    assert.ok(heading.nodes.some((node) => node.prop === 'background' && node.value.includes('var(--paper)') && !node.value.includes('transparent')), 'and is opaque, because rows pass beneath it')
     for (const selector of [':where(.kit-feature) .viewoperation-nav-link:focus-visible',
       ':where(.kit-feature) .viewspage-mobile-nav > summary:focus-visible']) {
       assert.ok(root.nodes.some((rule) => rule.type === 'rule' && rule.selectors.includes(selector)
