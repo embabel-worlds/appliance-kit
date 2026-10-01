@@ -81,7 +81,7 @@ export interface VcProducerProgress extends VcEventBase {
 }
 export interface VcRetrievalStep extends VcEventBase {
   type: 'retrieval.step'
-  /** `search_semantic`, `search_keyword`, `read_document`, `judged`, `composing`. */
+  /** `search`, `search_semantic`, `search_keyword`, `read_document`, `judged`, `composing`, `retry`, `verify`, `answered`, `failed`, `fallback`. */
   step: string
   /** The query the model chose, or the document title it opened. */
   detail: string
@@ -119,11 +119,18 @@ const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? o
 
 /** The retrieval loop's steps, said as what the model is doing rather than as its tool name. */
 const RETRIEVAL_STEPS: Record<string, string> = {
+  // A search by meaning and keyword together, fused: neither of the two below.
+  search: 'Searching',
   search_semantic: 'Searching by meaning',
   search_keyword: 'Searching by keyword',
   read_document: 'Reading',
   judged: 'Judging',
   composing: 'Composing the answer',
+  retry: 'Trying again',
+  verify: 'Checking the figures',
+  answered: 'Answered',
+  failed: 'Failed',
+  fallback: 'Falling back',
 }
 
 /**
