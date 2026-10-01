@@ -480,6 +480,123 @@ describe('the public browser feature entry point', () => {
     assert.equal([...container.querySelectorAll('[role="alert"]')].filter(e => e.textContent.includes('Run backend detail')).length, 1)
   })
 
+  /* A run that can be watched and killed: `runView` stays open until the test answers it, and the
+     trace is whatever the test emits. */
+  const slowRun = () => {
+    const services = c3Services(), killed = []
+    let emit = () => {}, finish = () => {}
+    services.kg.views = async () => ok([{ name: 'Alpha', cypher: 'RETURN 1', params: {} }, { name: 'Beta', cypher: 'RETURN 2', params: {} }])
+    services.kg.runView = () => new Promise(resolve => { finish = resolve })
+    services.kg.kill = async (runId) => { killed.push(runId); return ok({ runId, killed: true }) }
+    services.kg.runs = async () => ok([])
+    services.subscribeProgress = (onEvent) => { emit = onEvent }
+    const started = async (queryId) => {
+      await act(async () => {
+        emit({ type: 'query.started', queryId, userId: 'u', seq: 0, atMs: 0, cypher: 'RETURN 1' })
+        emit({ type: 'stage.started', queryId, userId: 'u', seq: 1, atMs: 0, stage: 1, producer: 'digest', targetLabel: 'Digest', anchorLabel: 'Document', anchorCount: 3 })
+      })
+    }
+    return { services, killed, started, finish: (outcome) => act(async () => finish(outcome)) }
+  }
+  const runHost = () => {
+    let route = 'Alpha'; const listeners = new Set()
+    return {
+      host: {
+        selectedView: () => route,
+        subscribeSelection: listener => { listeners.add(listener); return () => listeners.delete(listener) },
+        navigateToView: (name, destination) => { route = name ? name + (destination === 'open' ? '' : '/' + destination) : '' },
+        onOpenInStudio() {}, onCreateHandler() {},
+      },
+    }
+  }
+  const cancelButton = (container) => container.querySelector('[data-view-cancel]')
+
+  it('a running view can be cancelled, and a cancelled run is not reported as zero rows', async () => {
+    const { services, killed, started, finish } = slowRun()
+    const { container } = await render(h(features.SavedViewsSurface, { services, host: runHost().host }))
+    assert.equal(cancelButton(container), null, 'nothing to cancel before a run')
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await started('q1')
+    const results = container.querySelector('.viewpane[data-view-pane="results"]')
+    assert.match(results.querySelector('.viewrun-trace').textContent, /Stage 1: digest → Digest, from 3 Documents/)
+    assert.match(results.querySelector('.viewrun-wait').textContent, /Running….*last step: Stage 1: digest/)
+    await act(async () => cancelButton(container).click())
+    assert.deepEqual(killed, ['q1'], 'the run the trace bound is the run killed')
+    assert.match(results.textContent, /Cancel requested/)
+    await finish(ok({ rows: [], rowCount: 0, reason: 'KILLED', hint: 'Kept so far.' }))
+    assert.match(results.textContent, /Cancelled\. Kept so far\./)
+    assert.doesNotMatch(results.textContent, /0 row\(s\)|No rows|Nothing run yet/)
+    assert.equal(cancelButton(container), null)
+    assert.equal(results.querySelector('.viewrun-wait'), null)
+    assert.ok(results.querySelector('.viewrun-trace'), 'the trace stays as the account of how far it got')
+  })
+
+  it('a slow run says how long there has been no result', async () => {
+    const { services, started } = slowRun()
+    const realNow = performance.now.bind(performance); let skew = 0
+    performance.now = () => realNow() + skew
+    try {
+      const { container } = await render(h(features.SavedViewsSurface, { services, host: runHost().host }))
+      await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+      await started('q1')
+      skew = 64_000
+      await act(async () => { await new Promise(resolve => setTimeout(resolve, 1100)) })
+      assert.match(container.querySelector('.viewrun-wait').textContent, /^No result for 1 min [5-6] s · last step: Stage 1/)
+    } finally {
+      performance.now = realNow
+    }
+  })
+
+  it('leaving a running view cancels its run and its late answer lands nowhere', async () => {
+    const { services, killed, started, finish } = slowRun()
+    const { container } = await render(h(features.SavedViewsSurface, { services, host: runHost().host }))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await started('q1')
+    await act(async () => [...container.querySelectorAll('.viewsibling')].find(e => e.textContent.includes('Beta')).click())
+    await flush()
+    assert.deepEqual(killed, ['q1'], 'cancelled without asking')
+    assert.equal(container.querySelector('.viewoperation-title h2').textContent, 'Beta')
+    assert.equal(cancelButton(container), null)
+    await finish(ok({ rows: [{ id: 'late' }], rowCount: 1 }))
+    const results = container.querySelector('.viewpane[data-view-pane="results"]')
+    assert.match(results.textContent, /Nothing run yet/)
+    assert.doesNotMatch(results.textContent, /late|1 row/)
+  })
+
+  it('a run nobody named is cancelled only when it is the one run in flight', async () => {
+    const { services, killed } = slowRun()
+    services.subscribeProgress = undefined
+    let inFlight = [{ runId: 'a', cypher: 'X', startedAt: 1 }, { runId: 'b', cypher: 'Y', startedAt: 2 }]
+    services.kg.runs = async () => ok(inFlight)
+    const { container } = await render(h(features.SavedViewsSurface, { services, host: runHost().host }))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await act(async () => cancelButton(container).click())
+    assert.deepEqual(killed, [], 'two candidates cancel nothing')
+    assert.match(container.textContent, /nothing was cancelled/)
+    inFlight = [{ runId: 'b', cypher: 'Y', startedAt: 2 }]
+    await act(async () => cancelButton(container).click())
+    assert.deepEqual(killed, ['b'])
+  })
+
+  it('a deadline that passes while the run is still going cancels it, and a host without kill offers no Cancel', async () => {
+    const { services, killed, started, finish } = slowRun()
+    const { container, root } = await render(h(features.SavedViewsSurface, { services, host: runHost().host }))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await started('q1')
+    await finish({ ok: false, kind: 'unreachable', message: 'The appliance did not answer within 180000ms' })
+    await flush()
+    assert.deepEqual(killed, ['q1'])
+    assert.match(container.textContent, /did not answer within 180000ms The query was still running, so it was cancelled/)
+
+    const old = slowRun().services
+    delete old.kg.kill
+    await act(async () => root.render(h(features.SavedViewsSurface, { services: old, host: runHost().host })))
+    await flush()
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    assert.match(container.querySelector('.viewrun-wait').textContent, /Running/)
+    assert.equal(cancelButton(container), null)
+  })
+
   it('C3 watch action failures retain status and never claim a failed stop succeeded', async () => {
     const services = c3Services(); let watched = false
     services.watches.list = async () => ok(watched ? [{ id: 'w1', lensId: 'Alpha', enabled: true }] : [])

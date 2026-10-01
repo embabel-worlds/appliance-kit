@@ -48,6 +48,10 @@ const jsx_runtime_1 = require("react/jsx-runtime");
  * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
  * too; tabs that anchored into one long page produced exactly that double scrollbar.
  *
+ * WAITING. A run that is slow says how long there has been no result and the last step the engine
+ * reported, shows the trace where the rows will land, and can be cancelled. Leaving a view cancels
+ * its run without asking: the answer would arrive for a view nobody is looking at.
+ *
  * RUNNING. An unedited view runs through the appliance's one-call `runView`. Once its Cypher is
  * edited, Run sends the edited body to `execute` WITH the view's declared params, so it gets the
  * same defaults, coercion and substitution it will get once saved — trying an edit never requires
@@ -64,6 +68,8 @@ const outcome_ts_1 = require("../../../client/outcome.js");
 const rows_ts_1 = require("../../../vc/rows.js");
 const format_ts_1 = require("../../../studio-kit/format.js");
 const chrome_tsx_1 = require("../studio/chrome.js");
+const progress_ts_1 = require("../studio/progress.js");
+const runWait_tsx_1 = require("./runWait.js");
 const SaveCopyDialog_tsx_1 = require("./SaveCopyDialog.js");
 const ViewCypherEditor_tsx_1 = require("./ViewCypherEditor.js");
 const PANE_LABELS = { results: 'Results', schema: 'Schema', watch: 'Watch / receipts' };
@@ -99,6 +105,8 @@ function useViewsRuntime() {
 function SavedViewsSurface({ services, host }) {
     return (0, jsx_runtime_1.jsx)(ViewsRuntimeContext.Provider, { value: { services, host }, children: (0, jsx_runtime_1.jsx)(SavedViewsBody, {}) });
 }
+/** A host that gives no trace: the run is still timed and still cancellable, just not narrated. */
+const NO_TRACE = () => { };
 function SavedViewsBody() {
     const { services, host } = useViewsRuntime();
     const [views, setViews] = (0, react_1.useState)(null);
@@ -115,11 +123,29 @@ function SavedViewsBody() {
     const [rows, setRows] = (0, react_1.useState)([]);
     const [ran, setRan] = (0, react_1.useState)(false);
     const [busy, setBusy] = (0, react_1.useState)(false);
+    /** When the run in flight began, on the monotonic clock; null when nothing is running. */
+    const [startedAt, setStartedAt] = (0, react_1.useState)(null);
+    const [cancelling, setCancelling] = (0, react_1.useState)(false);
+    const progress = (0, progress_ts_1.useRunProgress)(services.subscribeProgress ?? NO_TRACE);
+    /* Refs, because the run that reads them awaits across renders: which run owns the screen, the
+       id the trace bound for it, and the edited text it was sent as. */
+    const runGeneration = (0, react_1.useRef)(0);
+    const running = (0, react_1.useRef)(false);
+    const boundRunId = (0, react_1.useRef)(null);
+    boundRunId.current = progress.runId;
+    const runningDraft = (0, react_1.useRef)(null);
     const [editorSize, setEditorSize] = (0, react_1.useState)('closed');
     const [edited, setEdited] = (0, react_1.useState)(false);
     const [saveNote, setSaveNote] = (0, react_1.useState)(null);
     const [copying, setCopying] = (0, react_1.useState)(false);
     const editorRef = (0, react_1.useRef)(null);
+    const traceRef = (0, react_1.useRef)(null);
+    // The newest line is the one being read, and the pane is the only scroller.
+    (0, react_1.useEffect)(() => {
+        const pane = traceRef.current?.parentElement;
+        if (pane)
+            pane.scrollTop = pane.scrollHeight;
+    }, [progress.lines]);
     const load = (0, react_1.useCallback)(async () => {
         const outcome = await services.kg.views();
         if (!(0, outcome_ts_1.isOk)(outcome))
@@ -182,6 +208,7 @@ function SavedViewsBody() {
         if (rest === null)
             return;
         if (!rest) {
+            abandonRun();
             setSelected(null);
             return;
         }
@@ -245,7 +272,33 @@ function SavedViewsBody() {
         return Object.fromEntries(Object.entries((v.params ?? {}))
             .map(([k, spec]) => [k, spec?.default == null ? '' : String(spec.default)]));
     }
+    /*
+     * LEAVING A VIEW MID-RUN cancels the run, without asking. Its answer is disowned first, so a
+     * late reply cannot write another view's rows; then the appliance is told to stop, because a run
+     * nobody is waiting on is only cost. Work already materialized is kept either way.
+     *
+     * ONLY BY THE ID THE TRACE BOUND. Cancel may fall back to the appliance's list of runs, because
+     * the person pressing it is looking at the run. Here the next run is usually a moment behind, and
+     * a guess made from that list could land on it instead.
+     */
+    function abandonRun() {
+        if (!running.current)
+            return;
+        running.current = false;
+        runGeneration.current += 1;
+        const runId = boundRunId.current;
+        progress.end();
+        setBusy(false);
+        setStartedAt(null);
+        setCancelling(false);
+        if (runId)
+            void (0, runWait_tsx_1.cancelRun)(services.kg, runId, null);
+    }
+    const abandonOnUnmount = (0, react_1.useRef)(abandonRun);
+    abandonOnUnmount.current = abandonRun;
+    (0, react_1.useEffect)(() => () => abandonOnUnmount.current(), []);
     function applyView(v, nextPane) {
+        abandonRun();
         setExpandedRealm(groupOf(v));
         setSelected(v.name);
         setPane(nextPane);
@@ -276,18 +329,42 @@ function SavedViewsBody() {
             return;
         // Running is for looking at rows, so the editor gets out of the way at either size.
         setEditorSize('closed');
+        // Enter in an argument field runs again mid-run; the earlier run is then nobody's.
+        abandonRun();
+        const generation = ++runGeneration.current;
+        running.current = true;
         setBusy(true);
+        setCancelling(false);
         setRows([]);
         setRan(false);
-        setStatus({ tone: null, text: 'running…' });
+        setStatus({ tone: null, text: '' });
         const draft = edited ? editorRef.current?.getText() : undefined;
+        runningDraft.current = draft ?? null;
+        progress.begin();
+        setStartedAt(performance.now());
         const outcome = draft === undefined
             ? await services.kg.runView(view.name, supplied(values))
             : await services.kg.execute(draft, { params, args: supplied(values) });
+        // Abandoned for another view, or superseded: this answer belongs to nothing on screen.
+        if (generation !== runGeneration.current)
+            return;
+        running.current = false;
+        /* Read before the trace is closed. An id still bound means the engine never reported the run
+           over — so a failure here is the client giving up, not the run ending. */
+        const unfinished = boundRunId.current;
+        // The trace stops; its lines stay, as the account of where the wait went.
+        progress.end();
         setBusy(false);
+        setStartedAt(null);
+        setCancelling(false);
         if (!(0, outcome_ts_1.isOk)(outcome)) {
-            setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, `run '${view.name}'`) });
+            const text = (0, chrome_tsx_1.failureMessage)(outcome, `run '${view.name}'`);
+            setStatus({ tone: 'error', text });
             showPane('results', true);
+            // A deadline passing here must not leave the run going where nothing can stop it.
+            if (unfinished && (await (0, runWait_tsx_1.cancelRun)(services.kg, unfinished, null)).accepted && generation === runGeneration.current) {
+                setStatus({ tone: 'error', text: `${text} The query was still running, so it was cancelled; work already materialized is kept.` });
+            }
             return;
         }
         const result = outcome.value;
@@ -299,6 +376,13 @@ function SavedViewsBody() {
         const got = (result.rows ?? []);
         // `rowCount` is documented as required and is not always sent. The rows are the truth.
         const rowCount = result.rowCount ?? got.length;
+        /* A KILLED run comes back 200 with no error and no rows, so the generic path would report
+           "0 row(s)" — and zero rows because you cancelled is not zero rows because the graph is empty. */
+        if (result.reason === 'KILLED') {
+            setStatus({ tone: 'caution', text: `Cancelled. ${result.hint ?? 'Work already materialized is kept — run it again to resume from there.'}` });
+            showPane('results', true);
+            return;
+        }
         if (result.error) {
             setStatus({ tone: 'error', text: result.error });
             showPane('results', true);
@@ -317,6 +401,22 @@ function SavedViewsBody() {
         setRows(got);
         setRan(true);
         showPane('results', true);
+    }
+    /*
+     * Cancel is a REQUEST: the engine checks between steps, so the status says what is being waited
+     * for rather than freezing. The run's own answer, when it lands, replaces whatever is said here.
+     */
+    async function cancel() {
+        const generation = runGeneration.current;
+        setCancelling(true);
+        setStatus({ tone: null, text: 'Cancelling — the engine checks between steps, so this can take a moment…' });
+        const result = await (0, runWait_tsx_1.cancelRun)(services.kg, boundRunId.current, runningDraft.current);
+        if (generation !== runGeneration.current || !running.current)
+            return;
+        if (result.accepted)
+            return setStatus({ tone: null, text: 'Cancel requested — waiting for the run to confirm it stopped…' });
+        setCancelling(false);
+        setStatus({ tone: 'caution', text: result.text });
     }
     /*
      * SAVING the editor's text as `name`. Everything but the body is carried over from the view being
@@ -399,6 +499,7 @@ function SavedViewsBody() {
         const outcome = await services.kg.deleteView(name);
         if (!(0, outcome_ts_1.isOk)(outcome))
             return setStatus({ tone: 'error', text: (0, chrome_tsx_1.failureMessage)(outcome, 'delete this view') });
+        abandonRun();
         setSelected(null);
         navigate(null, 'open');
         void load();
@@ -424,10 +525,10 @@ function SavedViewsBody() {
     const reason = copyReason(view);
     const ownView = view.source === USER_SAVED;
     const paneLabel = (name) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name];
-    const navigator = () => ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "viewnav-head", children: [(0, jsx_runtime_1.jsx)("span", { className: "viewnav-label", children: group === 'Yours' || group === 'World' ? 'Group' : 'Realm' }), (0, jsx_runtime_1.jsx)("h2", { children: group }), (0, jsx_runtime_1.jsx)("small", { children: "Selected operation" }), (0, jsx_runtime_1.jsx)("strong", { children: view.name }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => { setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), (0, jsx_runtime_1.jsxs)("nav", { className: "viewnav-section", "aria-label": `Other operations in ${group}`, children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: ["In ", group, " \u00B7 ", siblings.length] }), siblings.map((candidate) => ((0, jsx_runtime_1.jsxs)("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsxs)("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
+    const navigator = () => ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsxs)("div", { className: "viewnav-head", children: [(0, jsx_runtime_1.jsx)("span", { className: "viewnav-label", children: group === 'Yours' || group === 'World' ? 'Group' : 'Realm' }), (0, jsx_runtime_1.jsx)("h2", { children: group }), (0, jsx_runtime_1.jsx)("small", { children: "Selected operation" }), (0, jsx_runtime_1.jsx)("strong", { children: view.name }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => { abandonRun(); setSelected(null); navigate(null, 'open'); }, children: "\u2190 Operation Board" })] }), (0, jsx_runtime_1.jsxs)("nav", { className: "viewnav-section", "aria-label": `Other operations in ${group}`, children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: ["In ", group, " \u00B7 ", siblings.length] }), siblings.map((candidate) => ((0, jsx_runtime_1.jsxs)("button", { className: `viewsibling${candidate.name === view.name ? ' active' : ''}`, "aria-current": candidate.name === view.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [(0, jsx_runtime_1.jsx)("strong", { children: candidate.name }), (0, jsx_runtime_1.jsxs)("small", { children: [Object.keys(candidate.params ?? {}).length, " parameter(s) \u00B7 ", candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'] })] }, candidate.name)))] })] }));
     const saveControls = ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [saveNote && ((0, jsx_runtime_1.jsxs)("span", { className: `viewcypher-note${saveNote.tone ? ` ${saveNote.tone}` : ''}`, role: "status", children: [saveNote.text, saveNote.undo !== undefined && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [" \u00B7 ", (0, jsx_runtime_1.jsx)("button", { className: "viewlink", onClick: () => void undoSave(saveNote.undo ?? ''), children: "Undo" })] })] })), (0, jsx_runtime_1.jsx)("button", { className: `btn tiny${edited && !reason ? ' primary' : ''}`, disabled: !edited, title: reason ? 'This view is not yours to change, so your edits save as a new view' : undefined, onClick: () => void save(), children: reason ? 'Save as copy…' : 'Save' })] }));
     return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [(0, jsx_runtime_1.jsx)("aside", { className: "panel viewspage-sidebar", "aria-label": `${group} operation navigator`, children: navigator() }), (0, jsx_runtime_1.jsxs)("details", { className: "panel viewspage-mobile-nav", children: [(0, jsx_runtime_1.jsx)("summary", { children: (0, jsx_runtime_1.jsxs)("span", { children: [(0, jsx_runtime_1.jsxs)("strong", { children: ["Browse ", group] }), (0, jsx_runtime_1.jsxs)("small", { children: [group, " \u00B7 ", view.name] })] }) }), (0, jsx_runtime_1.jsx)("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewspage-operation", children: [(0, jsx_runtime_1.jsxs)("section", { className: "panel viewoperation-head", children: [(0, jsx_runtime_1.jsxs)("div", { children: [(0, jsx_runtime_1.jsxs)("span", { className: "viewnav-label", children: [group, " \u00B7 operation"] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewoperation-title", children: [(0, jsx_runtime_1.jsx)("h2", { children: view.name }), (0, jsx_runtime_1.jsx)(OriginChip, { view: view })] }), (0, jsx_runtime_1.jsxs)("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized — Run reads its cache' : view.outputLabel ?? 'Tabular'] })] }), (0, jsx_runtime_1.jsxs)("div", { className: "row", children: [view.materialized && (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), (0, jsx_runtime_1.jsx)("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), ownView && (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: view.description })] }), (0, jsx_runtime_1.jsxs)("div", { className: "viewrunbar", children: [Object.keys(params).length === 0 ? (0, jsx_runtime_1.jsx)("span", { className: "hint", children: "No parameters." }) : Object.entries(params).map(([key, spec]) => ((0, jsx_runtime_1.jsxs)("label", { className: "paramrow", title: spec?.description, children: [(0, jsx_runtime_1.jsxs)("span", { className: "paramname", children: [key, " ", (0, jsx_runtime_1.jsx)("em", { children: spec?.type })] }), (0, jsx_runtime_1.jsx)("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'required', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })), onKeyDown: (event) => { if (event.key === 'Enter')
-                                            void run(); } })] }, key))), (0, jsx_runtime_1.jsxs)("div", { className: "row viewrunbar-actions", children: [(0, jsx_runtime_1.jsxs)("button", { className: "btn ghost viewcypher-toggle", "aria-expanded": editorSize !== 'closed', title: editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor', onClick: () => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed'), children: ['{ }', " Cypher", edited ? ' •' : ''] }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' })] })] }), (0, jsx_runtime_1.jsxs)("div", { className: `viewoperation-body${editorSize === 'full' ? ' covered' : ''}`, children: [(0, jsx_runtime_1.jsx)("nav", { className: "viewoperation-nav", role: "tablist", "aria-label": "Operation sections", children: Object.keys(PANE_LABELS).map((name) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", id: `viewtab-${name}`, "aria-controls": `viewpane-${name}`, "aria-selected": pane === name, "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, onClick: () => showPane(name), children: paneLabel(name) }, name))) }), (0, jsx_runtime_1.jsxs)("section", { className: "viewpane viewpane-results", role: "tabpanel", id: "viewpane-results", "data-view-pane": "results", "aria-labelledby": "viewtab-results", hidden: pane !== 'results', children: [(0, jsx_runtime_1.jsx)("span", { "data-state": "view.ran", hidden: !ran }), (0, jsx_runtime_1.jsx)("div", { className: "viewpane-scroll view-results", tabIndex: 0, children: !ran ? (busy ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' ? null : (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) : ((0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: (0, rows_ts_1.rowColumns)(rows) })) }), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, rows_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, rows_ts_1.rowsToCsv)(rows) })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] })] }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-schema", "data-view-pane": "schema", "aria-labelledby": "viewtab-schema", hidden: pane !== 'schema', children: (0, jsx_runtime_1.jsxs)("div", { className: "viewpane-scroll", children: [schema && (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), schemaError ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: schemaError }) : schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : ((0, jsx_runtime_1.jsx)("div", { className: "viewschema", children: viewSchemaLabels.map((label) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewschema-label", children: [(0, jsx_runtime_1.jsxs)("div", { className: "row", children: [(0, jsx_runtime_1.jsx)("strong", { children: label.label }), (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && (0, jsx_runtime_1.jsx)("p", { children: label.description }), (0, jsx_runtime_1.jsxs)("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && (0, jsx_runtime_1.jsx)("dl", { children: label.properties.map((property) => (0, jsx_runtime_1.jsxs)(react_1.default.Fragment, { children: [(0, jsx_runtime_1.jsx)("dt", { children: property.name }), (0, jsx_runtime_1.jsx)("dd", { children: property.type })] }, property.name)) })] }, label.label))) }))] }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-watch", "data-view-pane": "watch", "aria-labelledby": "viewtab-watch", hidden: pane !== 'watch', children: (0, jsx_runtime_1.jsx)("div", { className: "viewpane-scroll", children: (0, jsx_runtime_1.jsx)(WatchPanel, { viewName: view.name, args: args, onWatchChange: (watching) => setWatchedViews((current) => {
+                                            void run(); } })] }, key))), (0, jsx_runtime_1.jsxs)("div", { className: "row viewrunbar-actions", children: [(0, jsx_runtime_1.jsxs)("button", { className: "btn ghost viewcypher-toggle", "aria-expanded": editorSize !== 'closed', title: editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor', onClick: () => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed'), children: ['{ }', " Cypher", edited ? ' •' : ''] }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' }), busy && services.kg.kill && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", "data-view-cancel": true, onClick: () => void cancel(), children: cancelling ? 'cancelling…' : 'Cancel' }))] })] }), (0, jsx_runtime_1.jsxs)("div", { className: `viewoperation-body${editorSize === 'full' ? ' covered' : ''}`, children: [(0, jsx_runtime_1.jsx)("nav", { className: "viewoperation-nav", role: "tablist", "aria-label": "Operation sections", children: Object.keys(PANE_LABELS).map((name) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", id: `viewtab-${name}`, "aria-controls": `viewpane-${name}`, "aria-selected": pane === name, "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, onClick: () => showPane(name), children: paneLabel(name) }, name))) }), (0, jsx_runtime_1.jsxs)("section", { className: "viewpane viewpane-results", role: "tabpanel", id: "viewpane-results", "data-view-pane": "results", "aria-labelledby": "viewtab-results", hidden: pane !== 'results', children: [(0, jsx_runtime_1.jsx)("span", { "data-state": "view.ran", hidden: !ran }), (0, jsx_runtime_1.jsxs)("div", { className: "viewpane-scroll view-results", tabIndex: 0, children: [!ran ? (busy ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' || status.tone === 'caution' ? null : (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) : ((0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: (0, rows_ts_1.rowColumns)(rows) })), !ran && progress.lines.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "progresslist viewrun-trace", ref: traceRef, "aria-label": "What the engine has done so far", children: progress.lines.map((line) => ((0, jsx_runtime_1.jsx)("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))) }))] }), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, rows_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, rows_ts_1.rowsToCsv)(rows) })] }), busy && startedAt != null && (0, jsx_runtime_1.jsx)(runWait_tsx_1.RunWait, { startedAt: startedAt, lastStep: progress.lines.at(-1)?.text ?? null }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text })] })] }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-schema", "data-view-pane": "schema", "aria-labelledby": "viewtab-schema", hidden: pane !== 'schema', children: (0, jsx_runtime_1.jsxs)("div", { className: "viewpane-scroll", children: [schema && (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), schemaError ? (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: schemaError }) : schema == null ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : ((0, jsx_runtime_1.jsx)("div", { className: "viewschema", children: viewSchemaLabels.map((label) => ((0, jsx_runtime_1.jsxs)("article", { className: "viewschema-label", children: [(0, jsx_runtime_1.jsxs)("div", { className: "row", children: [(0, jsx_runtime_1.jsx)("strong", { children: label.label }), (0, jsx_runtime_1.jsx)("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && (0, jsx_runtime_1.jsx)("p", { children: label.description }), (0, jsx_runtime_1.jsxs)("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && (0, jsx_runtime_1.jsx)("dl", { children: label.properties.map((property) => (0, jsx_runtime_1.jsxs)(react_1.default.Fragment, { children: [(0, jsx_runtime_1.jsx)("dt", { children: property.name }), (0, jsx_runtime_1.jsx)("dd", { children: property.type })] }, property.name)) })] }, label.label))) }))] }) }), (0, jsx_runtime_1.jsx)("section", { className: "viewpane", role: "tabpanel", id: "viewpane-watch", "data-view-pane": "watch", "aria-labelledby": "viewtab-watch", hidden: pane !== 'watch', children: (0, jsx_runtime_1.jsx)("div", { className: "viewpane-scroll", children: (0, jsx_runtime_1.jsx)(WatchPanel, { viewName: view.name, args: args, onWatchChange: (watching) => setWatchedViews((current) => {
                                             const next = new Set(current ?? []);
                                             watching ? next.add(view.name) : next.delete(view.name);
                                             return next;
