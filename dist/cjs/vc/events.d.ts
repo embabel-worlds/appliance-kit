@@ -61,7 +61,7 @@ export interface VcProducerProgress extends VcEventBase {
 }
 export interface VcRetrievalStep extends VcEventBase {
     type: 'retrieval.step';
-    /** `search_semantic`, `search_keyword`, `read_document`, `judged`, `composing`. */
+    /** `search`, `search_semantic`, `search_keyword`, `read_document`, `judged`, `composing`, `retry`, `verify`, `answered`, `failed`, `fallback`. */
     step: string;
     /** The query the model chose, or the document title it opened. */
     detail: string;

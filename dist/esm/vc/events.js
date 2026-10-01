@@ -26,11 +26,18 @@ export const isFailure = (event) => event.type === 'producer.error' || event.typ
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 /** The retrieval loop's steps, said as what the model is doing rather than as its tool name. */
 const RETRIEVAL_STEPS = {
+    // A search by meaning and keyword together, fused: neither of the two below.
+    search: 'Searching',
     search_semantic: 'Searching by meaning',
     search_keyword: 'Searching by keyword',
     read_document: 'Reading',
     judged: 'Judging',
     composing: 'Composing the answer',
+    retry: 'Trying again',
+    verify: 'Checking the figures',
+    answered: 'Answered',
+    failed: 'Failed',
+    fallback: 'Falling back',
 };
 /**
  * One line describing what just happened, for a progress panel.

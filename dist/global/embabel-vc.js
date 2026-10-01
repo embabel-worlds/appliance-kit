@@ -340,11 +340,18 @@ var EmbabelVc = (() => {
   var isFailure = (event) => event.type === "producer.error" || event.type === "query.rejected";
   var plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   var RETRIEVAL_STEPS = {
+    // A search by meaning and keyword together, fused: neither of the two below.
+    search: "Searching",
     search_semantic: "Searching by meaning",
     search_keyword: "Searching by keyword",
     read_document: "Reading",
     judged: "Judging",
-    composing: "Composing the answer"
+    composing: "Composing the answer",
+    retry: "Trying again",
+    verify: "Checking the figures",
+    answered: "Answered",
+    failed: "Failed",
+    fallback: "Falling back"
   };
   function describeVcEvent(event) {
     switch (event.type) {
