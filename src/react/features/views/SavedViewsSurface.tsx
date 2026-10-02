@@ -1,12 +1,17 @@
 /*
  * VIEWS — the world's saved questions, as a place rather than a panel.
  *
+ * LIST AND DETAIL, ALWAYS. Every view is in the list on the left — grouped by where it came from,
+ * under one filter — and the one chosen is on the right. There was a landing board of realms that
+ * folded open, and choosing a view replaced it with this layout; getting back meant a button, and
+ * the board said nothing the list does not. The list scrolls on its own, so it is always there.
+ *
  * A view is the durable thing: someone worked out a question worth asking, named it, and now
  * anyone can ask it again with different arguments. That is not a sub-feature of the editor, so it
  * is not buried in the editor's rail — it is where you go when you want an ANSWER rather than a
  * query.
  *
- * ONE WINDOW, ONE SCROLLER. A selected view is a fixed workspace: the run bar (arguments, the
+ * ONE SCROLLER PER PANE. A selected view is a fixed workspace: the run bar (arguments, the
  * Cypher, Run) stays put above three tabs — Results, Schema, Watch — and only the active tab's body
  * scrolls. The results table scrolls both ways, so it must never sit inside a page that scrolls
  * too; tabs that anchored into one long page produced exactly that double scrollbar.
@@ -98,9 +103,8 @@ function SavedViewsBody() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<string | null>(null)
   const [args, setArgs] = useState<Record<string, string>>({})
-  const [expandedRealm, setExpandedRealm] = useState<string | null>(null)
+  const [filter, setFilter] = useState('')
   const [watchedViews, setWatchedViews] = useState<Set<string> | null>(null)
-  const [watchSummaryLoaded, setWatchSummaryLoaded] = useState(false)
   const [pane, setPane] = useState<ViewPane>('results')
   const [schema, setSchema] = useState<KgSchema | null>(null)
   const [schemaError, setSchemaError] = useState('')
@@ -140,7 +144,6 @@ function SavedViewsBody() {
   useEffect(() => { void load() }, [load])
   useEffect(() => {
     void services.watches.list().then((outcome) => {
-      setWatchSummaryLoaded(true)
       if (isOk(outcome)) return setWatchedViews(new Set(outcome.value.map((watch) => watch.lensId)))
     })
     if (services.kg.schema) {
@@ -279,7 +282,6 @@ function SavedViewsBody() {
 
   function applyView(v: KgView, nextPane: ViewPane): void {
     abandonRun()
-    setExpandedRealm(groupOf(v))
     setSelected(v.name)
     setPane(nextPane)
     setStatus({ tone: null, text: '' })
@@ -437,7 +439,6 @@ function SavedViewsBody() {
     // The copy IS the query on screen, so the selection moves to it and the rows stay.
     setCopying(false)
     setSelected(name)
-    setExpandedRealm('Yours')
     setSaveNote({ tone: 'ok', text: `Saved as ${name}` })
     navigate(name, pane === 'results' ? 'open' : pane)
     return null
@@ -482,86 +483,58 @@ function SavedViewsBody() {
     void load()
   }
 
-  if (!view) return (
-    <div className="kit-feature kit-feature-views viewspage viewspage-board">
-      <div className="viewboard-head">
-        <div>
-          <h2>Operation Board</h2>
-          <p className="hint">Choose a realm, inspect its operations, and open or run one directly.</p>
-        </div>
-      </div>
-      {error ? <Status tone="error">{error}</Status> : views == null ? <p className="hint">loading…</p> : list.length === 0 ? (
+  // Nothing to choose from yet: the listing failed, is still loading, or is empty.
+  if (error || views == null || list.length === 0) return (
+    <div className="kit-feature kit-feature-views viewspage">
+      {error ? <Status tone="error">{error}</Status> : views == null ? <p className="hint">loading…</p> : (
         <StudioPanel title="Saved views">
           <p className="hint">No saved views yet. Write a query in Query Studio and save it — that is where views come from.</p>
         </StudioPanel>
-      ) : (
-        <div className="viewrealms">
-          {groupNames.map((name) => {
-            const realmViews = groups[name]!
-            const isExpanded = expandedRealm === name
-            const materialized = realmViews.filter((candidate) => candidate.materialized).length
-            const watched = watchedViews == null ? null : realmViews.filter((candidate) => watchedViews.has(candidate.name)).length
-            return (
-              <section className={`panel viewrealm${isExpanded ? ' expanded' : ''}`} key={name}>
-                <button
-                  className="viewrealm-head"
-                  data-viewgroup={name}
-                  aria-expanded={isExpanded}
-                  onClick={() => setExpandedRealm(isExpanded ? null : name)}
-                >
-                  <span>
-                    <strong>{name}</strong>
-                    <small>{realmViews.length} operations · {materialized} materialized · {!watchSummaryLoaded ? 'watch state loading' : watched == null ? 'watch state unavailable' : `${watched} watched`}</small>
-                  </span>
-                  <span className="chev" aria-hidden="true">{isExpanded ? '−' : '+'}</span>
-                </button>
-                {isExpanded && (
-                  <div className="viewrealm-operations">
-                    {realmViews.map((candidate) => (
-                      <article className="viewoperation" key={candidate.name}>
-                        <button className="viewoperation-open" onClick={() => pick(candidate, 'results', 'open')}>
-                          <strong>{candidate.name}</strong>
-                          <small>{candidate.description}</small>
-                          <span className="viewnote">
-                            {Object.keys(candidate.params ?? {}).length} parameter(s) · {candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}
-                          </span>
-                        </button>
-                        <button className="btn primary" onClick={() => { pendingRun.current = { name: candidate.name, args: defaultArgs(candidate) }; pick(candidate, 'results', 'run') }}>Run</button>
-                      </article>
-                    ))}
-                  </div>
-                )}
-              </section>
-            )
-          })}
-        </div>
       )}
     </div>
   )
 
-  const group = groupOf(view)
-  const siblings = groups[group] ?? [view]
-  const reason = copyReason(view)
-  const ownView = view.source === USER_SAVED
+  const reason = view ? copyReason(view) : null
   const paneLabel = (name: ViewPane) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name]
+  /* Every view, grouped by where it came from, under one filter. The filter reads the name, the
+     description and the group, so "ledger" finds a realm's views and "overdue" finds one of them. */
+  const wanted = filter.trim().toLowerCase()
+  const shown = groupNames
+    .map((name) => ({
+      name,
+      views: groups[name]!.filter((candidate) => !wanted
+        || `${candidate.name} ${candidate.description ?? ''} ${name}`.toLowerCase().includes(wanted)),
+    }))
+    .filter((group) => group.views.length > 0)
   const navigator = () => (
     <>
-      <div className="viewnav-head">
-        <span className="viewnav-label">{group === 'Yours' || group === 'World' ? 'Group' : 'Realm'}</span>
-        <h2>{group}</h2>
-        <small>Selected operation</small>
-        <strong>{view.name}</strong>
-        <button className="btn ghost" onClick={() => { abandonRun(); setSelected(null); navigate(null, 'open') }}>← Operation Board</button>
+      <div className="viewnav-filter">
+        <input
+          type="search"
+          aria-label="Filter views"
+          placeholder={`Filter ${list.length} views`}
+          value={filter}
+          onChange={(event) => setFilter(event.target.value)}
+        />
       </div>
-      <nav className="viewnav-section" aria-label={`Other operations in ${group}`}>
-        <span className="viewnav-label">In {group} · {siblings.length}</span>
-        {siblings.map((candidate) => (
-          <button key={candidate.name} className={`viewsibling${candidate.name === view.name ? ' active' : ''}`} aria-current={candidate.name === view.name ? 'page' : undefined} onClick={() => pick(candidate, pane)}>
-            <strong>{candidate.name}</strong>
-            <small>{Object.keys(candidate.params ?? {}).length} parameter(s) · {candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}</small>
-          </button>
+      <div className="viewnav-list">
+        {shown.length === 0 && <p className="hint viewnav-none">No view matches “{filter.trim()}”.</p>}
+        {shown.map((group) => (
+          <nav className="viewnav-section" aria-label={`${group.name} views`} data-viewgroup={group.name} key={group.name}>
+            <span className="viewnav-label">{group.name} · {group.views.length}</span>
+            {group.views.map((candidate) => (
+              <button key={candidate.name} className={`viewsibling${candidate.name === view?.name ? ' active' : ''}`} aria-current={candidate.name === view?.name ? 'page' : undefined} onClick={() => pick(candidate, pane)}>
+                <strong>{candidate.name}</strong>
+                {watchedViews?.has(candidate.name) && <span className="viewtag">watched</span>}
+                {/* One secondary line: what the view answers, or its shape when nobody described it. */}
+                <small title={candidate.description || undefined}>
+                  {candidate.description || `${Object.keys(candidate.params ?? {}).length} parameter(s) · ${candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}`}
+                </small>
+              </button>
+            ))}
+          </nav>
         ))}
-      </nav>
+      </div>
     </>
   )
 
@@ -586,17 +559,22 @@ function SavedViewsBody() {
 
   return (
     <div className="kit-feature kit-feature-views viewspage viewspage-selected">
-      <aside className="panel viewspage-sidebar" aria-label={`${group} operation navigator`}>{navigator()}</aside>
+      <aside className="panel viewspage-sidebar" aria-label="Views">{navigator()}</aside>
       <details className="panel viewspage-mobile-nav">
         <summary>
-          <span><strong>Browse {group}</strong><small>{group} · {view.name}</small></span>
+          <span><strong>Browse views</strong><small>{view ? `${groupOf(view)} · ${view.name}` : `${list.length} views`}</small></span>
         </summary>
         <div className="viewspage-mobile-nav-body">{navigator()}</div>
       </details>
+      {!view ? (
+        <div className="viewspage-operation viewspage-none">
+          <p className="hint">Choose a view to see what it takes and run it.</p>
+        </div>
+      ) : (
       <div className="viewspage-operation">
         <section className="panel viewoperation-head">
           <div>
-            <span className="viewnav-label">{group} · operation</span>
+            <span className="viewnav-label">{groupOf(view)} · operation</span>
             <div className="viewoperation-title">
               <h2>{view.name}</h2>
               <OriginChip view={view} />
@@ -606,7 +584,7 @@ function SavedViewsBody() {
           <div className="row">
             {view.materialized && <button className="btn ghost" onClick={() => void refresh(view.name)}>Refresh cache</button>}
             <button className="btn" onClick={() => void openInStudio()}>Open in Query Studio</button>
-            {ownView && <button className="btn ghost" onClick={() => void remove(view.name)}>Delete</button>}
+            {view.source === USER_SAVED && <button className="btn ghost" onClick={() => void remove(view.name)}>Delete</button>}
           </div>
           {view.description && <p className="hint">{view.description}</p>}
         </section>
@@ -741,6 +719,7 @@ function SavedViewsBody() {
           />
         )}
       </div>
+      )}
     </div>
   )
 }
@@ -748,11 +727,11 @@ function SavedViewsBody() {
 /** Where this view comes from, which decides whether saving replaces it or makes a copy. */
 function OriginChip({ view }: { view: KgView }) {
   if (view.source === USER_SAVED) {
-    return <span className="viewtag viewtag-origin mine" title="Saved in your world. Saving replaces it.">Yours</span>
+    return <span className="viewtag viewtag-origin from-you" title="Saved in your world. Saving replaces it.">Yours</span>
   }
   if (view.source) {
     return (
-      <span className="viewtag viewtag-origin realm" title={`Ships with the ${view.source} realm. Your edits save as a copy in your world.`}>
+      <span className="viewtag viewtag-origin from-realm" title={`Ships with the ${view.source} realm. Your edits save as a copy in your world.`}>
         {view.source} realm
       </span>
     )
