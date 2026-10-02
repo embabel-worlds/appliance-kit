@@ -8,4 +8,5 @@ export { rewoundCounter } from './query/sessionRewind.ts';
 export { CodingAgentsSurface } from './coding-agents/CodingAgentsSurface.tsx';
 export { ApiKeysSurface } from './api-keys/ApiKeysSurface.tsx';
 export { AgentsSurface, StagePill, firingOf } from './agents/AgentsSurface.tsx';
+export { ApprovalsSurface, RequestStatusPill } from './approvals/ApprovalsSurface.tsx';
 //# sourceMappingURL=index.d.ts.map

@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -38,9 +38,12 @@ var cron_ts_1 = require("./cron.js");
 Object.defineProperty(exports, "CronClient", { enumerable: true, get: function () { return cron_ts_1.CronClient; } });
 var agents_ts_1 = require("./agents.js");
 Object.defineProperty(exports, "AgentsClient", { enumerable: true, get: function () { return agents_ts_1.AgentsClient; } });
+var requests_ts_1 = require("./requests.js");
+Object.defineProperty(exports, "RequestsClient", { enumerable: true, get: function () { return requests_ts_1.RequestsClient; } });
 var handlers_ts_1 = require("./handlers.js");
 Object.defineProperty(exports, "HandlersClient", { enumerable: true, get: function () { return handlers_ts_1.HandlersClient; } });
 const agents_ts_2 = require("./agents.js");
+const requests_ts_2 = require("./requests.js");
 const cron_ts_2 = require("./cron.js");
 const documents_ts_2 = require("./documents.js");
 const handlers_ts_2 = require("./handlers.js");
@@ -53,6 +56,7 @@ class ApplianceClient {
     transport;
     kg;
     agents;
+    requests;
     cron;
     handlers;
     documents;
@@ -62,6 +66,7 @@ class ApplianceClient {
         this.transport = transport;
         this.kg = new kg_ts_2.KgClient(transport);
         this.agents = new agents_ts_2.AgentsClient(transport);
+        this.requests = new requests_ts_2.RequestsClient(transport);
         this.cron = new cron_ts_2.CronClient(transport);
         this.handlers = new handlers_ts_2.HandlersClient(transport);
         this.documents = new documents_ts_2.DocumentsClient(transport, options.documents);
