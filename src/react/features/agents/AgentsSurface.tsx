@@ -60,7 +60,8 @@ function CheckFound({ check }: { check: DutyCheck | undefined }) {
 function checkWords(check: DutyCheck): string {
   const found = check.state === 'unknown'
     ? `Could not tell: ${check.reason ?? 'no reason given'}`
-    : check.state === 'upheld' ? 'Upheld: nothing to repair' : `Lapsed: ${check.violations} violation${check.violations === 1 ? '' : 's'}`
+    : check.state === 'upheld' ? 'Upheld: nothing to repair'
+      : `${check.state === 'neglected' ? 'Neglected, its requests are being rejected' : 'Lapsed'}: ${check.violations} violation${check.violations === 1 ? '' : 's'}`
   const would = check.wouldHaveCalled.length > 0 ? `; would have called ${check.wouldHaveCalled.join(', ')}` : ''
   const failed = check.repairFailures > 0 ? `; ${check.repairFailures} repair${check.repairFailures === 1 ? '' : 's'} failed` : ''
   return `${found}${would}${failed}.`

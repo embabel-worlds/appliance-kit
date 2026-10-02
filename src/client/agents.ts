@@ -31,7 +31,7 @@ export interface AgentRoutine {
   missing: boolean
 }
 
-export type DutyState = 'upheld' | 'lapsed' | 'unknown'
+export type DutyState = 'upheld' | 'lapsed' | 'neglected' | 'unknown'
 
 export interface AgentDuty {
   name: string
