@@ -1633,6 +1633,16 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .request-detail { margin: 0; }
 
+/* Said in the caution colour, not the error one: nothing is wrong yet, the approver is being told what to watch for. */
+:where(.kit-feature) .request-untrusted { margin: 0; font-size: 12.5px; color: var(--caution);
+  border-left: 2px solid var(--caution); padding-left: 8px; }
+
+:where(.kit-feature) .agent-halt { gap: 8px; align-items: center; flex-wrap: wrap; margin-bottom: 8px; }
+:where(.kit-feature) .agent-halt input { flex: 1 1 220px; min-width: 0; }
+:where(.kit-feature) .agent-halt.halted { display: flex; justify-content: space-between; padding: 8px 10px;
+  border: 1px solid var(--caution); border-radius: 6px; }
+:where(.kit-feature) .agent-halt.halted p { margin: 0; }
+
 :where(.kit-feature) .request-evidence { overflow-x: auto; }
 
 :where(.kit-feature) .request-evidence table { border-collapse: collapse; font-size: 12px; }

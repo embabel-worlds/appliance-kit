@@ -22,6 +22,19 @@ class RecordingTransport implements Transport {
 const agent = { name: 'chaser', job: 'chase late invoices' }
 
 describe('AgentsClient', () => {
+  it('throws and lifts the kill switch on its own path, not under agents', async () => {
+    const transport = new RecordingTransport(ok({ halted: true, by: 'rod', at: '2026-10-02T10:00:00Z', reason: 'wrong customer' }))
+    const agents = new AgentsClient(transport)
+    await agents.haltStatus()
+    await agents.halt('wrong customer')
+    await agents.resume()
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/halt' },
+      { method: 'POST', path: '/api/v1/halt', body: { reason: 'wrong customer' } },
+      { method: 'DELETE', path: '/api/v1/halt' },
+    ])
+  })
+
   it('checks a duty by the agent and duty names, encoded', async () => {
     const transport = new RecordingTransport(ok({ agent: 'ops desk', duty: 'at risk', state: 'lapsed' }))
     await new AgentsClient(transport).checkDuty('ops desk', 'at risk')

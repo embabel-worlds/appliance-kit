@@ -35,6 +35,12 @@ export interface AgentRequest {
   reason: string | null
   /** What the verb answered, once approved. */
   result: string | null
+  /**
+   * What the routine had read, before it asked, that people outside the business wrote — each as
+   * `source: what`. Such text can carry instructions meant for whoever reads it. Absent on older
+   * appliances.
+   */
+  untrusted?: string[]
 }
 
 interface DecisionResponse {

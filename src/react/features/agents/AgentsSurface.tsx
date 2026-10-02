@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
-import type { Agent, AgentDuty, AgentStage, AgentVersion, DutyCheck } from '../../../client/agents.ts'
+import type { Agent, AgentDuty, AgentStage, AgentVersion, DutyCheck, Halt } from '../../../client/agents.ts'
 import type { AgentsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
@@ -83,6 +83,74 @@ export function StagePill({ stage }: { stage: AgentStage }) {
   )
 }
 
+/*
+ * THE KILL SWITCH, on the roster: one control that stops every agent, and while they are stopped,
+ * says so above everything else with who did it and why. Stopping asks for a reason in the page —
+ * the next person to read it needs one — and starting again asks nothing more than the press,
+ * because every agent goes back to exactly the stage it had.
+ */
+function HaltBar({ services, onChanged }: { services: AgentsSurfaceProps['services']; onChanged: () => void }) {
+  const [halt, setHalt] = useState<Halt | null>(null)
+  const [arming, setArming] = useState(false)
+  const [reason, setReason] = useState('')
+  const [busy, setBusy] = useState(false)
+  const [problem, setProblem] = useState('')
+
+  useEffect(() => {
+    void services.haltStatus?.().then((r) => {
+      if (r.ok) setHalt(r.value)
+      else setProblem(failureMessage(r, 'load whether every agent is stopped'))
+    })
+  }, [services])
+
+  async function change(stop: boolean) {
+    if (busy) return
+    setBusy(true)
+    const result = stop ? await services.halt?.(reason.trim()) : await services.resume?.()
+    setBusy(false)
+    if (!result) return
+    if (!result.ok) {
+      setProblem(failureMessage(result, stop ? 'stop every agent' : 'start every agent again'))
+      return
+    }
+    setProblem('')
+    setHalt(result.value)
+    setArming(false)
+    setReason('')
+    onChanged()
+  }
+
+  if (!services.haltStatus || !services.halt || !services.resume) return null
+  if (problem) return <Status tone="error">{problem}</Status>
+  if (halt?.halted) {
+    return (
+      <div className="agent-halt halted" role="alert">
+        <p>
+          <strong>Every agent is stopped</strong>
+          {halt.by ? `, by ${halt.by}` : ''}{halt.at ? ` on ${when(halt.at)}` : ''}{halt.reason ? `: ${halt.reason}` : '.'}
+        </p>
+        <button className="btn" disabled={busy} onClick={() => void change(false)}>Start them again</button>
+      </div>
+    )
+  }
+  return arming ? (
+    <div className="agent-halt row">
+      <input
+        aria-label="Why stop every agent"
+        placeholder="Why? The next person to look will read this."
+        value={reason}
+        onChange={(e) => setReason(e.target.value)}
+      />
+      <button className="btn arm" disabled={busy || !reason.trim()} onClick={() => void change(true)}>Stop them</button>
+      <button className="btn ghost" disabled={busy} onClick={() => setArming(false)}>Cancel</button>
+    </div>
+  ) : (
+    <div className="agent-halt row">
+      <button className="btn ghost tiny" onClick={() => setArming(true)}>Stop every agent…</button>
+    </div>
+  )
+}
+
 export function AgentsSurface({ services, host, initialAgent }: AgentsSurfaceProps) {
   const [agents, setAgents] = useState<Agent[]>([])
   const [loaded, setLoaded] = useState(false)
@@ -125,6 +193,7 @@ export function AgentsSurface({ services, host, initialAgent }: AgentsSurfacePro
           <Status tone="caution">{problem}</Status>
         ) : (
           <>
+            <HaltBar services={services} onChanged={() => void load()} />
             {problem && <Status tone="error">{problem}</Status>}
             {loaded && agents.length === 0 && !problem && (
               <p className="hint">

@@ -167,6 +167,12 @@ function RequestCard({
         <RequestStatusPill status={request.status} />
       </header>
       <p className="request-detail">{request.detail}</p>
+      {request.untrusted && request.untrusted.length > 0 && (
+        <p className="request-untrusted">
+          Drafted after reading text from outside the business ({request.untrusted.join('; ')}). Such text can
+          carry instructions meant for whoever reads it: read the draft with that in mind.
+        </p>
+      )}
 
       {columns.length > 0 && (
         <div className="request-evidence">
