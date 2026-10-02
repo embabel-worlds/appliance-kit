@@ -138,6 +138,9 @@
           "state" : {
             "enum" : [ "RUNNING", "SUCCEEDED", "FAILED" ],
             "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
           }
         },
         "required" : [ "id", "kind", "label", "mine", "pinned", "startedAt", "state" ],
@@ -231,6 +234,65 @@
         "required" : [ "actions", "description", "goals", "name" ],
         "type" : "object"
       },
+      "AgentRequest" : {
+        "properties" : {
+          "args" : {
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedBy" : {
+            "type" : "string"
+          },
+          "detail" : {
+            "type" : "string"
+          },
+          "evidence" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "expiresAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "raisedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "result" : {
+            "type" : "string"
+          },
+          "routine" : {
+            "type" : "string"
+          },
+          "runId" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "PENDING", "APPROVED", "FAILED", "REJECTED", "EXPIRED" ],
+            "type" : "string"
+          },
+          "verb" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "verb" ],
+        "type" : "object"
+      },
       "AgentVersionView" : {
         "properties" : {
           "digest" : {
@@ -258,6 +320,9 @@
       },
       "AgentView" : {
         "properties" : {
+          "authority" : {
+            "$ref" : "#/components/schemas/AuthoritySpec"
+          },
           "duties" : {
             "items" : {
               "$ref" : "#/components/schemas/DutyView"
@@ -480,6 +545,23 @@
           }
         },
         "required" : [ "filename", "handler", "stale", "startedAt", "state", "summary" ],
+        "type" : "object"
+      },
+      "AuthoritySpec" : {
+        "properties" : {
+          "default" : {
+            "enum" : [ "act", "request", "never" ],
+            "type" : "string"
+          },
+          "verbs" : {
+            "additionalProperties" : {
+              "enum" : [ "act", "request", "never" ],
+              "type" : "string"
+            },
+            "type" : "object"
+          }
+        },
+        "required" : [ "default", "verbs" ],
         "type" : "object"
       },
       "AvailableSourcesResponse" : {
@@ -1379,6 +1461,29 @@
           },
           "to" : {
             "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "DecisionRequest" : {
+        "properties" : {
+          "decision" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "decision" ],
+        "type" : "object"
+      },
+      "DecisionResponse" : {
+        "properties" : {
+          "refused" : {
+            "type" : "string"
+          },
+          "request" : {
+            "$ref" : "#/components/schemas/AgentRequest"
           }
         },
         "type" : "object"
@@ -3239,6 +3344,18 @@
         "required" : [ "elementId", "props", "round", "rule", "trace" ],
         "type" : "object"
       },
+      "KgDeriveDemandWire" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "materialize" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "materialize" ],
+        "type" : "object"
+      },
       "KgDeriveRequest" : {
         "properties" : {
           "cypher" : {
@@ -3263,6 +3380,12 @@
             "additionalProperties" : { },
             "type" : "object"
           },
+          "requires" : {
+            "items" : {
+              "$ref" : "#/components/schemas/KgDeriveDemandWire"
+            },
+            "type" : "array"
+          },
           "rules" : {
             "items" : {
               "$ref" : "#/components/schemas/KgDeriveRuleWire"
@@ -3270,7 +3393,7 @@
             "type" : "array"
           }
         },
-        "required" : [ "cypher", "derives", "description", "paramSpecs", "params", "rules" ],
+        "required" : [ "cypher", "derives", "description", "paramSpecs", "params", "requires", "rules" ],
         "type" : "object"
       },
       "KgDeriveResponse" : {
@@ -4966,6 +5089,10 @@
             },
             "type" : "array"
           },
+          "matched" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "name" : {
             "type" : "string"
           },
@@ -4977,6 +5104,9 @@
           },
           "realm" : {
             "type" : "string"
+          },
+          "truncated" : {
+            "type" : "boolean"
           }
         },
         "required" : [ "edges", "name", "nodes", "realm" ],
@@ -14931,7 +15061,7 @@
                 }
               }
             },
-            "description" : "Arguments do not match the lens's declared parameters"
+            "description" : "Arguments do not match the lens's declared parameters, or the body has a field other than args/idempotencyKey"
           },
           "401" : {
             "content" : {
@@ -15834,6 +15964,158 @@
         "tags" : [ "Realms" ]
       }
     },
+    "/api/v1/requests" : {
+      "get" : {
+        "operationId" : "listRequests",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentRequest"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The requests, with any whose time ran out marked expired"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentRequest"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Every request raised in your world, newest first",
+        "tags" : [ "Requests" ]
+      }
+    },
+    "/api/v1/requests/{id}" : {
+      "get" : {
+        "operationId" : "getRequest",
+        "parameters" : [ {
+          "description" : "The request's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentRequest"
+                }
+              }
+            },
+            "description" : "The request"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentRequest"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentRequest"
+                }
+              }
+            },
+            "description" : "No such request in your world"
+          }
+        },
+        "summary" : "One request",
+        "tags" : [ "Requests" ]
+      }
+    },
+    "/api/v1/requests/{id}/decision" : {
+      "post" : {
+        "description" : "Approving calls the request's verb as you, through the gateway. Rejecting needs a reason.",
+        "operationId" : "decideRequest",
+        "parameters" : [ {
+          "description" : "The request's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/DecisionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description" : "The request after the decision"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description" : "No such request in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DecisionResponse"
+                }
+              }
+            },
+            "description" : "Refused: already decided or expired, a rejection with no reason, or no such decision"
+          }
+        },
+        "summary" : "Approve or reject a request",
+        "tags" : [ "Requests" ]
+      }
+    },
     "/api/v1/samples" : {
       "delete" : {
         "description" : "Every `:_Sample` node whatever loaded it — what you run before showing this world to somebody who should only see real records.",
@@ -16625,7 +16907,7 @@
                 }
               }
             },
-            "description" : "Arguments do not match the view's declared parameters"
+            "description" : "Arguments do not match the view's declared parameters, or the body has a field other than args/idempotencyKey"
           },
           "401" : {
             "content" : {
@@ -18298,7 +18580,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34497"
+    "url" : "http://localhost:38855"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -18507,5 +18789,8 @@
   }, {
     "description" : "Generate, execute, monitor and cancel scoped knowledge-graph queries, and invoke saved views",
     "name" : "Virtual Cypher"
+  }, {
+    "description" : "What your agents ask you to approve",
+    "name" : "Requests"
   } ]
 }
