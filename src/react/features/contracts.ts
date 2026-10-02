@@ -10,7 +10,7 @@ import type {
   KgClient,
   KgQueryResult,
 } from '../../client/kg.ts'
-import type { Agent, AgentStage, AgentVersion, DutyCheck } from '../../client/agents.ts'
+import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts'
 import type { AgentRequest } from '../../client/requests.ts'
 import type { CompiledSchedule } from '../../client/cron.ts'
 import type { Outcome } from '../../client/outcome.ts'
@@ -423,6 +423,10 @@ export interface AgentsServices {
   versions(name: string): Promise<Outcome<AgentVersion[]>>
   /** Run a duty's check now. Omitted, the card offers no test run and duties are checked on schedule only. */
   checkDuty?(name: string, duty: string): Promise<Outcome<DutyCheck>>
+  /** The kill switch. All three or none: omitted, the surface offers no way to stop every agent. */
+  haltStatus?(): Promise<Outcome<Halt>>
+  halt?(reason: string): Promise<Outcome<Halt>>
+  resume?(): Promise<Outcome<Halt>>
 }
 
 export interface AgentsHost {

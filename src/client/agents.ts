@@ -99,12 +99,22 @@ export interface AgentVersion {
   routines: string[]
 }
 
+/** The world's kill switch: whether every agent is stopped, by whom, when and why. */
+export interface Halt {
+  halted: boolean
+  by: string | null
+  at: string | null
+  reason: string | null
+}
+
 interface StageResponse {
   agent: Agent | null
   refused: string | null
 }
 
 const AGENTS = '/api/v1/agents'
+/* Its own path, not under agents, where it would shadow an agent of the same name. */
+const HALT = '/api/v1/halt'
 
 export class AgentsClient {
   constructor(private readonly transport: Transport) {}
@@ -145,6 +155,21 @@ export class AgentsClient {
       path: `${AGENTS}/${encodeURIComponent(name)}/duties/${encodeURIComponent(duty)}/check`,
       body: {},
     })
+  }
+
+  /** Whether every agent in the world is stopped. */
+  haltStatus(): Promise<Outcome<Halt>> {
+    return this.transport.send({ method: 'GET', path: HALT })
+  }
+
+  /** Stop every agent: nothing runs from the next tick, and a run already going is refused its writes. */
+  halt(reason: string): Promise<Outcome<Halt>> {
+    return this.transport.send({ method: 'POST', path: HALT, body: { reason } })
+  }
+
+  /** Lift the halt: every agent back at the stage it had. */
+  resume(): Promise<Outcome<Halt>> {
+    return this.transport.send({ method: 'DELETE', path: HALT })
   }
 
   versions(name: string): Promise<Outcome<AgentVersion[]>> {
