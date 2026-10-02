@@ -31,6 +31,8 @@ export interface AgentRoutine {
   missing: boolean
 }
 
+export type DutyState = 'upheld' | 'lapsed' | 'neglected' | 'unknown'
+
 export interface AgentDuty {
   name: string
   text: string
@@ -38,7 +40,32 @@ export interface AgentDuty {
   every: string | null
   timezone: string | null
   stage: AgentStage
+  /** The latest check, in words: "upheld", "lapsed since …", "unknown: …", or "not checked yet". */
   status: string
+  state?: DutyState | null
+  lapsedSince?: string | null
+  checkedAt?: string | null
+  violations?: number
+  reason?: string | null
+  /** When it last passed a test run, and of which signed version. Going on duty needs the current one. */
+  testedAt?: string | null
+  testedVersion?: number | null
+}
+
+/** What one check of a duty found, and what its repair did or would have done. */
+export interface DutyCheck {
+  agent: string
+  duty: string
+  state: DutyState
+  lapsedSince: string | null
+  checkedAt: string
+  violations: number
+  reason: string | null
+  repaired: number
+  repairFailures: number
+  wouldHaveCalled: string[]
+  onDemand: boolean
+  agentVersion: number | null
 }
 
 export interface Agent {
@@ -106,6 +133,18 @@ export class AgentsClient {
     return this.agentOrRefusal(
       this.transport.send<StageResponse>({ method: 'POST', path: `${AGENTS}/${encodeURIComponent(name)}/sign`, body: {} }),
     )
+  }
+
+  /**
+   * Check one duty now and run its repair on what it finds. Off duty it only observes, so this is
+   * the test run a duty must pass before its agent goes on duty.
+   */
+  checkDuty(name: string, duty: string): Promise<Outcome<DutyCheck>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${AGENTS}/${encodeURIComponent(name)}/duties/${encodeURIComponent(duty)}/check`,
+      body: {},
+    })
   }
 
   versions(name: string): Promise<Outcome<AgentVersion[]>> {

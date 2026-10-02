@@ -18,7 +18,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
-import type { Agent, AgentStage, AgentVersion } from '../../../client/agents.ts'
+import type { Agent, AgentDuty, AgentStage, AgentVersion, DutyCheck } from '../../../client/agents.ts'
 import type { AgentsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
@@ -41,6 +41,30 @@ function when(iso: string | null): string {
   if (!iso) return ''
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
+}
+
+/* Whether the duty may go on duty as it stands: a test run of the version that will run, or not yet. */
+function testedWords(duty: AgentDuty, version: number): string {
+  if (duty.testedVersion == null) return 'Not tested yet'
+  const on = duty.testedAt ? ` on ${when(duty.testedAt)}` : ''
+  return duty.testedVersion === version
+    ? `Tested on version ${version}${on}`
+    : `Last tested on version ${duty.testedVersion}${on}; version ${version} needs a test run`
+}
+
+/* What a test run just found, and what the repair would have done about it. */
+function CheckFound({ check }: { check: DutyCheck | undefined }) {
+  return check ? <p className="hint">{checkWords(check)}</p> : null
+}
+
+function checkWords(check: DutyCheck): string {
+  const found = check.state === 'unknown'
+    ? `Could not tell: ${check.reason ?? 'no reason given'}`
+    : check.state === 'upheld' ? 'Upheld: nothing to repair'
+      : `${check.state === 'neglected' ? 'Neglected, its requests are being rejected' : 'Lapsed'}: ${check.violations} violation${check.violations === 1 ? '' : 's'}`
+  const would = check.wouldHaveCalled.length > 0 ? `; would have called ${check.wouldHaveCalled.join(', ')}` : ''
+  const failed = check.repairFailures > 0 ? `; ${check.repairFailures} repair${check.repairFailures === 1 ? '' : 's'} failed` : ''
+  return `${found}${would}${failed}.`
 }
 
 /** The highest stage any routine actually fires at: what the agent is doing, in one pill. */
@@ -152,6 +176,7 @@ function AgentDetail({
   const [refusal, setRefusal] = useState('')
   const [busy, setBusy] = useState(false)
   const [history, setHistory] = useState<AgentVersion[] | null>(null)
+  const [checked, setChecked] = useState<Record<string, DutyCheck>>({})
 
   async function move(stage: AgentStage, routine?: string) {
     if (busy) return
@@ -179,6 +204,27 @@ function AgentDetail({
     setRefusal('')
     setHistory(null)
     onChanged(result.value)
+  }
+
+  /*
+   * A TEST RUN from the card: the duty's check, now. Off duty it only observes, so it is safe to try,
+   * and it is what going on duty asks for. The card is re-read afterwards, since the check moves its
+   * status and, when it passes, what it was tested on.
+   */
+  async function testRun(duty: AgentDuty) {
+    if (busy || !services.checkDuty) return
+    setBusy(true)
+    const result = await services.checkDuty(agent.name, duty.name)
+    if (result.ok) {
+      setChecked((prior) => ({ ...prior, [duty.name]: result.value }))
+      const fresh = await services.listAgents()
+      const now = fresh.ok ? fresh.value.find((a) => a.name === agent.name) : undefined
+      if (now) onChanged(now)
+      setRefusal('')
+    } else {
+      setRefusal(failureMessage(result, `check ${agent.name}'s duty ${duty.name}`))
+    }
+    setBusy(false)
   }
 
   async function showHistory() {
@@ -278,6 +324,13 @@ function AgentDetail({
               <li key={d.name}>
                 <strong>{d.text || d.name}</strong>
                 <span className="hint"> · {d.holds}{d.every ? ` · ${d.every}` : ''}{d.timezone ? ` · ${d.timezone}` : ''} · {d.status}</span>
+                <div className="row">
+                  <span className="hint" title={d.testedAt ?? undefined}>{testedWords(d, agent.version)}</span>
+                  {services.checkDuty && (
+                    <button className="btn ghost tiny" disabled={busy} onClick={() => void testRun(d)}>Test run</button>
+                  )}
+                </div>
+                <CheckFound check={checked[d.name]} />
               </li>
             ))}
           </ul>
