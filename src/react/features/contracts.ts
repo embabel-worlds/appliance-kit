@@ -10,7 +10,7 @@ import type {
   KgClient,
   KgQueryResult,
 } from '../../client/kg.ts'
-import type { Agent, AgentStage, AgentVersion } from '../../client/agents.ts'
+import type { Agent, AgentStage, AgentVersion, DutyCheck } from '../../client/agents.ts'
 import type { AgentRequest } from '../../client/requests.ts'
 import type { CompiledSchedule } from '../../client/cron.ts'
 import type { Outcome } from '../../client/outcome.ts'
@@ -421,6 +421,8 @@ export interface AgentsServices {
   setStage(name: string, stage: AgentStage, routine?: string): Promise<Outcome<Agent>>
   sign(name: string): Promise<Outcome<Agent>>
   versions(name: string): Promise<Outcome<AgentVersion[]>>
+  /** Run a duty's check now. Omitted, the card offers no test run and duties are checked on schedule only. */
+  checkDuty?(name: string, duty: string): Promise<Outcome<DutyCheck>>
 }
 
 export interface AgentsHost {

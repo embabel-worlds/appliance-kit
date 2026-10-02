@@ -76,7 +76,7 @@ export type { CompiledSchedule } from './cron.ts'
 export { AgentsClient } from './agents.ts'
 export { RequestsClient } from './requests.ts'
 export type { AgentRequest, RequestStatus } from './requests.ts'
-export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion } from './agents.ts'
+export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion, DutyCheck, DutyState } from './agents.ts'
 
 export { HandlersClient } from './handlers.ts'
 export type {
