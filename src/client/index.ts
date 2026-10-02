@@ -74,6 +74,8 @@ export type { CitedSource, SourceKind } from './citations.ts'
 export { CronClient } from './cron.ts'
 export type { CompiledSchedule } from './cron.ts'
 export { AgentsClient } from './agents.ts'
+export { RequestsClient } from './requests.ts'
+export type { AgentRequest, RequestStatus } from './requests.ts'
 export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion } from './agents.ts'
 
 export { HandlersClient } from './handlers.ts'
@@ -95,6 +97,7 @@ export type {
 export type { components, paths } from './generated/openapi.ts'
 
 import { AgentsClient as AgentsClientImpl } from './agents.ts'
+import { RequestsClient as RequestsClientImpl } from './requests.ts'
 import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
@@ -112,6 +115,7 @@ export interface ApplianceClientOptions {
 export class ApplianceClient {
   readonly kg: KgClient
   readonly agents: AgentsClientImpl
+  readonly requests: RequestsClientImpl
   readonly cron: CronClientImpl
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
@@ -121,6 +125,7 @@ export class ApplianceClient {
   constructor(readonly transport: Transport, options: ApplianceClientOptions = {}) {
     this.kg = new KgClient(transport)
     this.agents = new AgentsClientImpl(transport)
+    this.requests = new RequestsClientImpl(transport)
     this.cron = new CronClientImpl(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)

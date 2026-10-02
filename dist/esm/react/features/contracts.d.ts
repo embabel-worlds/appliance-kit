@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
 import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion } from '../../client/agents.ts';
+import type { AgentRequest } from '../../client/requests.ts';
 import type { CompiledSchedule } from '../../client/cron.ts';
 import type { Outcome } from '../../client/outcome.ts';
 import type { TourSummary } from '../../client/tours.ts';
@@ -410,5 +411,18 @@ export interface AgentsSurfaceProps {
     host?: AgentsHost;
     /** An agent to open first, by name. */
     initialAgent?: string;
+}
+export interface ApprovalsServices {
+    listRequests(): Promise<Outcome<AgentRequest[]>>;
+    approve(id: string): Promise<Outcome<AgentRequest>>;
+    reject(id: string, reason: string): Promise<Outcome<AgentRequest>>;
+}
+export interface ApprovalsHost {
+    /** Open the agent whose routine raised a request. Omitted, the routine is plain text. */
+    openAgent?(routine: string): void;
+}
+export interface ApprovalsSurfaceProps {
+    services: ApprovalsServices;
+    host?: ApprovalsHost;
 }
 //# sourceMappingURL=contracts.d.ts.map

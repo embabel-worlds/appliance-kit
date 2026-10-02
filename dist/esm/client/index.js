@@ -16,8 +16,10 @@ export { ToursClient } from "./tours.js";
 export { classifySource } from "./citations.js";
 export { CronClient } from "./cron.js";
 export { AgentsClient } from "./agents.js";
+export { RequestsClient } from "./requests.js";
 export { HandlersClient } from "./handlers.js";
 import { AgentsClient as AgentsClientImpl } from "./agents.js";
+import { RequestsClient as RequestsClientImpl } from "./requests.js";
 import { CronClient as CronClientImpl } from "./cron.js";
 import { DocumentsClient } from "./documents.js";
 import { HandlersClient } from "./handlers.js";
@@ -30,6 +32,7 @@ export class ApplianceClient {
     transport;
     kg;
     agents;
+    requests;
     cron;
     handlers;
     documents;
@@ -39,6 +42,7 @@ export class ApplianceClient {
         this.transport = transport;
         this.kg = new KgClient(transport);
         this.agents = new AgentsClientImpl(transport);
+        this.requests = new RequestsClientImpl(transport);
         this.cron = new CronClientImpl(transport);
         this.handlers = new HandlersClient(transport);
         this.documents = new DocumentsClient(transport, options.documents);
