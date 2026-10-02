@@ -13,6 +13,7 @@ export interface AgentRoutine {
     /** Named by the agent but absent from the world. */
     missing: boolean;
 }
+export type DutyState = 'upheld' | 'lapsed' | 'neglected' | 'unknown';
 export interface AgentDuty {
     name: string;
     text: string;
@@ -20,7 +21,31 @@ export interface AgentDuty {
     every: string | null;
     timezone: string | null;
     stage: AgentStage;
+    /** The latest check, in words: "upheld", "lapsed since …", "unknown: …", or "not checked yet". */
     status: string;
+    state?: DutyState | null;
+    lapsedSince?: string | null;
+    checkedAt?: string | null;
+    violations?: number;
+    reason?: string | null;
+    /** When it last passed a test run, and of which signed version. Going on duty needs the current one. */
+    testedAt?: string | null;
+    testedVersion?: number | null;
+}
+/** What one check of a duty found, and what its repair did or would have done. */
+export interface DutyCheck {
+    agent: string;
+    duty: string;
+    state: DutyState;
+    lapsedSince: string | null;
+    checkedAt: string;
+    violations: number;
+    reason: string | null;
+    repaired: number;
+    repairFailures: number;
+    wouldHaveCalled: string[];
+    onDemand: boolean;
+    agentVersion: number | null;
 }
 export interface Agent {
     name: string;
@@ -51,6 +76,13 @@ export interface AgentVersion {
     digest: string;
     routines: string[];
 }
+/** The world's kill switch: whether every agent is stopped, by whom, when and why. */
+export interface Halt {
+    halted: boolean;
+    by: string | null;
+    at: string | null;
+    reason: string | null;
+}
 export declare class AgentsClient {
     private readonly transport;
     constructor(transport: Transport);
@@ -60,6 +92,17 @@ export declare class AgentsClient {
     setStage(name: string, stage: AgentStage, routine?: string): Promise<Outcome<Agent>>;
     /** Sign the agent as it stands now, as its next version. */
     sign(name: string): Promise<Outcome<Agent>>;
+    /**
+     * Check one duty now and run its repair on what it finds. Off duty it only observes, so this is
+     * the test run a duty must pass before its agent goes on duty.
+     */
+    checkDuty(name: string, duty: string): Promise<Outcome<DutyCheck>>;
+    /** Whether every agent in the world is stopped. */
+    haltStatus(): Promise<Outcome<Halt>>;
+    /** Stop every agent: nothing runs from the next tick, and a run already going is refused its writes. */
+    halt(reason: string): Promise<Outcome<Halt>>;
+    /** Lift the halt: every agent back at the stage it had. */
+    resume(): Promise<Outcome<Halt>>;
     versions(name: string): Promise<Outcome<AgentVersion[]>>;
     private agentOrRefusal;
 }
