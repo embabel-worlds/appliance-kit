@@ -1796,19 +1796,82 @@
         "required" : [ "inUse" ],
         "type" : "object"
       },
+      "DutyCheck" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "checkedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "duty" : {
+            "type" : "string"
+          },
+          "lapsedSince" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "onDemand" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "repairFailures" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "repaired" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "state" : {
+            "enum" : [ "upheld", "lapsed", "unknown" ],
+            "type" : "string"
+          },
+          "violations" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "wouldHaveCalled" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "agent", "checkedAt", "duty", "onDemand", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
+        "type" : "object"
+      },
       "DutyView" : {
         "properties" : {
+          "checkedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
           "every" : {
             "type" : "string"
           },
           "holds" : {
             "type" : "string"
           },
+          "lapsedSince" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
           "name" : {
+            "type" : "string"
+          },
+          "reason" : {
             "type" : "string"
           },
           "stage" : {
             "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "upheld", "lapsed", "unknown" ],
             "type" : "string"
           },
           "status" : {
@@ -1819,9 +1882,13 @@
           },
           "timezone" : {
             "type" : "string"
+          },
+          "violations" : {
+            "format" : "int32",
+            "type" : "integer"
           }
         },
-        "required" : [ "holds", "name", "stage", "status", "text" ],
+        "required" : [ "holds", "name", "stage", "status", "text", "violations" ],
         "type" : "object"
       },
       "EdgeRequest" : {
@@ -9431,6 +9498,63 @@
           }
         },
         "summary" : "One agent in your world",
+        "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/duties/{duty}/check" : {
+      "post" : {
+        "description" : "Reads the duty's violations view, records upheld, lapsed or unknown, and runs its repair on each violation. Off duty, it runs observing.",
+        "operationId" : "checkAgentDuty",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The duty's name",
+          "in" : "path",
+          "name" : "duty",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DutyCheck"
+                }
+              }
+            },
+            "description" : "What the check found"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DutyCheck"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DutyCheck"
+                }
+              }
+            },
+            "description" : "No signed agent of that name holds such a duty"
+          }
+        },
+        "summary" : "Check one of an agent's duties now",
         "tags" : [ "Agents" ]
       }
     },
@@ -18580,7 +18704,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41131"
+    "url" : "http://localhost:34093"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
