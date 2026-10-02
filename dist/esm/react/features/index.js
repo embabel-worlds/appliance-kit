@@ -8,4 +8,5 @@ export { rewoundCounter } from "./query/sessionRewind.js";
 export { CodingAgentsSurface } from "./coding-agents/CodingAgentsSurface.js";
 export { ApiKeysSurface } from "./api-keys/ApiKeysSurface.js";
 export { AgentsSurface, StagePill, firingOf } from "./agents/AgentsSurface.js";
+export { ApprovalsSurface, RequestStatusPill } from "./approvals/ApprovalsSurface.js";
 //# sourceMappingURL=index.js.map
