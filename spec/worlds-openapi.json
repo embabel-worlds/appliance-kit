@@ -286,11 +286,17 @@
             "enum" : [ "PENDING", "APPROVED", "FAILED", "REJECTED", "EXPIRED" ],
             "type" : "string"
           },
+          "untrusted" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "verb" : {
             "type" : "string"
           }
         },
-        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "verb" ],
+        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "untrusted", "verb" ],
         "type" : "object"
       },
       "AgentVersionView" : {
@@ -1801,6 +1807,10 @@
           "agent" : {
             "type" : "string"
           },
+          "agentVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
           "checkedAt" : {
             "format" : "date-time",
             "type" : "string"
@@ -1827,7 +1837,7 @@
             "type" : "integer"
           },
           "state" : {
-            "enum" : [ "upheld", "lapsed", "unknown" ],
+            "enum" : [ "upheld", "lapsed", "neglected", "unknown" ],
             "type" : "string"
           },
           "violations" : {
@@ -1871,11 +1881,19 @@
             "type" : "string"
           },
           "state" : {
-            "enum" : [ "upheld", "lapsed", "unknown" ],
+            "enum" : [ "upheld", "lapsed", "neglected", "unknown" ],
             "type" : "string"
           },
           "status" : {
             "type" : "string"
+          },
+          "testedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "testedVersion" : {
+            "format" : "int32",
+            "type" : "integer"
           },
           "text" : {
             "type" : "string"
@@ -2326,6 +2344,32 @@
           }
         },
         "required" : [ "description", "examples", "name", "tags" ],
+        "type" : "object"
+      },
+      "HaltRequest" : {
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "HaltResponse" : {
+        "properties" : {
+          "at" : {
+            "type" : "string"
+          },
+          "by" : {
+            "type" : "string"
+          },
+          "halted" : {
+            "type" : "boolean"
+          },
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "halted" ],
         "type" : "object"
       },
       "HandlerAvailable" : {
@@ -4565,7 +4609,7 @@
       "Notification" : {
         "properties" : {
           "actionKind" : {
-            "enum" : [ "DRAFT_REPLY", "SEND_PREP", "UPDATE_RECORD", "SCHEDULE_BLOCK", "NOTIFY_PERSON", "ACK_ONLY", "CONFIRM_IDENTITY_LINK" ],
+            "enum" : [ "DRAFT_REPLY", "SEND_PREP", "UPDATE_RECORD", "SCHEDULE_BLOCK", "NOTIFY_PERSON", "ACK_ONLY", "CONFIRM_IDENTITY_LINK", "DECIDE_REQUEST" ],
             "type" : "string"
           },
           "confidence" : {
@@ -13263,6 +13307,110 @@
         "tags" : [ "Embeddings" ]
       }
     },
+    "/api/v1/halt" : {
+      "delete" : {
+        "operationId" : "resume",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "Lifted"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Lift the halt: every agent back as it was",
+        "tags" : [ "Agents" ]
+      },
+      "get" : {
+        "operationId" : "getHalt",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "The halt, or halted false"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Whether every agent in your world is stopped",
+        "tags" : [ "Agents" ]
+      },
+      "post" : {
+        "description" : "Every routine and duty is off from the next tick, and a run already going is refused its writes. Lifting the halt restores every stage.",
+        "operationId" : "halt",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/HaltRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "Halted"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HaltResponse"
+                }
+              }
+            },
+            "description" : "No world"
+          }
+        },
+        "summary" : "Stop every agent in your world",
+        "tags" : [ "Agents" ]
+      }
+    },
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
@@ -18704,7 +18852,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34419"
+    "url" : "http://localhost:40963"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -18764,11 +18912,11 @@
     "description" : "Keys the signed-in user mints to reach this world from code",
     "name" : "API keys"
   }, {
-    "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
-    "name" : "World"
-  }, {
     "description" : "The colleagues in your world",
     "name" : "Agents"
+  }, {
+    "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
+    "name" : "World"
   }, {
     "description" : "Serve world images",
     "name" : "Images"
