@@ -9592,14 +9592,12 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "binary",
-                  "type" : "string"
+                  "type" : "object"
                 }
               },
               "text/html" : {
                 "schema" : {
-                  "format" : "binary",
-                  "type" : "string"
+                  "type" : "object"
                 }
               }
             },
@@ -9609,14 +9607,12 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "format" : "binary",
-                  "type" : "string"
+                  "type" : "object"
                 }
               },
               "text/html" : {
                 "schema" : {
-                  "format" : "binary",
-                  "type" : "string"
+                  "type" : "object"
                 }
               }
             },
@@ -12099,7 +12095,7 @@
     },
     "/api/v1/directory/browse/realms" : {
       "get" : {
-        "description" : "Returns all available realms grouped by provider/account.",
+        "description" : "Returns available realms grouped by provider/account. The complete field is false when a source scan failed or returned partial results.",
         "operationId" : "browseRealms",
         "responses" : {
           "200" : {
@@ -12112,6 +12108,17 @@
               }
             },
             "description" : "Realms grouped by provider"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Directory scan incomplete and no realms available; use Refresh directory to retry"
           }
         },
         "summary" : "Browse all realms",
@@ -18291,7 +18298,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46481"
+    "url" : "http://localhost:46119"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
