@@ -2,6 +2,7 @@ import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
 import { AgentsClient } from '../src/client/agents.ts'
 import { CronClient } from '../src/client/cron.ts'
+import { ThreadsClient } from '../src/client/threads.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -81,5 +82,22 @@ describe('CronClient', () => {
     const result = await new CronClient(transport).compileSchedule('every weekday at 8')
     assert.deepEqual(transport.sent, [{ method: 'POST', path: '/api/v1/cron/compile-schedule', body: { schedule: 'every weekday at 8' }, timeoutMs: 60_000 }])
     assert.deepEqual(result, { ok: true, value: { cron: '0 0 8 * * MON-FRI' } })
+  })
+})
+
+describe('ThreadsClient', () => {
+  it('lists, opens, starts and posts in threads at their paths', async () => {
+    const transport = new RecordingTransport(ok({ threads: [] }))
+    const threads = new ThreadsClient(transport)
+    await threads.list()
+    await threads.get('th 1')
+    await threads.create('Northwind')
+    await threads.post('th 1', '@steward is Northwind at risk?', [{ kind: 'VIEW', label: 'StewardUnacknowledgedRisk' }])
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/threads' },
+      { method: 'GET', path: '/api/v1/threads/th%201' },
+      { method: 'POST', path: '/api/v1/threads', body: { title: 'Northwind' } },
+      { method: 'POST', path: '/api/v1/threads/th%201/messages', body: { text: '@steward is Northwind at risk?', attachments: [{ kind: 'VIEW', label: 'StewardUnacknowledgedRisk' }] } },
+    ])
   })
 })

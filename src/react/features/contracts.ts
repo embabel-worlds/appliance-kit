@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts'
 import type {
   HandlerGenerated,
   HandlerMutationResult,
@@ -462,5 +463,24 @@ export interface ApprovalsHost {
 export interface ApprovalsSurfaceProps {
   services: ApprovalsServices
   host?: ApprovalsHost
+}
+
+export interface ThreadsServices {
+  listThreads(): Promise<Outcome<Thread[]>>
+  getThread(id: string): Promise<Outcome<ThreadView>>
+  createThread(title: string): Promise<Outcome<Thread>>
+  post(id: string, text: string, attachments: AttachmentRequest[]): Promise<Outcome<ThreadMessage>>
+}
+
+export interface ThreadsHost {
+  /** Open an agent's card from its name on a message. Omitted, the name is plain text. */
+  openAgent?(name: string): void
+}
+
+export interface ThreadsSurfaceProps {
+  services: ThreadsServices
+  host?: ThreadsHost
+  /** A thread to open first, by id. */
+  initialThread?: string
 }
 

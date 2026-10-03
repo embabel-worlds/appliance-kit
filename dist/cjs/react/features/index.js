@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.RequestStatusPill = exports.ApprovalsSurface = exports.firingOf = exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
+exports.ThreadsSurface = exports.RequestStatusPill = exports.ApprovalsSurface = exports.firingOf = exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
 __exportStar(require("./contracts.js"), exports);
 var AppsSurface_tsx_1 = require("./apps/AppsSurface.js");
 Object.defineProperty(exports, "AppsSurface", { enumerable: true, get: function () { return AppsSurface_tsx_1.AppsSurface; } });
@@ -42,4 +42,6 @@ Object.defineProperty(exports, "firingOf", { enumerable: true, get: function () 
 var ApprovalsSurface_tsx_1 = require("./approvals/ApprovalsSurface.js");
 Object.defineProperty(exports, "ApprovalsSurface", { enumerable: true, get: function () { return ApprovalsSurface_tsx_1.ApprovalsSurface; } });
 Object.defineProperty(exports, "RequestStatusPill", { enumerable: true, get: function () { return ApprovalsSurface_tsx_1.RequestStatusPill; } });
+var ThreadsSurface_tsx_1 = require("./threads/ThreadsSurface.js");
+Object.defineProperty(exports, "ThreadsSurface", { enumerable: true, get: function () { return ThreadsSurface_tsx_1.ThreadsSurface; } });
 //# sourceMappingURL=index.js.map
