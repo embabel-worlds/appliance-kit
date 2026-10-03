@@ -12,7 +12,8 @@
     "dist",
     "css",
     "src",
-    "README.md"
+    "README.md",
+    "llms.txt"
   ],
   "exports": {
     ".": {

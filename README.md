@@ -3,9 +3,6 @@
 The shared code behind the **Embabel Me** app and the **Worlds console**: one
 REST client, one visual language, one set of virtual-Cypher semantics.
 
-> Parked under `johnsonr` rather than the `embabel` org for now — the package
-> name is already `@embabel/*`, so moving it later changes no imports.
-
 ## Why one package
 
 It began as five (`appliance-client`, `appliance-ui`, `vc`, `code-surface`,
@@ -101,6 +98,30 @@ export function SavePanel() {
     </Panel>
   )
 }
+```
+
+## Hosts built on desk
+
+The Worlds console draws its windows with [`@liberation-data/desk`](https://github.com/liberation-data/desk).
+In a host like that, desk decides how a screen looks and the kit supplies what it says:
+
+- Read desk's `HIG.md` before laying out a row, a panel or a status. It is checked out beside this
+  repo as `../desk/HIG.md`.
+- Use desk's controls: `Led` with the words beside it for state, `InfoTip` for explanation, `Table`,
+  `Toggle`, `Disclosure`. desk's `llms.txt` lists them all.
+- Take data, types and vocabulary from the kit (`firingOf`, the client, the feature services), and
+  leave its primitives to the kit's own feature surfaces.
+
+The pills are deprecated for this reason: `StatusPill`, `StagePill` and `RequestStatusPill`. `.pill`
+is `display: flex`, written for the flex rows of the kit's own surfaces. Dropped into a line of text
+it becomes a block as wide as its container, and reads as a text field. State in a desk host is a
+lamp and a word:
+
+```tsx
+import { Led } from '@liberation-data/desk/react'
+import { firingOf } from '@embabel/appliance-kit/react/features'
+
+<span className="state"><Led color="amber" /> On duty, observing</span>
 ```
 
 The global builds are **map-free on purpose**: a vendored copy travels without
