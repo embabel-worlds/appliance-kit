@@ -525,6 +525,44 @@
         "required" : [ "filters", "sources", "unresolvedCitations" ],
         "type" : "object"
       },
+      "Attachment" : {
+        "properties" : {
+          "args" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "capturedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "ENTITY", "VIEW", "REQUEST" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "properties" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "rows" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "args", "kind", "label", "properties", "rows", "title" ],
+        "type" : "object"
+      },
       "AttachmentActivity" : {
         "properties" : {
           "filename" : {
@@ -553,6 +591,33 @@
         "required" : [ "filename", "handler", "stale", "startedAt", "state", "summary" ],
         "type" : "object"
       },
+      "AttachmentRequest" : {
+        "properties" : {
+          "args" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "ENTITY", "VIEW", "REQUEST" ],
+            "type" : "string"
+          },
+          "label" : {
+            "type" : "string"
+          },
+          "properties" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "args", "kind", "label", "properties", "title" ],
+        "type" : "object"
+      },
       "AuthoritySpec" : {
         "properties" : {
           "default" : {
@@ -561,11 +626,21 @@
           },
           "observe" : {
             "items" : {
-              "enum" : [ "authority", "sensitive" ],
+              "enum" : [ "authority", "sensitive", "egress", "review" ],
               "type" : "string"
             },
             "type" : "array",
             "uniqueItems" : true
+          },
+          "reach" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "review" : {
+            "type" : "boolean"
           },
           "verbs" : {
             "additionalProperties" : {
@@ -575,7 +650,7 @@
             "type" : "object"
           }
         },
-        "required" : [ "default", "observe", "verbs" ],
+        "required" : [ "default", "observe", "review", "verbs" ],
         "type" : "object"
       },
       "AvailableSourcesResponse" : {
@@ -1405,6 +1480,15 @@
           }
         },
         "required" : [ "description", "instructions", "name" ],
+        "type" : "object"
+      },
+      "CreateThreadRequest" : {
+        "properties" : {
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "title" ],
         "type" : "object"
       },
       "CreateWatchRequest" : {
@@ -2347,6 +2431,12 @@
           "conversation" : {
             "type" : "string"
           },
+          "refused" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "requests" : {
             "items" : {
               "$ref" : "#/components/schemas/EvidenceRequest"
@@ -2354,7 +2444,7 @@
             "type" : "array"
           }
         },
-        "required" : [ "conversation", "requests" ],
+        "required" : [ "conversation", "refused", "requests" ],
         "type" : "object"
       },
       "EvidenceRequest" : {
@@ -5083,6 +5173,21 @@
         "required" : [ "jobId", "status" ],
         "type" : "object"
       },
+      "PostMessageRequest" : {
+        "properties" : {
+          "attachments" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AttachmentRequest"
+            },
+            "type" : "array"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "attachments", "text" ],
+        "type" : "object"
+      },
       "PreferencesBody" : {
         "properties" : {
           "greetingEnabled" : {
@@ -5466,6 +5571,19 @@
           }
         },
         "required" : [ "query" ],
+        "type" : "object"
+      },
+      "Sender" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [ "PERSON", "AGENT", "APPLIANCE" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind", "name" ],
         "type" : "object"
       },
       "SensorBatchRequest" : {
@@ -5929,6 +6047,81 @@
         "required" : [ "content", "name" ],
         "type" : "object"
       },
+      "Thread" : {
+        "properties" : {
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "updatedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "id", "ownerId", "title", "updatedAt" ],
+        "type" : "object"
+      },
+      "ThreadList" : {
+        "properties" : {
+          "threads" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Thread"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "threads" ],
+        "type" : "object"
+      },
+      "ThreadMessage" : {
+        "properties" : {
+          "attachments" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Attachment"
+            },
+            "type" : "array"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "from" : {
+            "$ref" : "#/components/schemas/Sender"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "inReplyTo" : {
+            "type" : "string"
+          },
+          "mentions" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "threadId" : {
+            "type" : "string"
+          },
+          "wordsOnly" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "attachments", "createdAt", "from", "id", "mentions", "text", "threadId", "wordsOnly" ],
+        "type" : "object"
+      },
       "ThreadsResponse" : {
         "properties" : {
           "error" : {
@@ -6307,6 +6500,27 @@
           }
         },
         "required" : [ "args", "description", "group", "name" ],
+        "type" : "object"
+      },
+      "View" : {
+        "properties" : {
+          "messages" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ThreadMessage"
+            },
+            "type" : "array"
+          },
+          "thread" : {
+            "$ref" : "#/components/schemas/Thread"
+          },
+          "waitingOn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "messages", "thread", "waitingOn" ],
         "type" : "object"
       },
       "ViewDebugInfo" : {
@@ -17386,6 +17600,187 @@
         "tags" : [ "Themes" ]
       }
     },
+    "/api/v1/threads" : {
+      "get" : {
+        "operationId" : "listThreads",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadList"
+                }
+              }
+            },
+            "description" : "The threads"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadList"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Your threads, most recently active first",
+        "tags" : [ "Threads" ]
+      },
+      "post" : {
+        "operationId" : "createThread",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/CreateThreadRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Thread"
+                }
+              }
+            },
+            "description" : "The thread"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Thread"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Start a thread",
+        "tags" : [ "Threads" ]
+      }
+    },
+    "/api/v1/threads/{id}" : {
+      "get" : {
+        "operationId" : "getThread",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "The thread"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "No thread of yours with that id"
+          }
+        },
+        "summary" : "A thread, its messages, and the agents still answering",
+        "tags" : [ "Threads" ]
+      }
+    },
+    "/api/v1/threads/{id}/messages" : {
+      "post" : {
+        "description" : "Attachments are resolved and frozen now: a view is run, a request read, a record taken as you send it.",
+        "operationId" : "postThreadMessage",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/PostMessageRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "201" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadMessage"
+                }
+              }
+            },
+            "description" : "The message as posted"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadMessage"
+                }
+              }
+            },
+            "description" : "Nothing to post"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadMessage"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadMessage"
+                }
+              }
+            },
+            "description" : "No thread of yours with that id"
+          }
+        },
+        "summary" : "Post in a thread; every agent you @mention answers in it",
+        "tags" : [ "Threads" ]
+      }
+    },
     "/api/v1/tours" : {
       "get" : {
         "description" : "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
@@ -19346,11 +19741,14 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:44559"
+    "url" : "http://localhost:41081"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
     "name" : "Watches"
+  }, {
+    "description" : "Conversations you and your agents share",
+    "name" : "Threads"
   }, {
     "description" : "Accept or reject an inbox identity-link proposal",
     "name" : "Identity Link Proposals"
