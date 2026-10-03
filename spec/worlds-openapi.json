@@ -5764,6 +5764,37 @@
         "required" : [ "count", "maxMillis", "outcome", "totalMillis" ],
         "type" : "object"
       },
+      "TipSchedule" : {
+        "properties" : {
+          "frequency" : {
+            "enum" : [ "NEVER", "DAILY", "WEEKDAYS", "WEEKLY" ],
+            "type" : "string"
+          },
+          "hour" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "frequency", "hour" ],
+        "type" : "object"
+      },
+      "TipScheduleView" : {
+        "properties" : {
+          "cron" : {
+            "type" : "string"
+          },
+          "frequency" : {
+            "enum" : [ "NEVER", "DAILY", "WEEKDAYS", "WEEKLY" ],
+            "type" : "string"
+          },
+          "hour" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "frequency", "hour" ],
+        "type" : "object"
+      },
       "TourDeletedResponse" : {
         "description" : "Whether a saved tour was removed",
         "properties" : {
@@ -13609,6 +13640,63 @@
         "tags" : [ "Hints" ]
       }
     },
+    "/api/v1/hints/schedule" : {
+      "get" : {
+        "description" : "`cron` is the six-field expression the schedule runs on, in the user's own zone; null when tips are off.",
+        "operationId" : "schedule",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TipScheduleView"
+                }
+              }
+            },
+            "description" : "The schedule in force"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "When a tip is posted to the acting user's inbox",
+        "tags" : [ "Hints" ]
+      },
+      "put" : {
+        "description" : "Takes effect at once: the job is rescheduled before this returns. NEVER removes it.",
+        "operationId" : "changeSchedule",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TipSchedule"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TipScheduleView"
+                }
+              }
+            },
+            "description" : "The schedule now in force"
+          },
+          "400" : {
+            "description" : "Unknown frequency, or an hour outside 0-23"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "Change when a tip is posted to the acting user's inbox",
+        "tags" : [ "Hints" ]
+      }
+    },
     "/api/v1/identity-link-proposals/{id}/accept" : {
       "post" : {
         "description" : "Links the identity with HUMAN provenance, updates any realm bridge, and dismisses the proposal.",
@@ -18860,7 +18948,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42929"
+    "url" : "http://localhost:32895"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
