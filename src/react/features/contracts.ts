@@ -392,6 +392,8 @@ export interface ApiKeySummary {
   prefix: string
   createdAt: string
   lastUsedAt: string | null
+  /** Set for an agent key: the agents it may talk to (`*` for any). It reaches nothing else. Absent on older appliances. */
+  agents?: string[] | null
 }
 
 /** The one response that carries the whole secret. The appliance never returns it again. */
@@ -401,7 +403,8 @@ export interface MintedApiKey extends Omit<ApiKeySummary, 'lastUsedAt'> {
 
 export interface ApiKeysServices {
   listKeys(): Promise<Outcome<ApiKeySummary[]>>
-  mintKey(name: string): Promise<Outcome<MintedApiKey>>
+  /** [agents] mints an agent key: it talks only to those agents (`*` for any) and reaches nothing else. */
+  mintKey(name: string, agents?: string[]): Promise<Outcome<MintedApiKey>>
   revokeKey(id: string): Promise<Outcome<void>>
 }
 
