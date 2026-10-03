@@ -33,6 +33,7 @@ var EmbabelApplianceClient = (() => {
     HttpTransport: () => HttpTransport,
     KgClient: () => KgClient,
     RequestsClient: () => RequestsClient,
+    ThreadsClient: () => ThreadsClient,
     ToursClient: () => ToursClient,
     basicAuth: () => basicAuth,
     classifySource: () => classifySource,
@@ -826,6 +827,28 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/threads.ts
+  var THREADS = "/api/v1/threads";
+  var ThreadsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    async list() {
+      const listed = await this.transport.send({ method: "GET", path: THREADS });
+      return listed.ok ? { ok: true, value: listed.value.threads } : listed;
+    }
+    get(id) {
+      return this.transport.send({ method: "GET", path: `${THREADS}/${encodeURIComponent(id)}` });
+    }
+    create(title) {
+      return this.transport.send({ method: "POST", path: THREADS, body: { title } });
+    }
+    /** Post in a thread. Every agent the text @mentions answers in it, in the background. */
+    post(id, text, attachments = []) {
+      return this.transport.send({ method: "POST", path: `${THREADS}/${encodeURIComponent(id)}/messages`, body: { text, attachments } });
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -945,6 +968,7 @@ var EmbabelApplianceClient = (() => {
       this.kg = new KgClient(transport);
       this.agents = new AgentsClient(transport);
       this.requests = new RequestsClient(transport);
+      this.threads = new ThreadsClient(transport);
       this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
@@ -954,6 +978,7 @@ var EmbabelApplianceClient = (() => {
     kg;
     agents;
     requests;
+    threads;
     cron;
     handlers;
     documents;
