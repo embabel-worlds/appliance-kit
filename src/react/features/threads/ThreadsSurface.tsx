@@ -5,7 +5,7 @@
  * each other land here as well, so what colleagues say to each other is never hidden. The
  * attachment is the payload — a record, a view's rows frozen when sent, a request — and it shows as
  * a card that opens to the thing itself, never a paragraph about it. An answer given without one
- * says it came from the words alone.
+ * is marked as having had nothing attached.
  *
  * Answers arrive in the background: while the thread is waiting on someone it says who, and looks
  * again every few seconds until they have answered.
@@ -128,8 +128,8 @@ function ThreadPane({ view, services, host, onPosted, onProblem }: {
   const [viewName, setViewName] = useState('')
   const [sending, setSending] = useState(false)
 
-  async function send(event: React.FormEvent) {
-    event.preventDefault()
+  async function send(event?: React.FormEvent) {
+    event?.preventDefault()
     if (sending || (!text.trim() && !viewName.trim())) return
     setSending(true)
     const attachments = viewName.trim() ? [{ kind: 'VIEW' as const, label: viewName.trim() }] : []
@@ -156,8 +156,15 @@ function ThreadPane({ view, services, host, onPosted, onProblem }: {
         <textarea
           value={text}
           rows={3}
-          placeholder="Write, and @mention an agent to bring it in: @steward is Northwind at risk?"
+          placeholder="Write, and @mention an agent to bring it in: @steward is Northwind at risk? Enter sends, Shift+Enter for a new line"
           onChange={(event) => setText(event.target.value)}
+          onKeyDown={(event) => {
+            // Enter sends, as in any chat; Shift+Enter is a new line, and Enter mid-composition picks an IME candidate.
+            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+              event.preventDefault()
+              void send()
+            }
+          }}
         />
         <div className="row">
           <input value={viewName} placeholder="Attach a view's rows (its name)" onChange={(event) => setViewName(event.target.value)} />
@@ -180,7 +187,7 @@ function MessageItem({ message, host }: { message: ThreadMessage; host: ThreadsS
       <header className="row">
         <strong>{name}</strong>
         <span className="hint" title={message.createdAt}>{when(message.createdAt)}</span>
-        {message.wordsOnly && <span className="hint">answered from the words alone</span>}
+        {message.wordsOnly && <span className="hint">nothing attached</span>}
       </header>
       <p className="threadtext">{message.text}</p>
       {message.attachments.map((a, i) => <AttachmentCard key={i} attachment={a} />)}
