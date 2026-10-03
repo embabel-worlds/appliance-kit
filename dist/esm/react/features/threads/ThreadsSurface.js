@@ -6,7 +6,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * each other land here as well, so what colleagues say to each other is never hidden. The
  * attachment is the payload — a record, a view's rows frozen when sent, a request — and it shows as
  * a card that opens to the thing itself, never a paragraph about it. An answer given without one
- * says it came from the words alone.
+ * is marked as having had nothing attached.
  *
  * Answers arrive in the background: while the thread is waiting on someone it says who, and looks
  * again every few seconds until they have answered.
@@ -80,7 +80,7 @@ function ThreadPane({ view, services, host, onPosted, onProblem }) {
     const [viewName, setViewName] = useState('');
     const [sending, setSending] = useState(false);
     async function send(event) {
-        event.preventDefault();
+        event?.preventDefault();
         if (sending || (!text.trim() && !viewName.trim()))
             return;
         setSending(true);
@@ -95,14 +95,20 @@ function ThreadPane({ view, services, host, onPosted, onProblem }) {
         setViewName('');
         onPosted();
     }
-    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in: @steward is Northwind at risk?", onChange: (event) => setText(event.target.value) }), _jsxs("div", { className: "row", children: [_jsx("input", { value: viewName, placeholder: "Attach a view's rows (its name)", onChange: (event) => setViewName(event.target.value) }), _jsx("button", { className: "btn primary", type: "submit", disabled: sending || (!text.trim() && !viewName.trim()), children: sending ? 'Posting…' : 'Post' })] })] })] }));
+    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in: @steward is Northwind at risk? Enter sends, Shift+Enter for a new line", onChange: (event) => setText(event.target.value), onKeyDown: (event) => {
+                            // Enter sends, as in any chat; Shift+Enter is a new line, and Enter mid-composition picks an IME candidate.
+                            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                                event.preventDefault();
+                                void send();
+                            }
+                        } }), _jsxs("div", { className: "row", children: [_jsx("input", { value: viewName, placeholder: "Attach a view's rows (its name)", onChange: (event) => setViewName(event.target.value) }), _jsx("button", { className: "btn primary", type: "submit", disabled: sending || (!text.trim() && !viewName.trim()), children: sending ? 'Posting…' : 'Post' })] })] })] }));
 }
 function MessageItem({ message, host }) {
     const from = message.from;
     const name = from.kind === 'AGENT' && host?.openAgent
         ? _jsx("button", { className: "request-agentlink", onClick: () => host.openAgent?.(from.name), children: from.name })
         : from.name;
-    return (_jsxs("li", { className: `threadmessage from-${from.kind.toLowerCase()}`, children: [_jsxs("header", { className: "row", children: [_jsx("strong", { children: name }), _jsx("span", { className: "hint", title: message.createdAt, children: when(message.createdAt) }), message.wordsOnly && _jsx("span", { className: "hint", children: "answered from the words alone" })] }), _jsx("p", { className: "threadtext", children: message.text }), message.attachments.map((a, i) => _jsx(AttachmentCard, { attachment: a }, i))] }));
+    return (_jsxs("li", { className: `threadmessage from-${from.kind.toLowerCase()}`, children: [_jsxs("header", { className: "row", children: [_jsx("strong", { children: name }), _jsx("span", { className: "hint", title: message.createdAt, children: when(message.createdAt) }), message.wordsOnly && _jsx("span", { className: "hint", children: "nothing attached" })] }), _jsx("p", { className: "threadtext", children: message.text }), message.attachments.map((a, i) => _jsx(AttachmentCard, { attachment: a }, i))] }));
 }
 /* The thing itself, opened: a record's properties, or the rows a view returned when it was sent. */
 function AttachmentCard({ attachment }) {
