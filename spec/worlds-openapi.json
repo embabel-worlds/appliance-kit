@@ -3004,6 +3004,9 @@
           "id" : {
             "type" : "string"
           },
+          "realm" : {
+            "type" : "string"
+          },
           "surface" : {
             "type" : "string"
           },
@@ -19741,7 +19744,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41081"
+    "url" : "http://localhost:34397"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
