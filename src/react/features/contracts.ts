@@ -417,6 +417,8 @@ export interface ApiKeysHost {
 export interface ApiKeysSurfaceProps {
   services: ApiKeysServices
   host: ApiKeysHost
+  /** Draws the title and actions, as for [CodingAgentsSurfaceProps.frame]. Omitted, a titled panel of its own. */
+  frame?: (parts: SurfaceFrameParts) => ReactNode
 }
 
 export interface AgentsServices {

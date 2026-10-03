@@ -13,7 +13,7 @@
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
-import type { ApiKeySummary, ApiKeysSurfaceProps, MintedApiKey } from '../contracts.ts'
+import type { ApiKeySummary, ApiKeysSurfaceProps, MintedApiKey, SurfaceFrameParts } from '../contracts.ts'
 import { useFocusTrap } from '../../useFocusTrap.ts'
 import { CopyButton, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
@@ -27,7 +27,12 @@ function when(iso: string | null): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
 }
 
-export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
+/** The kit's own frame: a titled panel with the actions beside the title. */
+function StudioFrame({ title, actions, children }: SurfaceFrameParts) {
+  return <StudioPanel title={title} aside={actions}>{children}</StudioPanel>
+}
+
+export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysSurfaceProps) {
   const [keys, setKeys] = useState<ApiKeySummary[]>([])
   const [loaded, setLoaded] = useState(false)
   const [absent, setAbsent] = useState(false)
@@ -103,10 +108,11 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
 
   return (
     <div className="kit-feature kit-feature-api-keys apikeys">
-      <StudioPanel
-        title="API keys"
-        aside={<button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>}
-      >
+      {frame({
+        title: 'API keys',
+        actions: <button className="btn ghost tiny" onClick={() => void load()}>Refresh</button>,
+        refresh: () => void load(),
+        children: <>
         <p className="hint">
           A key lets a script, a service or a coding agent call this appliance as you without
           carrying your password. Each one is named for what holds it and can be revoked on its own.
@@ -215,7 +221,8 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
             </div>
           </>
         )}
-      </StudioPanel>
+        </>,
+      })}
     </div>
   )
 }
