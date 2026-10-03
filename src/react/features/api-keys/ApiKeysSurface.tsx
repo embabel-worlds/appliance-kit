@@ -36,6 +36,9 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
   const [minting, setMinting] = useState(false)
   const [minted, setMinted] = useState<MintedApiKey | null>(null)
   const [revoking, setRevoking] = useState<string | null>(null)
+  // What the key is for: everything its owner can do, or only talking to agents.
+  const [forAgents, setForAgents] = useState(false)
+  const [agents, setAgents] = useState('*')
 
   const load = useCallback(async () => {
     const result = await services.listKeys()
@@ -59,7 +62,9 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
     const trimmed = name.trim()
     if (!trimmed || minting) return
     setMinting(true)
-    const result = await services.mintKey(trimmed)
+    const named = agents.split(',').map((a) => a.trim()).filter(Boolean)
+    if (forAgents && named.length === 0) return
+    const result = await services.mintKey(trimmed, forAgents ? named : undefined)
     setMinting(false)
     if (!result.ok) {
       setProblem(failureMessage(result, 'create an API key'))
@@ -89,6 +94,12 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
     `export EMBABEL_API_KEY=emb_…`,
     `curl -H "X-Embabel-Api-Key: $EMBABEL_API_KEY" ${baseUrl}/api/v1/watches`,
   ].join('\n')
+  // An agent key goes into a chat client, which wants a base URL and a key and names the agent as the model.
+  const agentExample = [
+    `Base URL: ${baseUrl}/api/v1/openai/v1`,
+    `API key:  emb_…`,
+    `Model:    the agent's name, e.g. jonathon`,
+  ].join('\n')
 
   return (
     <div className="kit-feature kit-feature-api-keys apikeys">
@@ -117,6 +128,23 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
                   onChange={(event) => setName(event.target.value)}
                 />
               </label>
+              <label className="field">
+                <span>For</span>
+                <select value={forAgents ? 'agents' : 'all'} onChange={(event) => setForAgents(event.target.value === 'agents')}>
+                  <option value="all">Everything you can do</option>
+                  <option value="agents">Talking to agents only</option>
+                </select>
+              </label>
+              {forAgents && (
+                <label className="field">
+                  <span>Agents</span>
+                  <input
+                    value={agents}
+                    placeholder="jonathon, chaser, or * for any"
+                    onChange={(event) => setAgents(event.target.value)}
+                  />
+                </label>
+              )}
               <button className="btn primary inline-action" type="submit" disabled={!name.trim() || minting}>
                 {minting ? 'Creating…' : 'Create key'}
               </button>
@@ -135,6 +163,7 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
                     <tr>
                       <th>Name</th>
                       <th>Key</th>
+                      <th>Reaches</th>
                       <th>Created</th>
                       <th>Last used</th>
                       <th aria-label="actions" />
@@ -145,6 +174,7 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
                       <tr key={key.id}>
                         <td>{key.name}</td>
                         <td><code>{key.prefix}…</code></td>
+                        <td>{key.agents ? `agents: ${key.agents.join(', ')}` : 'everything'}</td>
                         <td title={key.createdAt}>{when(key.createdAt)}</td>
                         <td title={key.lastUsedAt ?? undefined}>{when(key.lastUsedAt)}</td>
                         <td>
@@ -169,8 +199,15 @@ export function ApiKeysSurface({ services, host }: ApiKeysSurfaceProps) {
                 <CopyButton label="Copy" text={example} />
               </div>
               <pre className="cmd">{example}</pre>
+              <div className="snippet-head">
+                <strong>In a chat client (Open WebUI, LibreChat…)</strong>
+                <CopyButton label="Copy" text={agentExample} />
+              </div>
+              <pre className="cmd">{agentExample}</pre>
               <p className="hint">
-                Send it in the <code>X-Embabel-Api-Key</code> header, or as{' '}
+                An agent key is the one to paste into a chat client: it talks only to the agents it
+                names and reaches nothing else of yours. Send any key in the{' '}
+                <code>X-Embabel-Api-Key</code> header, or as{' '}
                 <code>Authorization: Bearer</code> for a client that can only set that one. Keep it
                 in an environment variable or a secrets store, never in a URL and never in a
                 repository.
