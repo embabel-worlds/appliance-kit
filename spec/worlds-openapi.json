@@ -559,6 +559,14 @@
             "enum" : [ "act", "request", "never" ],
             "type" : "string"
           },
+          "observe" : {
+            "items" : {
+              "enum" : [ "authority", "sensitive" ],
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
           "verbs" : {
             "additionalProperties" : {
               "enum" : [ "act", "request", "never" ],
@@ -567,7 +575,7 @@
             "type" : "object"
           }
         },
-        "required" : [ "default", "verbs" ],
+        "required" : [ "default", "observe", "verbs" ],
         "type" : "object"
       },
       "AvailableSourcesResponse" : {
@@ -9883,7 +9891,7 @@
     },
     "/api/v1/artifacts/serve/**" : {
       "get" : {
-        "description" : "Serves a raw file from the app artifact directories — scoped (serve/{scope}/{name}) or by flat-name precedence (serve/{name}) — with a content type derived from its extension (html, css, js, json, svg; anything else is octet-stream).",
+        "description" : "Serves a raw file from the app artifact directories — scoped (serve/{scope}/{path}, where the path may include subfolders) or by flat-name precedence (serve/{name}) — with a content type derived from its extension (html, css, js, json, svg; anything else is octet-stream).",
         "operationId" : "serve_1",
         "responses" : {
           "200" : {
@@ -18852,7 +18860,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46343"
+    "url" : "http://localhost:42929"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
