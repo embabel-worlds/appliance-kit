@@ -831,6 +831,85 @@
         "required" : [ "joined", "offered" ],
         "type" : "object"
       },
+      "ChatCompletion" : {
+        "properties" : {
+          "choices" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Choice"
+            },
+            "type" : "array"
+          },
+          "created" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "embabel" : {
+            "$ref" : "#/components/schemas/Evidence"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "object" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "choices", "created", "id", "model", "object" ],
+        "type" : "object"
+      },
+      "ChatCompletionRequest" : {
+        "properties" : {
+          "embabel_conversation" : {
+            "type" : "string"
+          },
+          "embabel_evidence" : {
+            "type" : "boolean"
+          },
+          "embabel_observing" : {
+            "type" : "boolean"
+          },
+          "embabel_realms" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "embabel_verbosity" : {
+            "type" : "string"
+          },
+          "max_completion_tokens" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "max_tokens" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "messages" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RequestMessage"
+            },
+            "type" : "array"
+          },
+          "model" : {
+            "type" : "string"
+          },
+          "stream" : {
+            "type" : "boolean"
+          },
+          "temperature" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "user" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "messages" ],
+        "type" : "object"
+      },
       "ChatFeedbackRequest" : {
         "properties" : {
           "text" : {
@@ -850,6 +929,22 @@
           }
         },
         "required" : [ "message" ],
+        "type" : "object"
+      },
+      "Choice" : {
+        "properties" : {
+          "finish_reason" : {
+            "type" : "string"
+          },
+          "index" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "$ref" : "#/components/schemas/Message"
+          }
+        },
+        "required" : [ "finish_reason", "index", "message" ],
         "type" : "object"
       },
       "CollectorConfig" : {
@@ -2168,6 +2263,30 @@
         "required" : [ "engines" ],
         "type" : "object"
       },
+      "ErrorBody" : {
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/ErrorDetail"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "ErrorDetail" : {
+        "properties" : {
+          "code" : {
+            "type" : "string"
+          },
+          "message" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message", "type" ],
+        "type" : "object"
+      },
       "EventAttendee" : {
         "properties" : {
           "displayName" : {
@@ -2221,6 +2340,39 @@
           }
         },
         "required" : [ "events" ],
+        "type" : "object"
+      },
+      "Evidence" : {
+        "properties" : {
+          "conversation" : {
+            "type" : "string"
+          },
+          "requests" : {
+            "items" : {
+              "$ref" : "#/components/schemas/EvidenceRequest"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "conversation", "requests" ],
+        "type" : "object"
+      },
+      "EvidenceRequest" : {
+        "properties" : {
+          "detail" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "status" : {
+            "type" : "string"
+          },
+          "verb" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "detail", "id", "status", "verb" ],
         "type" : "object"
       },
       "ExportRequest" : {
@@ -4535,13 +4687,50 @@
         "required" : [ "heapUsedBytes" ],
         "type" : "object"
       },
+      "Message" : {
+        "properties" : {
+          "content" : {
+            "type" : "string"
+          },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "content", "role" ],
+        "type" : "object"
+      },
       "MintRequest" : {
         "properties" : {
+          "agents" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "name" : {
             "type" : "string"
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "Model" : {
+        "properties" : {
+          "created" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "object" : {
+            "type" : "string"
+          },
+          "owned_by" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "created", "id", "object", "owned_by" ],
         "type" : "object"
       },
       "ModelInUse" : {
@@ -4560,6 +4749,21 @@
           }
         },
         "required" : [ "local", "purpose" ],
+        "type" : "object"
+      },
+      "ModelList" : {
+        "properties" : {
+          "data" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Model"
+            },
+            "type" : "array"
+          },
+          "object" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "data", "object" ],
         "type" : "object"
       },
       "ModelRunnerActivity" : {
@@ -5036,6 +5240,16 @@
           }
         },
         "required" : [ "text" ],
+        "type" : "object"
+      },
+      "RequestMessage" : {
+        "properties" : {
+          "content" : { },
+          "role" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "role" ],
         "type" : "object"
       },
       "ResolvedModel" : {
@@ -9767,6 +9981,111 @@
         },
         "summary" : "Move an agent or one of its routines on the ladder",
         "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/v1/chat/completions" : {
+      "post" : {
+        "operationId" : "openAiChatCompletions_1",
+        "parameters" : [ {
+          "description" : "The agent, on its own base URL; there `model` is ignored",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChatCompletionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChatCompletion"
+                }
+              }
+            },
+            "description" : "The agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "Talk to an agent: the one named as the model, or the one whose base URL this is",
+        "tags" : [ "OpenAI-compatible" ]
+      }
+    },
+    "/api/v1/agents/{name}/v1/models" : {
+      "get" : {
+        "operationId" : "openAiAgentModels",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModelList"
+                }
+              }
+            },
+            "description" : "The agent, as a model"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "One agent, as the only OpenAI model at its own base URL",
+        "tags" : [ "OpenAI-compatible" ]
       }
     },
     "/api/v1/agents/{name}/versions" : {
@@ -15842,6 +16161,85 @@
         "tags" : [ "Onboarding" ]
       }
     },
+    "/api/v1/openai/v1/chat/completions" : {
+      "post" : {
+        "operationId" : "openAiChatCompletions",
+        "parameters" : [ ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChatCompletionRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChatCompletion"
+                }
+              }
+            },
+            "description" : "The agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+          },
+          "401" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "Talk to an agent: the one named as the model, or the one whose base URL this is",
+        "tags" : [ "OpenAI-compatible" ]
+      }
+    },
+    "/api/v1/openai/v1/models" : {
+      "get" : {
+        "operationId" : "openAiModels",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ModelList"
+                }
+              }
+            },
+            "description" : "The agents, as models"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          }
+        },
+        "summary" : "The agents you can talk to now, as OpenAI models",
+        "tags" : [ "OpenAI-compatible" ]
+      }
+    },
     "/api/v1/profile" : {
       "get" : {
         "operationId" : "profile",
@@ -18948,7 +19346,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:32895"
+    "url" : "http://localhost:44559"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -19052,6 +19450,9 @@
   }, {
     "description" : "Models available to this appliance",
     "name" : "Models"
+  }, {
+    "description" : "Talk to an agent with any OpenAI client",
+    "name" : "OpenAI-compatible"
   }, {
     "description" : "The embedding model, and switching it",
     "name" : "Embeddings"
