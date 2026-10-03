@@ -56,6 +56,11 @@ export interface StatusPillProps extends Omit<HTMLAttributes<HTMLSpanElement>, '
     tone: StatusPillTone;
     word: string;
 }
+/**
+ * @deprecated A host built on desk draws state with desk's `Led` and the words beside it, not this
+ * pill: see "Hosts built on desk" in the README. The pill is `display: flex`, so anywhere but a
+ * flex row it stretches to the width of its container and reads as a text field.
+ */
 export declare const StatusPill: import("react").ForwardRefExoticComponent<StatusPillProps & import("react").RefAttributes<HTMLSpanElement>>;
 export interface SettingRowProps {
     icon: (props: SVGProps<SVGSVGElement>) => ReactNode;
