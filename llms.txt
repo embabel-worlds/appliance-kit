@@ -1,0 +1,53 @@
+# @embabel/appliance-kit
+
+The shared code behind the Embabel Me app and the Worlds console: the appliance REST client,
+virtual-Cypher semantics, and the feature surfaces both hosts draw. For a coding agent. Prose for
+people, and the entry points in full: `README.md`.
+
+## Entry points
+
+```ts
+import { ApplianceClient }             from '@embabel/appliance-kit'                 // REST, no DOM
+import { compose, TARGETS }            from '@embabel/appliance-kit/vc'              // virtual-Cypher semantics
+import { AgentsSurface, firingOf }     from '@embabel/appliance-kit/react/features'  // whole feature surfaces
+import '@embabel/appliance-kit/css'                                                  // the kit's own styles
+import '@embabel/appliance-kit/css/features.css'                                     // after the base stylesheet
+```
+
+## If the host is built on desk, desk decides how it looks
+
+The Worlds console is built on `@liberation-data/desk`. When you write or change a screen in a host
+like that:
+
+- Read `../desk/HIG.md` first. It says how a row, a list, a status and a button behave; for example,
+  a list row has one primary line and at most one secondary line.
+- Use desk's controls, listed in `../desk/llms.txt`: `Led` with the words beside it for state,
+  `InfoTip` for explanation nobody needs on every visit, `Table`, `Toggle`, `Disclosure`.
+- Take data, types and vocabulary from the kit. Do not take its primitives.
+
+## Do not use the kit's pills
+
+`StatusPill`, `StagePill` and `RequestStatusPill` are deprecated, and so is the `.pill` class.
+
+`.pill` is `display: flex`. Inside a flex row of the kit's own surfaces it sits at its own width.
+Anywhere else, such as inside a `<span>` in a line of text, it becomes a block as wide as its
+container, pushes the text after it onto a new line, and reads as a text field.
+
+Draw state as a lamp and a word instead:
+
+```tsx
+import { Led } from '@liberation-data/desk/react'
+import { firingOf } from '@embabel/appliance-kit/react/features'
+
+<span className="state"><Led color="amber" /> On duty, observing</span>
+```
+
+A lamp is never the only thing carrying a state: the word stays beside it.
+
+## What the kit is for
+
+- The client: `client.kg`, `client.handlers`, and the generated OpenAPI types. Never hand-edit
+  `src/client/generated/openapi.ts`.
+- Semantics: `./vc`, `./studio-kit`.
+- Whole feature surfaces from `./react/features`, mounted as a window's content. The host supplies
+  their services: transport, routing, pins and persistence.

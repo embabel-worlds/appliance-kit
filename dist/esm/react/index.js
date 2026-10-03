@@ -99,6 +99,11 @@ export const TabList = TabListImplementation;
 export const Tab = forwardRef(function Tab({ selected, className, children, type = 'button', ...rest }, ref) {
     return (_jsx("button", { ...rest, ref: ref, type: type, role: "tab", "aria-selected": selected, className: classes('tab', selected && 'is-on', className), children: children }));
 });
+/**
+ * @deprecated A host built on desk draws state with desk's `Led` and the words beside it, not this
+ * pill: see "Hosts built on desk" in the README. The pill is `display: flex`, so anywhere but a
+ * flex row it stretches to the width of its container and reads as a text field.
+ */
 export const StatusPill = forwardRef(function StatusPill({ tone, word, className, ...rest }, ref) {
     return (_jsxs("span", { ...rest, ref: ref, className: classes('pill', tone !== 'neutral' && tone, className), children: [_jsx("span", { className: "dot", "aria-hidden": "true" }), word] }));
 });

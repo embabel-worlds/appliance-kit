@@ -48,6 +48,11 @@ function pretty(args: string): string {
   }
 }
 
+/**
+ * @deprecated A host built on desk draws state with desk's `Led` and the words beside it, not this
+ * pill: see "Hosts built on desk" in the README. The pill is `display: flex`, so anywhere but a
+ * flex row it stretches to the width of its container and reads as a text field.
+ */
 export function RequestStatusPill({ status }: { status: RequestStatus }) {
   return (
     <span className={`pill ${TONE[status]}`.trim()}>

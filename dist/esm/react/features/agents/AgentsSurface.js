@@ -67,6 +67,11 @@ export function firingOf(agent) {
         return 'observing';
     return 'off';
 }
+/**
+ * @deprecated A host built on desk draws state with desk's `Led` and the words beside it, not this
+ * pill: see "Hosts built on desk" in the README. The pill is `display: flex`, so anywhere but a
+ * flex row it stretches to the width of its container and reads as a text field.
+ */
 export function StagePill({ stage }) {
     return (_jsxs("span", { className: `pill ${TONE[stage]}`.trim(), children: [_jsx("span", { className: "dot", "aria-hidden": "true" }), STAGE_WORDS[stage]] }));
 }

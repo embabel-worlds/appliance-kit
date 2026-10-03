@@ -43,6 +43,11 @@ function pretty(args) {
         return args;
     }
 }
+/**
+ * @deprecated A host built on desk draws state with desk's `Led` and the words beside it, not this
+ * pill: see "Hosts built on desk" in the README. The pill is `display: flex`, so anywhere but a
+ * flex row it stretches to the width of its container and reads as a text field.
+ */
 export function RequestStatusPill({ status }) {
     return (_jsxs("span", { className: `pill ${TONE[status]}`.trim(), children: [_jsx("span", { className: "dot", "aria-hidden": "true" }), STATUS_WORDS[status]] }));
 }
