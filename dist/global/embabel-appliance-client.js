@@ -40,6 +40,8 @@ var EmbabelApplianceClient = (() => {
     RequestsClient: () => RequestsClient,
     ThreadsClient: () => ThreadsClient,
     ToursClient: () => ToursClient,
+    WORLD_LIST_QUERIES: () => QUERIES,
+    WorldLists: () => WorldLists,
     basicAuth: () => basicAuth,
     classifySource: () => classifySource,
     createSseParser: () => createSseParser,
@@ -141,10 +143,10 @@ var EmbabelApplianceClient = (() => {
       } finally {
         clearTimeout(timer);
       }
-      const text2 = await response.text().catch(() => "");
+      const text3 = await response.text().catch(() => "");
       let body;
       try {
-        body = text2.length > 0 ? JSON.parse(text2) : void 0;
+        body = text3.length > 0 ? JSON.parse(text3) : void 0;
       } catch {
         body = void 0;
       }
@@ -178,8 +180,8 @@ var EmbabelApplianceClient = (() => {
   function createSseParser() {
     let buffer = "";
     return {
-      push(text2) {
-        buffer += text2.replace(/\r\n?/g, "\n");
+      push(text3) {
+        buffer += text3.replace(/\r\n?/g, "\n");
         const events = [];
         let cut;
         while ((cut = buffer.indexOf("\n\n")) >= 0) {
@@ -855,8 +857,8 @@ var EmbabelApplianceClient = (() => {
       return this.transport.send({ method: "POST", path: THREADS, body: { title } });
     }
     /** Post in a thread. Every agent the text @mentions answers in it, in the background. */
-    post(id, text2, attachments = []) {
-      return this.transport.send({ method: "POST", path: `${THREADS}/${encodeURIComponent(id)}/messages`, body: { text: text2, attachments } });
+    post(id, text3, attachments = []) {
+      return this.transport.send({ method: "POST", path: `${THREADS}/${encodeURIComponent(id)}/messages`, body: { text: text3, attachments } });
     }
   };
 
@@ -992,6 +994,69 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/worldLists.ts
+  var QUERIES = {
+    skippedApis: "MATCH (me:AssistantUser)-[:HAS_CONFIG]->(a:ConfigSkippedApi) RETURN a.name AS name, a.reason AS reason, a.unlockedBy AS unlockedBy ORDER BY name",
+    signalTypes: "MATCH (me:AssistantUser)-[:HAS_CONFIG]->(s:ConfigSignalType) RETURN s.typeName AS typeName, s.fields AS fields, s.count AS count, s.lastSeen AS lastSeen ORDER BY typeName",
+    skills: "MATCH (me:AssistantUser)-[:HAS_CONFIG]->(s:ConfigSkill) RETURN s.name AS name, s.description AS description ORDER BY name",
+    watches: "MATCH (me:AssistantUser)-[:HAS_CONFIG]->(w:ConfigWatch) RETURN w.id AS id, w.name AS name, w.subject AS subject, w.schedule AS schedule, w.channel AS channel, w.enabled AS enabled ORDER BY name",
+    documentTags: "MATCH (d:Document) UNWIND d.tags AS tag RETURN tag, count(DISTINCT d) AS documents ORDER BY documents DESC, tag",
+    agentHolding: "MATCH (me:AssistantUser)-[:HAS_AGENT]->(a:Agent)-[:HOLDS]->(r:Routine) WHERE r.name = $routine RETURN a.name AS agent LIMIT 1"
+  };
+  var text = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
+  var count = (v) => Number(v ?? 0) || 0;
+  function rowsOf(outcome, what) {
+    if (!outcome.ok) return outcome;
+    const value = outcome.value;
+    if (!("rows" in value)) return failure("failed", `${what} is still running in the background`, void 0, { background: true });
+    if (value.error) return failure("refused", `${what}: ${value.error}`);
+    return ok(value.rows ?? []);
+  }
+  var WorldLists = class {
+    constructor(run) {
+      this.run = run;
+    }
+    async rows(what, cypher, options) {
+      return rowsOf(await this.run(cypher, options), what);
+    }
+    async skippedApis() {
+      const r = await this.rows("Listing skipped APIs", QUERIES.skippedApis);
+      return r.ok ? ok(r.value.map((x) => ({ name: text(x["name"]), reason: text(x["reason"]), unlockedBy: text(x["unlockedBy"]) }))) : r;
+    }
+    async signalTypes() {
+      const r = await this.rows("Listing signal types", QUERIES.signalTypes);
+      const fields = (v) => Array.isArray(v) ? v.map(text).filter(Boolean) : text(v).split(",").map((f) => f.trim()).filter(Boolean);
+      return r.ok ? ok(r.value.map((x) => ({ typeName: text(x["typeName"]), fields: fields(x["fields"]), count: count(x["count"]), lastSeen: text(x["lastSeen"]) }))) : r;
+    }
+    async skills() {
+      const r = await this.rows("Listing skills", QUERIES.skills);
+      return r.ok ? ok(r.value.map((x) => ({ name: text(x["name"]), description: text(x["description"]) }))) : r;
+    }
+    async watches() {
+      const r = await this.rows("Listing watches", QUERIES.watches);
+      return r.ok ? ok(r.value.map((x) => ({
+        id: text(x["id"]),
+        lensId: text(x["subject"]),
+        name: text(x["name"]),
+        cron: text(x["schedule"]) || null,
+        enabled: x["enabled"] === true,
+        delivery: text(x["channel"]) ? { channel: text(x["channel"]) } : null
+      }))) : r;
+    }
+    async documentTags() {
+      const r = await this.rows("Listing document tags", QUERIES.documentTags);
+      return r.ok ? ok(r.value.map((x) => ({ tag: text(x["tag"]), documents: count(x["documents"]) })).filter((t) => t.tag)) : r;
+    }
+    /** The agent that holds [routine], or null when none does. */
+    async agentHolding(routine) {
+      const params = {
+        routine: { type: "string", default: "", description: "The routine whose agent is wanted" }
+      };
+      const r = await this.rows("Finding the agent that holds a routine", QUERIES.agentHolding, { params, args: { routine } });
+      return r.ok ? ok(text(r.value[0]?.["agent"]) || null) : r;
+    }
+  };
+
   // src/client/realmCatalog.ts
   var ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
   r.latestVersion AS latestVersion, r.author AS author, r.provider AS provider, r.maturity AS maturity,
@@ -1039,26 +1104,26 @@ var EmbabelApplianceClient = (() => {
   function experimentalQuery(filter) {
     return query("MATCH (r:Realm)", filter, "RETURN count(r) AS hidden", ["experimental"], ["NOT r.installed", "r.maturity = 'experimental'"]);
   }
-  var text = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
-  var texts = (v) => Array.isArray(v) ? v.map(text).filter(Boolean) : [];
+  var text2 = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
+  var texts = (v) => Array.isArray(v) ? v.map(text2).filter(Boolean) : [];
   function toRealm(row) {
     return {
-      name: text(row["name"]),
-      description: text(row["description"]),
+      name: text2(row["name"]),
+      description: text2(row["description"]),
       installed: row["installed"] === true,
-      version: text(row["version"]),
-      latestVersion: text(row["latestVersion"]),
-      author: text(row["author"]),
-      provider: text(row["provider"]),
-      maturity: text(row["maturity"]).toLowerCase(),
+      version: text2(row["version"]),
+      latestVersion: text2(row["latestVersion"]),
+      author: text2(row["author"]),
+      provider: text2(row["provider"]),
+      maturity: text2(row["maturity"]).toLowerCase(),
       tags: texts(row["tags"]),
-      url: text(row["url"]),
-      source: text(row["source"]),
+      url: text2(row["url"]),
+      source: text2(row["source"]),
       problems: Number(row["problems"] ?? 0) || 0,
       missingSources: texts(row["missingSources"])
     };
   }
-  function rowsOf(outcome, what) {
+  function rowsOf2(outcome, what) {
     if (!outcome.ok) return outcome;
     const value = outcome.value;
     if (!("rows" in value)) return failure("failed", `${what} is still running in the background`, void 0, { background: true });
@@ -1072,18 +1137,18 @@ var EmbabelApplianceClient = (() => {
     }
     async realms(filter) {
       const q = realmsQuery(filter);
-      const rows = rowsOf(await this.run(q.cypher, q.options), "Listing realms");
+      const rows = rowsOf2(await this.run(q.cypher, q.options), "Listing realms");
       return rows.ok ? ok(rows.value.map(toRealm)) : rows;
     }
     async tags(filter) {
       const q = tagsQuery(filter);
-      const rows = rowsOf(await this.run(q.cypher, q.options), "Counting realm tags");
-      return rows.ok ? ok(rows.value.map((r) => ({ tag: text(r["tag"]), realms: Number(r["realms"] ?? 0) || 0 })).filter((t) => t.tag)) : rows;
+      const rows = rowsOf2(await this.run(q.cypher, q.options), "Counting realm tags");
+      return rows.ok ? ok(rows.value.map((r) => ({ tag: text2(r["tag"]), realms: Number(r["realms"] ?? 0) || 0 })).filter((t) => t.tag)) : rows;
     }
     async hiddenExperimental(filter) {
       if (filter.experimental) return ok(0);
       const q = experimentalQuery(filter);
-      const rows = rowsOf(await this.run(q.cypher, q.options), "Counting experimental realms");
+      const rows = rowsOf2(await this.run(q.cypher, q.options), "Counting experimental realms");
       return rows.ok ? ok(Number(rows.value[0]?.["hidden"] ?? 0) || 0) : rows;
     }
   };

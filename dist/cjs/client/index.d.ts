@@ -25,6 +25,8 @@ export { AgentSuggestionsClient } from './agentSuggestions.ts';
 export { AgentRunsClient } from './agentRuns.ts';
 export { AgentReflectionClient } from './agentReflection.ts';
 export { AgentAccountsClient } from './agentAccounts.ts';
+export { WorldLists, QUERIES as WORLD_LIST_QUERIES } from './worldLists.ts';
+export type { SkippedApi, SeenSignalType, WorldSkillRow, WatchRow, TagCountRow } from './worldLists.ts';
 export { RealmCatalog, ranInBackground, realmsQuery, tagsQuery, experimentalQuery, toRealm } from './realmCatalog.ts';
 export type { CatalogRealm, CatalogQuery, RealmFilter, RealmShow, TagCount } from './realmCatalog.ts';
 export type { AgentSlots, Retired } from './agentAccounts.ts';
