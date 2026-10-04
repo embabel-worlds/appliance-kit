@@ -179,3 +179,16 @@ describe('AgentAccountsClient', () => {
     ])
   })
 })
+
+describe('limitsOf', () => {
+  it('says only what is declared, in a sponsor\'s words', async () => {
+    const { limitsOf } = await import('../src/react/features/agents/limits.ts')
+    const base = { name: 'chaser', needs: [] } as unknown as import('../src/client/agents.ts').Agent
+    assert.deepEqual(limitsOf(base), [])
+    assert.deepEqual(limitsOf({
+      ...base,
+      budget: { spendPerRunCents: 50, spendPerDayCents: 500, sourceShares: { odoo: 25, '*': 50 } },
+      qos: { priority: 'background', fallbacks: { vc_relevance: 'claude-sonnet-4-6' } },
+    }), ['$0.50 a run', '$5 a day', '25% of odoo', '50% of any other source', 'background priority', 'vc_relevance falls back to claude-sonnet-4-6'])
+  })
+})
