@@ -65,6 +65,12 @@ export interface AskRequest {
      * worse than none.
      */
     tag?: string;
+    /**
+     * Narrow to the ONE document at this uri, as the listing names it. Applied inside the search on
+     * both retrieval paths, like a tag. A uri the caller's world does not hold is answered 404, not
+     * with an empty answer (embabel/me#1981).
+     */
+    uri?: string;
     dateField?: DateField;
     /** ISO date, inclusive. */
     from?: string;

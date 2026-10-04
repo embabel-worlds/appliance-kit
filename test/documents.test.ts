@@ -75,6 +75,18 @@ describe('DocumentsClient.ask', () => {
     assert.equal('tag' in (sent[1]!.body as Record<string, unknown>), false)
   })
 
+  it('sends the one document to read when one is chosen, and omits it when not', async () => {
+    const { transport, sent } = recordingTransport()
+    const client = new DocumentsClient(transport)
+
+    await client.ask({ question: 'q', uri: 'upload://w/spec.md' })
+    assert.equal((sent[0]!.body as Record<string, unknown>)['uri'], 'upload://w/spec.md')
+
+    // No document chosen is every document, and must not narrow to one named "".
+    await client.ask({ question: 'q', uri: '' })
+    assert.equal('uri' in (sent[1]!.body as Record<string, unknown>), false)
+  })
+
   it('carries the operation id as the header the appliance echoes on progress events', async () => {
     const { transport, sent } = recordingTransport()
     await new DocumentsClient(transport).ask({ question: 'q' }, { operationId: 'ask-abc' })
