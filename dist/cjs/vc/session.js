@@ -5,7 +5,7 @@
  * Every line is a verbatim clause of the query the session is building. `MATCH (c:Chunk)` runs
  * and captures (the `RETURN c` is implied from YOUR variable); `WHERE c.source CONTAINS '…'` is
  * legitimately the next clause — `c` means something because you bound it; a later
- * `MATCH (c)<-[:HAS_CHUNK]-(d:Document)` continues from it. The transcript IS the pipeline.
+ * `MATCH (c)-[:PART_OF]->(d:Document)` continues from it. The transcript IS the pipeline.
  *
  * Two forms per line:
  *  - the SESSION form, which is what runs: a continuation binds off the captured scope

@@ -40,10 +40,10 @@ describe('the session grammar — real Cypher, one clause at a time', () => {
   })
 
   it('a continuation MATCH re-anchors a bare bound variable and keeps the clause verbatim in the pipeline', () => {
-    const p = planLine('MATCH (c)<-[:HAS_CHUNK]-(d:Document)', bindings.at(-1)!, '_3', byName, byVar)
-    assert.equal(p.cypher, 'MATCH (c:`$_2`)<-[:HAS_CHUNK]-(d:Document) RETURN DISTINCT d')
+    const p = planLine('MATCH (c)-[:PART_OF]->(d:Document)', bindings.at(-1)!, '_3', byName, byVar)
+    assert.equal(p.cypher, 'MATCH (c:`$_2`)-[:PART_OF]->(d:Document) RETURN DISTINCT d')
     assert.equal(p.variable, 'd')
-    assert.deepEqual(p.pipeline!.slice(-2), ['WITH DISTINCT c', 'MATCH (c)<-[:HAS_CHUNK]-(d:Document)'])
+    assert.deepEqual(p.pipeline!.slice(-2), ['WITH DISTINCT c', 'MATCH (c)-[:PART_OF]->(d:Document)'])
     bind('_3', 'd', 'Document', p.pipeline!)
   })
 
@@ -56,14 +56,14 @@ describe('the session grammar — real Cypher, one clause at a time', () => {
         'MATCH (c:Chunk)',
         "WHERE c.source CONTAINS 'contract'",
         'WITH DISTINCT c',
-        'MATCH (c)<-[:HAS_CHUNK]-(d:Document)',
+        'MATCH (c)-[:PART_OF]->(d:Document)',
         'RETURN d.title, d.uri',
       ].join('\n'),
     )
   })
 
   it('a hand-typed scope reference runs as-is but its PIPELINE splices the provenance, renamed to the alias', () => {
-    const p = planLine('MATCH (x:`$_2`)<-[:HAS_CHUNK]-(d2:Document) RETURN d2', bindings.at(-1)!, '_4', byName, byVar)
+    const p = planLine('MATCH (x:`$_2`)-[:PART_OF]->(d2:Document) RETURN d2', bindings.at(-1)!, '_4', byName, byVar)
     assert.equal(pipelineText(p.pipeline!, null).includes('`$'), false)
     assert.match(pipelineText(p.pipeline!, null), /MATCH \(x:Chunk\)/)
   })
