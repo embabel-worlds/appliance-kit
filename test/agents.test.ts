@@ -3,6 +3,7 @@ import { describe, it } from 'node:test'
 import { AgentsClient } from '../src/client/agents.ts'
 import { CronClient } from '../src/client/cron.ts'
 import { ThreadsClient } from '../src/client/threads.ts'
+import { AgentSuggestionsClient } from '../src/client/agentSuggestions.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -98,6 +99,23 @@ describe('ThreadsClient', () => {
       { method: 'GET', path: '/api/v1/threads/th%201' },
       { method: 'POST', path: '/api/v1/threads', body: { title: 'Northwind' } },
       { method: 'POST', path: '/api/v1/threads/th%201/messages', body: { text: '@steward is Northwind at risk?', attachments: [{ kind: 'VIEW', label: 'StewardUnacknowledgedRisk' }] } },
+    ])
+  })
+})
+
+describe('AgentSuggestionsClient', () => {
+  it('lists suggestions and settles one at its own path, never under an agent of the same name', async () => {
+    const transport = new RecordingTransport(ok({ suggestion: { id: 'sg 1', name: 'renewals-desk' }, refused: null }))
+    const suggestions = new AgentSuggestionsClient(transport)
+    await suggestions.list()
+    await suggestions.draft('sg 1')
+    await suggestions.adopted('sg 1')
+    await suggestions.dismiss('sg 1')
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/agent-suggestions' },
+      { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/draft', body: {} },
+      { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/adopted', body: {} },
+      { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/dismiss', body: {} },
     ])
   })
 })
