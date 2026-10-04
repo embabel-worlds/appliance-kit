@@ -1,10 +1,10 @@
 /*
  * APPROVALS — what agents ask a person to approve before they act (embabel/me#1776).
  *
- * A request is a routine saying "I would do this, and here is why": the verb it would call, its
- * arguments, one line of reason, and the rows that made it think so. The surface leads with the
- * reason and the evidence, because that is what a person decides on; the verb and its arguments are
- * there to check, not to read first.
+ * A request is an agent saying "I would do this, and here is why", and most people deciding are not
+ * the people who wrote its routine. So the card speaks the business's words: who is asking, what
+ * would change, the text it would write, and the rows that made it ask. The routine, the tool and
+ * its raw arguments are folded under technical details, there to check, never to read first.
  *
  * Approving calls the verb as the person who approves. Rejecting needs a reason — the appliance
  * refuses one without — so the box for it is part of the reject control, not an afterthought.
@@ -37,6 +37,12 @@ function when(iso: string | null): string {
   if (!iso) return ''
   const date = new Date(iso)
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
+}
+
+/** An agent or routine name as a person reads it: `chase-failed-payment` is "Chase failed payment". */
+export function displayName(slug: string): string {
+  const words = slug.replace(/[-_]/g, ' ').trim()
+  return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
 /** The verb's arguments, indented if they are JSON, as they were if not. */
@@ -155,6 +161,7 @@ function RequestCard({
     onDecided(result.value)
   }
 
+  const asker = displayName(request.agent ?? request.routine)
   const first = request.evidence[0]
   const columns = first ? Object.keys(first) : []
 
@@ -163,15 +170,16 @@ function RequestCard({
       <header className="request-head">
         <span className="request-who">
           {host?.openAgent ? (
-            <button className="request-agentlink" onClick={() => host.openAgent?.(request.routine)}>{request.routine}</button>
+            <button className="request-agentlink" onClick={() => host.openAgent?.(request.routine)}>{asker}</button>
           ) : (
-            request.routine
+            asker
           )}{' '}
-          asks
+          asks your OK
         </span>
         <RequestStatusPill status={request.status} />
       </header>
       <p className="request-detail">{request.detail}</p>
+      {request.quote && <blockquote className="request-quote">{request.quote}</blockquote>}
       {request.untrusted && request.untrusted.length > 0 && (
         <p className="request-untrusted">
           Drafted after reading text from outside the business ({request.untrusted.join('; ')}). Such text can
@@ -195,9 +203,10 @@ function RequestCard({
       )}
 
       <details className="request-call">
-        <summary>
-          It would call <code>{request.verb}</code>
-        </summary>
+        <summary>Technical details</summary>
+        <p className="hint">
+          Routine <code>{request.routine}</code> would call <code>{request.verb}</code> with:
+        </p>
         <pre>{pretty(request.args)}</pre>
       </details>
 
