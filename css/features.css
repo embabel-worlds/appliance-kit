@@ -1725,3 +1725,8 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .run-outcome.is-skipped { color: var(--faint); }
 :where(.kit-feature) .run-output { white-space: pre-wrap; font-family: var(--mono); background: var(--code-bg); padding: 6px; margin: 4px 0; max-height: 16em; overflow: auto; }
 :where(.kit-feature) .receipt-list { margin: 4px 0 4px 12px; }
+
+/* Reflection on the agent card: what it would change, and the evidence for each change. */
+:where(.kit-feature) .agent-reflection { margin-top: 16px; }
+:where(.kit-feature) .proposal { display: grid; gap: 6px; border-left: 2px solid var(--rule); padding-left: 10px; margin-top: 8px; }
+:where(.kit-feature) .proposal-changes { margin: 0; padding-left: 18px; display: grid; gap: 4px; }

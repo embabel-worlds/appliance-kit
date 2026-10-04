@@ -5,6 +5,7 @@ import { CronClient } from '../src/client/cron.ts'
 import { ThreadsClient } from '../src/client/threads.ts'
 import { AgentSuggestionsClient } from '../src/client/agentSuggestions.ts'
 import { AgentRunsClient } from '../src/client/agentRuns.ts'
+import { AgentReflectionClient } from '../src/client/agentReflection.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -140,6 +141,23 @@ describe('AgentRunsClient', () => {
       { method: 'POST', path: '/api/v1/agents/steward/upcoming/skip', body: { job: 'duty-steward-x', reason: 'later', until: '2026-10-05T12:00:00Z' } },
       { method: 'POST', path: '/api/v1/agents/steward/upcoming/run', body: { job: 'action-brief' } },
       { method: 'GET', path: '/api/v1/receipts/verify' },
+    ])
+  })
+})
+
+describe('AgentReflectionClient', () => {
+  it('asks for a reflection and settles a proposal at the agent\'s own paths', async () => {
+    const transport = new RecordingTransport(ok({ proposal: { id: 'pr 1', agent: 'chaser' }, refused: null }))
+    const reflection = new AgentReflectionClient(transport)
+    await reflection.reflect('chaser')
+    await reflection.proposals('chaser')
+    await reflection.adopt('chaser', 'pr 1')
+    await reflection.dismiss('chaser', 'pr 1')
+    assert.deepEqual(transport.sent, [
+      { method: 'POST', path: '/api/v1/agents/chaser/reflect', body: {} },
+      { method: 'GET', path: '/api/v1/agents/chaser/proposals' },
+      { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/adopt', body: {} },
+      { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/dismiss', body: {} },
     ])
   })
 })

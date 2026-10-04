@@ -2,6 +2,7 @@ import type { ReactNode } from 'react';
 import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts';
 import type { AgentSuggestion } from '../../client/agentSuggestions.ts';
 import type { AgentRun, RunDetail, Upcoming } from '../../client/agentRuns.ts';
+import type { AgentProposal } from '../../client/agentReflection.ts';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
 import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
@@ -428,6 +429,11 @@ export interface AgentsServices {
     upcoming?(name: string): Promise<Outcome<Upcoming>>;
     skipFiring?(name: string, job: string, reason: string, until?: string): Promise<Outcome<Upcoming>>;
     runFiringNow?(name: string, job: string): Promise<Outcome<Upcoming>>;
+    /** Reflection (#1782): all four or none. Omitted, the card offers no reflection. */
+    reflect?(name: string): Promise<Outcome<AgentProposal>>;
+    listProposals?(name: string): Promise<Outcome<AgentProposal[]>>;
+    adoptProposal?(name: string, id: string): Promise<Outcome<AgentProposal>>;
+    dismissProposal?(name: string, id: string): Promise<Outcome<AgentProposal>>;
 }
 export interface AgentsHost {
     /** Open a routine's body for editing. Omitted, routines are read-only on this surface. */
