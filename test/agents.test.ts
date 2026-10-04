@@ -228,3 +228,34 @@ describe('presentationOf', () => {
       ['never signed', 'nobody sponsors it', 'it is suspended', 'it is set unavailable'])
   })
 })
+
+describe('WorldLists', () => {
+  it('answers in the shapes the surfaces consume, and passes a chosen value as a parameter', async () => {
+    const { WorldLists } = await import('../src/client/worldLists.ts')
+    const asked: { cypher: string; options?: unknown }[] = []
+    const answers: Record<string, unknown[]> = {
+      ConfigSignalType: [{ typeName: 'ViewChangedSignal', fields: 'id, subject', count: 6, lastSeen: 't' }],
+      ConfigWatch: [{ id: 'w1', name: 'Failed', subject: 'ChaserFailedPayments', schedule: '', channel: 'signal', enabled: true }],
+      Agent: [{ agent: 'chaser' }],
+    }
+    const lists = new WorldLists(async (cypher, options) => {
+      asked.push({ cypher, options })
+      const label = Object.keys(answers).find((l) => cypher.includes(`:${l})`)) ?? ''
+      return ok({ rows: answers[label] ?? [] } as never)
+    })
+    const types = await lists.signalTypes()
+    assert.deepEqual(types.ok && types.value[0]?.fields, ['id', 'subject'])
+    const watches = await lists.watches()
+    assert.deepEqual(watches.ok && watches.value[0], { id: 'w1', lensId: 'ChaserFailedPayments', name: 'Failed', cron: null, enabled: true, delivery: { channel: 'signal' } })
+    const holder = await lists.agentHolding("x' OR 1=1")
+    assert.equal(holder.ok && holder.value, 'chaser')
+    assert.doesNotMatch(asked.at(-1)!.cypher, /OR 1=1/)
+    assert.deepEqual((asked.at(-1)!.options as { args: unknown }).args, { routine: "x' OR 1=1" })
+  })
+
+  it('a run that parked in the background is a failure to retry, not an empty list', async () => {
+    const { WorldLists } = await import('../src/client/worldLists.ts')
+    const r = await new WorldLists(async () => ok({ runId: 'r1' } as never)).skills()
+    assert.equal(r.ok, false)
+  })
+})
