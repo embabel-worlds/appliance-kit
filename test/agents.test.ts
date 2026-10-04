@@ -4,6 +4,7 @@ import { AgentsClient } from '../src/client/agents.ts'
 import { CronClient } from '../src/client/cron.ts'
 import { ThreadsClient } from '../src/client/threads.ts'
 import { AgentSuggestionsClient } from '../src/client/agentSuggestions.ts'
+import { AgentRunsClient } from '../src/client/agentRuns.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -116,6 +117,29 @@ describe('AgentSuggestionsClient', () => {
       { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/draft', body: {} },
       { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/adopted', body: {} },
       { method: 'POST', path: '/api/v1/agent-suggestions/sg%201/dismiss', body: {} },
+    ])
+  })
+})
+
+describe('AgentRunsClient', () => {
+  it('reads runs and upcoming work, and changes one firing, at the agent\'s own paths', async () => {
+    const transport = new RecordingTransport(ok({ upcoming: { agent: 'steward', firings: [] }, refused: null }))
+    const runs = new AgentRunsClient(transport)
+    await runs.runs('steward', 20)
+    await runs.run('steward', 'run 1')
+    await runs.upcoming('steward')
+    await runs.skip('steward', 'duty-steward-x', 'month-end')
+    await runs.skip('steward', 'duty-steward-x', 'later', '2026-10-05T12:00:00Z')
+    await runs.runNow('steward', 'action-brief')
+    await runs.verifyReceipts()
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/agents/steward/runs', query: { limit: '20' } },
+      { method: 'GET', path: '/api/v1/agents/steward/runs/run%201' },
+      { method: 'GET', path: '/api/v1/agents/steward/upcoming' },
+      { method: 'POST', path: '/api/v1/agents/steward/upcoming/skip', body: { job: 'duty-steward-x', reason: 'month-end' } },
+      { method: 'POST', path: '/api/v1/agents/steward/upcoming/skip', body: { job: 'duty-steward-x', reason: 'later', until: '2026-10-05T12:00:00Z' } },
+      { method: 'POST', path: '/api/v1/agents/steward/upcoming/run', body: { job: 'action-brief' } },
+      { method: 'GET', path: '/api/v1/receipts/verify' },
     ])
   })
 })
