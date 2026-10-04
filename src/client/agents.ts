@@ -93,6 +93,16 @@ export interface Agent {
   identity?: Record<string, AgentIdentityMode>
   /** The limits it runs within; null or absent when it declares none. */
   budget?: AgentBudget | null
+  /** Its priority and model fallbacks; null or absent is business priority with none. */
+  qos?: AgentQos | null
+}
+
+export type AgentPriority = 'interactive' | 'business' | 'background'
+
+export interface AgentQos {
+  priority?: AgentPriority
+  /** Models by role, used when its own fail mid-check; a check whose fallbacks fail too is held. */
+  fallbacks?: Record<string, string>
 }
 
 export type AgentIdentityMode = 'own-account' | 'on-behalf-of'
@@ -106,6 +116,8 @@ export interface AgentBudget {
   requestsPerRun?: number | null
   writesPerDay?: number | null
   expiresOn?: string | null
+  /** Percent of each source's rate it may take, by bucket; `*` for the rest. */
+  sourceShares?: Record<string, number>
 }
 
 export interface AgentVersion {

@@ -25,6 +25,7 @@ import { SuggestedColleagues } from './SuggestedColleagues.tsx'
 import { RunsSection, UpcomingSection } from './AgentRecord.tsx'
 import { ReflectionSection } from './ReflectionSection.tsx'
 import { AccountsSection } from './AccountsSection.tsx'
+import { limitsOf } from './limits.ts'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -353,6 +354,7 @@ function AgentDetail({
 
       <dl className="agent-facts">
         {agent.routing && (<><dt>Ask it about</dt><dd>{agent.routing}</dd></>)}
+        {limitsOf(agent).length > 0 && (<><dt>Limits</dt><dd>{limitsOf(agent).join(' · ')}</dd></>)}
         <dt>Sponsor</dt>
         <dd>{agent.sponsor ?? <span className="hint">nobody yet</span>}</dd>
         {agent.owners.length > 0 && (<><dt>Owners</dt><dd>{agent.owners.join(', ')}</dd></>)}
