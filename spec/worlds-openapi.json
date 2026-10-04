@@ -285,6 +285,12 @@
       },
       "AgentRequest" : {
         "properties" : {
+          "about" : {
+            "type" : "string"
+          },
+          "agent" : {
+            "type" : "string"
+          },
           "args" : {
             "type" : "string"
           },
@@ -313,6 +319,9 @@
             "type" : "string"
           },
           "ownerId" : {
+            "type" : "string"
+          },
+          "quote" : {
             "type" : "string"
           },
           "raisedAt" : {
@@ -21719,7 +21728,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36169"
+    "url" : "http://localhost:39743"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
