@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
 import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts';
+import type { AgentSuggestion } from '../../client/agentSuggestions.ts';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
 import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
@@ -411,6 +412,14 @@ export interface AgentsServices {
     haltStatus?(): Promise<Outcome<Halt>>;
     halt?(reason: string): Promise<Outcome<Halt>>;
     resume?(): Promise<Outcome<Halt>>;
+    /**
+     * Suggested colleagues (#1778). All four or none: omitted, the roster shows no suggestions.
+     * Adopting is done on the agent's own card; [markAdopted] only settles the suggestion.
+     */
+    listSuggestions?(): Promise<Outcome<AgentSuggestion[]>>;
+    draftSuggestion?(id: string): Promise<Outcome<AgentSuggestion>>;
+    markAdopted?(id: string): Promise<Outcome<AgentSuggestion>>;
+    dismissSuggestion?(id: string): Promise<Outcome<AgentSuggestion>>;
 }
 export interface AgentsHost {
     /** Open a routine's body for editing. Omitted, routines are read-only on this surface. */

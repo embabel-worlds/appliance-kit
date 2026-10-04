@@ -21,6 +21,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import type { Agent, AgentDuty, AgentStage, AgentVersion, DutyCheck, Halt } from '../../../client/agents.ts'
 import type { AgentsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { SuggestedColleagues } from './SuggestedColleagues.tsx'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -227,6 +228,11 @@ export function AgentsSurface({ services, host, initialAgent }: AgentsSurfacePro
                 </li>
               ))}
             </ul>
+            <SuggestedColleagues
+              services={services}
+              onOpen={(name) => { setSelected(name); void load() }}
+              onDrafted={(name) => { setSelected(name); void load() }}
+            />
           </>
         )}
       </StudioPanel>

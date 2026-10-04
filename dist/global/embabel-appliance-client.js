@@ -21,6 +21,7 @@ var EmbabelApplianceClient = (() => {
   // src/client/index.ts
   var index_exports = {};
   __export(index_exports, {
+    AgentSuggestionsClient: () => AgentSuggestionsClient,
     AgentsClient: () => AgentsClient,
     ApplianceClient: () => ApplianceClient,
     CronClient: () => CronClient,
@@ -849,6 +850,41 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/agentSuggestions.ts
+  var SUGGESTIONS = "/api/v1/agent-suggestions";
+  var AgentSuggestionsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    list() {
+      return this.transport.send({ method: "GET", path: SUGGESTIONS });
+    }
+    /** Write the suggested agent into the world, unsigned and off duty, and see what it would act on. */
+    draft(id) {
+      return this.decide(id, "draft");
+    }
+    /** The realm agent it names was taken on from its card: the suggestion is settled. */
+    adopted(id) {
+      return this.decide(id, "adopted");
+    }
+    dismiss(id) {
+      return this.decide(id, "dismiss");
+    }
+    async decide(id, decision) {
+      const outcome = await this.transport.send({
+        method: "POST",
+        path: `${SUGGESTIONS}/${encodeURIComponent(id)}/${decision}`,
+        body: {}
+      });
+      if (!outcome.ok) {
+        const refused = outcome.body?.refused;
+        return refused ? failure("refused", refused, outcome.status, outcome.body) : outcome;
+      }
+      const suggestion = outcome.value.suggestion;
+      return suggestion ? { ok: true, value: suggestion } : failure("refused", outcome.value.refused ?? "Refused", 200, outcome.value);
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -969,6 +1005,7 @@ var EmbabelApplianceClient = (() => {
       this.agents = new AgentsClient(transport);
       this.requests = new RequestsClient(transport);
       this.threads = new ThreadsClient(transport);
+      this.agentSuggestions = new AgentSuggestionsClient(transport);
       this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
@@ -979,6 +1016,7 @@ var EmbabelApplianceClient = (() => {
     agents;
     requests;
     threads;
+    agentSuggestions;
     cron;
     handlers;
     documents;

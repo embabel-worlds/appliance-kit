@@ -18,10 +18,12 @@ export { CronClient } from "./cron.js";
 export { AgentsClient } from "./agents.js";
 export { RequestsClient } from "./requests.js";
 export { ThreadsClient } from "./threads.js";
+export { AgentSuggestionsClient } from "./agentSuggestions.js";
 export { HandlersClient } from "./handlers.js";
 import { AgentsClient as AgentsClientImpl } from "./agents.js";
 import { RequestsClient as RequestsClientImpl } from "./requests.js";
 import { ThreadsClient as ThreadsClientImpl } from "./threads.js";
+import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from "./agentSuggestions.js";
 import { CronClient as CronClientImpl } from "./cron.js";
 import { DocumentsClient } from "./documents.js";
 import { HandlersClient } from "./handlers.js";
@@ -36,6 +38,7 @@ export class ApplianceClient {
     agents;
     requests;
     threads;
+    agentSuggestions;
     cron;
     handlers;
     documents;
@@ -47,6 +50,7 @@ export class ApplianceClient {
         this.agents = new AgentsClientImpl(transport);
         this.requests = new RequestsClientImpl(transport);
         this.threads = new ThreadsClientImpl(transport);
+        this.agentSuggestions = new AgentSuggestionsClientImpl(transport);
         this.cron = new CronClientImpl(transport);
         this.handlers = new HandlersClient(transport);
         this.documents = new DocumentsClient(transport, options.documents);

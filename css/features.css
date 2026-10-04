@@ -1703,3 +1703,13 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .threadcompose { display: grid; gap: 6px; margin-top: 12px; }
 :where(.kit-feature) .threadcompose input { flex: 1 1 220px; min-width: 0; }
 @media (max-width: 720px) { :where(.kit-feature) .team { grid-template-columns: 1fr; } }
+
+/* Suggested colleagues, under the roster: who to hire, each with the evidence counted. */
+:where(.kit-feature) .suggested { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 12px; }
+:where(.kit-feature) .suggested-title { margin: 0 0 8px; font-size: inherit; }
+:where(.kit-feature) .suggestedlist { list-style: none; margin: 0; padding: 0; display: grid; gap: 12px; }
+:where(.kit-feature) .suggestion { display: grid; gap: 4px; }
+:where(.kit-feature) .suggestion-head { gap: 8px; align-items: baseline; flex-wrap: wrap; }
+:where(.kit-feature) .suggestion-job { margin: 0; }
+:where(.kit-feature) .suggestion-evidence { margin: 0; padding-left: 18px; }
+:where(.kit-feature) .suggestion-query { white-space: pre-wrap; font-family: var(--mono); background: var(--code-bg); padding: 6px; margin: 4px 0; overflow-x: auto; }

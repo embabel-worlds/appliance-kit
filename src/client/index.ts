@@ -76,6 +76,8 @@ export type { CompiledSchedule } from './cron.ts'
 export { AgentsClient } from './agents.ts'
 export { RequestsClient } from './requests.ts'
 export { ThreadsClient } from './threads.ts'
+export { AgentSuggestionsClient } from './agentSuggestions.ts'
+export type { AgentSuggestion, SuggestionEvidence, SuggestionKind, SuggestionStatus } from './agentSuggestions.ts'
 export type { Attachment, AttachmentKind, AttachmentRequest, Sender, SenderKind, Thread, ThreadMessage, ThreadView } from './threads.ts'
 export type { AgentRequest, RequestStatus } from './requests.ts'
 export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion, DutyCheck, DutyState, Halt } from './agents.ts'
@@ -101,6 +103,7 @@ export type { components, paths } from './generated/openapi.ts'
 import { AgentsClient as AgentsClientImpl } from './agents.ts'
 import { RequestsClient as RequestsClientImpl } from './requests.ts'
 import { ThreadsClient as ThreadsClientImpl } from './threads.ts'
+import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from './agentSuggestions.ts'
 import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
@@ -120,6 +123,7 @@ export class ApplianceClient {
   readonly agents: AgentsClientImpl
   readonly requests: RequestsClientImpl
   readonly threads: ThreadsClientImpl
+  readonly agentSuggestions: AgentSuggestionsClientImpl
   readonly cron: CronClientImpl
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
@@ -131,6 +135,7 @@ export class ApplianceClient {
     this.agents = new AgentsClientImpl(transport)
     this.requests = new RequestsClientImpl(transport)
     this.threads = new ThreadsClientImpl(transport)
+    this.agentSuggestions = new AgentSuggestionsClientImpl(transport)
     this.cron = new CronClientImpl(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)
