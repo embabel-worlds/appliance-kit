@@ -2128,3 +2128,69 @@ describe('the public browser feature entry point', () => {
     assert.equal(features.rewoundCounter([]), 0)
   })
 })
+
+/*
+ * THREADS: an agent's words are markdown, and a thread is shown inside chat.
+ *
+ * The first case is a regression test with a history: threads rendered `{message.text}` into a
+ * `<p>`, so an agent writing a list showed people `- item` while chat two windows away rendered
+ * the same prose properly. The libraries are a FAKE on purpose — the kit never imports `marked` or
+ * `DOMPurify`, it is handed them — so what is asserted is that the text went through them and was
+ * set as markup, which is the thing that was missing.
+ */
+describe('threads', () => {
+  /* Enough of the policy's shape to tell markup from text, and nothing more. */
+  const libs = {
+    parse: (text) => text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^- (.+)$/gm, '<li>$1</li>'),
+    sanitize: (html) => html,
+  }
+
+  const thread = { id: 't1', title: 'Northwind', updatedAt: '2026-10-04T09:00:00Z' }
+  const message = (text) => ({
+    id: 'm1',
+    from: { kind: 'AGENT', name: 'steward' },
+    text,
+    createdAt: '2026-10-04T09:01:00Z',
+    wordsOnly: true,
+    attachments: [],
+  })
+  const services = (text) => ({
+    listThreads: async () => ok([thread]),
+    getThread: async () => ok({ thread, messages: [message(text)], waitingOn: [] }),
+    createThread: async () => ok(thread),
+    post: async () => ok({}),
+  })
+
+  it("renders an agent's markdown as markup, not as the characters it was typed with", async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('**Northwind** is at risk\n- no call booked'),
+      markdown: libs,
+    }))
+    const prose = container.querySelector('.threadtext')
+    assert.ok(prose, 'the message body is rendered')
+    assert.ok(prose.querySelector('strong'), 'bold became an element, not asterisks')
+    assert.ok(prose.querySelector('li'), 'a list item became an element, not a hyphen')
+    assert.ok(!prose.textContent.includes('**'), 'no markdown punctuation is shown to the reader')
+    assert.ok(prose.classList.contains('md'), 'carries the class the rendered-markdown styles key on')
+  })
+
+  it('shows the pane alone when the host already has a conversation list', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('hello'),
+      markdown: libs,
+      chrome: 'pane',
+      initialThread: 't1',
+    }))
+    assert.ok(container.querySelector('.threadmessages'), 'the thread itself is shown')
+    assert.equal(container.querySelector('.threadlist'), null, 'no second list of conversations')
+    assert.equal(button(container, 'Start'), undefined, 'and no second way to start one')
+  })
+
+  it('still brings its own list when it is the whole surface', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('hello'),
+      markdown: libs,
+    }))
+    assert.ok(container.querySelector('.threadlist'), 'the list is there for a host that wants it')
+  })
+})

@@ -1,5 +1,12 @@
 /*
- * THE TEAM: threads you and your agents share (embabel/me#1779).
+ * THREADS: the conversations you and your agents share (embabel/me#1779).
+ *
+ * Shown INSIDE chat, not beside it. A thread is a conversation with more than one participant whose
+ * answers may arrive later, which is a property of a conversation and never was a reason for a
+ * second place to type. It had one, and the cost was the ordinary one: chat gained markdown, unread
+ * and sessions while this rendered `{message.text}` into a `<p>`, so an agent's list arrived as
+ * `- item`. Prose now comes from the kit's one renderer, and `chrome: 'pane'` lets the host's own
+ * conversation list choose the thread.
  *
  * A person writes, @mentions an agent, and the agent answers in the thread as itself; agents asking
  * each other land here as well, so what colleagues say to each other is never hidden. The
@@ -15,6 +22,7 @@ import React, { useCallback, useEffect, useState } from 'react'
 import type { Attachment, Thread, ThreadMessage, ThreadView } from '../../../client/threads.ts'
 import type { ThreadsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
+import { Prose } from '../prose/Prose.tsx'
 
 const POLL_MS = 2500
 
@@ -24,7 +32,7 @@ function when(iso: string | null): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
 }
 
-export function ThreadsSurface({ services, host, initialThread }: ThreadsSurfaceProps) {
+export function ThreadsSurface({ services, host, initialThread, markdown, chrome = 'full' }: ThreadsSurfaceProps) {
   const [threads, setThreads] = useState<Thread[]>([])
   const [problem, setProblem] = useState('')
   const [absent, setAbsent] = useState(false)
@@ -81,6 +89,24 @@ export function ThreadsSurface({ services, host, initialThread }: ThreadsSurface
     setSelected(result.value.id)
   }
 
+  if (chrome === 'pane') {
+    return (
+      <div className="kit-feature kit-feature-threads pane">
+        {problem && <Status tone={absent ? 'caution' : 'error'}>{problem}</Status>}
+        {view && (
+          <ThreadPane
+            view={view}
+            services={services}
+            host={host}
+            markdown={markdown}
+            onPosted={() => void loadThread(view.thread.id)}
+            onProblem={setProblem}
+          />
+        )}
+      </div>
+    )
+  }
+
   return (
     <div className="kit-feature kit-feature-threads team">
       <StudioPanel title="Threads" aside={<button className="btn ghost tiny" onClick={() => void loadThreads()}>Refresh</button>}>
@@ -109,6 +135,7 @@ export function ThreadsSurface({ services, host, initialThread }: ThreadsSurface
           view={view}
           services={services}
           host={host}
+          markdown={markdown}
           onPosted={() => void loadThread(view.thread.id)}
           onProblem={setProblem}
         />
@@ -117,10 +144,11 @@ export function ThreadsSurface({ services, host, initialThread }: ThreadsSurface
   )
 }
 
-function ThreadPane({ view, services, host, onPosted, onProblem }: {
+function ThreadPane({ view, services, host, markdown, onPosted, onProblem }: {
   view: ThreadView
   services: ThreadsSurfaceProps['services']
   host: ThreadsSurfaceProps['host']
+  markdown: ThreadsSurfaceProps['markdown']
   onPosted: () => void
   onProblem: (problem: string) => void
 }) {
@@ -147,7 +175,7 @@ function ThreadPane({ view, services, host, onPosted, onProblem }: {
   return (
     <StudioPanel title={view.thread.title}>
       <ol className="threadmessages">
-        {view.messages.map((m) => <MessageItem key={m.id} message={m} host={host} />)}
+        {view.messages.map((m) => <MessageItem key={m.id} message={m} host={host} markdown={markdown} />)}
       </ol>
       {view.waitingOn.length > 0 && (
         <p className="hint threadwaiting">{view.waitingOn.join(', ')} {view.waitingOn.length === 1 ? 'is' : 'are'} answering…</p>
@@ -177,7 +205,11 @@ function ThreadPane({ view, services, host, onPosted, onProblem }: {
   )
 }
 
-function MessageItem({ message, host }: { message: ThreadMessage; host: ThreadsSurfaceProps['host'] }) {
+function MessageItem({ message, host, markdown }: {
+  message: ThreadMessage
+  host: ThreadsSurfaceProps['host']
+  markdown: ThreadsSurfaceProps['markdown']
+}) {
   const from = message.from
   const name = from.kind === 'AGENT' && host?.openAgent
     ? <button className="request-agentlink" onClick={() => host.openAgent?.(from.name)}>{from.name}</button>
@@ -189,7 +221,7 @@ function MessageItem({ message, host }: { message: ThreadMessage; host: ThreadsS
         <span className="hint" title={message.createdAt}>{when(message.createdAt)}</span>
         {message.wordsOnly && <span className="hint">nothing attached</span>}
       </header>
-      <p className="threadtext">{message.text}</p>
+      <Prose libs={markdown} text={message.text} className="threadtext" />
       {message.attachments.map((a, i) => <AttachmentCard key={i} attachment={a} />)}
     </li>
   )

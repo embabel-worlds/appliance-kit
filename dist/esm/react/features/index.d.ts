@@ -9,5 +9,6 @@ export { CodingAgentsSurface } from './coding-agents/CodingAgentsSurface.tsx';
 export { ApiKeysSurface } from './api-keys/ApiKeysSurface.tsx';
 export { AgentsSurface, StagePill, firingOf } from './agents/AgentsSurface.tsx';
 export { ApprovalsSurface, RequestStatusPill } from './approvals/ApprovalsSurface.tsx';
+export { Prose, type ProseProps } from './prose/Prose.tsx';
 export { ThreadsSurface } from './threads/ThreadsSurface.tsx';
 //# sourceMappingURL=index.d.ts.map

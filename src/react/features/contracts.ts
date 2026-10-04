@@ -1,3 +1,4 @@
+import type { MarkdownLibraries } from '../../studio-kit/markdown.ts'
 import type { ReactNode } from 'react'
 import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts'
 import type { AgentSuggestion } from '../../client/agentSuggestions.ts'
@@ -505,5 +506,18 @@ export interface ThreadsSurfaceProps {
   host?: ThreadsHost
   /** A thread to open first, by id. */
   initialThread?: string
+  /**
+   * `marked` and `DOMPurify`, for the agent prose in a thread. REQUIRED, and required because it
+   * was once optional by omission: a thread rendered its messages as raw text while chat rendered
+   * the same words as markdown. A surface that shows what a model wrote has to say how.
+   */
+  markdown: MarkdownLibraries
+  /**
+   * `full` (the default) brings the thread LIST and the pane. `pane` brings the pane alone, for a
+   * host that already has one list of conversations and does not want a second one beside it —
+   * which is how chat absorbs threads instead of competing with them. `pane` needs
+   * [ThreadsSurfaceProps.initialThread]: with no list there is nothing to choose from.
+   */
+  chrome?: 'full' | 'pane'
 }
 

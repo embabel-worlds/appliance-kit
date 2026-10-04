@@ -1,6 +1,13 @@
 import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-runtime";
 /*
- * THE TEAM: threads you and your agents share (embabel/me#1779).
+ * THREADS: the conversations you and your agents share (embabel/me#1779).
+ *
+ * Shown INSIDE chat, not beside it. A thread is a conversation with more than one participant whose
+ * answers may arrive later, which is a property of a conversation and never was a reason for a
+ * second place to type. It had one, and the cost was the ordinary one: chat gained markdown, unread
+ * and sessions while this rendered `{message.text}` into a `<p>`, so an agent's list arrived as
+ * `- item`. Prose now comes from the kit's one renderer, and `chrome: 'pane'` lets the host's own
+ * conversation list choose the thread.
  *
  * A person writes, @mentions an agent, and the agent answers in the thread as itself; agents asking
  * each other land here as well, so what colleagues say to each other is never hidden. The
@@ -13,6 +20,7 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  */
 import React, { useCallback, useEffect, useState } from 'react';
 import { Status, StudioPanel, failureMessage } from "../studio/chrome.js";
+import { Prose } from "../prose/Prose.js";
 const POLL_MS = 2500;
 function when(iso) {
     if (!iso)
@@ -20,7 +28,7 @@ function when(iso) {
     const date = new Date(iso);
     return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
-export function ThreadsSurface({ services, host, initialThread }) {
+export function ThreadsSurface({ services, host, initialThread, markdown, chrome = 'full' }) {
     const [threads, setThreads] = useState([]);
     const [problem, setProblem] = useState('');
     const [absent, setAbsent] = useState(false);
@@ -73,9 +81,12 @@ export function ThreadsSurface({ services, host, initialThread }) {
         await loadThreads();
         setSelected(result.value.id);
     }
-    return (_jsxs("div", { className: "kit-feature kit-feature-threads team", children: [_jsx(StudioPanel, { title: "Threads", aside: _jsx("button", { className: "btn ghost tiny", onClick: () => void loadThreads(), children: "Refresh" }), children: absent ? _jsx(Status, { tone: "caution", children: problem }) : (_jsxs(_Fragment, { children: [problem && _jsx(Status, { tone: "error", children: problem }), _jsxs("form", { className: "row", onSubmit: (event) => void start(event), children: [_jsx("input", { value: title, placeholder: "A new thread about\u2026", onChange: (event) => setTitle(event.target.value) }), _jsx("button", { className: "btn", type: "submit", disabled: !title.trim(), children: "Start" })] }), _jsx("ul", { className: "threadlist", role: "listbox", "aria-label": "Threads", children: threads.map((t) => (_jsx("li", { children: _jsxs("button", { role: "option", "aria-selected": t.id === selected, onClick: () => setSelected(t.id), children: [_jsx("strong", { children: t.title }), _jsx("span", { className: "hint", children: when(t.updatedAt) })] }) }, t.id))) })] })) }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
+    if (chrome === 'pane') {
+        return (_jsxs("div", { className: "kit-feature kit-feature-threads pane", children: [problem && _jsx(Status, { tone: absent ? 'caution' : 'error', children: problem }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
+    }
+    return (_jsxs("div", { className: "kit-feature kit-feature-threads team", children: [_jsx(StudioPanel, { title: "Threads", aside: _jsx("button", { className: "btn ghost tiny", onClick: () => void loadThreads(), children: "Refresh" }), children: absent ? _jsx(Status, { tone: "caution", children: problem }) : (_jsxs(_Fragment, { children: [problem && _jsx(Status, { tone: "error", children: problem }), _jsxs("form", { className: "row", onSubmit: (event) => void start(event), children: [_jsx("input", { value: title, placeholder: "A new thread about\u2026", onChange: (event) => setTitle(event.target.value) }), _jsx("button", { className: "btn", type: "submit", disabled: !title.trim(), children: "Start" })] }), _jsx("ul", { className: "threadlist", role: "listbox", "aria-label": "Threads", children: threads.map((t) => (_jsx("li", { children: _jsxs("button", { role: "option", "aria-selected": t.id === selected, onClick: () => setSelected(t.id), children: [_jsx("strong", { children: t.title }), _jsx("span", { className: "hint", children: when(t.updatedAt) })] }) }, t.id))) })] })) }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
 }
-function ThreadPane({ view, services, host, onPosted, onProblem }) {
+function ThreadPane({ view, services, host, markdown, onPosted, onProblem }) {
     const [text, setText] = useState('');
     const [viewName, setViewName] = useState('');
     const [sending, setSending] = useState(false);
@@ -95,7 +106,7 @@ function ThreadPane({ view, services, host, onPosted, onProblem }) {
         setViewName('');
         onPosted();
     }
-    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in: @steward is Northwind at risk? Enter sends, Shift+Enter for a new line", onChange: (event) => setText(event.target.value), onKeyDown: (event) => {
+    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host, markdown: markdown }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in: @steward is Northwind at risk? Enter sends, Shift+Enter for a new line", onChange: (event) => setText(event.target.value), onKeyDown: (event) => {
                             // Enter sends, as in any chat; Shift+Enter is a new line, and Enter mid-composition picks an IME candidate.
                             if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
                                 event.preventDefault();
@@ -103,12 +114,12 @@ function ThreadPane({ view, services, host, onPosted, onProblem }) {
                             }
                         } }), _jsxs("div", { className: "row", children: [_jsx("input", { value: viewName, placeholder: "Attach a view's rows (its name)", onChange: (event) => setViewName(event.target.value) }), _jsx("button", { className: "btn primary", type: "submit", disabled: sending || (!text.trim() && !viewName.trim()), children: sending ? 'Posting…' : 'Post' })] })] })] }));
 }
-function MessageItem({ message, host }) {
+function MessageItem({ message, host, markdown }) {
     const from = message.from;
     const name = from.kind === 'AGENT' && host?.openAgent
         ? _jsx("button", { className: "request-agentlink", onClick: () => host.openAgent?.(from.name), children: from.name })
         : from.name;
-    return (_jsxs("li", { className: `threadmessage from-${from.kind.toLowerCase()}`, children: [_jsxs("header", { className: "row", children: [_jsx("strong", { children: name }), _jsx("span", { className: "hint", title: message.createdAt, children: when(message.createdAt) }), message.wordsOnly && _jsx("span", { className: "hint", children: "nothing attached" })] }), _jsx("p", { className: "threadtext", children: message.text }), message.attachments.map((a, i) => _jsx(AttachmentCard, { attachment: a }, i))] }));
+    return (_jsxs("li", { className: `threadmessage from-${from.kind.toLowerCase()}`, children: [_jsxs("header", { className: "row", children: [_jsx("strong", { children: name }), _jsx("span", { className: "hint", title: message.createdAt, children: when(message.createdAt) }), message.wordsOnly && _jsx("span", { className: "hint", children: "nothing attached" })] }), _jsx(Prose, { libs: markdown, text: message.text, className: "threadtext" }), message.attachments.map((a, i) => _jsx(AttachmentCard, { attachment: a }, i))] }));
 }
 /* The thing itself, opened: a record's properties, or the rows a view returned when it was sent. */
 function AttachmentCard({ attachment }) {
