@@ -6,6 +6,7 @@ import { ThreadsClient } from '../src/client/threads.ts'
 import { AgentSuggestionsClient } from '../src/client/agentSuggestions.ts'
 import { AgentRunsClient } from '../src/client/agentRuns.ts'
 import { AgentReflectionClient } from '../src/client/agentReflection.ts'
+import { AgentAccountsClient } from '../src/client/agentAccounts.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -158,6 +159,23 @@ describe('AgentReflectionClient', () => {
       { method: 'GET', path: '/api/v1/agents/chaser/proposals' },
       { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/adopt', body: {} },
       { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/dismiss', body: {} },
+    ])
+  })
+})
+
+describe('AgentAccountsClient', () => {
+  it('keeps secrets by name under the agent and retires it with a reason', async () => {
+    const transport = new RecordingTransport(ok({ agent: 'chaser', secrets: [] }))
+    const accounts = new AgentAccountsClient(transport)
+    await accounts.list('chaser')
+    await accounts.set('chaser', 'ODOO KEY', 'shh')
+    await accounts.remove('chaser', 'ODOO KEY')
+    await accounts.retire('chaser', 'replaced')
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/agents/chaser/accounts' },
+      { method: 'PUT', path: '/api/v1/agents/chaser/accounts/ODOO%20KEY', body: { value: 'shh' } },
+      { method: 'DELETE', path: '/api/v1/agents/chaser/accounts/ODOO%20KEY' },
+      { method: 'POST', path: '/api/v1/agents/chaser/retire', body: { reason: 'replaced' } },
     ])
   })
 })

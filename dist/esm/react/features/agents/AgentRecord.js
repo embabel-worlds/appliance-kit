@@ -85,7 +85,14 @@ export function RunsSection({ name, services }) {
     if (!services.listRuns)
         return null;
     return (_jsxs("div", { className: "agent-runs", children: [_jsxs("div", { className: "row", children: [_jsx("h3", { className: "caption", children: "Runs" }), _jsx("button", { className: "btn ghost tiny", onClick: () => void load(), children: "Refresh" })] }), problem && _jsx(Status, { tone: "error", children: problem }), runs && runs.length === 0 && _jsx("p", { className: "hint", children: "No runs yet." }), runs && runs.length > 0 && (_jsx("ol", { className: "run-list", children: runs.map((r) => (_jsx("li", { children: _jsxs("details", { onToggle: (e) => { if (e.target.open)
-                            void receipts(r); }, children: [_jsxs("summary", { className: "row", children: [_jsx("span", { className: `run-outcome is-${r.outcome.toLowerCase()}`, children: OUTCOME_WORDS[r.outcome] }), _jsx("span", { children: r.work }), _jsxs("span", { className: "hint", children: [r.trigger, r.observing ? ' · observing' : '', r.agentVersion ? ` · v${r.agentVersion}` : ''] }), _jsx("span", { className: "hint", children: when(r.startedAt) }), r.violations != null && _jsxs("span", { className: "hint", children: [r.violations, " found, ", r.repairs ?? 0, " repaired"] }), r.requests.length > 0 && _jsxs("span", { className: "hint", children: [r.requests.length, " request", r.requests.length === 1 ? '' : 's'] })] }), r.error && _jsx("p", { className: "hint", children: r.error }), r.output && _jsx("pre", { className: "run-output", children: r.output }), open[r.id] && _jsx(Receipts, { receipts: open[r.id] ?? [] })] }) }, r.id))) }))] }));
+                            void receipts(r); }, children: [_jsxs("summary", { className: "row", children: [_jsx("span", { className: `run-outcome is-${r.outcome.toLowerCase()}`, children: OUTCOME_WORDS[r.outcome] }), _jsx("span", { children: r.work }), _jsxs("span", { className: "hint", children: [r.trigger, r.observing ? ' · observing' : '', r.agentVersion ? ` · v${r.agentVersion}` : ''] }), _jsx("span", { className: "hint", children: when(r.startedAt) }), r.violations != null && _jsxs("span", { className: "hint", children: [r.violations, " found, ", r.repairs ?? 0, " repaired"] }), r.requests.length > 0 && _jsxs("span", { className: "hint", children: [r.requests.length, " request", r.requests.length === 1 ? '' : 's'] }), !!r.spendCents && _jsx("span", { className: "hint", title: spendTitle(r), children: cents(r.spendCents) })] }), r.error && _jsx("p", { className: "hint", children: r.error }), r.output && _jsx("pre", { className: "run-output", children: r.output }), open[r.id] && _jsx(Receipts, { receipts: open[r.id] ?? [] })] }) }, r.id))) }))] }));
+}
+/** Spend is recorded to the hundredth of a cent, because a single cheap call costs less than one. */
+function cents(c) {
+    return c >= 100 ? `$${(c / 100).toFixed(2)}` : `${c < 1 ? c.toFixed(2) : c.toFixed(1)}¢`;
+}
+function spendTitle(r) {
+    return Object.entries(r.spendByModel ?? {}).map(([model, c]) => `${model}: ${cents(c)}`).join('\n');
 }
 function Receipts({ receipts }) {
     if (receipts.length === 0)

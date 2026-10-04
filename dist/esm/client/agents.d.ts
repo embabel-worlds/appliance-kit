@@ -68,6 +68,21 @@ export interface Agent {
     duties: AgentDuty[];
     /** What it needs before it can go on duty; empty when it can. */
     needs: string[];
+    /** Whose account it calls each API with; an API not named is called on its sponsor's behalf. Absent from older servers. */
+    identity?: Record<string, AgentIdentityMode>;
+    /** The limits it runs within; null or absent when it declares none. */
+    budget?: AgentBudget | null;
+}
+export type AgentIdentityMode = 'own-account' | 'on-behalf-of';
+/** Spend is in US cents. Over a daily limit, or past `expiresOn`, the agent stands itself down. */
+export interface AgentBudget {
+    spendPerRunCents?: number | null;
+    spendPerDayCents?: number | null;
+    runsPerHour?: number | null;
+    concurrentRuns?: number | null;
+    requestsPerRun?: number | null;
+    writesPerDay?: number | null;
+    expiresOn?: string | null;
 }
 export interface AgentVersion {
     version: number;

@@ -24,6 +24,7 @@ import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 import { SuggestedColleagues } from './SuggestedColleagues.tsx'
 import { RunsSection, UpcomingSection } from './AgentRecord.tsx'
 import { ReflectionSection } from './ReflectionSection.tsx'
+import { AccountsSection } from './AccountsSection.tsx'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -460,6 +461,11 @@ function AgentDetail({
         name={agent.name}
         services={services}
         onAdopted={() => void services.listAgents().then((r) => { if (r.ok) { const a = r.value.find((x) => x.name === agent.name); if (a) onChanged(a) } })}
+      />
+      <AccountsSection
+        agent={agent}
+        services={services}
+        onRetired={() => void services.listAgents().then((r) => { if (r.ok) { const a = r.value.find((x) => x.name === agent.name); if (a) onChanged(a) } })}
       />
     </StudioPanel>
   )
