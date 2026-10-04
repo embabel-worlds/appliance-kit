@@ -2190,6 +2190,179 @@ describe('the public browser feature entry point', () => {
   })
 })
 
+/*
+ * THREADS: an agent's words are markdown, and a thread is shown inside chat.
+ *
+ * The first case is a regression test with a history: threads rendered `{message.text}` into a
+ * `<p>`, so an agent writing a list showed people `- item` while chat two windows away rendered
+ * the same prose properly. The libraries are a FAKE on purpose — the kit never imports `marked` or
+ * `DOMPurify`, it is handed them — so what is asserted is that the text went through them and was
+ * set as markup, which is the thing that was missing.
+ */
+describe('threads', () => {
+  /* Enough of the policy's shape to tell markup from text, and nothing more. */
+  const libs = {
+    parse: (text) => text.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>').replace(/^- (.+)$/gm, '<li>$1</li>'),
+    sanitize: (html) => html,
+  }
+
+  const thread = { id: 't1', title: 'Northwind', updatedAt: '2026-10-04T09:00:00Z' }
+  const message = (text) => ({
+    id: 'm1',
+    from: { kind: 'AGENT', name: 'steward' },
+    text,
+    createdAt: '2026-10-04T09:01:00Z',
+    wordsOnly: true,
+    attachments: [],
+  })
+  const services = (text) => ({
+    listThreads: async () => ok([thread]),
+    getThread: async () => ok({ thread, messages: [message(text)], waitingOn: [] }),
+    createThread: async () => ok(thread),
+    post: async () => ok({}),
+  })
+
+  it("renders an agent's markdown as markup, not as the characters it was typed with", async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('**Northwind** is at risk\n- no call booked'),
+      markdown: libs,
+    }))
+    const prose = container.querySelector('.threadtext')
+    assert.ok(prose, 'the message body is rendered')
+    assert.ok(prose.querySelector('strong'), 'bold became an element, not asterisks')
+    assert.ok(prose.querySelector('li'), 'a list item became an element, not a hyphen')
+    assert.ok(!prose.textContent.includes('**'), 'no markdown punctuation is shown to the reader')
+    assert.ok(prose.classList.contains('md'), 'carries the class the rendered-markdown styles key on')
+  })
+
+  it('shows the pane alone when the host already has a conversation list', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('hello'),
+      markdown: libs,
+      chrome: 'pane',
+      initialThread: 't1',
+    }))
+    assert.ok(container.querySelector('.threadmessages'), 'the thread itself is shown')
+    assert.equal(container.querySelector('.threadlist'), null, 'no second list of conversations')
+    assert.equal(button(container, 'Start'), undefined, 'and no second way to start one')
+  })
+
+  it('still brings its own list when it is the whole surface', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: services('hello'),
+      markdown: libs,
+    }))
+    assert.ok(container.querySelector('.threadlist'), 'the list is there for a host that wants it')
+  })
+})
+
+/*
+ * THE @MENTION MENU: who you can bring into a thread, offered where you need it.
+ *
+ * `@mention` was the only way to reach an agent in a thread and nothing in the thread said who
+ * there was — and `/talk`, which lists them, is a CHAT command, so typed into a thread it posts
+ * the literal text "/talk". These cases cover the two halves: knowing when the caret is in a
+ * mention, and the keyboard owning Enter while the menu is up.
+ */
+describe('mentions', () => {
+  const libs = { parse: (t) => t, sanitize: (h) => h }
+  const thread = { id: 't1', title: 'Northwind', updatedAt: null }
+  const agents = [
+    { name: 'steward', job: 'Keeps account trouble in front of its owner' },
+    { name: 'chaser', job: 'Chases what we are owed', hint: 'off' },
+    { name: 'chess-coach', job: 'Explains a position' },
+  ]
+  const services = {
+    listThreads: async () => ok([thread]),
+    getThread: async () => ok({ thread, messages: [], waitingOn: [] }),
+    createThread: async () => ok(thread),
+    post: async () => ok({}),
+  }
+  const pane = () => render(h(features.ThreadsSurface, {
+    services, markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+  }))
+  /* The native setter, as `setInput` does for inputs: assigning `.value` directly leaves React's
+   * own value tracker thinking nothing changed, and onChange never runs. */
+  const type = async (container, value, caret = value.length) => {
+    const box = container.querySelector('textarea')
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(box), 'value').set
+    await act(async () => {
+      setter.call(box, value)
+      box.setSelectionRange(caret, caret)
+      box.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    return box
+  }
+  const key = async (box, init) => {
+    await act(async () => {
+      box.dispatchEvent(new dom.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }))
+    })
+  }
+
+  it('knows a mention from an email address and from a finished name', () => {
+    assert.deepEqual(features.activeMention('@ste', 4), { query: 'ste', at: 0 })
+    assert.deepEqual(features.activeMention('ask @', 5), { query: '', at: 4 })
+    assert.equal(features.activeMention('@steward is here', 16), null, 'the caret has left the name')
+    assert.equal(features.activeMention('rod@embabel.com', 15), null, 'an @ mid-word is an address')
+  })
+
+  it('puts the name back with a space, and the caret after it', () => {
+    const next = features.applyMention('ask @ste about it', 8, 'steward')
+    assert.equal(next.text, 'ask @steward  about it')
+    assert.equal(next.caret, 'ask @steward '.length)
+  })
+
+  it('offers a prefix match before one buried inside a name', () => {
+    assert.deepEqual(features.matching(agents, 'ch').map((a) => a.name), ['chaser', 'chess-coach'])
+    assert.deepEqual(features.matching(agents, 'coach').map((a) => a.name), ['chess-coach'])
+  })
+
+  it('opens on @ and offers every agent, saying which cannot take part', async () => {
+    const { container } = await pane()
+    await type(container, '@')
+    const options = [...container.querySelectorAll('[role="option"]')]
+    assert.deepEqual(options.map((o) => o.querySelector('strong').textContent), ['@steward', '@chaser', '@chess-coach'])
+    // Listed with its reason and still selectable: the appliance answers in the thread if it will
+    // not take part, and that rule is not reimplemented here.
+    assert.match(options[1].textContent, /off/)
+    assert.equal(options[1].disabled, false)
+  })
+
+  it('Enter picks the highlighted name instead of posting', async () => {
+    const posted = []
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: { ...services, post: async (...args) => { posted.push(args); return ok({}) } },
+      markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+    }))
+    const box = await type(container, 'ask @ch')
+    await key(box, { key: 'ArrowDown' })   // chaser -> chess-coach
+    await key(box, { key: 'Enter' })
+    assert.equal(posted.length, 0, 'Enter belonged to the menu, not to Send')
+    assert.equal(container.querySelector('textarea').value, 'ask @chess-coach ')
+  })
+
+  it('Escape closes it, and then Enter posts again', async () => {
+    const posted = []
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: { ...services, post: async (...args) => { posted.push(args); return ok({}) } },
+      markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+    }))
+    const box = await type(container, 'ask @ste')
+    await key(box, { key: 'Escape' })
+    assert.equal(container.querySelector('[role="listbox"]'), null, 'the menu is gone')
+    await key(box, { key: 'Enter' })
+    assert.equal(posted.length, 1, 'Enter went back to posting')
+  })
+
+  it('says nothing when the host offers no agents', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services, markdown: libs, chrome: 'pane', initialThread: 't1',
+    }))
+    await type(container, '@')
+    assert.equal(container.querySelector('.threadmentions'), null)
+  })
+})
+
 describe('an approval request', () => {
   it('reads in the business\'s words, with the tool folded under technical details', async () => {
     const request = {

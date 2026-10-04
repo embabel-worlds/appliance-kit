@@ -1,3 +1,5 @@
+import type { MarkdownLibraries } from '../../studio-kit/markdown.ts'
+import type { MentionableAgent } from './threads/MentionMenu.tsx'
 import type { ReactNode } from 'react'
 import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts'
 import type { AgentSuggestion } from '../../client/agentSuggestions.ts'
@@ -511,5 +513,27 @@ export interface ThreadsSurfaceProps {
   host?: ThreadsHost
   /** A thread to open first, by id. */
   initialThread?: string
+  /**
+   * `marked` and `DOMPurify`, for the agent prose in a thread. REQUIRED, and required because it
+   * was once optional by omission: a thread rendered its messages as raw text while chat rendered
+   * the same words as markdown. A surface that shows what a model wrote has to say how.
+   */
+  markdown: MarkdownLibraries
+  /**
+   * Who can be offered when someone types `@`. The HOST maps its own agent records to this: the
+   * kit holds no opinion about when an agent may be talked to, and listing one with a `hint` does
+   * not stop it being mentioned — the appliance answers in the thread saying why it would not take
+   * part, and that rule lives there, once.
+   *
+   * Omitted or empty: no menu, and typing `@` behaves as it always did.
+   */
+  agents?: readonly MentionableAgent[]
+  /**
+   * `full` (the default) brings the thread LIST and the pane. `pane` brings the pane alone, for a
+   * host that already has one list of conversations and does not want a second one beside it —
+   * which is how chat absorbs threads instead of competing with them. `pane` needs
+   * [ThreadsSurfaceProps.initialThread]: with no list there is nothing to choose from.
+   */
+  chrome?: 'full' | 'pane'
 }
 

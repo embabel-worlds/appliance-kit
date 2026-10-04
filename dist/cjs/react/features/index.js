@@ -14,7 +14,7 @@ var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ThreadsSurface = exports.RequestStatusPill = exports.ApprovalsSurface = exports.unavailableBecause = exports.canTalkNow = exports.presentationOf = exports.firingOf = exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
+exports.matching = exports.applyMention = exports.activeMention = exports.MentionMenu = exports.ThreadsSurface = exports.Prose = exports.RequestStatusPill = exports.ApprovalsSurface = exports.unavailableBecause = exports.canTalkNow = exports.presentationOf = exports.firingOf = exports.StagePill = exports.AgentsSurface = exports.ApiKeysSurface = exports.CodingAgentsSurface = exports.rewoundCounter = exports.SaveView = exports.QueryStudioSurface = exports.stageOf = exports.HandlerStudioSurface = exports.SavedViewsSurface = exports.RealmsSurface = exports.PinRail = exports.AppsSurface = void 0;
 __exportStar(require("./contracts.js"), exports);
 var AppsSurface_tsx_1 = require("./apps/AppsSurface.js");
 Object.defineProperty(exports, "AppsSurface", { enumerable: true, get: function () { return AppsSurface_tsx_1.AppsSurface; } });
@@ -46,6 +46,14 @@ Object.defineProperty(exports, "unavailableBecause", { enumerable: true, get: fu
 var ApprovalsSurface_tsx_1 = require("./approvals/ApprovalsSurface.js");
 Object.defineProperty(exports, "ApprovalsSurface", { enumerable: true, get: function () { return ApprovalsSurface_tsx_1.ApprovalsSurface; } });
 Object.defineProperty(exports, "RequestStatusPill", { enumerable: true, get: function () { return ApprovalsSurface_tsx_1.RequestStatusPill; } });
+var Prose_tsx_1 = require("./prose/Prose.js");
+Object.defineProperty(exports, "Prose", { enumerable: true, get: function () { return Prose_tsx_1.Prose; } });
 var ThreadsSurface_tsx_1 = require("./threads/ThreadsSurface.js");
 Object.defineProperty(exports, "ThreadsSurface", { enumerable: true, get: function () { return ThreadsSurface_tsx_1.ThreadsSurface; } });
+var MentionMenu_tsx_1 = require("./threads/MentionMenu.js");
+Object.defineProperty(exports, "MentionMenu", { enumerable: true, get: function () { return MentionMenu_tsx_1.MentionMenu; } });
+var mentions_ts_1 = require("./threads/mentions.js");
+Object.defineProperty(exports, "activeMention", { enumerable: true, get: function () { return mentions_ts_1.activeMention; } });
+Object.defineProperty(exports, "applyMention", { enumerable: true, get: function () { return mentions_ts_1.applyMention; } });
+Object.defineProperty(exports, "matching", { enumerable: true, get: function () { return mentions_ts_1.matching; } });
 //# sourceMappingURL=index.js.map
