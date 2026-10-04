@@ -6,6 +6,7 @@ import { ThreadsClient } from '../src/client/threads.ts'
 import { AgentSuggestionsClient } from '../src/client/agentSuggestions.ts'
 import { AgentRunsClient } from '../src/client/agentRuns.ts'
 import { AgentReflectionClient } from '../src/client/agentReflection.ts'
+import { AgentAccountsClient } from '../src/client/agentAccounts.ts'
 import { failure, ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -159,5 +160,71 @@ describe('AgentReflectionClient', () => {
       { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/adopt', body: {} },
       { method: 'POST', path: '/api/v1/agents/chaser/proposals/pr%201/dismiss', body: {} },
     ])
+  })
+})
+
+describe('AgentAccountsClient', () => {
+  it('keeps secrets by name under the agent and retires it with a reason', async () => {
+    const transport = new RecordingTransport(ok({ agent: 'chaser', secrets: [] }))
+    const accounts = new AgentAccountsClient(transport)
+    await accounts.list('chaser')
+    await accounts.set('chaser', 'ODOO KEY', 'shh')
+    await accounts.remove('chaser', 'ODOO KEY')
+    await accounts.retire('chaser', 'replaced')
+    assert.deepEqual(transport.sent, [
+      { method: 'GET', path: '/api/v1/agents/chaser/accounts' },
+      { method: 'PUT', path: '/api/v1/agents/chaser/accounts/ODOO%20KEY', body: { value: 'shh' } },
+      { method: 'DELETE', path: '/api/v1/agents/chaser/accounts/ODOO%20KEY' },
+      { method: 'POST', path: '/api/v1/agents/chaser/retire', body: { reason: 'replaced' } },
+    ])
+  })
+})
+
+describe('limitsOf', () => {
+  it('says only what is declared, in a sponsor\'s words', async () => {
+    const { limitsOf } = await import('../src/react/features/agents/limits.ts')
+    const base = { name: 'chaser', needs: [] } as unknown as import('../src/client/agents.ts').Agent
+    assert.deepEqual(limitsOf(base), [])
+    assert.deepEqual(limitsOf({
+      ...base,
+      budget: { spendPerRunCents: 50, spendPerDayCents: 500, sourceShares: { odoo: 25, '*': 50 } },
+      qos: { priority: 'background', fallbacks: { vc_relevance: 'claude-sonnet-4-6' } },
+    }), ['$0.50 a run', '$5 a day', '25% of odoo', '50% of any other source', 'background priority', 'vc_relevance falls back to claude-sonnet-4-6'])
+  })
+})
+
+/*
+ * Conversational is read off the agent, never sent: a persona and nothing it does on its own. A
+ * persona alone does not make one — an agent that also holds a routine or a duty is a worker, and
+ * keeps the worker's card, because then the ladder and what fires are what its sponsor needs.
+ */
+describe('presentationOf', () => {
+  const routine = { name: 'nightly', description: '', trigger: 'every day', stage: 'on', firing: 'on', missing: false } as const
+  const duty = { name: 'ar', text: 'nothing overdue', holds: 'Invoice', every: null, timezone: null, stage: 'on', status: 'upheld' } as const
+  const talker = {
+    name: 'concierge', job: 'answers questions about the business', routing: 'opening hours, prices', persona: 'warm-host',
+    sponsor: 'priya', owners: [], operators: [], state: 'active', stage: 'on', version: 2, signedBy: 'priya', signedAt: null,
+    unsignedChanges: [], origin: 'world', routines: [], duties: [], needs: [],
+  } as import('../src/client/agents.ts').Agent
+
+  it('calls an agent with a persona and no routines or duties conversational', async () => {
+    const { presentationOf } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(presentationOf(talker), 'conversational')
+  })
+
+  it('keeps anything that works unattended a worker, persona or not', async () => {
+    const { presentationOf } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(presentationOf({ ...talker, routines: [routine] }), 'worker')
+    assert.equal(presentationOf({ ...talker, duties: [duty] }), 'worker')
+    assert.equal(presentationOf({ ...talker, persona: null }), 'worker')
+    assert.equal(presentationOf({ ...talker, persona: '' }), 'worker')
+  })
+
+  it('can be talked to when signed, sponsored, active and not off, and says which it is missing', async () => {
+    const { canTalkNow, unavailableBecause } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(canTalkNow(talker), true)
+    assert.equal(canTalkNow({ ...talker, stage: 'observing' }), true)
+    assert.deepEqual(unavailableBecause({ ...talker, version: 0, sponsor: null, state: 'suspended', stage: 'off' }),
+      ['never signed', 'nobody sponsors it', 'it is suspended', 'it is set unavailable'])
   })
 })

@@ -79,6 +79,8 @@ export { ThreadsClient } from './threads.ts'
 export { AgentSuggestionsClient } from './agentSuggestions.ts'
 export { AgentRunsClient } from './agentRuns.ts'
 export { AgentReflectionClient } from './agentReflection.ts'
+export { AgentAccountsClient } from './agentAccounts.ts'
+export type { AgentSlots, Retired } from './agentAccounts.ts'
 export type { AgentProposal, ProposalChange } from './agentReflection.ts'
 export type { AgentRun, Firing, Receipt, ReceiptVerification, RunDetail, RunKind, RunOutcome, Upcoming } from './agentRuns.ts'
 export type { AgentSuggestion, SuggestionEvidence, SuggestionKind, SuggestionStatus } from './agentSuggestions.ts'
@@ -110,6 +112,7 @@ import { ThreadsClient as ThreadsClientImpl } from './threads.ts'
 import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from './agentSuggestions.ts'
 import { AgentRunsClient as AgentRunsClientImpl } from './agentRuns.ts'
 import { AgentReflectionClient as AgentReflectionClientImpl } from './agentReflection.ts'
+import { AgentAccountsClient as AgentAccountsClientImpl } from './agentAccounts.ts'
 import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
@@ -132,6 +135,7 @@ export class ApplianceClient {
   readonly agentSuggestions: AgentSuggestionsClientImpl
   readonly agentRuns: AgentRunsClientImpl
   readonly agentReflection: AgentReflectionClientImpl
+  readonly agentAccounts: AgentAccountsClientImpl
   readonly cron: CronClientImpl
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
@@ -146,6 +150,7 @@ export class ApplianceClient {
     this.agentSuggestions = new AgentSuggestionsClientImpl(transport)
     this.agentRuns = new AgentRunsClientImpl(transport)
     this.agentReflection = new AgentReflectionClientImpl(transport)
+    this.agentAccounts = new AgentAccountsClientImpl(transport)
     this.cron = new CronClientImpl(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)

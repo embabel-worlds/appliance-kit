@@ -18,13 +18,19 @@ export interface AgentRequest {
   ownerId: string
   /** The routine that asked, and the run it asked from. */
   routine: string
+  /** The agent whose work that was: who is asking, as an approver reads it. Absent on older appliances. */
+  agent?: string | null
   runId: string | null
   /** The gateway verb approving it calls, e.g. `odoo_partnerMessagePost`. */
   verb: string
   /** The verb's input, as JSON text. */
   args: string
-  /** Why — what an approver reads first. */
+  /** What would happen and why, in the business's words — what an approver reads first. */
   detail: string
+  /** The text it would write where people read it (a note, a message), as it would land. */
+  quote?: string | null
+  /** Whom it is about, by name — the customer a note goes on — when the call said. */
+  about?: string | null
   /** The rows the routine saw when it asked. */
   evidence: Record<string, unknown>[]
   status: RequestStatus

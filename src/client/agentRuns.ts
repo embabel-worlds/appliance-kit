@@ -32,6 +32,11 @@ export interface AgentRun {
   violations: number | null
   repairs: number | null
   chain: string[]
+  /** `agent:<name>@<world>`: the agent as a principal, apart from whose account it used. */
+  principal: string | null
+  /** What its model calls cost, in US cents, and on which models. */
+  spendCents?: number
+  spendByModel?: Record<string, number>
 }
 
 /** One decision made on a run's behalf, chained to the one before it. */

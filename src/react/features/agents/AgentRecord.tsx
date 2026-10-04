@@ -6,6 +6,10 @@
  * the record: each with how it ended, and opened, every decision the Gatekeeper made on its behalf
  * as a receipt, with the business records it named. "Show me what Steward did last week, and what it
  * will do tomorrow" is these two sections, one above the other.
+ *
+ * QUIET, for an agent that only talks: it has no schedule and its conversations are not runs, so
+ * "Nothing scheduled" and "No runs yet" would be true every time and say nothing. Quiet, a section
+ * draws only once it has something to show, and a load that fails still says so.
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
@@ -23,7 +27,7 @@ const OUTCOME_WORDS: Record<RunOutcome, string> = {
   RUNNING: 'running', DONE: 'done', FAILED: 'failed', TIMED_OUT: 'timed out', SKIPPED: 'skipped',
 }
 
-export function UpcomingSection({ name, services }: { name: string; services: AgentsServices }) {
+export function UpcomingSection({ name, services, quiet = false }: { name: string; services: AgentsServices; quiet?: boolean }) {
   const [upcoming, setUpcoming] = useState<Upcoming | null>(null)
   const [problem, setProblem] = useState('')
   const [busy, setBusy] = useState<string | null>(null)
@@ -59,6 +63,7 @@ export function UpcomingSection({ name, services }: { name: string; services: Ag
   }
 
   if (!services.upcoming) return null
+  if (quiet && !problem && !(upcoming && somethingUpcoming(upcoming))) return null
   return (
     <div className="agent-upcoming">
       <h3 className="caption">Upcoming</h3>
@@ -106,7 +111,13 @@ export function UpcomingSection({ name, services }: { name: string; services: Ag
   )
 }
 
-export function RunsSection({ name, services }: { name: string; services: AgentsServices }) {
+/* Anything at all on the Upcoming record, counts included: a quiet card never hides real activity. */
+function somethingUpcoming(u: Upcoming): boolean {
+  return u.firings.length > 0 || u.onSignals.length > 0 || u.expected.length > 0 || u.inFlight.length > 0
+    || u.counts.runsLastHour > 0 || u.counts.writesToday > 0 || u.counts.requestsToday > 0
+}
+
+export function RunsSection({ name, services, quiet = false }: { name: string; services: AgentsServices; quiet?: boolean }) {
   const [runs, setRuns] = useState<AgentRun[] | null>(null)
   const [problem, setProblem] = useState('')
   const [open, setOpen] = useState<Record<string, Receipt[]>>({})
@@ -133,6 +144,7 @@ export function RunsSection({ name, services }: { name: string; services: Agents
   }
 
   if (!services.listRuns) return null
+  if (quiet && !problem && !(runs && runs.length > 0)) return null
   return (
     <div className="agent-runs">
       <div className="row">
@@ -153,6 +165,7 @@ export function RunsSection({ name, services }: { name: string; services: Agents
                   <span className="hint">{when(r.startedAt)}</span>
                   {r.violations != null && <span className="hint">{r.violations} found, {r.repairs ?? 0} repaired</span>}
                   {r.requests.length > 0 && <span className="hint">{r.requests.length} request{r.requests.length === 1 ? '' : 's'}</span>}
+                  {!!r.spendCents && <span className="hint" title={spendTitle(r)}>{cents(r.spendCents)}</span>}
                 </summary>
                 {r.error && <p className="hint">{r.error}</p>}
                 {r.output && <pre className="run-output">{r.output}</pre>}
@@ -164,6 +177,15 @@ export function RunsSection({ name, services }: { name: string; services: Agents
       )}
     </div>
   )
+}
+
+/** Spend is recorded to the hundredth of a cent, because a single cheap call costs less than one. */
+function cents(c: number): string {
+  return c >= 100 ? `$${(c / 100).toFixed(2)}` : `${c < 1 ? c.toFixed(2) : c.toFixed(1)}¢`
+}
+
+function spendTitle(r: AgentRun): string {
+  return Object.entries(r.spendByModel ?? {}).map(([model, c]) => `${model}: ${cents(c)}`).join('\n')
 }
 
 function Receipts({ receipts }: { receipts: Receipt[] }) {

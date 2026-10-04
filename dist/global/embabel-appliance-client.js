@@ -21,6 +21,7 @@ var EmbabelApplianceClient = (() => {
   // src/client/index.ts
   var index_exports = {};
   __export(index_exports, {
+    AgentAccountsClient: () => AgentAccountsClient,
     AgentReflectionClient: () => AgentReflectionClient,
     AgentRunsClient: () => AgentRunsClient,
     AgentSuggestionsClient: () => AgentSuggestionsClient,
@@ -961,6 +962,30 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/agentAccounts.ts
+  var AGENTS4 = "/api/v1/agents";
+  var AgentAccountsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    list(name) {
+      return this.transport.send({ method: "GET", path: `${AGENTS4}/${encodeURIComponent(name)}/accounts` });
+    }
+    set(name, secret, value) {
+      return this.transport.send({
+        method: "PUT",
+        path: `${AGENTS4}/${encodeURIComponent(name)}/accounts/${encodeURIComponent(secret)}`,
+        body: { value }
+      });
+    }
+    remove(name, secret) {
+      return this.transport.send({ method: "DELETE", path: `${AGENTS4}/${encodeURIComponent(name)}/accounts/${encodeURIComponent(secret)}` });
+    }
+    retire(name, reason) {
+      return this.transport.send({ method: "POST", path: `${AGENTS4}/${encodeURIComponent(name)}/retire`, body: { reason } });
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -1084,6 +1109,7 @@ var EmbabelApplianceClient = (() => {
       this.agentSuggestions = new AgentSuggestionsClient(transport);
       this.agentRuns = new AgentRunsClient(transport);
       this.agentReflection = new AgentReflectionClient(transport);
+      this.agentAccounts = new AgentAccountsClient(transport);
       this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
@@ -1097,6 +1123,7 @@ var EmbabelApplianceClient = (() => {
     agentSuggestions;
     agentRuns;
     agentReflection;
+    agentAccounts;
     cron;
     handlers;
     documents;

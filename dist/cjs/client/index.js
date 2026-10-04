@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -48,6 +48,8 @@ var agentRuns_ts_1 = require("./agentRuns.js");
 Object.defineProperty(exports, "AgentRunsClient", { enumerable: true, get: function () { return agentRuns_ts_1.AgentRunsClient; } });
 var agentReflection_ts_1 = require("./agentReflection.js");
 Object.defineProperty(exports, "AgentReflectionClient", { enumerable: true, get: function () { return agentReflection_ts_1.AgentReflectionClient; } });
+var agentAccounts_ts_1 = require("./agentAccounts.js");
+Object.defineProperty(exports, "AgentAccountsClient", { enumerable: true, get: function () { return agentAccounts_ts_1.AgentAccountsClient; } });
 var handlers_ts_1 = require("./handlers.js");
 Object.defineProperty(exports, "HandlersClient", { enumerable: true, get: function () { return handlers_ts_1.HandlersClient; } });
 const agents_ts_2 = require("./agents.js");
@@ -56,6 +58,7 @@ const threads_ts_2 = require("./threads.js");
 const agentSuggestions_ts_2 = require("./agentSuggestions.js");
 const agentRuns_ts_2 = require("./agentRuns.js");
 const agentReflection_ts_2 = require("./agentReflection.js");
+const agentAccounts_ts_2 = require("./agentAccounts.js");
 const cron_ts_2 = require("./cron.js");
 const documents_ts_2 = require("./documents.js");
 const handlers_ts_2 = require("./handlers.js");
@@ -73,6 +76,7 @@ class ApplianceClient {
     agentSuggestions;
     agentRuns;
     agentReflection;
+    agentAccounts;
     cron;
     handlers;
     documents;
@@ -87,6 +91,7 @@ class ApplianceClient {
         this.agentSuggestions = new agentSuggestions_ts_2.AgentSuggestionsClient(transport);
         this.agentRuns = new agentRuns_ts_2.AgentRunsClient(transport);
         this.agentReflection = new agentReflection_ts_2.AgentReflectionClient(transport);
+        this.agentAccounts = new agentAccounts_ts_2.AgentAccountsClient(transport);
         this.cron = new cron_ts_2.CronClient(transport);
         this.handlers = new handlers_ts_2.HandlersClient(transport);
         this.documents = new documents_ts_2.DocumentsClient(transport, options.documents);

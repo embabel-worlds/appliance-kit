@@ -15,6 +15,12 @@
  *
  * An agent runs as SIGNED. Edits, a realm update or a changed view appear as unsigned changes and
  * reach nothing until the sponsor signs, so the version panel is where an edit takes effect.
+ *
+ * An agent that only talks — a persona, no routines, no duties — gets a simpler card (see
+ * `presentation.ts`): who it is, what to ask it, and whether it can be talked to now. Its stage is the
+ * same control sending the same stages, worded as available or not, since "observing" means nothing
+ * for something that never writes on its own. What is always empty for it is left off, unless it
+ * is not empty; what its sponsor acts on — signing, the stage, the kill switch — stays.
  */
 
 import React, { useCallback, useEffect, useState } from 'react'
@@ -24,6 +30,9 @@ import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 import { SuggestedColleagues } from './SuggestedColleagues.tsx'
 import { RunsSection, UpcomingSection } from './AgentRecord.tsx'
 import { ReflectionSection } from './ReflectionSection.tsx'
+import { AccountsSection } from './AccountsSection.tsx'
+import { limitsOf } from './limits.ts'
+import { presentationOf, unavailableBecause } from './presentation.ts'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -38,6 +47,16 @@ const STAGE_WORDS: Record<AgentStage, string> = {
 }
 
 const TONE: Record<AgentStage, string> = { off: '', observing: 'caution', on: 'ok' }
+
+/*
+ * The conversational ladder: two of the same three stages. Available sends `on` rather than
+ * `observing` because a colleague that only answers has nothing to hold back; an agent left at
+ * `observing` from before reads as available, since talking asks only that it is not off.
+ */
+const AVAILABILITY: { stage: AgentStage; label: string }[] = [
+  { stage: 'off', label: 'Unavailable' },
+  { stage: 'on', label: 'Available' },
+]
 
 /** A date a person reads at a glance; the exact moment stays on the title. */
 function when(iso: string | null): string {
@@ -68,6 +87,22 @@ function checkWords(check: DutyCheck): string {
   const would = check.wouldHaveCalled.length > 0 ? `; would have called ${check.wouldHaveCalled.join(', ')}` : ''
   const failed = check.repairFailures > 0 ? `; ${check.repairFailures} repair${check.repairFailures === 1 ? '' : 's'} failed` : ''
   return `${found}${would}${failed}.`
+}
+
+/** Whether a conversational agent can be talked to now, in the pill's shape so a roster reads as one. */
+function AvailabilityPill({ agent }: { agent: Agent }) {
+  const available = unavailableBecause(agent).length === 0
+  return (
+    <span className={`pill${available ? ' ok' : ''}`}>
+      <span className="dot" aria-hidden="true" />
+      {available ? 'available' : 'unavailable'}
+    </span>
+  )
+}
+
+/** What a roster row or a card says the agent is doing: whether it can be talked to, or what fires. */
+function StateOf({ agent }: { agent: Agent }) {
+  return presentationOf(agent) === 'conversational' ? <AvailabilityPill agent={agent} /> : <StagePill stage={firingOf(agent)} />
 }
 
 /** The highest stage any routine actually fires at: what the agent is doing, in one pill. */
@@ -221,7 +256,7 @@ export function AgentsSurface({ services, host, initialAgent }: AgentsSurfacePro
                     <span className="agentrow-name">{a.name}</span>
                     <span className="agentrow-job">{a.job}</span>
                     <span className="agentrow-meta">
-                      <StagePill stage={firingOf(a)} />
+                      <StateOf agent={a} />
                       {a.origin === 'migrated' && <span className="agentrow-tag">gathered from existing routines</span>}
                       {a.origin !== 'world' && a.origin !== 'migrated' && <span className="agentrow-tag">from {a.origin}</span>}
                       {a.needs.length > 0 && <span className="agentrow-needs">needs {a.needs.length === 1 ? 'one thing' : `${a.needs.length} things`}</span>}
@@ -320,18 +355,23 @@ function AgentDetail({
 
   const declared = agent.origin !== 'migrated'
   const signable = declared && (agent.version === 0 || agent.unsignedChanges.length > 0)
+  const talks = presentationOf(agent) === 'conversational'
+  const unavailable = unavailableBecause(agent)
+  /* Pressed is what the stage means for talking: anything but off is available. */
+  const pressed = (stage: AgentStage) => (talks ? (stage === 'off') === (agent.stage === 'off') : agent.stage === stage)
 
   return (
-    <StudioPanel title={agent.name} aside={<StagePill stage={firingOf(agent)} />}>
+    <StudioPanel title={agent.name} aside={<StateOf agent={agent} />}>
       <p className="agent-job">{agent.job}</p>
+      {talks && agent.routing && <p className="agent-routing"><span className="caption">Ask it about</span> {agent.routing}</p>}
 
       <div className="row agent-stage">
-        <div className="stageladder" role="group" aria-label={`Stage for ${agent.name}`}>
-          {STAGES.map(({ stage, label }) => (
+        <div className="stageladder" role="group" aria-label={`${talks ? 'Availability' : 'Stage'} for ${agent.name}`}>
+          {(talks ? AVAILABILITY : STAGES).map(({ stage, label }) => (
             <button
               key={stage}
-              className={`stagebtn${agent.stage === stage ? ' is-on' : ''}`}
-              aria-pressed={agent.stage === stage}
+              className={`stagebtn${pressed(stage) ? ' is-on' : ''}`}
+              aria-pressed={pressed(stage)}
               disabled={busy}
               onClick={() => void move(stage)}
             >
@@ -339,19 +379,24 @@ function AgentDetail({
             </button>
           ))}
         </div>
-        <span className="hint">Off never runs. Observing runs and writes nothing. On duty may write.</span>
+        <span className="hint">
+          {talks
+            ? unavailable.length === 0 ? 'People and other agents can talk to it now.' : `Nobody can talk to it yet: ${unavailable.join(', ')}.`
+            : 'Off never runs. Observing runs and writes nothing. On duty may write.'}
+        </span>
       </div>
       {refusal && <Status tone="error">{refusal}</Status>}
 
       {agent.needs.length > 0 && (
         <div className="agent-needs">
-          <span className="caption">Before it can go on duty, it needs</span>
+          <span className="caption">{talks ? 'Before it can be talked to, it needs' : 'Before it can go on duty, it needs'}</span>
           <ul>{agent.needs.map((n) => <li key={n}>{n}</li>)}</ul>
         </div>
       )}
 
       <dl className="agent-facts">
-        {agent.routing && (<><dt>Ask it about</dt><dd>{agent.routing}</dd></>)}
+        {!talks && agent.routing && (<><dt>Ask it about</dt><dd>{agent.routing}</dd></>)}
+        {limitsOf(agent).length > 0 && (<><dt>Limits</dt><dd>{limitsOf(agent).join(' · ')}</dd></>)}
         <dt>Sponsor</dt>
         <dd>{agent.sponsor ?? <span className="hint">nobody yet</span>}</dd>
         {agent.owners.length > 0 && (<><dt>Owners</dt><dd>{agent.owners.join(', ')}</dd></>)}
@@ -361,9 +406,10 @@ function AgentDetail({
         <dd>{agent.state}</dd>
       </dl>
 
-      <h3 className="caption">Routines</h3>
+      {/* A conversational agent has no routines by definition, so "No routines." would only be noise. */}
+      {!talks && <h3 className="caption">Routines</h3>}
       {agent.routines.length === 0 ? (
-        <p className="hint">No routines.</p>
+        talks ? null : <p className="hint">No routines.</p>
       ) : (
         <div className="tablewrap">
           <table className="results-table agent-routines">
@@ -423,7 +469,9 @@ function AgentDetail({
         <div className="agent-version">
           <h3 className="caption">Version</h3>
           {agent.version === 0 ? (
-            <p className="hint">Never signed. It runs nothing until its sponsor signs version 1.</p>
+            <p className="hint">
+              {talks ? 'Never signed. Nobody can talk to it until its sponsor signs version 1.' : 'Never signed. It runs nothing until its sponsor signs version 1.'}
+            </p>
           ) : (
             <p title={agent.signedAt ?? undefined}>
               Running version {agent.version}, signed by {agent.signedBy} {agent.signedAt ? `on ${when(agent.signedAt)}` : ''}.
@@ -432,6 +480,7 @@ function AgentDetail({
           {agent.unsignedChanges.length > 0 && (
             <div className="agent-unsigned">
               <span className="caption">Not yet in effect</span>
+              {talks && <p className="hint">It still talks as the signed version until its sponsor signs these.</p>}
               <ul>{agent.unsignedChanges.map((c) => <li key={c}>{c}</li>)}</ul>
             </div>
           )}
@@ -446,7 +495,8 @@ function AgentDetail({
               <ul className="agent-history">
                 {history.map((v) => (
                   <li key={v.version} title={v.digest}>
-                    Version {v.version} · {v.signedBy} · {when(v.signedAt)} · {v.routines.length} routine{v.routines.length === 1 ? '' : 's'}
+                    Version {v.version} · {v.signedBy} · {when(v.signedAt)}
+                    {talks && v.routines.length === 0 ? '' : ` · ${v.routines.length} routine${v.routines.length === 1 ? '' : 's'}`}
                   </li>
                 ))}
               </ul>
@@ -454,12 +504,17 @@ function AgentDetail({
           )}
         </div>
       )}
-      <UpcomingSection name={agent.name} services={services} />
-      <RunsSection name={agent.name} services={services} />
+      <UpcomingSection name={agent.name} services={services} quiet={talks} />
+      <RunsSection name={agent.name} services={services} quiet={talks} />
       <ReflectionSection
         name={agent.name}
         services={services}
         onAdopted={() => void services.listAgents().then((r) => { if (r.ok) { const a = r.value.find((x) => x.name === agent.name); if (a) onChanged(a) } })}
+      />
+      <AccountsSection
+        agent={agent}
+        services={services}
+        onRetired={() => void services.listAgents().then((r) => { if (r.ok) { const a = r.value.find((x) => x.name === agent.name); if (a) onChanged(a) } })}
       />
     </StudioPanel>
   )
