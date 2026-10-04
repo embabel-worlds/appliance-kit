@@ -90,6 +90,38 @@ afterEach(async () => {
   document.body.replaceChildren()
 })
 
+
+/*
+ * A fake `(:Realm)` catalogue: answers the queries RealmCatalog builds, from rows, applying the
+ * WHERE each one carries as the engine would. `queries` records what was asked, so a test can
+ * check that a person's input travelled as a parameter rather than in the text.
+ */
+function realmCatalogue(realms, { failInstalled } = {}) {
+  const queries = []
+  const row = (r) => ({ installed: false, maturity: '', tags: [], description: '', version: '', latestVersion: '', author: '', provider: '', url: '', source: `https://github.com/embabel-worlds/realm-${r.name}.git`, problems: 0, missingSources: [], ...r })
+  const all = realms.map(row)
+  const searchRealms = async (cypher, options = {}) => {
+    queries.push({ cypher, options })
+    if (failInstalled?.() && /WHERE r\.installed/.test(cypher)) return failInstalled()
+    const args = options.args ?? {}
+    let rows = all
+    if (/WHERE r\.installed|AND r\.installed/.test(cypher)) rows = rows.filter((r) => r.installed)
+    if (/NOT r\.installed/.test(cypher)) rows = rows.filter((r) => !r.installed)
+    if (/r\.maturity <> 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity !== 'experimental')
+    if (/r\.maturity = 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity === 'experimental')
+    if (/\$tag IN r\.tags/.test(cypher)) rows = rows.filter((r) => r.tags.includes(args.tag))
+    if (/\$words/.test(cypher)) rows = rows.filter((r) => String(args.words).toLowerCase().split(' ').every((w) => `${r.name} ${r.description} ${r.tags.join(' ')}`.toLowerCase().includes(w)))
+    if (/count\(r\) AS hidden/.test(cypher)) return ok({ rows: [{ hidden: rows.length }] })
+    if (/UNWIND r\.tags/.test(cypher)) {
+      const counts = new Map()
+      for (const r of rows) for (const t of r.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
+      return ok({ rows: [...counts].map(([tag, realms]) => ({ tag, realms })) })
+    }
+    return ok({ rows })
+  }
+  return { searchRealms, queries }
+}
+
 describe('the public browser feature entry point', () => {
   it('reports editor text to the host and accepts an explicit repeat handoff without replaying edits', async () => {
     const services = {
@@ -315,14 +347,12 @@ describe('the public browser feature entry point', () => {
     let release
     const pending = new Promise((resolve) => { release = resolve })
     const services = {
-      listInstalled: async () => ok([]),
-      listDirectory: async () => ok({ providers: [{ provider: 'embabel', realms: [{ name: 'research', repo: 'github.com/embabel/research' }] }] }),
+      ...realmCatalogue([{ name: 'research' }]),
       refreshDirectory: async () => ok(undefined),
       installRealm: async () => pending,
       listUpdates: async () => ok({ results: [] }),
       updateRealm: async () => ok({ summary: 'current' }),
       updateAll: async () => ok({ results: [] }),
-      searchRealms: async () => ok({ rows: [] }),
       listTours: async () => ok([]),
     }
     const { container } = await render(h(features.RealmsSurface, {
@@ -341,14 +371,12 @@ describe('the public browser feature entry point', () => {
     let updates = 0
     let confirm = false
     const services = {
-      listInstalled: async () => ok([{ name: 'research', version: '1', description: 'Research' }]),
-      listDirectory: async () => ok({ providers: [] }),
+      ...realmCatalogue([{ name: 'research', version: '1', description: 'Research', installed: true }]),
       refreshDirectory: async () => ok(undefined),
       installRealm: async () => ok({ installed: true }),
       listUpdates: async () => ok({ results: [{ name: 'research', behind: true }] }),
       updateRealm: async () => ok({ summary: 'current' }),
       updateAll: async () => { updates += 1; return ok({ results: [] }) },
-      searchRealms: async () => ok({ rows: [] }),
       listTours: async () => ok([]),
     }
     const { container } = await render(h(features.RealmsSurface, {
@@ -2020,8 +2048,8 @@ describe('the public browser feature entry point', () => {
   it('offers realm-list recovery and excludes stale update targets after recovery', async () => {
     let listed = false
     const services = {
-      listInstalled: async () => listed ? ok([]) : { ok: false, kind: 'unauthorized', status: 403, message: 'Forbidden' },
-      listDirectory: async () => ok({ providers: [] }), listUpdates: async () => ok({ results: [{ name: 'removed', behind: true }] }),
+      ...realmCatalogue([], { failInstalled: () => listed ? null : { ok: false, kind: 'unauthorized', status: 403, message: 'Forbidden' } }),
+      listUpdates: async () => ok({ results: [{ name: 'removed', behind: true }] }),
       listTours: async () => ok([]),
     }
     const { container } = await render(h(features.RealmsSurface, { services, host: {} }))
@@ -2034,10 +2062,11 @@ describe('the public browser feature entry point', () => {
   })
 
   it('does not suggest retrying a smart search that returned a background handle', async () => {
+    const catalogue = realmCatalogue([{ name: 'grants', url: 'https://example.org/grants' }])
     const services = {
-      listInstalled: async () => ok([]), listDirectory: async () => ok({ providers: [{ provider: 'World', realms: [{ name: 'grants', url: 'https://example.org/grants' }] }] }),
       listUpdates: async () => ok({ results: [] }), listTours: async () => ok([]),
-      searchRealms: async () => ok({ runId: 'still-running' }),
+      // Every query answers; the one that asks a model to judge parks in the background.
+      searchRealms: async (cypher, options) => /ai\.relevant/.test(cypher) ? ok({ runId: 'still-running' }) : catalogue.searchRealms(cypher, options),
     }
     const { container } = await render(h(features.RealmsSurface, { services, host: {} }))
     await act(async () => setInput(container.querySelector('input[type="search"]'), 'grants'))
@@ -2391,3 +2420,89 @@ describe('an approval request', () => {
   })
 
 })
+
+describe('realm lists are queries over (:Realm)', () => {
+  const realms = [
+    { name: 'odoo', tags: ['crm', 'erp'], description: 'Odoo CRM' },
+    { name: 'lago', tags: ['billing'], maturity: 'experimental', description: 'Lago billing' },
+    { name: 'chatwoot', tags: ['crm', 'support'], maturity: 'experimental', description: 'Chatwoot desk' },
+    { name: 'bible', tags: ['scripture'], installed: true, maturity: 'experimental', version: '0.3.0' },
+  ]
+  const services = (catalogue, extra = {}) => ({
+    ...catalogue, refreshDirectory: async () => ok(undefined), installRealm: async () => ok({ installed: true }),
+    listUpdates: async () => ok({ results: [] }), updateRealm: async () => ok({}), updateAll: async () => ok({ results: [] }),
+    listTours: async () => ok([]), ...extra,
+  })
+  const offeredNames = (container) => [...container.querySelectorAll('.suggested-row strong')].map((n) => n.textContent)
+
+  it('leaves experimental realms out of what is on offer, says how many, and shows them when asked', async () => {
+    const { container } = await render(h(features.RealmsSurface, { services: services(realmCatalogue(realms)), host: {} }))
+    assert.deepEqual(offeredNames(container), ['odoo'])
+    const show = button(container, 'Show 2 experimental')
+    assert.ok(show, 'the count of what was left out is the way in')
+    await act(async () => show.click())
+    await flush()
+    assert.deepEqual(offeredNames(container).sort(), ['chatwoot', 'lago', 'odoo'])
+    assert.ok(container.querySelector('.suggested-row .realm-maturity'), 'and each says it is experimental')
+  })
+
+  it('an installed experimental realm is listed, and says so', async () => {
+    const { container } = await render(h(features.RealmsSurface, { services: services(realmCatalogue(realms)), host: {} }))
+    assert.match(container.querySelector('.realm-list').textContent, /bible.*experimental/)
+  })
+
+  it('a tag chip narrows the query, and the person\'s choice travels as a parameter', async () => {
+    const catalogue = realmCatalogue(realms)
+    const { container } = await render(h(features.RealmsSurface, { services: services(catalogue), host: {} }))
+    await act(async () => button(container, 'crm').click())
+    await flush()
+    assert.deepEqual(offeredNames(container), ['odoo'])
+    const asked = catalogue.queries.at(-3) ?? catalogue.queries.find((q) => q.options.args?.tag)
+    const withTag = catalogue.queries.filter((q) => q.options.args?.tag === 'crm')
+    assert.ok(withTag.length > 0, 'the tag went as an argument')
+    assert.ok(withTag.every((q) => !q.cypher.includes("'crm'")), 'and never into the query text')
+    assert.ok(asked)
+  })
+
+  it('installing an experimental realm asks first, and a yes retries carrying it', async () => {
+    const calls = []
+    const installRealm = async (repo, confirmed) => {
+      calls.push(confirmed)
+      return confirmed ? ok({ installed: true }) : { ok: false, kind: 'refused', status: 409, message: 'lago is experimental: it may change.', body: { status: 'needs-confirmation' } }
+    }
+    const asked = []
+    const { container } = await render(h(features.RealmsSurface, {
+      services: services(realmCatalogue(realms), { installRealm }),
+      host: { confirmInstall: async (warning) => { asked.push(warning); return true } },
+    }))
+    await act(async () => button(container, 'Show 2 experimental').click())
+    await flush()
+    const lago = [...container.querySelectorAll('.suggested-row')].find((r) => r.textContent.includes('lago'))
+    await act(async () => lago.querySelector('.suggested-install').click())
+    await flush()
+    assert.deepEqual(asked, ['lago is experimental: it may change.'])
+    assert.deepEqual(calls, [false, true])
+    assert.match(container.textContent, /Installed lago/)
+  })
+})
+
+describe('the realm catalogue queries', () => {
+  it('splices nothing a person typed into the text', async () => {
+    const { realmsQuery } = await import('../src/client/realmCatalog.ts')
+    const q = realmsQuery({ show: 'available', tag: "x' OR 1=1 //", words: "o'brien", meaning: 'money owed' })
+    assert.doesNotMatch(q.cypher, /OR 1=1|o'brien|money owed/)
+    assert.deepEqual(q.options.args, { tag: "x' OR 1=1 //", words: "o'brien", meaning: 'money owed' })
+    assert.match(q.cypher, /NOT r\.installed/)
+    assert.match(q.cypher, /r\.maturity <> 'experimental'/)
+  })
+
+  it('counts a facet with every other facet applied', async () => {
+    const { tagsQuery, experimentalQuery } = await import('../src/client/realmCatalog.ts')
+    assert.doesNotMatch(tagsQuery({ tag: 'crm' }).cypher, /\$tag/)
+    const hidden = experimentalQuery({ show: 'available', tag: 'crm' })
+    assert.match(hidden.cypher, /r\.maturity = 'experimental'/)
+    assert.doesNotMatch(hidden.cypher, /<> 'experimental'/)
+    assert.match(hidden.cypher, /\$tag IN r\.tags/)
+  })
+})
+

@@ -47,14 +47,14 @@ test('every kit failure caller supplies an infinitive action, including hook and
       if (ts.isConditionalExpression(node)) { checkArgument(node.whenTrue); checkArgument(node.whenFalse); return }
       if (ts.isIdentifier(node) && node.text === 'action') {
         const loads = calls.filter(c => c.expression.text === 'useLoadable')
-        assert.equal(loads.length, 2)
+        assert.equal(loads.length, 1)
         loads.forEach(c => checkArgument(c.arguments[1])); return
       }
       check(ts.isTemplateExpression(node) ? node.head.text : node.text)
     }
     for (const call of calls.filter(c => c.expression.text === 'failureMessage')) { count++; checkArgument(call.arguments[1]) }
   }
-  assert.equal(count, 64)
+  assert.equal(count, 65)
   assert.throws(() => check('saved views'))
   assert.throws(() => check('listing documents'))
 })

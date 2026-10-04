@@ -36,6 +36,7 @@ var EmbabelApplianceClient = (() => {
     HintsClient: () => HintsClient,
     HttpTransport: () => HttpTransport,
     KgClient: () => KgClient,
+    RealmCatalog: () => RealmCatalog,
     RequestsClient: () => RequestsClient,
     ThreadsClient: () => ThreadsClient,
     ToursClient: () => ToursClient,
@@ -43,11 +44,16 @@ var EmbabelApplianceClient = (() => {
     classifySource: () => classifySource,
     createSseParser: () => createSseParser,
     expect: () => expect,
+    experimentalQuery: () => experimentalQuery,
     followIngest: () => followIngest,
     isBackgroundHandle: () => isBackgroundHandle,
     isOk: () => isOk,
     newOperationId: () => newOperationId,
-    ok: () => ok
+    ok: () => ok,
+    ranInBackground: () => ranInBackground,
+    realmsQuery: () => realmsQuery,
+    tagsQuery: () => tagsQuery,
+    toRealm: () => toRealm
   });
 
   // src/client/outcome.ts
@@ -98,9 +104,9 @@ var EmbabelApplianceClient = (() => {
       this.defaultTimeoutMs = config.timeoutMs ?? 3e4;
     }
     url(spec) {
-      const query = spec.query ?? {};
+      const query2 = spec.query ?? {};
       const params = new URLSearchParams();
-      for (const [key, value] of Object.entries(query)) {
+      for (const [key, value] of Object.entries(query2)) {
         if (value !== void 0) params.append(key, String(value));
       }
       const search = params.toString();
@@ -135,10 +141,10 @@ var EmbabelApplianceClient = (() => {
       } finally {
         clearTimeout(timer);
       }
-      const text = await response.text().catch(() => "");
+      const text2 = await response.text().catch(() => "");
       let body;
       try {
-        body = text.length > 0 ? JSON.parse(text) : void 0;
+        body = text2.length > 0 ? JSON.parse(text2) : void 0;
       } catch {
         body = void 0;
       }
@@ -172,8 +178,8 @@ var EmbabelApplianceClient = (() => {
   function createSseParser() {
     let buffer = "";
     return {
-      push(text) {
-        buffer += text.replace(/\r\n?/g, "\n");
+      push(text2) {
+        buffer += text2.replace(/\r\n?/g, "\n");
         const events = [];
         let cut;
         while ((cut = buffer.indexOf("\n\n")) >= 0) {
@@ -281,9 +287,9 @@ var EmbabelApplianceClient = (() => {
      * the run has not finished, NEVER because the graph is empty.
      */
     execute(cypher, options = {}) {
-      const query = {};
-      if (options.background) query["background"] = true;
-      if (options.waitSeconds !== void 0) query["waitSeconds"] = options.waitSeconds;
+      const query2 = {};
+      if (options.background) query2["background"] = true;
+      if (options.waitSeconds !== void 0) query2["waitSeconds"] = options.waitSeconds;
       const body = { cypher };
       if (options.captureAs !== void 0) body["captureAs"] = options.captureAs;
       if (options.params !== void 0) body["params"] = options.params;
@@ -291,7 +297,7 @@ var EmbabelApplianceClient = (() => {
       return this.transport.send({
         method: "POST",
         path: `${KG}/execute`,
-        query,
+        query: query2,
         body,
         timeoutMs: TIMEOUTS.execute
       });
@@ -631,16 +637,16 @@ var EmbabelApplianceClient = (() => {
      * that as an `undefined` value, and callers show nothing rather than repeating themselves.
      */
     random(exclude = [], surface) {
-      const query = {};
-      if (exclude.length) query.exclude = exclude.join(",");
-      if (surface) query.surface = surface;
-      return this.transport.send({ method: "GET", path: `${HINTS}/random`, query });
+      const query2 = {};
+      if (exclude.length) query2.exclude = exclude.join(",");
+      if (surface) query2.surface = surface;
+      return this.transport.send({ method: "GET", path: `${HINTS}/random`, query: query2 });
     }
     /** The hints in one category (`hint`, `did-you-know`, `fun-fact`). */
     byCategory(category, surface) {
-      const query = { category };
-      if (surface) query.surface = surface;
-      return this.transport.send({ method: "GET", path: `${HINTS}/category`, query });
+      const query2 = { category };
+      if (surface) query2.surface = surface;
+      return this.transport.send({ method: "GET", path: `${HINTS}/category`, query: query2 });
     }
   };
 
@@ -849,8 +855,8 @@ var EmbabelApplianceClient = (() => {
       return this.transport.send({ method: "POST", path: THREADS, body: { title } });
     }
     /** Post in a thread. Every agent the text @mentions answers in it, in the background. */
-    post(id, text, attachments = []) {
-      return this.transport.send({ method: "POST", path: `${THREADS}/${encodeURIComponent(id)}/messages`, body: { text, attachments } });
+    post(id, text2, attachments = []) {
+      return this.transport.send({ method: "POST", path: `${THREADS}/${encodeURIComponent(id)}/messages`, body: { text: text2, attachments } });
     }
   };
 
@@ -983,6 +989,102 @@ var EmbabelApplianceClient = (() => {
     }
     retire(name, reason) {
       return this.transport.send({ method: "POST", path: `${AGENTS4}/${encodeURIComponent(name)}/retire`, body: { reason } });
+    }
+  };
+
+  // src/client/realmCatalog.ts
+  var ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
+  r.latestVersion AS latestVersion, r.author AS author, r.provider AS provider, r.maturity AS maturity,
+  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources`;
+  var HAYSTACK = "toLower(r.name + ' ' + r.description + ' ' + r.author + ' ' + reduce(s = '', t IN r.tags | s + ' ' + t))";
+  var string = (description) => ({ type: "string", default: "", description });
+  function where(filter, except = []) {
+    const clauses = [];
+    const params = {};
+    const args = {};
+    if (filter.show === "installed") clauses.push("r.installed");
+    if (filter.show === "available") clauses.push("NOT r.installed");
+    if (!filter.experimental && !except.includes("experimental")) clauses.push("r.maturity <> 'experimental'");
+    const tag = filter.tag?.trim();
+    if (tag && !except.includes("tag")) {
+      clauses.push("$tag IN r.tags");
+      params["tag"] = string("A tag every listed realm carries");
+      args["tag"] = tag;
+    }
+    const words = filter.words?.trim();
+    if (words) {
+      clauses.push(`all(w IN split(toLower($words), ' ') WHERE w = '' OR ${HAYSTACK} CONTAINS w)`);
+      params["words"] = string("Words every listed realm mentions");
+      args["words"] = words;
+    }
+    const meaning = filter.meaning?.trim();
+    if (meaning) {
+      clauses.push("ai.relevant(r, $meaning)");
+      params["meaning"] = string("What the person is looking for, judged by meaning");
+      args["meaning"] = meaning;
+    }
+    return { clauses, ...Object.keys(params).length ? { params, args } : {} };
+  }
+  function query(head, filter, tail, except, extra = []) {
+    const { clauses, ...options } = where(filter, except);
+    const all = [...clauses, ...extra];
+    return { cypher: `${head}${all.length ? ` WHERE ${all.join(" AND ")}` : ""} ${tail}`, options };
+  }
+  function realmsQuery(filter) {
+    return query("MATCH (r:Realm)", filter, `RETURN ${ROW} ORDER BY installed DESC, name`);
+  }
+  function tagsQuery(filter) {
+    return query("MATCH (r:Realm)", filter, "UNWIND r.tags AS tag RETURN tag, count(*) AS realms ORDER BY realms DESC, tag", ["tag"]);
+  }
+  function experimentalQuery(filter) {
+    return query("MATCH (r:Realm)", filter, "RETURN count(r) AS hidden", ["experimental"], ["r.maturity = 'experimental'"]);
+  }
+  var text = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
+  var texts = (v) => Array.isArray(v) ? v.map(text).filter(Boolean) : [];
+  function toRealm(row) {
+    return {
+      name: text(row["name"]),
+      description: text(row["description"]),
+      installed: row["installed"] === true,
+      version: text(row["version"]),
+      latestVersion: text(row["latestVersion"]),
+      author: text(row["author"]),
+      provider: text(row["provider"]),
+      maturity: text(row["maturity"]).toLowerCase(),
+      tags: texts(row["tags"]),
+      url: text(row["url"]),
+      source: text(row["source"]),
+      problems: Number(row["problems"] ?? 0) || 0,
+      missingSources: texts(row["missingSources"])
+    };
+  }
+  function rowsOf(outcome, what) {
+    if (!outcome.ok) return outcome;
+    const value = outcome.value;
+    if (!("rows" in value)) return failure("failed", `${what} is still running in the background`, void 0, { background: true });
+    if (value.error) return failure("refused", `${what}: ${value.error}`);
+    return ok(value.rows ?? []);
+  }
+  var ranInBackground = (outcome) => !outcome.ok && outcome.body?.background === true;
+  var RealmCatalog = class {
+    constructor(run) {
+      this.run = run;
+    }
+    async realms(filter) {
+      const q = realmsQuery(filter);
+      const rows = rowsOf(await this.run(q.cypher, q.options), "Listing realms");
+      return rows.ok ? ok(rows.value.map(toRealm)) : rows;
+    }
+    async tags(filter) {
+      const q = tagsQuery(filter);
+      const rows = rowsOf(await this.run(q.cypher, q.options), "Counting realm tags");
+      return rows.ok ? ok(rows.value.map((r) => ({ tag: text(r["tag"]), realms: Number(r["realms"] ?? 0) || 0 })).filter((t) => t.tag)) : rows;
+    }
+    async hiddenExperimental(filter) {
+      if (filter.experimental) return ok(0);
+      const q = experimentalQuery(filter);
+      const rows = rowsOf(await this.run(q.cypher, q.options), "Counting experimental realms");
+      return rows.ok ? ok(Number(rows.value[0]?.["hidden"] ?? 0) || 0) : rows;
     }
   };
 

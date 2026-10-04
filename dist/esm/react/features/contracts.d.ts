@@ -7,7 +7,7 @@ import type { AgentRun, RunDetail, Upcoming } from '../../client/agentRuns.ts';
 import type { AgentProposal } from '../../client/agentReflection.ts';
 import type { AgentSlots, Retired } from '../../client/agentAccounts.ts';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
-import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
+import type { ExecuteOptions, KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
 import type { AgentRequest } from '../../client/requests.ts';
 import type { CompiledSchedule } from '../../client/cron.ts';
@@ -118,16 +118,28 @@ export interface RealmServices {
     listInstalled(): Promise<Outcome<InstalledRealm[]>>;
     listDirectory(): Promise<Outcome<RealmDirectory>>;
     refreshDirectory(): Promise<Outcome<void>>;
-    installRealm(repo: string): Promise<Outcome<RealmInstallResult>>;
+    /**
+     * @param confirmed the person's explicit yes to a realm whose author calls it experimental. The
+     * appliance refuses the first attempt with `needs-confirmation` and its own warning; only someone
+     * who has read that may set this. Never pre-set it: a client that always confirms has removed the
+     * gate rather than passed it.
+     */
+    installRealm(repo: string, confirmed?: boolean): Promise<Outcome<RealmInstallResult>>;
     listUpdates(): Promise<Outcome<RealmUpdates>>;
     updateRealm(name: string): Promise<Outcome<RealmUpdateResult>>;
     updateAll(): Promise<Outcome<RealmUpdateAllResult>>;
-    searchRealms(cypher: string): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>;
+    /** Runs a `(:Realm)` catalogue query — see `RealmCatalog`, which builds them. Values travel as declared params. */
+    searchRealms(cypher: string, options?: ExecuteOptions): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>;
     listTours(): Promise<Outcome<TourSummary[]>>;
 }
 export interface RealmsHost {
     openTour(id: string): void;
     confirmUpdateAll(): Promise<boolean>;
+    /**
+     * Asked before installing a realm its author calls experimental, with the appliance's own warning.
+     * Omitted, the browser's confirm() asks.
+     */
+    confirmInstall?(warning: string): Promise<boolean>;
     observability?: ReactNode;
 }
 export interface RealmsSurfaceProps {
