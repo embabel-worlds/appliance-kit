@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react'
 import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../../client/threads.ts'
 import type { AgentSuggestion } from '../../client/agentSuggestions.ts'
+import type { AgentRun, RunDetail, Upcoming } from '../../client/agentRuns.ts'
 import type {
   HandlerGenerated,
   HandlerMutationResult,
@@ -442,6 +443,13 @@ export interface AgentsServices {
   draftSuggestion?(id: string): Promise<Outcome<AgentSuggestion>>
   markAdopted?(id: string): Promise<Outcome<AgentSuggestion>>
   dismissSuggestion?(id: string): Promise<Outcome<AgentSuggestion>>
+  /** The agent's runs, and one run with its receipts (#1781). Omitted, the card shows no record. */
+  listRuns?(name: string): Promise<Outcome<AgentRun[]>>
+  getRun?(name: string, id: string): Promise<Outcome<RunDetail>>
+  /** What it will do next, and a person's say over one firing. Omitted, the card shows no Upcoming. */
+  upcoming?(name: string): Promise<Outcome<Upcoming>>
+  skipFiring?(name: string, job: string, reason: string, until?: string): Promise<Outcome<Upcoming>>
+  runFiringNow?(name: string, job: string): Promise<Outcome<Upcoming>>
 }
 
 export interface AgentsHost {

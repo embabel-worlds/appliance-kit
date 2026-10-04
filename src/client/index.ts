@@ -77,6 +77,8 @@ export { AgentsClient } from './agents.ts'
 export { RequestsClient } from './requests.ts'
 export { ThreadsClient } from './threads.ts'
 export { AgentSuggestionsClient } from './agentSuggestions.ts'
+export { AgentRunsClient } from './agentRuns.ts'
+export type { AgentRun, Firing, Receipt, ReceiptVerification, RunDetail, RunKind, RunOutcome, Upcoming } from './agentRuns.ts'
 export type { AgentSuggestion, SuggestionEvidence, SuggestionKind, SuggestionStatus } from './agentSuggestions.ts'
 export type { Attachment, AttachmentKind, AttachmentRequest, Sender, SenderKind, Thread, ThreadMessage, ThreadView } from './threads.ts'
 export type { AgentRequest, RequestStatus } from './requests.ts'
@@ -104,6 +106,7 @@ import { AgentsClient as AgentsClientImpl } from './agents.ts'
 import { RequestsClient as RequestsClientImpl } from './requests.ts'
 import { ThreadsClient as ThreadsClientImpl } from './threads.ts'
 import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from './agentSuggestions.ts'
+import { AgentRunsClient as AgentRunsClientImpl } from './agentRuns.ts'
 import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
@@ -124,6 +127,7 @@ export class ApplianceClient {
   readonly requests: RequestsClientImpl
   readonly threads: ThreadsClientImpl
   readonly agentSuggestions: AgentSuggestionsClientImpl
+  readonly agentRuns: AgentRunsClientImpl
   readonly cron: CronClientImpl
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
@@ -136,6 +140,7 @@ export class ApplianceClient {
     this.requests = new RequestsClientImpl(transport)
     this.threads = new ThreadsClientImpl(transport)
     this.agentSuggestions = new AgentSuggestionsClientImpl(transport)
+    this.agentRuns = new AgentRunsClientImpl(transport)
     this.cron = new CronClientImpl(transport)
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)

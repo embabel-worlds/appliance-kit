@@ -21,6 +21,7 @@ var EmbabelApplianceClient = (() => {
   // src/client/index.ts
   var index_exports = {};
   __export(index_exports, {
+    AgentRunsClient: () => AgentRunsClient,
     AgentSuggestionsClient: () => AgentSuggestionsClient,
     AgentsClient: () => AgentsClient,
     ApplianceClient: () => ApplianceClient,
@@ -885,6 +886,50 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/agentRuns.ts
+  var AGENTS2 = "/api/v1/agents";
+  var AgentRunsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    runs(name, limit) {
+      return this.transport.send({
+        method: "GET",
+        path: `${AGENTS2}/${encodeURIComponent(name)}/runs`,
+        ...limit ? { query: { limit: String(limit) } } : {}
+      });
+    }
+    run(name, id) {
+      return this.transport.send({ method: "GET", path: `${AGENTS2}/${encodeURIComponent(name)}/runs/${encodeURIComponent(id)}` });
+    }
+    upcoming(name) {
+      return this.transport.send({ method: "GET", path: `${AGENTS2}/${encodeURIComponent(name)}/upcoming` });
+    }
+    /** Skip the next firing of [job], or postpone it to [until]. */
+    skip(name, job, reason, until) {
+      return this.change(name, "skip", until ? { job, reason, until } : { job, reason });
+    }
+    runNow(name, job) {
+      return this.change(name, "run", { job });
+    }
+    verifyReceipts() {
+      return this.transport.send({ method: "GET", path: "/api/v1/receipts/verify" });
+    }
+    async change(name, act, body) {
+      const outcome = await this.transport.send({
+        method: "POST",
+        path: `${AGENTS2}/${encodeURIComponent(name)}/upcoming/${act}`,
+        body
+      });
+      if (!outcome.ok) {
+        const refused = outcome.body?.refused;
+        return refused ? failure("refused", refused, outcome.status, outcome.body) : outcome;
+      }
+      const upcoming = outcome.value.upcoming;
+      return upcoming ? { ok: true, value: upcoming } : failure("refused", outcome.value.refused ?? "Refused", 200, outcome.value);
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -1006,6 +1051,7 @@ var EmbabelApplianceClient = (() => {
       this.requests = new RequestsClient(transport);
       this.threads = new ThreadsClient(transport);
       this.agentSuggestions = new AgentSuggestionsClient(transport);
+      this.agentRuns = new AgentRunsClient(transport);
       this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
@@ -1017,6 +1063,7 @@ var EmbabelApplianceClient = (() => {
     requests;
     threads;
     agentSuggestions;
+    agentRuns;
     cron;
     handlers;
     documents;

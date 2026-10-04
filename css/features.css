@@ -1713,3 +1713,15 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .suggestion-job { margin: 0; }
 :where(.kit-feature) .suggestion-evidence { margin: 0; padding-left: 18px; }
 :where(.kit-feature) .suggestion-query { white-space: pre-wrap; font-family: var(--mono); background: var(--code-bg); padding: 6px; margin: 4px 0; overflow-x: auto; }
+
+/* An agent's record on its card: what it will do next, and what it did, with a receipt per decision. */
+:where(.kit-feature) .agent-upcoming, :where(.kit-feature) .agent-runs { margin-top: 16px; }
+:where(.kit-feature) .upcoming-list, :where(.kit-feature) .run-list, :where(.kit-feature) .receipt-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+:where(.kit-feature) .upcoming-list .row, :where(.kit-feature) .run-list summary { gap: 8px; align-items: baseline; flex-wrap: wrap; }
+:where(.kit-feature) .upcoming-when { font-variant-numeric: tabular-nums; min-width: 12ch; }
+:where(.kit-feature) .run-list summary { cursor: pointer; }
+:where(.kit-feature) .run-outcome { font-family: var(--mono); font-size: 0.85em; }
+:where(.kit-feature) .run-outcome.is-failed, :where(.kit-feature) .run-outcome.is-timed_out { color: var(--alert); }
+:where(.kit-feature) .run-outcome.is-skipped { color: var(--faint); }
+:where(.kit-feature) .run-output { white-space: pre-wrap; font-family: var(--mono); background: var(--code-bg); padding: 6px; margin: 4px 0; max-height: 16em; overflow: auto; }
+:where(.kit-feature) .receipt-list { margin: 4px 0 4px 12px; }

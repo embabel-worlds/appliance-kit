@@ -22,6 +22,7 @@ import type { Agent, AgentDuty, AgentStage, AgentVersion, DutyCheck, Halt } from
 import type { AgentsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 import { SuggestedColleagues } from './SuggestedColleagues.tsx'
+import { RunsSection, UpcomingSection } from './AgentRecord.tsx'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -452,6 +453,8 @@ function AgentDetail({
           )}
         </div>
       )}
+      <UpcomingSection name={agent.name} services={services} />
+      <RunsSection name={agent.name} services={services} />
     </StudioPanel>
   )
 }
