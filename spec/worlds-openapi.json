@@ -234,6 +234,55 @@
         "required" : [ "actions", "description", "goals", "name" ],
         "type" : "object"
       },
+      "AgentProposal" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "changes" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Change"
+            },
+            "type" : "array"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "fromVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "proven" : {
+            "type" : "boolean"
+          },
+          "record" : {
+            "type" : "string"
+          },
+          "refused" : {
+            "type" : "string"
+          },
+          "status" : {
+            "enum" : [ "OPEN", "ADOPTED", "DISMISSED" ],
+            "type" : "string"
+          },
+          "summary" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "agent", "changes", "createdAt", "id", "ownerId", "proven", "record", "status", "summary" ],
+        "type" : "object"
+      },
       "AgentRequest" : {
         "properties" : {
           "args" : {
@@ -299,10 +348,100 @@
         "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "untrusted", "verb" ],
         "type" : "object"
       },
+      "AgentRun" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "agentDigest" : {
+            "type" : "string"
+          },
+          "agentVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "chain" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "endedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "error" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "ROUTINE", "REPAIR", "DUTY_CHECK", "CONVERSATION", "TEST" ],
+            "type" : "string"
+          },
+          "observing" : {
+            "type" : "boolean"
+          },
+          "outcome" : {
+            "enum" : [ "RUNNING", "DONE", "FAILED", "TIMED_OUT", "SKIPPED" ],
+            "type" : "string"
+          },
+          "output" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "repairs" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "requests" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "runAs" : {
+            "type" : "string"
+          },
+          "spendByModel" : {
+            "additionalProperties" : {
+              "format" : "double",
+              "type" : "number"
+            },
+            "type" : "object"
+          },
+          "spendCents" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "trigger" : {
+            "type" : "string"
+          },
+          "violations" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "work" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "chain", "id", "kind", "observing", "outcome", "output", "ownerId", "requests", "runAs", "spendByModel", "spendCents", "startedAt", "trigger", "work" ],
+        "type" : "object"
+      },
       "AgentSpec" : {
         "properties" : {
           "authority" : {
             "$ref" : "#/components/schemas/AuthoritySpec"
+          },
+          "budget" : {
+            "$ref" : "#/components/schemas/BudgetSpec"
           },
           "colleagues" : {
             "$ref" : "#/components/schemas/ColleaguesSpec"
@@ -318,6 +457,12 @@
           },
           "job" : {
             "type" : "string"
+          },
+          "models" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
           },
           "name" : {
             "type" : "string"
@@ -365,7 +510,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "duties", "job", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
+        "required" : [ "duties", "job", "models", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
         "type" : "object"
       },
       "AgentSuggestion" : {
@@ -887,6 +1032,38 @@
         "required" : [ "zone" ],
         "type" : "object"
       },
+      "BudgetSpec" : {
+        "properties" : {
+          "concurrentRuns" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "expiresOn" : {
+            "type" : "string"
+          },
+          "requestsPerRun" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "runsPerHour" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "spendPerDayCents" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "spendPerRunCents" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "writesPerDay" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "BuildSnapshot" : {
         "properties" : {
           "byOutcome" : {
@@ -1012,6 +1189,30 @@
           }
         },
         "required" : [ "verbs" ],
+        "type" : "object"
+      },
+      "Change" : {
+        "properties" : {
+          "duty" : {
+            "$ref" : "#/components/schemas/NewDuty"
+          },
+          "evidence" : {
+            "type" : "string"
+          },
+          "from" : {
+            "type" : "string"
+          },
+          "target" : {
+            "type" : "string"
+          },
+          "to" : {
+            "type" : "string"
+          },
+          "why" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "evidence", "target", "to", "why" ],
         "type" : "object"
       },
       "ChangeRequest" : {
@@ -1576,6 +1777,24 @@
           }
         },
         "required" : [ "converter", "docling", "failuresSinceStart", "recentFailures" ],
+        "type" : "object"
+      },
+      "Counts" : {
+        "properties" : {
+          "requestsToday" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "runsLastHour" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "writesToday" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "requestsToday", "runsLastHour", "writesToday" ],
         "type" : "object"
       },
       "CpuStatus" : {
@@ -2710,6 +2929,23 @@
         "required" : [ "detail", "id", "status", "verb" ],
         "type" : "object"
       },
+      "Expected" : {
+        "properties" : {
+          "duty" : {
+            "type" : "string"
+          },
+          "lastCheckedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "violations" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "duty", "violations" ],
+        "type" : "object"
+      },
       "ExportRequest" : {
         "properties" : {
           "labels" : {
@@ -2810,6 +3046,38 @@
           }
         },
         "required" : [ "createdAt", "liveCallsTotal", "state", "ticks" ],
+        "type" : "object"
+      },
+      "Firing" : {
+        "properties" : {
+          "cron" : {
+            "type" : "string"
+          },
+          "job" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "type" : "string"
+          },
+          "nextAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "postponedTo" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "skipped" : {
+            "type" : "boolean"
+          },
+          "work" : {
+            "type" : "string"
+          },
+          "zone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "cron", "job", "kind", "skipped", "work", "zone" ],
         "type" : "object"
       },
       "GoalListItem" : {
@@ -3304,6 +3572,26 @@
             "type" : "number"
           }
         },
+        "type" : "object"
+      },
+      "InFlight" : {
+        "properties" : {
+          "deadline" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "runId" : {
+            "type" : "string"
+          },
+          "startedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "work" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "deadline", "runId", "startedAt", "work" ],
         "type" : "object"
       },
       "InUseResponse" : {
@@ -5119,6 +5407,24 @@
         "required" : [ "busy", "loaded" ],
         "type" : "object"
       },
+      "NewDuty" : {
+        "properties" : {
+          "every" : {
+            "type" : "string"
+          },
+          "holds" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "holds", "name", "text" ],
+        "type" : "object"
+      },
       "NewRoleRequest" : {
         "properties" : {
           "description" : {
@@ -5582,6 +5888,72 @@
         "required" : [ "build", "dispatch", "jvm" ],
         "type" : "object"
       },
+      "Receipt" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "agentVersion" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "at" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedBy" : {
+            "type" : "string"
+          },
+          "decision" : {
+            "type" : "string"
+          },
+          "entityKeys" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "hash" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "inputHash" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "previousHash" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "requestId" : {
+            "type" : "string"
+          },
+          "rule" : {
+            "type" : "string"
+          },
+          "runId" : {
+            "type" : "string"
+          },
+          "seq" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "verb" : {
+            "type" : "string"
+          },
+          "work" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "at", "decision", "entityKeys", "hash", "id", "inputHash", "ownerId", "previousHash", "reason", "rule", "seq", "verb", "work" ],
+        "type" : "object"
+      },
       "RememberFactRequest" : {
         "properties" : {
           "confidence" : {
@@ -5729,6 +6101,30 @@
           }
         },
         "required" : [ "description", "firing", "missing", "name", "stage", "trigger" ],
+        "type" : "object"
+      },
+      "RunDetail" : {
+        "properties" : {
+          "receipts" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Receipt"
+            },
+            "type" : "array"
+          },
+          "run" : {
+            "$ref" : "#/components/schemas/AgentRun"
+          }
+        },
+        "required" : [ "receipts", "run" ],
+        "type" : "object"
+      },
+      "RunNowRequest" : {
+        "properties" : {
+          "job" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "job" ],
         "type" : "object"
       },
       "RunSavedRequest" : {
@@ -6042,6 +6438,22 @@
           }
         },
         "required" : [ "description", "name" ],
+        "type" : "object"
+      },
+      "SkipRequest" : {
+        "properties" : {
+          "job" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "type" : "string"
+          },
+          "until" : {
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "job", "reason" ],
         "type" : "object"
       },
       "Source" : {
@@ -6672,6 +7084,53 @@
         "required" : [ "field", "name" ],
         "type" : "object"
       },
+      "Upcoming" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "counts" : {
+            "$ref" : "#/components/schemas/Counts"
+          },
+          "expected" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Expected"
+            },
+            "type" : "array"
+          },
+          "firings" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Firing"
+            },
+            "type" : "array"
+          },
+          "inFlight" : {
+            "items" : {
+              "$ref" : "#/components/schemas/InFlight"
+            },
+            "type" : "array"
+          },
+          "onSignals" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "agent", "counts", "expected", "firings", "inFlight", "onSignals" ],
+        "type" : "object"
+      },
+      "UpcomingResponse" : {
+        "properties" : {
+          "refused" : {
+            "type" : "string"
+          },
+          "upcoming" : {
+            "$ref" : "#/components/schemas/Upcoming"
+          }
+        },
+        "type" : "object"
+      },
       "UpdateActionRequest" : {
         "properties" : {
           "description" : {
@@ -6820,6 +7279,26 @@
           }
         },
         "required" : [ "args", "description", "group", "name" ],
+        "type" : "object"
+      },
+      "Verification" : {
+        "properties" : {
+          "brokenAt" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "intact" : {
+            "type" : "boolean"
+          },
+          "receipts" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "why" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "intact", "receipts" ],
         "type" : "object"
       },
       "View" : {
@@ -10647,6 +11126,351 @@
         "tags" : [ "Agents" ]
       }
     },
+    "/api/v1/agents/{name}/proposals" : {
+      "get" : {
+        "operationId" : "listAgentProposals",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentProposal"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Every proposal, open and settled"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentProposal"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "An agent's proposals, newest first",
+        "tags" : [ "Agent reflection" ]
+      }
+    },
+    "/api/v1/agents/{name}/proposals/{id}/adopt" : {
+      "post" : {
+        "description" : "Refused if the result would grant more than the signed version does.",
+        "operationId" : "adoptAgentProposal",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The proposal's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "The proposal, adopted; the agent now shows unsigned changes"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No such proposal of this agent's"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "Refused: already settled, or it would widen what the agent may do"
+          }
+        },
+        "summary" : "Write a proposal into the world as the agent's next version, for its sponsor to sign",
+        "tags" : [ "Agent reflection" ]
+      }
+    },
+    "/api/v1/agents/{name}/proposals/{id}/dismiss" : {
+      "post" : {
+        "operationId" : "dismissAgentProposal",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The proposal's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "The proposal, dismissed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No such proposal of this agent's"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "Refused: already settled"
+          }
+        },
+        "summary" : "Dismiss a proposal",
+        "tags" : [ "Agent reflection" ]
+      }
+    },
+    "/api/v1/agents/{name}/reflect" : {
+      "post" : {
+        "description" : "Reads its runs, requests and duty checks for the last 30 days. Proposals change only wording, cadence and duties, never what it may do.",
+        "operationId" : "reflectAgent",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "The proposal, with the record it read and the evidence for each change"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "No such agent in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "Refused: the world has no workhorse role, or the model did not answer"
+          }
+        },
+        "summary" : "Ask an agent to propose a better version of itself from its own record",
+        "tags" : [ "Agent reflection" ]
+      }
+    },
+    "/api/v1/agents/{name}/runs" : {
+      "get" : {
+        "operationId" : "listAgentRuns",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "How many, at most (default 50, at most 500)",
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentRun"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Its runs: routines, repairs, duty checks and conversations"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentRun"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "An agent's runs, newest first",
+        "tags" : [ "Agent runs" ]
+      }
+    },
+    "/api/v1/agents/{name}/runs/{id}" : {
+      "get" : {
+        "operationId" : "getAgentRun",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The run's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description" : "The run and its receipts"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RunDetail"
+                }
+              }
+            },
+            "description" : "No such run of this agent's in your world"
+          }
+        },
+        "summary" : "One run, with its receipts",
+        "tags" : [ "Agent runs" ]
+      }
+    },
     "/api/v1/agents/{name}/sign" : {
       "post" : {
         "description" : "Only its sponsor or an owner may sign. Refused when nothing has changed since the last signature.",
@@ -10773,6 +11597,161 @@
         },
         "summary" : "Move an agent or one of its routines on the ladder",
         "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/upcoming" : {
+      "get" : {
+        "description" : "Its scheduled duty checks and routines with when each fires, the requests its last checks say to expect, work in flight, and its recent counts.",
+        "operationId" : "getAgentUpcoming",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Upcoming"
+                }
+              }
+            },
+            "description" : "The agent's upcoming work"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Upcoming"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "What an agent will do next",
+        "tags" : [ "Agent runs" ]
+      }
+    },
+    "/api/v1/agents/{name}/upcoming/run" : {
+      "post" : {
+        "operationId" : "runAgentFiringNow",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RunNowRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "The upcoming work; the run appears on the agent's runs"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "Refused: the agent has no such scheduled job"
+          }
+        },
+        "summary" : "Run one of an agent's scheduled jobs now, outside its schedule",
+        "tags" : [ "Agent runs" ]
+      }
+    },
+    "/api/v1/agents/{name}/upcoming/skip" : {
+      "post" : {
+        "operationId" : "skipAgentFiring",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SkipRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "The upcoming work, with the firing marked skipped"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/UpcomingResponse"
+                }
+              }
+            },
+            "description" : "Refused: no such job, nothing to skip, already skipped, or a time already past"
+          }
+        },
+        "summary" : "Skip an agent's next scheduled firing, or postpone it",
+        "tags" : [ "Agent runs" ]
       }
     },
     "/api/v1/agents/{name}/v1/chat/completions" : {
@@ -17609,6 +18588,36 @@
         "tags" : [ "Realms" ]
       }
     },
+    "/api/v1/receipts/verify" : {
+      "get" : {
+        "description" : "Walks the chain: each receipt must follow the one before it and hash to what it says it does.",
+        "operationId" : "verifyReceipts",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Verification"
+                }
+              }
+            },
+            "description" : "How many receipts, whether the chain is intact, and where it first breaks"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Verification"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Check that every receipt still says what it said when it was written",
+        "tags" : [ "Agent runs" ]
+      }
+    },
     "/api/v1/requests" : {
       "get" : {
         "operationId" : "listRequests",
@@ -20406,7 +21415,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39345"
+    "url" : "http://localhost:35387"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -20420,6 +21429,9 @@
   }, {
     "description" : "Protocol for the local sensor app on the user's machine: event ingest and the command outbox",
     "name" : "Sensor"
+  }, {
+    "description" : "An agent proposes a better version of itself, for its sponsor to sign",
+    "name" : "Agent reflection"
   }, {
     "description" : "Channels this world's content declares, and the ones you have joined",
     "name" : "Audience"
@@ -20564,6 +21576,9 @@
   }, {
     "description" : "Captured query scopes: frozen result sets referenced in later queries as (x:`$name`)",
     "name" : "KG Scopes"
+  }, {
+    "description" : "What your agents did, with a receipt for every decision",
+    "name" : "Agent runs"
   }, {
     "description" : "Adopt handlers in your own world",
     "name" : "Handlers"
