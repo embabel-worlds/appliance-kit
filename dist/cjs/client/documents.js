@@ -197,6 +197,8 @@ class DocumentsClient {
         };
         if (request.tag)
             body['tag'] = request.tag;
+        if (request.uri)
+            body['uri'] = request.uri;
         /* ONE `window` OBJECT, which is what the appliance reads. This used to send `dateField`, `from`
            and `to` at the top level; the server's request type has no such fields and ignores unknown
            ones, so every date filter narrowed nothing and nothing said so. The field is sent only with

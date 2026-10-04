@@ -592,6 +592,7 @@ var EmbabelApplianceClient = (() => {
         answer: true
       };
       if (request.tag) body["tag"] = request.tag;
+      if (request.uri) body["uri"] = request.uri;
       if (request.from || request.to) {
         body["window"] = {
           field: request.dateField ?? "modified",
