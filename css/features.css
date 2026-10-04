@@ -1605,6 +1605,10 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .agent-job { color: var(--mid); margin-bottom: 12px; }
 
+:where(.kit-feature) .agent-routing { margin: -4px 0 12px; font-size: 13px; }
+
+:where(.kit-feature) .agent-routing .caption { margin-right: 6px; }
+
 :where(.kit-feature) .agent-stage { align-items: center; gap: 12px; flex-wrap: wrap; }
 
 :where(.kit-feature) .stageladder { display: inline-flex; border: 1px solid var(--rule); border-radius: 99px; overflow: hidden; }

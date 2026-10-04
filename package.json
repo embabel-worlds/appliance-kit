@@ -75,6 +75,7 @@
     "test": "node --experimental-transform-types --test test/*.test.ts test/*.test.mjs",
     "fixture:handlers": "node scripts/fixture.mjs handler-studio",
     "fixture:views": "node scripts/fixture.mjs views",
+    "fixture:agents": "node scripts/fixture.mjs agents",
     "check": "npm run build && npm test"
   },
   "devDependencies": {

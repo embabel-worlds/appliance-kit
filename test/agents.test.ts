@@ -192,3 +192,39 @@ describe('limitsOf', () => {
     }), ['$0.50 a run', '$5 a day', '25% of odoo', '50% of any other source', 'background priority', 'vc_relevance falls back to claude-sonnet-4-6'])
   })
 })
+
+/*
+ * Conversational is read off the agent, never sent: a persona and nothing it does on its own. A
+ * persona alone does not make one — an agent that also holds a routine or a duty is a worker, and
+ * keeps the worker's card, because then the ladder and what fires are what its sponsor needs.
+ */
+describe('presentationOf', () => {
+  const routine = { name: 'nightly', description: '', trigger: 'every day', stage: 'on', firing: 'on', missing: false } as const
+  const duty = { name: 'ar', text: 'nothing overdue', holds: 'Invoice', every: null, timezone: null, stage: 'on', status: 'upheld' } as const
+  const talker = {
+    name: 'concierge', job: 'answers questions about the business', routing: 'opening hours, prices', persona: 'warm-host',
+    sponsor: 'priya', owners: [], operators: [], state: 'active', stage: 'on', version: 2, signedBy: 'priya', signedAt: null,
+    unsignedChanges: [], origin: 'world', routines: [], duties: [], needs: [],
+  } as import('../src/client/agents.ts').Agent
+
+  it('calls an agent with a persona and no routines or duties conversational', async () => {
+    const { presentationOf } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(presentationOf(talker), 'conversational')
+  })
+
+  it('keeps anything that works unattended a worker, persona or not', async () => {
+    const { presentationOf } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(presentationOf({ ...talker, routines: [routine] }), 'worker')
+    assert.equal(presentationOf({ ...talker, duties: [duty] }), 'worker')
+    assert.equal(presentationOf({ ...talker, persona: null }), 'worker')
+    assert.equal(presentationOf({ ...talker, persona: '' }), 'worker')
+  })
+
+  it('can be talked to when signed, sponsored, active and not off, and says which it is missing', async () => {
+    const { canTalkNow, unavailableBecause } = await import('../src/react/features/agents/presentation.ts')
+    assert.equal(canTalkNow(talker), true)
+    assert.equal(canTalkNow({ ...talker, stage: 'observing' }), true)
+    assert.deepEqual(unavailableBecause({ ...talker, version: 0, sponsor: null, state: 'suspended', stage: 'off' }),
+      ['never signed', 'nobody sponsors it', 'it is suspended', 'it is set unavailable'])
+  })
+})
