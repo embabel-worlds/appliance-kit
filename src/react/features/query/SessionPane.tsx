@@ -61,7 +61,7 @@ interface SavedSession {
 const HELP = [
   ['MATCH (c:Chunk)', 'open a set — RETURN c implied, captured as a binding'],
   ['WHERE c.source CONTAINS ‘x’', 'the next clause — narrows the newest set'],
-  ['MATCH (c)<-[:HAS_CHUNK]-(d:Document)', 'continue from a variable you bound'],
+  ['MATCH (c)-[:PART_OF]->(d:Document)', 'continue from a variable you bound'],
   ['RETURN d.title, d.uri', 'project — shown, not captured'],
   ['contracts = MATCH (d:Document) …', 'name a binding · pin contracts keeps it'],
   ['$contracts', 'peek a binding'],
