@@ -299,6 +299,137 @@
         "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "untrusted", "verb" ],
         "type" : "object"
       },
+      "AgentSpec" : {
+        "properties" : {
+          "authority" : {
+            "$ref" : "#/components/schemas/AuthoritySpec"
+          },
+          "colleagues" : {
+            "$ref" : "#/components/schemas/ColleaguesSpec"
+          },
+          "conversation" : {
+            "$ref" : "#/components/schemas/ConversationSpec"
+          },
+          "duties" : {
+            "items" : {
+              "$ref" : "#/components/schemas/DutySpec"
+            },
+            "type" : "array"
+          },
+          "job" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "operators" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "owners" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "persona" : {
+            "type" : "string"
+          },
+          "realm" : {
+            "type" : "string"
+          },
+          "routines" : {
+            "items" : {
+              "$ref" : "#/components/schemas/RoutineRef"
+            },
+            "type" : "array"
+          },
+          "routing" : {
+            "type" : "string"
+          },
+          "sponsor" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "state" : {
+            "enum" : [ "draft", "submitted", "active", "suspended", "retired" ],
+            "type" : "string"
+          },
+          "version" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "duties", "job", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
+        "type" : "object"
+      },
+      "AgentSuggestion" : {
+        "properties" : {
+          "adopt" : {
+            "type" : "string"
+          },
+          "agent" : {
+            "$ref" : "#/components/schemas/AgentSpec"
+          },
+          "createdAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "decidedAt" : {
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "evidence" : {
+            "items" : {
+              "$ref" : "#/components/schemas/Evidence"
+            },
+            "type" : "array"
+          },
+          "feasibility" : {
+            "type" : "string"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "job" : {
+            "type" : "string"
+          },
+          "kind" : {
+            "enum" : [ "WORKS", "TALKS" ],
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "ownerId" : {
+            "type" : "string"
+          },
+          "preview" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "rank" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "enum" : [ "OPEN", "DRAFTED", "ADOPTED", "DISMISSED" ],
+            "type" : "string"
+          },
+          "uncovered" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "createdAt", "evidence", "feasibility", "id", "job", "kind", "name", "ownerId", "preview", "rank", "status" ],
+        "type" : "object"
+      },
       "AgentVersionView" : {
         "properties" : {
           "digest" : {
@@ -485,6 +616,10 @@
           "topK" : {
             "format" : "int32",
             "type" : "integer"
+          },
+          "uri" : {
+            "description" : "Narrow to the one document at this uri, as GET /documents lists it, whether or not an answer is composed. A uri the caller's world does not hold is answered 404.",
+            "type" : "string"
           },
           "window" : {
             "$ref" : "#/components/schemas/DateWindow"
@@ -1022,6 +1157,24 @@
         "required" : [ "finish_reason", "index", "message" ],
         "type" : "object"
       },
+      "ColleaguesSpec" : {
+        "properties" : {
+          "mayBeMessagedBy" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "mayMessage" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "mayBeMessagedBy", "mayMessage" ],
+        "type" : "object"
+      },
       "CollectorConfig" : {
         "properties" : {
           "cron" : {
@@ -1359,6 +1512,25 @@
           }
         },
         "required" : [ "followsChat", "id" ],
+        "type" : "object"
+      },
+      "ConversationSpec" : {
+        "properties" : {
+          "builtins" : { },
+          "llm" : {
+            "type" : "string"
+          },
+          "realms" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "sampling" : {
+            "$ref" : "#/components/schemas/SamplingSpec"
+          }
+        },
+        "required" : [ "realms" ],
         "type" : "object"
       },
       "ConversionFailure" : {
@@ -1989,6 +2161,51 @@
         "required" : [ "inUse" ],
         "type" : "object"
       },
+      "DocumentNotFound" : {
+        "properties" : {
+          "error" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "DocumentOutlineView" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "sections" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SectionHeadingView"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "type" : "string"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "sections", "uri" ],
+        "type" : "object"
+      },
+      "DocumentSectionView" : {
+        "properties" : {
+          "section" : {
+            "$ref" : "#/components/schemas/SectionHeadingView"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "section", "uri" ],
+        "type" : "object"
+      },
       "DutyCheck" : {
         "properties" : {
           "agent" : {
@@ -2039,6 +2256,34 @@
           }
         },
         "required" : [ "agent", "checkedAt", "duty", "onDemand", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
+        "type" : "object"
+      },
+      "DutySpec" : {
+        "properties" : {
+          "every" : {
+            "type" : "string"
+          },
+          "holds" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "repair" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          },
+          "timezone" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "holds", "name", "text" ],
         "type" : "object"
       },
       "DutyView" : {
@@ -5447,6 +5692,19 @@
         "required" : [ "contexts", "deploymentUses", "models", "roles" ],
         "type" : "object"
       },
+      "RoutineRef" : {
+        "properties" : {
+          "action" : {
+            "type" : "string"
+          },
+          "stage" : {
+            "enum" : [ "off", "observing", "on" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "action" ],
+        "type" : "object"
+      },
       "RoutineView" : {
         "properties" : {
           "description" : {
@@ -5553,6 +5811,22 @@
         "required" : [ "edges", "name", "nodes", "realm" ],
         "type" : "object"
       },
+      "SamplingSpec" : {
+        "properties" : {
+          "maxTokens" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "temperature" : {
+            "items" : {
+              "format" : "double",
+              "type" : "number"
+            },
+            "type" : "array"
+          }
+        },
+        "type" : "object"
+      },
       "SearchMemoryRequest" : {
         "description" : "A memory search",
         "properties" : {
@@ -5574,6 +5848,35 @@
           }
         },
         "required" : [ "query" ],
+        "type" : "object"
+      },
+      "SectionHeadingView" : {
+        "properties" : {
+          "depth" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "hasText" : {
+            "type" : "boolean"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "leaf" : {
+            "type" : "boolean"
+          },
+          "ordinal" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "parentId" : {
+            "type" : "string"
+          },
+          "title" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "hasText", "id", "leaf", "title" ],
         "type" : "object"
       },
       "Sender" : {
@@ -5914,6 +6217,17 @@
           }
         },
         "required" : [ "budgetPerTick", "cypher", "label" ],
+        "type" : "object"
+      },
+      "SuggestionResponse" : {
+        "properties" : {
+          "refused" : {
+            "type" : "string"
+          },
+          "suggestion" : {
+            "$ref" : "#/components/schemas/AgentSuggestion"
+          }
+        },
         "type" : "object"
       },
       "SurfaceDictionary" : {
@@ -9931,6 +10245,264 @@
         "tags" : [ "Agent platform" ]
       }
     },
+    "/api/v1/agent-suggestions" : {
+      "get" : {
+        "operationId" : "listAgentSuggestions",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentSuggestion"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "Every suggestion, open and settled"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentSuggestion"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Suggested colleagues, best first",
+        "tags" : [ "Agent suggestions" ]
+      },
+      "post" : {
+        "description" : "An open suggestion of the same name is replaced. Nothing is written into the world.",
+        "operationId" : "suggestAgent",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/AgentSuggestion"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "The suggestion as recorded"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "Refused: no evidence, a name in use, an agent to adopt that is not installed"
+          }
+        },
+        "summary" : "Record a suggested colleague",
+        "tags" : [ "Agent suggestions" ]
+      }
+    },
+    "/api/v1/agent-suggestions/{id}/adopted" : {
+      "post" : {
+        "operationId" : "markSuggestionAdopted",
+        "parameters" : [ {
+          "description" : "The suggestion's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "The suggestion, adopted"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No such suggestion in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "Refused: already settled"
+          }
+        },
+        "summary" : "Mark a suggestion settled by adopting the realm agent it names",
+        "tags" : [ "Agent suggestions" ]
+      }
+    },
+    "/api/v1/agent-suggestions/{id}/dismiss" : {
+      "post" : {
+        "operationId" : "dismissAgentSuggestion",
+        "parameters" : [ {
+          "description" : "The suggestion's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "The suggestion, dismissed"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No such suggestion in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "Refused: already settled"
+          }
+        },
+        "summary" : "Dismiss a suggestion",
+        "tags" : [ "Agent suggestions" ]
+      }
+    },
+    "/api/v1/agent-suggestions/{id}/draft" : {
+      "post" : {
+        "description" : "Writes config/agents/<name>.yml and runs each duty's view once to show what it would act on.",
+        "operationId" : "draftSuggestedAgent",
+        "parameters" : [ {
+          "description" : "The suggestion's id",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "The suggestion, drafted, with its preview"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "No such suggestion in your world"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/SuggestionResponse"
+                }
+              }
+            },
+            "description" : "Refused: already settled, a suggestion to adopt, or the name is taken"
+          }
+        },
+        "summary" : "Draft a suggested colleague into the world, unsigned and off duty",
+        "tags" : [ "Agent suggestions" ]
+      }
+    },
     "/api/v1/agents" : {
       "get" : {
         "description" : "Declared agents, realm-shipped agents, and existing routines gathered into the agent they belong to.",
@@ -13554,6 +14126,93 @@
           }
         },
         "summary" : "Read an ingest job",
+        "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/documents/outline" : {
+      "get" : {
+        "description" : "Headings only, each once: id, title, ordinal, depth and whether it has words of its own. A document ingested before sections were ordered lists none, with a message saying so.",
+        "operationId" : "outline",
+        "parameters" : [ {
+          "description" : "The document's uri, as GET /documents lists it",
+          "in" : "query",
+          "name" : "uri",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentOutlineView"
+                }
+              }
+            },
+            "description" : "The outline"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentNotFound"
+                }
+              }
+            },
+            "description" : "The caller's world holds no document at that uri"
+          }
+        },
+        "summary" : "A document's sections, in reading order",
+        "tags" : [ "Documents" ]
+      }
+    },
+    "/api/v1/documents/sections" : {
+      "get" : {
+        "description" : "The section at `ordinal` in reading order, as GET /documents/outline numbers them. `text` is the markdown directly under that heading, or null for one that only holds other sections.",
+        "operationId" : "section",
+        "parameters" : [ {
+          "description" : "The document's uri, as GET /documents lists it",
+          "in" : "query",
+          "name" : "uri",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The section's place in reading order, counted from 0",
+          "in" : "query",
+          "name" : "ordinal",
+          "required" : true,
+          "schema" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentSectionView"
+                }
+              }
+            },
+            "description" : "The section"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentNotFound"
+                }
+              }
+            },
+            "description" : "No such document in the caller's world, or no section at that ordinal"
+          }
+        },
+        "summary" : "One section of a document, with its text",
         "tags" : [ "Documents" ]
       }
     },
@@ -19744,7 +20403,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45819"
+    "url" : "http://localhost:34563"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -19779,6 +20438,9 @@
   }, {
     "description" : "Manage world artifacts: documents, sites, code, data, diagrams",
     "name" : "Artifacts"
+  }, {
+    "description" : "Colleagues worth hiring, with the evidence",
+    "name" : "Agent suggestions"
   }, {
     "description" : "Get-to-Know-Me flow",
     "name" : "Onboarding"
