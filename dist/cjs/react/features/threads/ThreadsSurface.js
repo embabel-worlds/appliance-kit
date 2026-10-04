@@ -90,9 +90,12 @@ function ThreadsSurface({ services, host, initialThread, markdown, chrome = 'ful
         }
         setView(result.value);
     }, [services]);
+    /* The pane shows no list, so it asks for none: the host chose the thread and `getThread` below
+     * is the only read it needs. */
     (0, react_1.useEffect)(() => {
-        void loadThreads();
-    }, [loadThreads]);
+        if (chrome === 'full')
+            void loadThreads();
+    }, [loadThreads, chrome]);
     (0, react_1.useEffect)(() => {
         if (selected)
             void loadThread(selected);
