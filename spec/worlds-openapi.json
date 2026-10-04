@@ -393,6 +393,9 @@
           "ownerId" : {
             "type" : "string"
           },
+          "principal" : {
+            "type" : "string"
+          },
           "repairs" : {
             "format" : "int32",
             "type" : "integer"
@@ -449,11 +452,21 @@
           "conversation" : {
             "$ref" : "#/components/schemas/ConversationSpec"
           },
+          "disclosesAsAgent" : {
+            "type" : "boolean"
+          },
           "duties" : {
             "items" : {
               "$ref" : "#/components/schemas/DutySpec"
             },
             "type" : "array"
+          },
+          "identity" : {
+            "additionalProperties" : {
+              "enum" : [ "own-account", "on-behalf-of" ],
+              "type" : "string"
+            },
+            "type" : "object"
           },
           "job" : {
             "type" : "string"
@@ -481,6 +494,9 @@
           },
           "persona" : {
             "type" : "string"
+          },
+          "qos" : {
+            "$ref" : "#/components/schemas/QosSpec"
           },
           "realm" : {
             "type" : "string"
@@ -510,7 +526,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "duties", "job", "models", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
+        "required" : [ "disclosesAsAgent", "duties", "identity", "job", "models", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
         "type" : "object"
       },
       "AgentSuggestion" : {
@@ -605,11 +621,21 @@
           "authority" : {
             "$ref" : "#/components/schemas/AuthoritySpec"
           },
+          "budget" : {
+            "$ref" : "#/components/schemas/BudgetSpec"
+          },
           "duties" : {
             "items" : {
               "$ref" : "#/components/schemas/DutyView"
             },
             "type" : "array"
+          },
+          "identity" : {
+            "additionalProperties" : {
+              "enum" : [ "own-account", "on-behalf-of" ],
+              "type" : "string"
+            },
+            "type" : "object"
           },
           "job" : {
             "type" : "string"
@@ -640,6 +666,9 @@
           },
           "persona" : {
             "type" : "string"
+          },
+          "qos" : {
+            "$ref" : "#/components/schemas/QosSpec"
           },
           "routines" : {
             "items" : {
@@ -678,7 +707,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "duties", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "unsignedChanges", "version" ],
+        "required" : [ "duties", "identity", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "unsignedChanges", "version" ],
         "type" : "object"
       },
       "AnnotateDryRunRequest" : {
@@ -1049,6 +1078,13 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "sourceShares" : {
+            "additionalProperties" : {
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "type" : "object"
+          },
           "spendPerDayCents" : {
             "format" : "int32",
             "type" : "integer"
@@ -1062,6 +1098,7 @@
             "type" : "integer"
           }
         },
+        "required" : [ "sourceShares" ],
         "type" : "object"
       },
       "BuildSnapshot" : {
@@ -2448,6 +2485,9 @@
           "onDemand" : {
             "type" : "boolean"
           },
+          "onFallbacks" : {
+            "type" : "boolean"
+          },
           "reason" : {
             "type" : "string"
           },
@@ -2474,7 +2514,7 @@
             "type" : "array"
           }
         },
-        "required" : [ "agent", "checkedAt", "duty", "onDemand", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
+        "required" : [ "agent", "checkedAt", "duty", "onDemand", "onFallbacks", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
         "type" : "object"
       },
       "DutySpec" : {
@@ -5814,6 +5854,22 @@
         "required" : [ "id", "source", "summary" ],
         "type" : "object"
       },
+      "QosSpec" : {
+        "properties" : {
+          "fallbacks" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "priority" : {
+            "enum" : [ "interactive", "business", "background" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "fallbacks", "priority" ],
+        "type" : "object"
+      },
       "QuietHoursConfig" : {
         "properties" : {
           "enabled" : {
@@ -5990,6 +6046,32 @@
           }
         },
         "required" : [ "local", "name" ],
+        "type" : "object"
+      },
+      "RetireRequest" : {
+        "properties" : {
+          "reason" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "reason" ],
+        "type" : "object"
+      },
+      "Retired" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "keysRevoked" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "slotsDeleted" : {
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "agent", "keysRevoked", "slotsDeleted" ],
         "type" : "object"
       },
       "RoleModelRequest" : {
@@ -6246,6 +6328,15 @@
         "required" : [ "query" ],
         "type" : "object"
       },
+      "SecretValue" : {
+        "properties" : {
+          "value" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "value" ],
+        "type" : "object"
+      },
       "SectionHeadingView" : {
         "properties" : {
           "depth" : {
@@ -6454,6 +6545,21 @@
           }
         },
         "required" : [ "job", "reason" ],
+        "type" : "object"
+      },
+      "Slots" : {
+        "properties" : {
+          "agent" : {
+            "type" : "string"
+          },
+          "secrets" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "agent", "secrets" ],
         "type" : "object"
       },
       "Source" : {
@@ -11069,6 +11175,145 @@
         "tags" : [ "Agents" ]
       }
     },
+    "/api/v1/agents/{name}/accounts" : {
+      "get" : {
+        "operationId" : "listAgentAccounts",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "Their names; the values are never returned"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "The secrets an agent has its own value for, by name",
+        "tags" : [ "Agent accounts" ]
+      }
+    },
+    "/api/v1/agents/{name}/accounts/{secret}" : {
+      "delete" : {
+        "operationId" : "removeAgentAccount",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The secret's name",
+          "in" : "path",
+          "name" : "secret",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "The secrets it still has its own value for"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Delete an agent's own value for a secret",
+        "tags" : [ "Agent accounts" ]
+      },
+      "put" : {
+        "description" : "Sent instead of its sponsor's on an API where the agent's identity is own-account.",
+        "operationId" : "setAgentAccount",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The secret's name, as the realm's key declares it",
+          "in" : "path",
+          "name" : "secret",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/SecretValue"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "The secrets it now has its own value for"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Slots"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          }
+        },
+        "summary" : "Keep an agent's own value for a secret",
+        "tags" : [ "Agent accounts" ]
+      }
+    },
     "/api/v1/agents/{name}/duties/{duty}/check" : {
       "post" : {
         "description" : "Reads the duty's violations view, records upheld, lapsed or unknown, and runs its repair on each violation. Off duty, it runs observing.",
@@ -11360,6 +11605,65 @@
         },
         "summary" : "Ask an agent to propose a better version of itself from its own record",
         "tags" : [ "Agent reflection" ]
+      }
+    },
+    "/api/v1/agents/{name}/retire" : {
+      "post" : {
+        "description" : "Final. Its record of runs and receipts is kept.",
+        "operationId" : "retireAgent",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/RetireRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Retired"
+                }
+              }
+            },
+            "description" : "What was revoked"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Retired"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Retired"
+                }
+              }
+            },
+            "description" : "No such agent in your world"
+          }
+        },
+        "summary" : "Retire an agent: off duty for good, its keys revoked and its own credentials deleted",
+        "tags" : [ "Agent accounts" ]
       }
     },
     "/api/v1/agents/{name}/runs" : {
@@ -21415,7 +21719,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:35387"
+    "url" : "http://localhost:36169"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -21519,6 +21823,9 @@
   }, {
     "description" : "The signed-in user's named memory contexts, and which one is active",
     "name" : "Context"
+  }, {
+    "description" : "An agent's own credentials, and retiring it",
+    "name" : "Agent accounts"
   }, {
     "description" : "The signed-in user's connected email accounts",
     "name" : "Email"
