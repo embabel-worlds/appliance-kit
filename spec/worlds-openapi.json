@@ -6066,6 +6066,9 @@
             "format" : "double",
             "type" : "number"
           },
+          "sectionId" : {
+            "type" : "string"
+          },
           "title" : {
             "type" : "string"
           },
@@ -20403,7 +20406,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34563"
+    "url" : "http://localhost:40991"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
