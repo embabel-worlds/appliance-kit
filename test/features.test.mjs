@@ -107,8 +107,8 @@ function realmCatalogue(realms, { failInstalled } = {}) {
     let rows = all
     if (/WHERE r\.installed|AND r\.installed/.test(cypher)) rows = rows.filter((r) => r.installed)
     if (/NOT r\.installed/.test(cypher)) rows = rows.filter((r) => !r.installed)
-    if (/r\.maturity <> 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity !== 'experimental')
-    if (/r\.maturity = 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity === 'experimental')
+    if (/\(r\.installed OR r\.maturity <> 'experimental'\)/.test(cypher)) rows = rows.filter((r) => r.installed || r.maturity !== 'experimental')
+    if (/r\.maturity = 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity === 'experimental' && (!/NOT r\.installed/.test(cypher) || !r.installed))
     if (/\$tag IN r\.tags/.test(cypher)) rows = rows.filter((r) => r.tags.includes(args.tag))
     if (/\$words/.test(cypher)) rows = rows.filter((r) => String(args.words).toLowerCase().split(' ').every((w) => `${r.name} ${r.description} ${r.tags.join(' ')}`.toLowerCase().includes(w)))
     if (/count\(r\) AS hidden/.test(cypher)) return ok({ rows: [{ hidden: rows.length }] })
@@ -2446,6 +2446,14 @@ describe('realm lists are queries over (:Realm)', () => {
     assert.ok(container.querySelector('.suggested-row .realm-maturity'), 'and each says it is experimental')
   })
 
+  it('an installed experimental realm is never left out, whatever the list shows', async () => {
+    const { realmsQuery } = await import('../src/client/realmCatalog.ts')
+    const q = realmsQuery({ show: 'all' })
+    const listed = await realmCatalogue(realms).searchRealms(q.cypher, q.options)
+    assert.ok(listed.value.rows.some((r) => r.name === 'bible'), 'installed and experimental is still this world')
+    assert.ok(!listed.value.rows.some((r) => r.name === 'lago'), 'offered and experimental waits to be asked for')
+  })
+
   it('an installed experimental realm is listed, and says so', async () => {
     const { container } = await render(h(features.RealmsSurface, { services: services(realmCatalogue(realms)), host: {} }))
     assert.match(container.querySelector('.realm-list').textContent, /bible.*experimental/)
@@ -2493,7 +2501,7 @@ describe('the realm catalogue queries', () => {
     assert.doesNotMatch(q.cypher, /OR 1=1|o'brien|money owed/)
     assert.deepEqual(q.options.args, { tag: "x' OR 1=1 //", words: "o'brien", meaning: 'money owed' })
     assert.match(q.cypher, /NOT r\.installed/)
-    assert.match(q.cypher, /r\.maturity <> 'experimental'/)
+    assert.match(q.cypher, /\(r\.installed OR r\.maturity <> 'experimental'\)/)
   })
 
   it('counts a facet with every other facet applied', async () => {
@@ -2501,6 +2509,7 @@ describe('the realm catalogue queries', () => {
     assert.doesNotMatch(tagsQuery({ tag: 'crm' }).cypher, /\$tag/)
     const hidden = experimentalQuery({ show: 'available', tag: 'crm' })
     assert.match(hidden.cypher, /r\.maturity = 'experimental'/)
+    assert.match(hidden.cypher, /NOT r\.installed/, 'only realms on offer count as left out')
     assert.doesNotMatch(hidden.cypher, /<> 'experimental'/)
     assert.match(hidden.cypher, /\$tag IN r\.tags/)
   })

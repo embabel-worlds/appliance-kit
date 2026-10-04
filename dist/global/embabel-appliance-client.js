@@ -1004,7 +1004,7 @@ var EmbabelApplianceClient = (() => {
     const args = {};
     if (filter.show === "installed") clauses.push("r.installed");
     if (filter.show === "available") clauses.push("NOT r.installed");
-    if (!filter.experimental && !except.includes("experimental")) clauses.push("r.maturity <> 'experimental'");
+    if (!filter.experimental && !except.includes("experimental")) clauses.push("(r.installed OR r.maturity <> 'experimental')");
     const tag = filter.tag?.trim();
     if (tag && !except.includes("tag")) {
       clauses.push("$tag IN r.tags");
@@ -1037,7 +1037,7 @@ var EmbabelApplianceClient = (() => {
     return query("MATCH (r:Realm)", filter, "UNWIND r.tags AS tag RETURN tag, count(*) AS realms ORDER BY realms DESC, tag", ["tag"]);
   }
   function experimentalQuery(filter) {
-    return query("MATCH (r:Realm)", filter, "RETURN count(r) AS hidden", ["experimental"], ["r.maturity = 'experimental'"]);
+    return query("MATCH (r:Realm)", filter, "RETURN count(r) AS hidden", ["experimental"], ["NOT r.installed", "r.maturity = 'experimental'"]);
   }
   var text = (v) => typeof v === "string" ? v : v == null ? "" : String(v);
   var texts = (v) => Array.isArray(v) ? v.map(text).filter(Boolean) : [];

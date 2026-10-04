@@ -9,9 +9,11 @@
  * typed or picked is never spliced into the text: each value travels as a declared view parameter,
  * and only the SHAPE of the query varies with which facets are set.
  *
- * Experimental realms are left out unless asked for. An author's `maturity: experimental` says the
- * realm may change or break, so a list does not lead with it — but says how many it left out, since
- * an opt-in nobody can find is not one. Unstated maturity is no claim, and listed.
+ * Experimental realms on offer are left out unless asked for. An author's `maturity: experimental`
+ * says the realm may change or break, so a list does not lead with it — but says how many it left
+ * out, since an opt-in nobody can find is not one. An INSTALLED experimental realm is never left
+ * out: it is part of this world whatever its author thinks of it (realm-spec, Maturity). Unstated
+ * maturity is no claim, and listed.
  */
 import { failure, ok } from "./outcome.js";
 const ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
@@ -34,7 +36,7 @@ function where(filter, except = []) {
     if (filter.show === 'available')
         clauses.push('NOT r.installed');
     if (!filter.experimental && !except.includes('experimental'))
-        clauses.push("r.maturity <> 'experimental'");
+        clauses.push("(r.installed OR r.maturity <> 'experimental')");
     const tag = filter.tag?.trim();
     if (tag && !except.includes('tag')) {
         clauses.push('$tag IN r.tags');
@@ -72,7 +74,7 @@ export function tagsQuery(filter) {
 }
 /** How many experimental realms the other facets would show if they were included. */
 export function experimentalQuery(filter) {
-    return query('MATCH (r:Realm)', filter, 'RETURN count(r) AS hidden', ['experimental'], ["r.maturity = 'experimental'"]);
+    return query('MATCH (r:Realm)', filter, 'RETURN count(r) AS hidden', ['experimental'], ['NOT r.installed', "r.maturity = 'experimental'"]);
 }
 const text = (v) => (typeof v === 'string' ? v : v == null ? '' : String(v));
 const texts = (v) => (Array.isArray(v) ? v.map(text).filter(Boolean) : []);
