@@ -153,6 +153,7 @@ export function RunsSection({ name, services }: { name: string; services: Agents
                   <span className="hint">{when(r.startedAt)}</span>
                   {r.violations != null && <span className="hint">{r.violations} found, {r.repairs ?? 0} repaired</span>}
                   {r.requests.length > 0 && <span className="hint">{r.requests.length} request{r.requests.length === 1 ? '' : 's'}</span>}
+                  {!!r.spendCents && <span className="hint" title={spendTitle(r)}>{cents(r.spendCents)}</span>}
                 </summary>
                 {r.error && <p className="hint">{r.error}</p>}
                 {r.output && <pre className="run-output">{r.output}</pre>}
@@ -164,6 +165,15 @@ export function RunsSection({ name, services }: { name: string; services: Agents
       )}
     </div>
   )
+}
+
+/** Spend is recorded to the hundredth of a cent, because a single cheap call costs less than one. */
+function cents(c: number): string {
+  return c >= 100 ? `$${(c / 100).toFixed(2)}` : `${c < 1 ? c.toFixed(2) : c.toFixed(1)}¢`
+}
+
+function spendTitle(r: AgentRun): string {
+  return Object.entries(r.spendByModel ?? {}).map(([model, c]) => `${model}: ${cents(c)}`).join('\n')
 }
 
 function Receipts({ receipts }: { receipts: Receipt[] }) {

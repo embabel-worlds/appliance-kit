@@ -3,6 +3,7 @@ import type { AttachmentRequest, Thread, ThreadMessage, ThreadView } from '../..
 import type { AgentSuggestion } from '../../client/agentSuggestions.ts';
 import type { AgentRun, RunDetail, Upcoming } from '../../client/agentRuns.ts';
 import type { AgentProposal } from '../../client/agentReflection.ts';
+import type { AgentSlots, Retired } from '../../client/agentAccounts.ts';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
 import type { KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
@@ -434,6 +435,11 @@ export interface AgentsServices {
     listProposals?(name: string): Promise<Outcome<AgentProposal[]>>;
     adoptProposal?(name: string, id: string): Promise<Outcome<AgentProposal>>;
     dismissProposal?(name: string, id: string): Promise<Outcome<AgentProposal>>;
+    /** An agent's own accounts and retiring it (#1783): all four or none. Omitted, the card offers neither. */
+    listAccounts?(name: string): Promise<Outcome<AgentSlots>>;
+    setAccount?(name: string, secret: string, value: string): Promise<Outcome<AgentSlots>>;
+    removeAccount?(name: string, secret: string): Promise<Outcome<AgentSlots>>;
+    retire?(name: string, reason: string): Promise<Outcome<Retired>>;
 }
 export interface AgentsHost {
     /** Open a routine's body for editing. Omitted, routines are read-only on this surface. */
