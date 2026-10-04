@@ -2128,3 +2128,32 @@ describe('the public browser feature entry point', () => {
     assert.equal(features.rewoundCounter([]), 0)
   })
 })
+
+describe('an approval request', () => {
+  it('reads in the business\'s words, with the tool folded under technical details', async () => {
+    const request = {
+      id: 'req_1', ownerId: 'rod', routine: 'chase-failed-payment', agent: 'chaser', runId: 'run_1',
+      verb: 'odoo_partnerMessagePost',
+      args: '{"ids":[12256],"body":"Payment for invoice ACC-009 (USD 12,000) failed."}',
+      detail: "An internal note in the customer's history — Northwind Traders.",
+      quote: 'Payment for invoice ACC-009 (USD 12,000) failed.',
+      about: 'Northwind Traders',
+      evidence: [], status: 'PENDING', raisedAt: '2026-10-04T08:00:00Z', expiresAt: '2026-10-07T08:00:00Z',
+      decidedAt: null, decidedBy: null, reason: null, result: null, untrusted: [],
+    }
+    const services = { listRequests: async () => ok([request]), approve: async () => ok(request), reject: async () => ok(request) }
+    const { container } = await render(h(features.ApprovalsSurface, { services }))
+
+    const card = container.querySelector('.request')
+    const shown = [...card.childNodes].filter((n) => n.nodeName !== 'DETAILS').map((n) => n.textContent).join(' ')
+    assert.match(shown, /Chaser asks your OK/)
+    assert.match(shown, /An internal note in the customer's history — Northwind Traders\./)
+    assert.equal(card.querySelector('.request-quote').textContent, 'Payment for invoice ACC-009 (USD 12,000) failed.')
+    assert.doesNotMatch(shown, /odoo_partnerMessagePost|chase-failed-payment/)
+
+    const details = card.querySelector('details.request-call')
+    assert.equal(details.querySelector('summary').textContent, 'Technical details')
+    assert.match(details.textContent, /chase-failed-payment[\s\S]*odoo_partnerMessagePost/)
+  })
+
+})
