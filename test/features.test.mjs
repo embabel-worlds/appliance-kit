@@ -250,7 +250,7 @@ describe('the public browser feature entry point', () => {
     for (const name of [
       'AppsSurface', 'PinRail', 'RealmsSurface', 'SavedViewsSurface',
       'HandlerStudioSurface', 'QueryStudioSurface', 'CodingAgentsSurface', 'ApiKeysSurface',
-      'AgentsSurface', 'StagePill', 'firingOf',
+      'AgentsSurface', 'StagePill', 'firingOf', 'presentationOf', 'canTalkNow', 'unavailableBecause',
     ]) {
       assert.equal(typeof features[name], 'function', `${name} ESM export`)
     }
@@ -2112,6 +2112,67 @@ describe('the public browser feature entry point', () => {
     await act(async () => button(container, 'routines from github').click())
     await flush()
     assert.equal(button(container, 'Sign version'), undefined)
+  })
+
+  it('gives an agent that only talks a simpler card, and still shows whatever it actually has', async () => {
+    const base = {
+      routing: 'opening hours, prices, bookings', owners: [], operators: [], state: 'active', origin: 'world',
+      routines: [], duties: [], needs: [], signedBy: 'priya', signedAt: '2026-09-29T10:00:00Z',
+    }
+    const concierge = {
+      ...base, name: 'concierge', job: 'answers questions about the business', persona: 'warm-host', sponsor: 'priya',
+      stage: 'off', version: 2, unsignedChanges: ['persona: warm-host → brisk-host'],
+    }
+    const busy = { ...concierge, name: 'front-desk', job: 'answers the phones', stage: 'on', unsignedChanges: [] }
+    const worker = {
+      ...base, name: 'chaser', job: 'chase overdue invoices', persona: 'warm-host', sponsor: 'priya', stage: 'on', version: 1, unsignedChanges: [],
+      routines: [{ name: 'note-failure', description: '', trigger: 'every day at 08:00', stage: 'on', firing: 'on', missing: false }],
+    }
+    const empty = { agent: '', firings: [], onSignals: [], expected: [], inFlight: [], counts: { runsLastHour: 0, writesToday: 0, requestsToday: 0 } }
+    const staged = []
+    const services = {
+      listAgents: async () => ok([concierge, busy, worker]),
+      setStage: async (name, stage) => { staged.push([name, stage]); return ok({ ...concierge, stage }) },
+      sign: async () => ok(concierge),
+      versions: async () => ok([]),
+      listRuns: async (name) => ok(name === 'front-desk'
+        ? [{ id: 'r1', work: 'answer', trigger: 'chat', outcome: 'DONE', observing: false, startedAt: '2026-10-01T09:00:00Z', requests: [] }]
+        : []),
+      getRun: async () => ok({ receipts: [] }),
+      upcoming: async () => ok(empty),
+    }
+    const { container } = await render(h(features.AgentsSurface, { services }))
+    const card = () => container.querySelector('.agentdesk > :last-child')
+
+    // Leads with who it is and what to ask it; the roster says available or not, never "off duty".
+    assert.match(container.querySelector('.agentroster').textContent, /unavailable/)
+    assert.doesNotMatch(container.querySelector('.agentroster').textContent.split('chase overdue')[0], /off duty/)
+    assert.match(card().querySelector('.agent-routing').textContent, /Ask it about.*opening hours/)
+    assert.match(card().textContent, /Nobody can talk to it yet: it is set unavailable/)
+
+    // Always empty for it, so absent: no ladder words, no routines, no schedule, no run record.
+    for (const gone of [/Observing/, /On duty/, /Routines/, /No routines/, /Upcoming/, /Nothing scheduled/, /No runs yet/, /Test run/]) {
+      assert.doesNotMatch(card().textContent, gone)
+    }
+
+    // What its sponsor acts on stays: the unsigned persona edit, the signature, and the same stages sent.
+    assert.match(card().querySelector('.agent-unsigned').textContent, /warm-host → brisk-host/)
+    assert.ok(button(container, 'Sign version 3'))
+    await act(async () => button(container, 'Available').click())
+    await flush()
+    assert.deepEqual(staged, [['concierge', 'on']])
+    assert.match(card().textContent, /People and other agents can talk to it now/)
+
+    // Real data is never hidden: a conversational agent with runs shows them.
+    await act(async () => button(container, 'answers the phones').click())
+    await flush()
+    assert.match(card().textContent, /Runs/)
+    assert.doesNotMatch(card().textContent, /Upcoming/)
+
+    // A persona with a routine is a worker, and keeps the whole card.
+    await act(async () => button(container, 'chase overdue invoices').click())
+    await flush()
+    for (const kept of [/Observing/, /Routines/, /Upcoming/, /No runs yet/]) assert.match(card().textContent, kept)
   })
 
   it('says an appliance predates agents instead of showing an empty roster', async () => {
