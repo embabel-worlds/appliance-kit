@@ -1703,6 +1703,47 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .threadcompose { display: grid; gap: 6px; margin-top: 12px; }
 :where(.kit-feature) .threadcompose input { flex: 1 1 220px; min-width: 0; }
 @media (max-width: 720px) { :where(.kit-feature) .team { grid-template-columns: 1fr; } }
+/*
+ * The @mention menu, over the composer rather than pushing it down: a list that moved the textarea
+ * as it filtered would move the words being typed. The composer is the positioning context, so the
+ * menu sits on its top edge and grows upward into the thread it is about to post into.
+ */
+:where(.kit-feature) .threadcompose { position: relative; }
+:where(.kit-feature) .threadmentions {
+  position: absolute;
+  bottom: 100%;
+  left: 0;
+  right: 0;
+  z-index: 20;
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0 0 4px;
+  padding: 4px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  box-shadow: 0 10px 24px rgb(0 0 0 / 0.28);
+}
+:where(.kit-feature) .threadmentions button {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  width: 100%;
+  padding: 6px 8px;
+  border: 0;
+  border-radius: 6px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+/* Highlight follows the KEYBOARD cursor, not hover, so what Enter would pick is never ambiguous. */
+:where(.kit-feature) .threadmentions button.is-active { background: var(--signal-quiet); }
+:where(.kit-feature) .threadmentions .hint { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+:where(.kit-feature) .threadmentions .pill { flex: none; }
+
 
 /* Suggested colleagues, under the roster: who to hire, each with the evidence counted. */
 :where(.kit-feature) .suggested { margin-top: 16px; border-top: 1px solid var(--rule); padding-top: 12px; }

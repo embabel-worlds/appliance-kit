@@ -11,4 +11,6 @@ export { AgentsSurface, StagePill, firingOf } from "./agents/AgentsSurface.js";
 export { ApprovalsSurface, RequestStatusPill } from "./approvals/ApprovalsSurface.js";
 export { Prose } from "./prose/Prose.js";
 export { ThreadsSurface } from "./threads/ThreadsSurface.js";
+export { MentionMenu } from "./threads/MentionMenu.js";
+export { activeMention, applyMention, matching } from "./threads/mentions.js";
 //# sourceMappingURL=index.js.map

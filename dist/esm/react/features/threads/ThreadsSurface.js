@@ -18,9 +18,11 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * Answers arrive in the background: while the thread is waiting on someone it says who, and looks
  * again every few seconds until they have answered.
  */
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Status, StudioPanel, failureMessage } from "../studio/chrome.js";
 import { Prose } from "../prose/Prose.js";
+import { MentionMenu, useMentionCursor } from "./MentionMenu.js";
+import { activeMention, applyMention, matching } from "./mentions.js";
 const POLL_MS = 2500;
 function when(iso) {
     if (!iso)
@@ -28,7 +30,7 @@ function when(iso) {
     const date = new Date(iso);
     return Number.isNaN(date.getTime()) ? iso : date.toLocaleString();
 }
-export function ThreadsSurface({ services, host, initialThread, markdown, chrome = 'full' }) {
+export function ThreadsSurface({ services, host, initialThread, markdown, agents, chrome = 'full' }) {
     const [threads, setThreads] = useState([]);
     const [problem, setProblem] = useState('');
     const [absent, setAbsent] = useState(false);
@@ -85,14 +87,46 @@ export function ThreadsSurface({ services, host, initialThread, markdown, chrome
         setSelected(result.value.id);
     }
     if (chrome === 'pane') {
-        return (_jsxs("div", { className: "kit-feature kit-feature-threads pane", children: [problem && _jsx(Status, { tone: absent ? 'caution' : 'error', children: problem }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
+        return (_jsxs("div", { className: "kit-feature kit-feature-threads pane", children: [problem && _jsx(Status, { tone: absent ? 'caution' : 'error', children: problem }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, agents: agents, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
     }
-    return (_jsxs("div", { className: "kit-feature kit-feature-threads team", children: [_jsx(StudioPanel, { title: "Threads", aside: _jsx("button", { className: "btn ghost tiny", onClick: () => void loadThreads(), children: "Refresh" }), children: absent ? _jsx(Status, { tone: "caution", children: problem }) : (_jsxs(_Fragment, { children: [problem && _jsx(Status, { tone: "error", children: problem }), _jsxs("form", { className: "row", onSubmit: (event) => void start(event), children: [_jsx("input", { value: title, placeholder: "A new thread about\u2026", onChange: (event) => setTitle(event.target.value) }), _jsx("button", { className: "btn", type: "submit", disabled: !title.trim(), children: "Start" })] }), _jsx("ul", { className: "threadlist", role: "listbox", "aria-label": "Threads", children: threads.map((t) => (_jsx("li", { children: _jsxs("button", { role: "option", "aria-selected": t.id === selected, onClick: () => setSelected(t.id), children: [_jsx("strong", { children: t.title }), _jsx("span", { className: "hint", children: when(t.updatedAt) })] }) }, t.id))) })] })) }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
+    return (_jsxs("div", { className: "kit-feature kit-feature-threads team", children: [_jsx(StudioPanel, { title: "Threads", aside: _jsx("button", { className: "btn ghost tiny", onClick: () => void loadThreads(), children: "Refresh" }), children: absent ? _jsx(Status, { tone: "caution", children: problem }) : (_jsxs(_Fragment, { children: [problem && _jsx(Status, { tone: "error", children: problem }), _jsxs("form", { className: "row", onSubmit: (event) => void start(event), children: [_jsx("input", { value: title, placeholder: "A new thread about\u2026", onChange: (event) => setTitle(event.target.value) }), _jsx("button", { className: "btn", type: "submit", disabled: !title.trim(), children: "Start" })] }), _jsx("ul", { className: "threadlist", role: "listbox", "aria-label": "Threads", children: threads.map((t) => (_jsx("li", { children: _jsxs("button", { role: "option", "aria-selected": t.id === selected, onClick: () => setSelected(t.id), children: [_jsx("strong", { children: t.title }), _jsx("span", { className: "hint", children: when(t.updatedAt) })] }) }, t.id))) })] })) }), view && (_jsx(ThreadPane, { view: view, services: services, host: host, markdown: markdown, agents: agents, onPosted: () => void loadThread(view.thread.id), onProblem: setProblem }))] }));
 }
-function ThreadPane({ view, services, host, markdown, onPosted, onProblem }) {
+function ThreadPane({ view, services, host, markdown, agents = [], onPosted, onProblem }) {
     const [text, setText] = useState('');
     const [viewName, setViewName] = useState('');
     const [sending, setSending] = useState(false);
+    /*
+     * The mention being typed, if any. `null` is "no menu": dismissed with Escape, or the caret is
+     * not in a mention. The caret is read from the element rather than tracked, because every way it
+     * moves — clicking, arrowing, selecting — has to count, and only the element knows them all.
+     */
+    const box = useRef(null);
+    const [mention, setMention] = useState(null);
+    const offered = mention ? matching(agents, mention.query) : [];
+    const cursor = useMentionCursor(offered.length);
+    const open = mention !== null && offered.length > 0;
+    const MENU = `mentions-${view.thread.id}`;
+    /* Re-asked after every edit and every caret move, so the menu follows the caret out of a mention
+     * as readily as into one. */
+    const syncMention = (el) => {
+        const found = activeMention(el.value, el.selectionStart ?? el.value.length);
+        setMention(found ? { query: found.query } : null);
+    };
+    const pick = (name) => {
+        const el = box.current;
+        if (!el)
+            return;
+        const next = applyMention(el.value, el.selectionStart ?? el.value.length, name);
+        setText(next.text);
+        setMention(null);
+        cursor.reset();
+        /* After React has written the value: setting it first and the caret second would put the caret
+         * where the OLD text ended. */
+        requestAnimationFrame(() => {
+            el.focus();
+            el.setSelectionRange(next.caret, next.caret);
+        });
+    };
     async function send(event) {
         event?.preventDefault();
         if (sending || (!text.trim() && !viewName.trim()))
@@ -109,13 +143,46 @@ function ThreadPane({ view, services, host, markdown, onPosted, onProblem }) {
         setViewName('');
         onPosted();
     }
-    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host, markdown: markdown }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in: @steward is Northwind at risk? Enter sends, Shift+Enter for a new line", onChange: (event) => setText(event.target.value), onKeyDown: (event) => {
+    return (_jsxs(StudioPanel, { title: view.thread.title, children: [_jsx("ol", { className: "threadmessages", children: view.messages.map((m) => _jsx(MessageItem, { message: m, host: host, markdown: markdown }, m.id)) }), view.waitingOn.length > 0 && (_jsxs("p", { className: "hint threadwaiting", children: [view.waitingOn.join(', '), " ", view.waitingOn.length === 1 ? 'is' : 'are', " answering\u2026"] })), _jsxs("form", { className: "threadcompose", onSubmit: (event) => void send(event), children: [_jsx("textarea", { ref: box, value: text, rows: 3, placeholder: "Write, and @mention an agent to bring it in. Enter sends, Shift+Enter for a new line", role: "combobox", "aria-expanded": open, "aria-controls": open ? MENU : undefined, "aria-activedescendant": open ? `${MENU}-${cursor.active}` : undefined, "aria-autocomplete": "list", onChange: (event) => { setText(event.target.value); syncMention(event.target); }, onClick: (event) => syncMention(event.currentTarget), onBlur: () => setMention(null), onKeyUp: (event) => {
+                            /* Arrows and Home/End move the caret without changing the text, so the menu would
+                             * otherwise stay open on a mention the caret has left. */
+                            if (event.key.startsWith('Arrow') || event.key === 'Home' || event.key === 'End') {
+                                if (!(open && (event.key === 'ArrowDown' || event.key === 'ArrowUp')))
+                                    syncMention(event.currentTarget);
+                            }
+                        }, onKeyDown: (event) => {
+                            if (event.nativeEvent.isComposing)
+                                return;
+                            if (open) {
+                                /* While the menu is up these keys belong to it. Enter picks a name rather than
+                                 * posting, which is what every mention menu a person has used already does. */
+                                if (event.key === 'ArrowDown') {
+                                    event.preventDefault();
+                                    cursor.move(1);
+                                    return;
+                                }
+                                if (event.key === 'ArrowUp') {
+                                    event.preventDefault();
+                                    cursor.move(-1);
+                                    return;
+                                }
+                                if (event.key === 'Enter' || event.key === 'Tab') {
+                                    event.preventDefault();
+                                    pick(offered[cursor.active]?.name ?? '');
+                                    return;
+                                }
+                                if (event.key === 'Escape') {
+                                    event.preventDefault();
+                                    setMention(null);
+                                    return;
+                                }
+                            }
                             // Enter sends, as in any chat; Shift+Enter is a new line, and Enter mid-composition picks an IME candidate.
-                            if (event.key === 'Enter' && !event.shiftKey && !event.nativeEvent.isComposing) {
+                            if (event.key === 'Enter' && !event.shiftKey) {
                                 event.preventDefault();
                                 void send();
                             }
-                        } }), _jsxs("div", { className: "row", children: [_jsx("input", { value: viewName, placeholder: "Attach a view's rows (its name)", onChange: (event) => setViewName(event.target.value) }), _jsx("button", { className: "btn primary", type: "submit", disabled: sending || (!text.trim() && !viewName.trim()), children: sending ? 'Posting…' : 'Post' })] })] })] }));
+                        } }), open && (_jsx(MentionMenu, { agents: agents, query: mention.query, active: cursor.active, onPick: pick, id: MENU })), _jsxs("div", { className: "row", children: [_jsx("input", { value: viewName, placeholder: "Attach a view's rows (its name)", onChange: (event) => setViewName(event.target.value) }), _jsx("button", { className: "btn primary", type: "submit", disabled: sending || (!text.trim() && !viewName.trim()), children: sending ? 'Posting…' : 'Post' })] })] })] }));
 }
 function MessageItem({ message, host, markdown }) {
     const from = message.from;

@@ -2194,3 +2194,110 @@ describe('threads', () => {
     assert.ok(container.querySelector('.threadlist'), 'the list is there for a host that wants it')
   })
 })
+
+/*
+ * THE @MENTION MENU: who you can bring into a thread, offered where you need it.
+ *
+ * `@mention` was the only way to reach an agent in a thread and nothing in the thread said who
+ * there was — and `/talk`, which lists them, is a CHAT command, so typed into a thread it posts
+ * the literal text "/talk". These cases cover the two halves: knowing when the caret is in a
+ * mention, and the keyboard owning Enter while the menu is up.
+ */
+describe('mentions', () => {
+  const libs = { parse: (t) => t, sanitize: (h) => h }
+  const thread = { id: 't1', title: 'Northwind', updatedAt: null }
+  const agents = [
+    { name: 'steward', job: 'Keeps account trouble in front of its owner' },
+    { name: 'chaser', job: 'Chases what we are owed', hint: 'off' },
+    { name: 'chess-coach', job: 'Explains a position' },
+  ]
+  const services = {
+    listThreads: async () => ok([thread]),
+    getThread: async () => ok({ thread, messages: [], waitingOn: [] }),
+    createThread: async () => ok(thread),
+    post: async () => ok({}),
+  }
+  const pane = () => render(h(features.ThreadsSurface, {
+    services, markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+  }))
+  /* The native setter, as `setInput` does for inputs: assigning `.value` directly leaves React's
+   * own value tracker thinking nothing changed, and onChange never runs. */
+  const type = async (container, value, caret = value.length) => {
+    const box = container.querySelector('textarea')
+    const setter = Object.getOwnPropertyDescriptor(Object.getPrototypeOf(box), 'value').set
+    await act(async () => {
+      setter.call(box, value)
+      box.setSelectionRange(caret, caret)
+      box.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    return box
+  }
+  const key = async (box, init) => {
+    await act(async () => {
+      box.dispatchEvent(new dom.window.KeyboardEvent('keydown', { bubbles: true, cancelable: true, ...init }))
+    })
+  }
+
+  it('knows a mention from an email address and from a finished name', () => {
+    assert.deepEqual(features.activeMention('@ste', 4), { query: 'ste', at: 0 })
+    assert.deepEqual(features.activeMention('ask @', 5), { query: '', at: 4 })
+    assert.equal(features.activeMention('@steward is here', 16), null, 'the caret has left the name')
+    assert.equal(features.activeMention('rod@embabel.com', 15), null, 'an @ mid-word is an address')
+  })
+
+  it('puts the name back with a space, and the caret after it', () => {
+    const next = features.applyMention('ask @ste about it', 8, 'steward')
+    assert.equal(next.text, 'ask @steward  about it')
+    assert.equal(next.caret, 'ask @steward '.length)
+  })
+
+  it('offers a prefix match before one buried inside a name', () => {
+    assert.deepEqual(features.matching(agents, 'ch').map((a) => a.name), ['chaser', 'chess-coach'])
+    assert.deepEqual(features.matching(agents, 'coach').map((a) => a.name), ['chess-coach'])
+  })
+
+  it('opens on @ and offers every agent, saying which cannot take part', async () => {
+    const { container } = await pane()
+    await type(container, '@')
+    const options = [...container.querySelectorAll('[role="option"]')]
+    assert.deepEqual(options.map((o) => o.querySelector('strong').textContent), ['@steward', '@chaser', '@chess-coach'])
+    // Listed with its reason and still selectable: the appliance answers in the thread if it will
+    // not take part, and that rule is not reimplemented here.
+    assert.match(options[1].textContent, /off/)
+    assert.equal(options[1].disabled, false)
+  })
+
+  it('Enter picks the highlighted name instead of posting', async () => {
+    const posted = []
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: { ...services, post: async (...args) => { posted.push(args); return ok({}) } },
+      markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+    }))
+    const box = await type(container, 'ask @ch')
+    await key(box, { key: 'ArrowDown' })   // chaser -> chess-coach
+    await key(box, { key: 'Enter' })
+    assert.equal(posted.length, 0, 'Enter belonged to the menu, not to Send')
+    assert.equal(container.querySelector('textarea').value, 'ask @chess-coach ')
+  })
+
+  it('Escape closes it, and then Enter posts again', async () => {
+    const posted = []
+    const { container } = await render(h(features.ThreadsSurface, {
+      services: { ...services, post: async (...args) => { posted.push(args); return ok({}) } },
+      markdown: libs, agents, chrome: 'pane', initialThread: 't1',
+    }))
+    const box = await type(container, 'ask @ste')
+    await key(box, { key: 'Escape' })
+    assert.equal(container.querySelector('[role="listbox"]'), null, 'the menu is gone')
+    await key(box, { key: 'Enter' })
+    assert.equal(posted.length, 1, 'Enter went back to posting')
+  })
+
+  it('says nothing when the host offers no agents', async () => {
+    const { container } = await render(h(features.ThreadsSurface, {
+      services, markdown: libs, chrome: 'pane', initialThread: 't1',
+    }))
+    await type(container, '@')
+    assert.equal(container.querySelector('.threadmentions'), null)
+  })
+})
