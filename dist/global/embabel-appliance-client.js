@@ -21,6 +21,7 @@ var EmbabelApplianceClient = (() => {
   // src/client/index.ts
   var index_exports = {};
   __export(index_exports, {
+    AgentReflectionClient: () => AgentReflectionClient,
     AgentRunsClient: () => AgentRunsClient,
     AgentSuggestionsClient: () => AgentSuggestionsClient,
     AgentsClient: () => AgentsClient,
@@ -930,6 +931,35 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/agentReflection.ts
+  var AGENTS3 = "/api/v1/agents";
+  var AgentReflectionClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    reflect(name) {
+      return this.decide(`${AGENTS3}/${encodeURIComponent(name)}/reflect`);
+    }
+    proposals(name) {
+      return this.transport.send({ method: "GET", path: `${AGENTS3}/${encodeURIComponent(name)}/proposals` });
+    }
+    adopt(name, id) {
+      return this.decide(`${AGENTS3}/${encodeURIComponent(name)}/proposals/${encodeURIComponent(id)}/adopt`);
+    }
+    dismiss(name, id) {
+      return this.decide(`${AGENTS3}/${encodeURIComponent(name)}/proposals/${encodeURIComponent(id)}/dismiss`);
+    }
+    async decide(path) {
+      const outcome = await this.transport.send({ method: "POST", path, body: {} });
+      if (!outcome.ok) {
+        const refused = outcome.body?.refused;
+        return refused ? failure("refused", refused, outcome.status, outcome.body) : outcome;
+      }
+      const proposal = outcome.value.proposal;
+      return proposal ? { ok: true, value: proposal } : failure("refused", outcome.value.refused ?? "Refused", 200, outcome.value);
+    }
+  };
+
   // src/client/handlers.ts
   var HANDLERS = "/api/v1/admin/handlers";
   var TIMEOUTS2 = {
@@ -1052,6 +1082,7 @@ var EmbabelApplianceClient = (() => {
       this.threads = new ThreadsClient(transport);
       this.agentSuggestions = new AgentSuggestionsClient(transport);
       this.agentRuns = new AgentRunsClient(transport);
+      this.agentReflection = new AgentReflectionClient(transport);
       this.cron = new CronClient(transport);
       this.handlers = new HandlersClient(transport);
       this.documents = new DocumentsClient(transport, options.documents);
@@ -1064,6 +1095,7 @@ var EmbabelApplianceClient = (() => {
     threads;
     agentSuggestions;
     agentRuns;
+    agentReflection;
     cron;
     handlers;
     documents;

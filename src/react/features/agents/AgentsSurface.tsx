@@ -23,6 +23,7 @@ import type { AgentsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 import { SuggestedColleagues } from './SuggestedColleagues.tsx'
 import { RunsSection, UpcomingSection } from './AgentRecord.tsx'
+import { ReflectionSection } from './ReflectionSection.tsx'
 
 const STAGES: { stage: AgentStage; label: string }[] = [
   { stage: 'off', label: 'Off duty' },
@@ -455,6 +456,11 @@ function AgentDetail({
       )}
       <UpcomingSection name={agent.name} services={services} />
       <RunsSection name={agent.name} services={services} />
+      <ReflectionSection
+        name={agent.name}
+        services={services}
+        onAdopted={() => void services.listAgents().then((r) => { if (r.ok) { const a = r.value.find((x) => x.name === agent.name); if (a) onChanged(a) } })}
+      />
     </StudioPanel>
   )
 }
