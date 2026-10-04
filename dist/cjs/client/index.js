@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.toRealm = exports.experimentalQuery = exports.tagsQuery = exports.realmsQuery = exports.ranInBackground = exports.RealmCatalog = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -50,6 +50,13 @@ var agentReflection_ts_1 = require("./agentReflection.js");
 Object.defineProperty(exports, "AgentReflectionClient", { enumerable: true, get: function () { return agentReflection_ts_1.AgentReflectionClient; } });
 var agentAccounts_ts_1 = require("./agentAccounts.js");
 Object.defineProperty(exports, "AgentAccountsClient", { enumerable: true, get: function () { return agentAccounts_ts_1.AgentAccountsClient; } });
+var realmCatalog_ts_1 = require("./realmCatalog.js");
+Object.defineProperty(exports, "RealmCatalog", { enumerable: true, get: function () { return realmCatalog_ts_1.RealmCatalog; } });
+Object.defineProperty(exports, "ranInBackground", { enumerable: true, get: function () { return realmCatalog_ts_1.ranInBackground; } });
+Object.defineProperty(exports, "realmsQuery", { enumerable: true, get: function () { return realmCatalog_ts_1.realmsQuery; } });
+Object.defineProperty(exports, "tagsQuery", { enumerable: true, get: function () { return realmCatalog_ts_1.tagsQuery; } });
+Object.defineProperty(exports, "experimentalQuery", { enumerable: true, get: function () { return realmCatalog_ts_1.experimentalQuery; } });
+Object.defineProperty(exports, "toRealm", { enumerable: true, get: function () { return realmCatalog_ts_1.toRealm; } });
 var handlers_ts_1 = require("./handlers.js");
 Object.defineProperty(exports, "HandlersClient", { enumerable: true, get: function () { return handlers_ts_1.HandlersClient; } });
 const agents_ts_2 = require("./agents.js");

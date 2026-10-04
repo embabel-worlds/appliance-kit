@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useMemo, useState } from 'react'
-import { isBackgroundHandle } from '../../../client/kg.ts'
 import { isOk } from '../../../client/outcome.ts'
-import type { InstalledRealm, RealmDirectory, RealmsSurfaceProps, SuggestedRealm } from '../contracts.ts'
+import { RealmCatalog, ranInBackground, type CatalogRealm, type RealmFilter, type TagCount } from '../../../client/realmCatalog.ts'
+import type { RealmsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 
 type Loadable<T> = { data: T | null; error: string; loading: boolean; reload(): void }
@@ -29,22 +29,28 @@ function sourceOf(url?: string, provider?: string): string | null {
   return m?.[1] ?? provider ?? null
 }
 
+/** The appliance asking rather than refusing: `needs-confirmation` with the realm's own warning. */
+const needsConfirmation = (outcome: { body?: unknown }): boolean =>
+  typeof outcome.body === 'object' && outcome.body !== null
+  && (outcome.body as { status?: unknown }).status === 'needs-confirmation'
+
 function Lamp({ tone }: { tone: string }) {
   return <span className={`lamp lamp-${tone}`} aria-hidden="true" />
 }
 
 // ── realms ────────────────────────────────────────────────────────────────────
 export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
-  const installed = useLoadable<InstalledRealm[]>(useCallback(() => services.listInstalled(), [services]), 'list installed realms')
-  const suggested = useLoadable<RealmDirectory>(useCallback(() => services.listDirectory(), [services]), 'load the realm directory')
+  /*
+   * EVERY LIST HERE IS A QUERY over `(:Realm)` — see RealmCatalog. Installed and on offer are the
+   * same rows with a different WHERE, and each facet below is another clause, so the list a person
+   * filters and the answer chat gives to the same question come from one place.
+   */
+  const catalog = useMemo(() => new RealmCatalog((cypher, options) => services.searchRealms(cypher, options)), [services])
+  const installed = useLoadable<CatalogRealm[]>(
+    useCallback(() => catalog.realms({ show: 'installed', experimental: true }), [catalog]),
+    'list installed realms',
+  )
   const [dirRefreshing, setDirRefreshing] = useState(false)
-  const refreshDirectory = useCallback(async () => {
-    setDirRefreshing(true)
-    await services.refreshDirectory()
-    suggested.reload()
-    setDirRefreshing(false)
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [services, suggested])
   const [busy, setBusy] = useState<string | null>(null)
   const [installMsg, setInstallMsg] = useState<string | null>(null)
   const [query, setQuery] = useState('')
@@ -55,39 +61,71 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
     if (next.has(name)) next.delete(name); else next.add(name)
     return next
   })
-  /* Search-by-meaning: one Virtual Cypher run over the AvailableRealm door, the engine's
-   * per-row judge deciding fit — the same query a user could type in Query Studio or ask in
-   * chat. null = keyword mode; rows = the judged matches for `q`. */
-  const [meaning, setMeaning] = useState<{ q: string; names: Set<string> } | null>(null)
-  const [judging, setJudging] = useState(false)
-  const [searchNote, setSearchNote] = useState<{ tone: 'error' | 'caution'; text: string } | null>(null)
 
-  const searchByMeaning = useCallback(async () => {
+  /*
+   * THE FACETS on what is on offer. Words are matched as typed, a moment after the last keystroke;
+   * Smart search sets `meaning`, which a model judges per realm. A tag is one chip at a time.
+   * Experimental realms are left out until asked for, and the count of what was left out is shown.
+   */
+  const [words, setWords] = useState('')
+  useEffect(() => {
+    const id = setTimeout(() => setWords(query.trim()), 250)
+    return () => clearTimeout(id)
+  }, [query])
+  const [meaning, setMeaning] = useState<string | null>(null)
+  const [tag, setTag] = useState('')
+  const [showExperimental, setShowExperimental] = useState(false)
+  const offerFilter: RealmFilter = useMemo(() => ({
+    show: 'available', tag, experimental: showExperimental, ...(meaning ? { meaning } : { words }),
+  }), [tag, showExperimental, meaning, words])
+
+  const [offered, setOffered] = useState<{ realms: CatalogRealm[]; tags: TagCount[]; hidden: number } | null>(null)
+  const [offeredError, setOfferedError] = useState('')
+  const [offeredLoading, setOfferedLoading] = useState(true)
+  const [searchNote, setSearchNote] = useState<{ tone: 'error' | 'caution'; text: string } | null>(null)
+  const [offerVersion, reloadOffered] = useState(0)
+  useEffect(() => {
+    let active = true
+    setOfferedLoading(true)
+    void Promise.all([catalog.realms(offerFilter), catalog.tags(offerFilter), catalog.hiddenExperimental(offerFilter)])
+      .then(([realms, tags, hidden]) => {
+        if (!active) return
+        setOfferedLoading(false)
+        if (!realms.ok) {
+          if (meaning) {
+            /* Smart search failing is not the directory failing: fall back to the words. A run the
+               engine parked in the background has not failed, so it is not worth retrying. */
+            setSearchNote(ranInBackground(realms)
+              ? { tone: 'caution', text: 'Smart search started a background run; its results are not available here. Showing keyword matches.' }
+              : { tone: 'error', text: 'Smart search did not return results. Showing keyword matches instead; try Smart search again.' })
+            setMeaning(null)
+            return
+          }
+          setOfferedError(failureMessage(realms, 'load the realm directory'))
+          return
+        }
+        setOfferedError('')
+        setOffered({ realms: realms.value, tags: tags.ok ? tags.value : [], hidden: hidden.ok ? hidden.value : 0 })
+      })
+    return () => { active = false }
+  }, [catalog, offerFilter, meaning, offerVersion])
+
+  const refreshDirectory = useCallback(async () => {
+    setDirRefreshing(true)
+    await services.refreshDirectory()
+    reloadOffered((v) => v + 1)
+    installed.reload()
+    setDirRefreshing(false)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [services, installed])
+
+  const searchByMeaning = useCallback(() => {
     const q = query.trim()
     if (!q) return
-    setJudging(true)
     setSearchNote(null)
-    /* Bare alias, not r.description: the judge reads the whole row — name included — so a
-     * realm with a thin manifest can still be found by what its name implies. */
-    const cypher =
-      "MATCH (d:RealmDirectory {scope:'all'})-[:OFFERS]->(r:AvailableRealm) " +
-      `WHERE ai.relevant(r, '${q.replace(/'/g, "\\'")}') ` +
-      'RETURN r.name AS name'
-    const outcome = await services.searchRealms(cypher)
-    setJudging(false)
-    if (isOk(outcome) && isBackgroundHandle(outcome.value)) {
-      setMeaning(null)
-      setSearchNote({ tone: 'caution', text: 'Smart search started a background run; its results are not available here. Showing keyword matches.' })
-      return
-    }
-    if (!isOk(outcome) || isBackgroundHandle(outcome.value) || outcome.value.error) {
-      setMeaning(null)
-      setSearchNote({ tone: 'error', text: 'Smart search did not return results. Showing keyword matches instead; try Smart search again.' })
-      return
-    }
-    const names = new Set((outcome.value.rows ?? []).map((row) => String((row as Record<string, unknown>)['name'] ?? '')))
-    setMeaning({ q, names })
-  }, [query, services])
+    setMeaning(q)
+  }, [query])
+
   /*
    * WHICH REALMS HAVE SOMETHING TO PULL. `GET /realms/updates` reads each realm's remote refs
    * (ls-remote — refs only, no objects) and says behind / current / unknown.
@@ -122,42 +160,9 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
   const canRefresh = (name: string) => updates === null || updates[name] !== false
   const behindCount = (installed.data ?? []).filter((realm) => updates?.[realm.name] === true).length
 
-  const installedNames = new Set((Array.isArray(installed.data) ? installed.data : []).map((r) => r.name))
-  // Real shape (verified): { providers: [{ provider, realms: [{ name, description, source, url, installed }] }] }
-  const rawSuggestions = (suggested.data?.providers ?? []).flatMap((p) =>
-    (p.realms ?? []).map((r) => ({ ...r, provider: p.provider })))
-  const uninstalled = rawSuggestions.filter((s) => !s.installed && !installedNames.has(s.name ?? ''))
 
-  /*
-   * SEARCH, over the list already in hand.
-   *
-   * The directory endpoint returns every realm from every configured source in one call — thirty-odd
-   * today — so filtering here answers on the keystroke rather than the round trip, and works while
-   * the appliance is thinking about something else. `GET /directory/browse/realms` takes no query
-   * parameter anyway; the Directory's own `search()` is reached only by the chat command.
-   *
-   * Name AND description, because "government" finds gov-au and gov-uk while "au" alone does not.
-   * Every word must match somewhere, so a second word narrows instead of widening — the opposite of
-   * the server's own any-word rule, and the one people expect from a filter box.
-   */
-  const words = query.toLowerCase().split(/\s+/).filter(Boolean)
-  const tagsOf = (r: { metadata?: { tags?: unknown } }): string[] =>
-    Array.isArray(r.metadata?.tags) ? r.metadata.tags.map(String) : []
-  /* Name, description, tags, provider and author all count — "accounting" should find a realm
-   * tagged accounting whose description never says the word. */
-  const hits = (r: { name?: string; description?: string; provider?: string; metadata?: { tags?: unknown; author?: string } }) =>
-    words.every((w) =>
-      `${r.name ?? ''} ${r.description ?? ''} ${tagsOf(r).join(' ')} ${r.provider ?? ''} ${r.metadata?.author ?? ''}`
-        .toLowerCase().includes(w))
-  /* The search is for SHOPPING — it scopes to the uninstalled directory only. What is
-   * already installed is a short known list, browsed, not searched. */
-  /* Alphabetical, both lists: like the schema rail, a directory is a lookup, and lookups sort. */
-  const byName = (a: { name?: string }, b: { name?: string }) => (a.name ?? '').localeCompare(b.name ?? '')
-  const suggestions = (meaning
-    ? uninstalled.filter((s) => meaning.names.has(s.name ?? ''))
-    : uninstalled.filter(hits)
-  ).slice().sort(byName)
-  const installedShown = (installed.data ?? []).slice().sort(byName)
+  const suggestions = offered?.realms ?? []
+  const installedShown = installed.data ?? []
 
   // Which realms ship a tour. One call, read for a label and a link — the Tours tab owns running
   // them, so nothing here knows what a step is.
@@ -179,14 +184,25 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
     })()
   }, [installed.data, services])
 
-  async function install(s: SuggestedRealm) {
-    const repo = s.source ?? s.repo ?? s.url ?? s.repository
+  async function install(s: CatalogRealm, confirmed = false): Promise<void> {
+    const repo = s.source || s.url
     if (!repo) { setInstallMsg(`Could not install '${s.name}': its directory entry has no repository link. Ask the directory maintainer to add one.`); return }
-    setBusy(s.name ?? repo)
-    const r = await services.installRealm(repo)
+    setBusy(s.name)
+    const r = await services.installRealm(repo, confirmed)
     setBusy(null)
+    /*
+     * An experimental realm is not refused, it is ASKED about: the appliance answers
+     * `needs-confirmation` with its author's warning, and a yes retries carrying it.
+     */
+    if (!r.ok && !confirmed && needsConfirmation(r)) {
+      const yes = host.confirmInstall ? await host.confirmInstall(r.message) : confirm(r.message)
+      if (yes) return install(s, true)
+      setInstallMsg(`Not installed: ${s.name} is experimental, and that was declined.`)
+      return
+    }
     setInstallMsg(r.ok ? `Installed ${s.name}.` : `Install failed: ${r.message}`)
     installed.reload()
+    reloadOffered((v) => v + 1)
   }
 
   /*
@@ -261,7 +277,7 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
             )}
           </div>
           <div className="realm-list">
-            {installedShown.map((r: InstalledRealm) => (
+            {installedShown.map((r: CatalogRealm) => (
               <div className={`realm-row ${expanded.has(r.name) ? 'is-open' : ''}`} key={r.name}>
                 <button className="realm-row-head" onClick={() => toggle(r.name)}
                         aria-expanded={expanded.has(r.name)}>
@@ -272,6 +288,9 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
                   <strong>{r.name}</strong> <code className="ver">v{r.version}</code>
                   {sourceOf(r.url) && <small className="realm-source">{sourceOf(r.url)}</small>}
                   {updates?.[r.name] === true && <span className="realm-behind">update available</span>}
+                  {/* Installed and experimental is worth saying: it is why a view moved under
+                      somebody, and nothing else on the row would explain it. */}
+                  {r.maturity === 'experimental' && <span className="realm-maturity">experimental</span>}
                   <span className="realm-chevron" aria-hidden="true">{expanded.has(r.name) ? '▾' : '▸'}</span>
                 </button>
                 {expanded.has(r.name) && (
@@ -306,65 +325,97 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
           </div>
           <div className="subhead subhead-row">
             <span>Suggested</span>
-            {/* The server's realm scan is cached for the life of its process; this evicts it —
+            {/* The server caches its realm directory (an hour once complete); this evicts it —
                 how a realm published five minutes ago becomes installable without a restart.
                 An older appliance answers 404: the browse still reloads, honestly unchanged. */}
             <button className="btn ghost tiny" disabled={dirRefreshing} onClick={() => void refreshDirectory()}>
-              {dirRefreshing ? 'refreshing…' : suggested.error ? 'Retry directory' : 'Refresh directory'}
+              {dirRefreshing ? 'refreshing…' : offeredError ? 'Retry directory' : 'Refresh directory'}
             </button>
           </div>
           <div className="realmsearch">
             <input
               type="search"
               value={query}
-              placeholder={`Search ${uninstalled.length || ''} available realms — Enter for smart search`.replace('  ', ' ')}
+              placeholder="Search available realms — Enter for smart search"
               aria-label="search available realms"
               onChange={(e) => { setQuery(e.target.value); setMeaning(null) }}
-              onKeyDown={(e) => { if (e.key === 'Enter') void searchByMeaning() }}
+              onKeyDown={(e) => { if (e.key === 'Enter') searchByMeaning() }}
             />
             {query && (
-              <button className="btn ghost tiny" disabled={judging} onClick={() => void searchByMeaning()}
+              <button className="btn ghost tiny" disabled={offeredLoading && meaning !== null} onClick={searchByMeaning}
                       title="Understands what you're looking for, not just the words — 'money owed' finds an accounting realm">
-                {judging ? 'searching…' : 'Smart search'}
+                {offeredLoading && meaning !== null ? 'searching…' : 'Smart search'}
               </button>
             )}
             {query && <button className="btn ghost tiny" onClick={() => { setQuery(''); setMeaning(null) }}>Clear</button>}
           </div>
-          {meaning && (
+          {/* Facets: each chip is a WHERE on the same query, with the count choosing it would show. */}
+          {((offered?.tags.length ?? 0) > 0 || (offered?.hidden ?? 0) > 0 || showExperimental) && (
+            <div className="realm-facets" role="group" aria-label="Filter available realms">
+              {tag && (
+                <button className="realm-facet is-on" aria-pressed="true" onClick={() => setTag('')} title="Show every tag">
+                  {tag} ×
+                </button>
+              )}
+              {!tag && (offered?.tags ?? []).map((t) => (
+                <button key={t.tag} className="realm-facet" aria-pressed="false" onClick={() => setTag(t.tag)}>
+                  {t.tag} <span className="realm-facet-count">{t.realms}</span>
+                </button>
+              ))}
+              {/* The only way to reach what was left out, and it states the number, so the choice is
+                  a decision rather than an unexplained checkbox. */}
+              {((offered?.hidden ?? 0) > 0 || showExperimental) && (
+                <button
+                  className={`realm-facet realm-facet-maturity ${showExperimental ? 'is-on' : ''}`}
+                  aria-pressed={showExperimental}
+                  title="Realms their own authors call experimental — they may change or break, and installing one asks you to confirm"
+                  onClick={() => setShowExperimental((v) => !v)}
+                >
+                  {showExperimental ? 'Hide experimental' : `Show ${offered?.hidden ?? 0} experimental`}
+                </button>
+              )}
+            </div>
+          )}
+          {meaning && !offeredLoading && (
             <div className="notice">
-              Smart search for “{meaning.q}” · {suggestions.length} match{suggestions.length === 1 ? '' : 'es'} —
+              Smart search for “{meaning}” · {suggestions.length} match{suggestions.length === 1 ? '' : 'es'} —
               matched on what each realm does, not just its words. Asking in chat works the same way.
             </div>
           )}
           {searchNote && <Status tone={searchNote.tone}>{searchNote.text}</Status>}
-          {!suggested.loading && !suggested.error && suggestions.length > 0 ? (
+          {offeredError ? (
+            <Status tone="error">{offeredError}</Status>
+          ) : offered === null ? (
+            <Status tone={null}>Loading realm directory…</Status>
+          ) : suggestions.length > 0 ? (
             /* Suggested realms compress to ONE LINE each, like the installed list above: a
                directory of dozens read as a wall of cards; a directory reads as an index. The
                name expands to the description and tags; Install stays on the line. */
             <div className="realm-list">
               {suggestions.map((s) => {
-                const id = `s:${s.name ?? s.repo ?? ''}`
+                const id = `s:${s.name}`
                 const open = expanded.has(id)
                 return (
                   <div className={`realm-row suggested-row ${open ? 'is-open' : ''}`} key={id}>
                     <button className="realm-row-head" onClick={() => toggle(id)} aria-expanded={open}>
                       <Lamp tone="unlit" />
-                      <strong>{s.name ?? s.repo}</strong>
-                      {s.metadata?.version && <code className="ver">v{s.metadata.version}</code>}
-                      {sourceOf(s.url ?? s.repository, s.provider) && (
-                        <small className="realm-source">{sourceOf(s.url ?? s.repository, s.provider)}</small>
+                      <strong>{s.name}</strong>
+                      {s.version && <code className="ver">v{s.version}</code>}
+                      {sourceOf(s.url || s.source, s.provider) && (
+                        <small className="realm-source">{sourceOf(s.url || s.source, s.provider)}</small>
                       )}
+                      {s.maturity === 'experimental' && <span className="realm-maturity">experimental</span>}
                       <span className="realm-chevron" aria-hidden="true">{open ? '▾' : '▸'}</span>
                     </button>
-                    <button className="btn tiny suggested-install" disabled={busy === s.name} onClick={() => install(s)}>
+                    <button className="btn tiny suggested-install" disabled={busy === s.name} onClick={() => void install(s)}>
                       {busy === s.name ? 'installing…' : 'Install'}
                     </button>
                     {open && (
                       <div className="realm-row-body suggested-body">
-                        <p>{s.description ?? s.repo ?? ''}</p>
+                        <p>{s.description}</p>
                         <div className="realm-meta">
-                          <span>{s.metadata?.author || s.provider}</span>
-                          {tagsOf(s).map((t) => <span className="realm-tag" key={t}>{t}</span>)}
+                          <span>{s.author || s.provider}</span>
+                          {s.tags.map((t) => <span className="realm-tag" key={t}>{t}</span>)}
                         </div>
                       </div>
                     )}
@@ -372,12 +423,10 @@ export function RealmsSurface({ services, host }: RealmsSurfaceProps) {
                 )
               })}
             </div>
-          ) : !suggested.loading && !suggested.error ? (
-            <div className="notice">
-              {query ? `No realm matches “${query}”.` : 'Directory returned no further suggestions.'}
-            </div>
           ) : (
-            <Status tone={suggested.error ? 'error' : null}>{suggested.loading ? 'Loading realm directory…' : suggested.error}</Status>
+            <div className="notice">
+              {query ? `No realm matches “${query}”.` : tag ? `No available realm is tagged ${tag}.` : 'Directory returned no further suggestions.'}
+            </div>
           )}
           {installMsg && <div className="notice">{installMsg}</div>}
         </>

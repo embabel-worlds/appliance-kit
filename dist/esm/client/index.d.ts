@@ -25,6 +25,8 @@ export { AgentSuggestionsClient } from './agentSuggestions.ts';
 export { AgentRunsClient } from './agentRuns.ts';
 export { AgentReflectionClient } from './agentReflection.ts';
 export { AgentAccountsClient } from './agentAccounts.ts';
+export { RealmCatalog, ranInBackground, realmsQuery, tagsQuery, experimentalQuery, toRealm } from './realmCatalog.ts';
+export type { CatalogRealm, CatalogQuery, RealmFilter, RealmShow, TagCount } from './realmCatalog.ts';
 export type { AgentSlots, Retired } from './agentAccounts.ts';
 export type { AgentProposal, ProposalChange } from './agentReflection.ts';
 export type { AgentRun, Firing, Receipt, ReceiptVerification, RunDetail, RunKind, RunOutcome, Upcoming } from './agentRuns.ts';

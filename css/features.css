@@ -1160,6 +1160,17 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .realm-meta { display: flex; flex-wrap: wrap; gap: 6px; align-items: baseline; margin-top: 4px;
   font-size: 11.5px; color: var(--faint); }
 
+:where(.kit-feature) .realm-facets { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0; }
+:where(.kit-feature) .realm-facet { border: 1px solid var(--panel-edge); border-radius: 999px; padding: 1px 9px;
+  background: none; color: var(--mid); font: inherit; font-size: 11.5px; cursor: pointer; }
+:where(.kit-feature) .realm-facet:hover, :where(.kit-feature) .realm-facet:focus-visible { color: var(--ink); border-color: var(--ink); }
+:where(.kit-feature) .realm-facet.is-on { color: var(--paper); background: var(--ink); border-color: var(--ink); }
+:where(.kit-feature) .realm-facet-count { opacity: 0.65; margin-left: 2px; }
+/* Said in the caution colour: an author's own word that the realm may change or break. */
+:where(.kit-feature) .realm-facet-maturity { border-style: dashed; }
+:where(.kit-feature) .realm-maturity { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.04em;
+  color: var(--caution); border: 1px solid var(--caution); border-radius: 3px; padding: 0 4px; margin-left: 6px; }
+
 :where(.kit-feature) .realm-tag { border: 1px solid var(--panel-edge); border-radius: 999px; padding: 0 8px;
   font-size: 10.5px; color: var(--mid); }
 
