@@ -3227,6 +3227,9 @@
             "description" : "False when the body threw; `error` then carries the message.",
             "type" : "boolean"
           },
+          "output" : {
+            "description" : "What the body RETURNED, when it returned something. A handler that ends with `return rows` and never logs is not silent — this is its result. Absent when the body returned nothing."
+          },
           "ranAgainst" : {
             "$ref" : "#/components/schemas/HandlerRanAgainst"
           },
@@ -4513,6 +4516,20 @@
         "required" : [ "columns", "contractId", "disposition", "mode", "status", "version", "view", "yaml" ],
         "type" : "object"
       },
+      "KgGenerateRequest" : {
+        "description" : "A question to write Cypher for, and whether a saved view that answers it may stand in.",
+        "properties" : {
+          "preferViews" : {
+            "description" : "Consult the saved-view catalogue first (default true): a question a curated view already answers comes back as that view's invocation, with `view` set. False generates regardless.",
+            "type" : "boolean"
+          },
+          "question" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "question" ],
+        "type" : "object"
+      },
       "KgGenerateResponse" : {
         "description" : "Generated cypher and what the engine will do with it, without running it.",
         "properties" : {
@@ -4538,6 +4555,10 @@
           "valid" : {
             "description" : "Whether the final attempt passed the strict preflight.",
             "type" : "boolean"
+          },
+          "view" : {
+            "$ref" : "#/components/schemas/KgViewMatch",
+            "description" : "Present when a saved view already answers the question: `cypher` is then that view's invocation, `attempts` is 0, and nothing was generated. Absent when the Cypher was written for this question."
           },
           "violations" : {
             "items" : {
@@ -5164,6 +5185,25 @@
           }
         },
         "required" : [ "cypher", "name" ],
+        "type" : "object"
+      },
+      "KgViewMatch" : {
+        "description" : "The saved view a question was routed to instead of generating Cypher.",
+        "properties" : {
+          "args" : {
+            "additionalProperties" : { },
+            "description" : "The arguments the selector bound from the question, by parameter name.",
+            "type" : "object"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "reason" : {
+            "description" : "The selector's one line on why this view.",
+            "type" : "string"
+          }
+        },
+        "required" : [ "args", "name" ],
         "type" : "object"
       },
       "LearnApiRequest" : {
@@ -9519,7 +9559,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/KgAskRequest"
+                "$ref" : "#/components/schemas/KgGenerateRequest"
               }
             }
           },
@@ -21728,7 +21768,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43663"
+    "url" : "http://localhost:42289"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
