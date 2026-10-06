@@ -27,6 +27,12 @@ function when(iso: string | null): string {
   return Number.isNaN(date.getTime()) ? iso : date.toLocaleString()
 }
 
+/** What a key can do, in the words the form used when it was created. */
+function access(key: ApiKeySummary): string {
+  if (!key.agents) return 'Full access'
+  return key.agents.includes('*') ? 'All agents' : `Agents: ${key.agents.join(', ')}`
+}
+
 /** The kit's own frame: a titled panel with the actions beside the title. */
 function StudioFrame({ title, actions, children }: SurfaceFrameParts) {
   return <StudioPanel title={title} aside={actions}>{children}</StudioPanel>
@@ -66,9 +72,9 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
     event.preventDefault()
     const trimmed = name.trim()
     if (!trimmed || minting) return
-    setMinting(true)
     const named = agents.split(',').map((a) => a.trim()).filter(Boolean)
     if (forAgents && named.length === 0) return
+    setMinting(true)
     const result = await services.mintKey(trimmed, forAgents ? named : undefined)
     setMinting(false)
     if (!result.ok) {
@@ -114,9 +120,15 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
         refresh: () => void load(),
         children: <>
         <p className="hint">
-          A key lets a script, a service or a coding agent call this appliance as you without
-          carrying your password. Each one is named for what holds it and can be revoked on its own.
+          An API key lets a program sign in to this appliance as you, without your password.
+          Create one key for each program, so you can switch one off without affecting the others.
         </p>
+        <ol className="hint keysteps">
+          <li>Name the key after the program that will use it.</li>
+          <li>Choose its access: full access does everything you can, agents only can just chat with agents.</li>
+          <li>Create the key and copy it straight away. It is shown once.</li>
+          <li>Paste it into the program. The examples at the bottom show where.</li>
+        </ol>
 
         {absent ? (
           <Status tone="caution">{problem}</Status>
@@ -126,27 +138,27 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
 
             <form className="row" onSubmit={(event) => void mint(event)}>
               <label className="field grow">
-                <span>What will hold this key</span>
+                <span>Name</span>
                 <input
                   value={name}
                   maxLength={NAME_LIMIT}
-                  placeholder="deploy pipeline, Slack relay, laptop"
+                  placeholder="e.g. Open WebUI, deploy script"
                   onChange={(event) => setName(event.target.value)}
                 />
               </label>
               <label className="field">
-                <span>For</span>
+                <span>Access</span>
                 <select value={forAgents ? 'agents' : 'all'} onChange={(event) => setForAgents(event.target.value === 'agents')}>
-                  <option value="all">Everything you can do</option>
-                  <option value="agents">Talking to agents only</option>
+                  <option value="all">Full access</option>
+                  <option value="agents">Agents only</option>
                 </select>
               </label>
               {forAgents && (
                 <label className="field">
-                  <span>Agents</span>
+                  <span>Which agents</span>
                   <input
                     value={agents}
-                    placeholder="jonathon, chaser, or * for any"
+                    placeholder="names separated by commas, or * for all"
                     onChange={(event) => setAgents(event.target.value)}
                   />
                 </label>
@@ -159,7 +171,7 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
             {problem && <Status tone="error">{problem}</Status>}
 
             {loaded && keys.length === 0 && !problem && (
-              <p className="hint">No keys yet. The first one you create is shown once, here.</p>
+              <p className="hint">No keys yet.</p>
             )}
 
             {keys.length > 0 && (
@@ -169,7 +181,7 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
                     <tr>
                       <th>Name</th>
                       <th>Key</th>
-                      <th>Reaches</th>
+                      <th>Access</th>
                       <th>Created</th>
                       <th>Last used</th>
                       <th aria-label="actions" />
@@ -180,7 +192,7 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
                       <tr key={key.id}>
                         <td>{key.name}</td>
                         <td><code>{key.prefix}…</code></td>
-                        <td>{key.agents ? `agents: ${key.agents.join(', ')}` : 'everything'}</td>
+                        <td>{access(key)}</td>
                         <td title={key.createdAt}>{when(key.createdAt)}</td>
                         <td title={key.lastUsedAt ?? undefined}>{when(key.lastUsedAt)}</td>
                         <td>
@@ -201,22 +213,27 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
 
             <div className="snippet">
               <div className="snippet-head">
-                <strong>Using a key</strong>
+                <strong>Full access key: scripts and services</strong>
                 <CopyButton label="Copy" text={example} />
               </div>
               <pre className="cmd">{example}</pre>
+              <p className="hint">
+                Send the key in the <code>X-Embabel-Api-Key</code> header. If a program can only
+                set <code>Authorization</code>, use <code>Authorization: Bearer</code> followed by
+                the key.
+              </p>
               <div className="snippet-head">
-                <strong>In a chat client (Open WebUI, LibreChat…)</strong>
+                <strong>Agents-only key: chat clients such as Open WebUI or LibreChat</strong>
                 <CopyButton label="Copy" text={agentExample} />
               </div>
               <pre className="cmd">{agentExample}</pre>
               <p className="hint">
-                An agent key is the one to paste into a chat client: it talks only to the agents it
-                names and reaches nothing else of yours. Send any key in the{' '}
-                <code>X-Embabel-Api-Key</code> header, or as{' '}
-                <code>Authorization: Bearer</code> for a client that can only set that one. Keep it
-                in an environment variable or a secrets store, never in a URL and never in a
-                repository.
+                Enter these in the chat client's connection settings. The model is the name of
+                the agent you want to talk to.
+              </p>
+              <p className="hint">
+                Keep a key in an environment variable or a secrets store, never in a URL or a
+                repository. If a key leaks, revoke it here and create a new one.
               </p>
             </div>
           </>

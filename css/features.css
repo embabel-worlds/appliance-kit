@@ -1011,6 +1011,17 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .snippet { margin-top: 12px; }
 
+:where(.kit-feature) .keysteps { padding-left: 18px; }
+
+:where(.kit-feature) .keysteps li { margin: 2px 0; }
+
+/* The fields carry their own bottom margin, which left Create key 12px below the inputs it belongs to.
+   The row takes the margin instead. */
+
+:where(.kit-feature).apikeys form.row, :where(.kit-feature) .apikeys form.row { align-items: flex-end; margin-bottom: 12px; }
+
+:where(.kit-feature).apikeys form.row .field, :where(.kit-feature) .apikeys form.row .field { margin-bottom: 0; }
+
 :where(.kit-feature) .snippet-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 4px; }
 
 :where(.kit-feature) .snippet-head strong { font-size: 12px; color: var(--mid); }
