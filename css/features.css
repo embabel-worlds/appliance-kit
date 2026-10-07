@@ -113,6 +113,24 @@
 
 :where(.kit-feature) .studio-side > .panel { flex: 0 0 auto; }
 
+/* The Query studio's rail is the one exception, and only for its FIRST panel: the schema. Its list
+   is the only thing in either rail that scrolls on its own, so it takes the height the rail has
+   left instead of stopping at the 340px list cap, and Scopes and Fills keep their natural height
+   below it. Query ONLY — the routine studio's first panel has no list to absorb the squeeze, and
+   shrinking it paints its content over the panels beneath. Two columns only: stacked, the rail has
+   no height to hand out. */
+@media (min-width: 1101px) {
+  :where(.kit-feature).kit-feature-query .studio-side > .panel:first-child {
+    flex: 1 1 auto; min-height: 240px; display: flex; flex-direction: column;
+  }
+  :where(.kit-feature).kit-feature-query .studio-side > .panel:first-child > .panel-body {
+    flex: 1 1 auto; min-height: 0; display: flex; flex-direction: column;
+  }
+  :where(.kit-feature).kit-feature-query .studio-side > .panel:first-child .schemalist {
+    flex: 1 1 auto; min-height: 0; max-height: none;
+  }
+}
+
 /* Feature panels share one quiet hierarchy. Their headings divide tasks without turning every
    step into another framed card. */
 :where(.kit-feature) .panel-head {

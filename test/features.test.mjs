@@ -215,6 +215,32 @@ describe('the public browser feature entry point', () => {
     assert.equal(fill.disabled, false)
   })
 
+  it('lets only the Query studio\'s schema panel take a share of the rail, so no other rail panel is squeezed', () => {
+    const root = postcss.parse(
+      readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'),
+      { from: 'features.css' },
+    )
+    const firstPanelSelectors = []
+    let railPanelRule
+    root.walkRules((rule) => {
+      for (const selector of rule.selectors) {
+        if (selector === ':where(.kit-feature) .studio-side > .panel' &&
+            rule.nodes.some((node) => node.prop === 'flex')) railPanelRule = rule
+        if (selector.includes('.studio-side > .panel:first-child')) firstPanelSelectors.push(selector)
+      }
+    })
+    assert.ok(railPanelRule, 'every rail panel keeps a stated flex')
+    assert.equal(railPanelRule.nodes.find((node) => node.prop === 'flex').value, '0 0 auto')
+    assert.equal(firstPanelSelectors.length, 3)
+    for (const selector of firstPanelSelectors) {
+      assert.equal(
+        selector.startsWith(':where(.kit-feature).kit-feature-query '),
+        true,
+        `${selector} names the Query studio`,
+      )
+    }
+  })
+
   it('ships WKWebView-compatible feature-bound CSS with every extracted workflow block', () => {
     const css = readFileSync(new URL('../css/features.css', import.meta.url), 'utf8')
     const root = postcss.parse(css, { from: 'features.css' })
