@@ -3789,6 +3789,14 @@
         "required" : [ "embeddings", "message", "status" ],
         "type" : "object"
       },
+      "InstallDescriptionRequest" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "InstallRequest" : {
         "properties" : {
           "name" : {
@@ -3796,25 +3804,6 @@
           }
         },
         "required" : [ "name" ],
-        "type" : "object"
-      },
-      "InstalledResponse" : {
-        "properties" : {
-          "message" : {
-            "type" : "string"
-          },
-          "provisional" : {
-            "type" : "boolean"
-          },
-          "realm" : {
-            "type" : "string"
-          },
-          "unconfirmedDecisions" : {
-            "format" : "int32",
-            "type" : "integer"
-          }
-        },
-        "required" : [ "message", "provisional", "realm", "unconfirmedDecisions" ],
         "type" : "object"
       },
       "InvokeRequest" : {
@@ -5227,10 +5216,14 @@
           "consent" : {
             "type" : "string"
           },
+          "descriptionsOnly" : {
+            "type" : "boolean"
+          },
           "purpose" : {
             "type" : "string"
           }
         },
+        "required" : [ "descriptionsOnly" ],
         "type" : "object"
       },
       "LensChatRequest" : {
@@ -17282,6 +17275,67 @@
         "tags" : [ "Learning" ]
       }
     },
+    "/api/v1/learn/sources/{name}/description-brief" : {
+      "get" : {
+        "operationId" : "descriptionBrief",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "in" : "query",
+          "name" : "consent",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such connected database, or it is unreachable"
+          }
+        },
+        "summary" : "What to write about a connected database, and the schema to write it from",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/sources/{name}/description-review" : {
+      "post" : {
+        "operationId" : "descriptionReview",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No such connected database"
+          }
+        },
+        "summary" : "Hold a connected database's current state so reviewed wording can be saved",
+        "tags" : [ "Learning" ]
+      }
+    },
     "/api/v1/learn/sources/{name}/install" : {
       "delete" : {
         "operationId" : "uninstallLearnSourceRealm",
@@ -17396,7 +17450,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "type" : "object"
                 }
               }
             },
@@ -17455,19 +17509,28 @@
             "type" : "string"
           }
         } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/InstallDescriptionRequest"
+              }
+            }
+          }
+        },
         "responses" : {
           "200" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/InstalledResponse"
+                  "type" : "object"
                 }
               }
             },
             "description" : "OK"
           }
         },
-        "summary" : "Install as a PROVISIONAL realm and rebuild the world — queryable immediately",
+        "summary" : "Install the reviewed proposal and rebuild the world",
         "tags" : [ "Learning" ]
       }
     },
@@ -21768,7 +21831,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43289"
+    "url" : "http://localhost:37281"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
