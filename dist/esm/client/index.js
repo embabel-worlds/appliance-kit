@@ -23,7 +23,7 @@ export { AgentRunsClient } from "./agentRuns.js";
 export { AgentReflectionClient } from "./agentReflection.js";
 export { AgentAccountsClient } from "./agentAccounts.js";
 export { WorldLists, QUERIES as WORLD_LIST_QUERIES } from "./worldLists.js";
-export { RealmCatalog, ranInBackground, realmsQuery, tagsQuery, experimentalQuery, toRealm } from "./realmCatalog.js";
+export { RealmCatalog, ranInBackground, realmsQuery, tagsQuery, categoriesQuery, experimentalQuery, toRealm } from "./realmCatalog.js";
 export { HandlersClient } from "./handlers.js";
 import { AgentsClient as AgentsClientImpl } from "./agents.js";
 import { RequestsClient as RequestsClientImpl } from "./requests.js";

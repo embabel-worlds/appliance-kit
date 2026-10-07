@@ -98,7 +98,7 @@ afterEach(async () => {
  */
 function realmCatalogue(realms, { failInstalled } = {}) {
   const queries = []
-  const row = (r) => ({ installed: false, maturity: '', tags: [], description: '', version: '', latestVersion: '', author: '', provider: '', url: '', source: `https://github.com/embabel-worlds/realm-${r.name}.git`, problems: 0, missingSources: [], ...r })
+  const row = (r) => ({ installed: false, maturity: '', category: '', categoryLabel: '', categoryIcon: '', tags: [], description: '', version: '', latestVersion: '', author: '', provider: '', url: '', source: `https://github.com/embabel-worlds/realm-${r.name}.git`, problems: 0, missingSources: [], ...r })
   const all = realms.map(row)
   const searchRealms = async (cypher, options = {}) => {
     queries.push({ cypher, options })
@@ -109,9 +109,15 @@ function realmCatalogue(realms, { failInstalled } = {}) {
     if (/NOT r\.installed/.test(cypher)) rows = rows.filter((r) => !r.installed)
     if (/\(r\.installed OR r\.maturity <> 'experimental'\)/.test(cypher)) rows = rows.filter((r) => r.installed || r.maturity !== 'experimental')
     if (/r\.maturity = 'experimental'/.test(cypher)) rows = rows.filter((r) => r.maturity === 'experimental' && (!/NOT r\.installed/.test(cypher) || !r.installed))
+    if (/r\.category = \$category/.test(cypher)) rows = rows.filter((r) => r.category === args.category)
     if (/\$tag IN r\.tags/.test(cypher)) rows = rows.filter((r) => r.tags.includes(args.tag))
     if (/\$words/.test(cypher)) rows = rows.filter((r) => String(args.words).toLowerCase().split(' ').every((w) => `${r.name} ${r.description} ${r.tags.join(' ')}`.toLowerCase().includes(w)))
     if (/count\(r\) AS hidden/.test(cypher)) return ok({ rows: [{ hidden: rows.length }] })
+    if (/count\(\*\) AS realms ORDER BY realms DESC, label/.test(cypher)) {
+      const shelves = new Map()
+      for (const r of rows) shelves.set(r.category, { category: r.category, label: r.categoryLabel, icon: r.categoryIcon, realms: (shelves.get(r.category)?.realms ?? 0) + 1 })
+      return ok({ rows: [...shelves.values()].sort((a, b) => b.realms - a.realms || a.label.localeCompare(b.label)) })
+    }
     if (/UNWIND r\.tags/.test(cypher)) {
       const counts = new Map()
       for (const r of rows) for (const t of r.tags) counts.set(t, (counts.get(t) ?? 0) + 1)
@@ -2512,6 +2518,47 @@ describe('the realm catalogue queries', () => {
     assert.match(hidden.cypher, /NOT r\.installed/, 'only realms on offer count as left out')
     assert.doesNotMatch(hidden.cypher, /<> 'experimental'/)
     assert.match(hidden.cypher, /\$tag IN r\.tags/)
+  })
+
+  it('narrows to a category by a parameter, and counts categories without narrowing to one', async () => {
+    const { realmsQuery, categoriesQuery } = await import('../src/client/realmCatalog.ts')
+    const listed = realmsQuery({ category: "finance' OR 1=1 //", tag: 'billing' })
+    assert.match(listed.cypher, /r\.category = \$category/)
+    assert.doesNotMatch(listed.cypher, /OR 1=1/)
+    assert.equal(listed.options.args.category, "finance' OR 1=1 //")
+    assert.match(listed.cypher, /r\.category AS category, r\.categoryLabel AS categoryLabel, r\.categoryIcon AS categoryIcon/)
+    const counted = categoriesQuery({ category: 'finance', tag: 'billing', show: 'available' })
+    assert.doesNotMatch(counted.cypher, /\$category/, 'a category chip says how many choosing it would show')
+    assert.match(counted.cypher, /\$tag IN r\.tags/)
+    assert.match(counted.cypher, /NOT r\.installed/)
+  })
+
+  it('reads what a realm is for off its row, and counts the realms that say nothing', async () => {
+    const { RealmCatalog } = await import('../src/client/realmCatalog.ts')
+    const fake = realmCatalogue([
+      { name: 'stripe', category: 'finance', categoryLabel: 'Finance & Billing', categoryIcon: 'currency-dollar' },
+      { name: 'lago', category: 'finance', categoryLabel: 'Finance & Billing', categoryIcon: 'currency-dollar' },
+      { name: 'chess', category: 'lifestyle', categoryLabel: 'Lifestyle & Entertainment', categoryIcon: 'film-slate' },
+      { name: 'homelab' },
+    ])
+    const catalog = new RealmCatalog(fake.searchRealms)
+    const realms = await catalog.realms({ category: 'finance' })
+    assert.deepEqual(realms.value.map((r) => [r.name, r.category, r.categoryLabel, r.categoryIcon]), [
+      ['stripe', 'finance', 'Finance & Billing', 'currency-dollar'],
+      ['lago', 'finance', 'Finance & Billing', 'currency-dollar'],
+    ])
+    const counts = await catalog.categories({})
+    assert.deepEqual(counts.value, [
+      { id: 'finance', label: 'Finance & Billing', icon: 'currency-dollar', realms: 2 },
+      { id: '', label: '', icon: '', realms: 1 },
+      { id: 'lifestyle', label: 'Lifestyle & Entertainment', icon: 'film-slate', realms: 1 },
+    ])
+  })
+
+  it('a row from an appliance that does not state a category reads as none', async () => {
+    const { toRealm } = await import('../src/client/realmCatalog.ts')
+    const realm = toRealm({ name: 'stripe', installed: true, tags: ['billing'] })
+    assert.deepEqual([realm.category, realm.categoryLabel, realm.categoryIcon], ['', '', ''])
   })
 })
 
