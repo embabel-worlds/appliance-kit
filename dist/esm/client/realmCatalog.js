@@ -14,11 +14,16 @@
  * out, since an opt-in nobody can find is not one. An INSTALLED experimental realm is never left
  * out: it is part of this world whatever its author thinks of it (realm-spec, Maturity). Unstated
  * maturity is no claim, and listed.
+ *
+ * What a realm is FOR is its `category`: one id from a published list, which the appliance has
+ * already judged, so a row carries it with its label and icon or carries none (realm-spec,
+ * Category). It is the facet to browse by. Tags are free text and stay a way of searching.
  */
 import { failure, ok } from "./outcome.js";
 const ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
   r.latestVersion AS latestVersion, r.author AS author, r.provider AS provider, r.maturity AS maturity,
-  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources`;
+  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources,
+  r.category AS category, r.categoryLabel AS categoryLabel, r.categoryIcon AS categoryIcon`;
 /* The text a word must appear in. Tags count: "accounting" finds a realm tagged accounting whose
  * description never says the word. */
 const HAYSTACK = "toLower(r.name + ' ' + r.description + ' ' + r.author + ' ' + reduce(s = '', t IN r.tags | s + ' ' + t))";
@@ -37,6 +42,12 @@ function where(filter, except = []) {
         clauses.push('NOT r.installed');
     if (!filter.experimental && !except.includes('experimental'))
         clauses.push("(r.installed OR r.maturity <> 'experimental')");
+    const category = filter.category?.trim();
+    if (category && !except.includes('category')) {
+        clauses.push('r.category = $category');
+        params['category'] = string('The category every listed realm is in');
+        args['category'] = category;
+    }
     const tag = filter.tag?.trim();
     if (tag && !except.includes('tag')) {
         clauses.push('$tag IN r.tags');
@@ -72,6 +83,13 @@ export function realmsQuery(filter) {
 export function tagsQuery(filter) {
     return query('MATCH (r:Realm)', filter, 'UNWIND r.tags AS tag RETURN tag, count(*) AS realms ORDER BY realms DESC, tag', ['tag']);
 }
+/**
+ * How many realms are in each category, under every facet but the category itself. The realms that
+ * state none come back too, as the row whose category is empty: how many there are is part of the answer.
+ */
+export function categoriesQuery(filter) {
+    return query('MATCH (r:Realm)', filter, 'RETURN r.category AS category, r.categoryLabel AS label, r.categoryIcon AS icon, count(*) AS realms ORDER BY realms DESC, label', ['category']);
+}
 /** How many experimental realms the other facets would show if they were included. */
 export function experimentalQuery(filter) {
     return query('MATCH (r:Realm)', filter, 'RETURN count(r) AS hidden', ['experimental'], ['NOT r.installed', "r.maturity = 'experimental'"]);
@@ -88,6 +106,9 @@ export function toRealm(row) {
         author: text(row['author']),
         provider: text(row['provider']),
         maturity: text(row['maturity']).toLowerCase(),
+        category: text(row['category']),
+        categoryLabel: text(row['categoryLabel']),
+        categoryIcon: text(row['categoryIcon']),
         tags: texts(row['tags']),
         url: text(row['url']),
         source: text(row['source']),
@@ -125,6 +146,18 @@ export class RealmCatalog {
         const q = tagsQuery(filter);
         const rows = rowsOf(await this.run(q.cypher, q.options), 'Counting realm tags');
         return rows.ok ? ok(rows.value.map((r) => ({ tag: text(r['tag']), realms: Number(r['realms'] ?? 0) || 0 })).filter((t) => t.tag)) : rows;
+    }
+    async categories(filter) {
+        const q = categoriesQuery(filter);
+        const rows = rowsOf(await this.run(q.cypher, q.options), 'Counting realm categories');
+        if (!rows.ok)
+            return rows;
+        return ok(rows.value.map((r) => ({
+            id: text(r['category']),
+            label: text(r['label']),
+            icon: text(r['icon']),
+            realms: Number(r['realms'] ?? 0) || 0,
+        })));
     }
     async hiddenExperimental(filter) {
         if (filter.experimental)

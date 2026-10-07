@@ -4,6 +4,8 @@ export type RealmShow = 'all' | 'installed' | 'available';
 export interface RealmFilter {
     /** Installed, on offer, or both. Default both. */
     show?: RealmShow;
+    /** The category every listed realm is in, as its id. Empty is any. */
+    category?: string;
     /** One tag every listed realm carries. Empty is any. */
     tag?: string;
     /** Include realms their authors call experimental. Default false. */
@@ -27,6 +29,12 @@ export interface CatalogRealm {
     provider: string;
     /** `experimental`, `beta`, `stable`, `deprecated`, or empty when the author states none. */
     maturity: string;
+    /** What the realm is for, as an id from the published list. Empty when it states none the list has. */
+    category: string;
+    /** The category's name for people. Empty when [category] is. */
+    categoryLabel: string;
+    /** The category's Phosphor icon name. Empty when it has none. */
+    categoryIcon: string;
     tags: string[];
     url: string;
     /** What to install from: the clone URL. Empty for a realm nobody offers (path-installed, private). */
@@ -36,6 +44,13 @@ export interface CatalogRealm {
 }
 export interface TagCount {
     tag: string;
+    realms: number;
+}
+/** A category and how many realms are in it. An empty [id] is the realms that state none. */
+export interface CategoryCount {
+    id: string;
+    label: string;
+    icon: string;
     realms: number;
 }
 /** A query and how to run it: the text, and its declared parameters with their values. */
@@ -48,6 +63,11 @@ type Run = (cypher: string, options: ExecuteOptions) => Promise<Outcome<KgQueryR
 export declare function realmsQuery(filter: RealmFilter): CatalogQuery;
 /** How many realms carry each tag, under every facet but the tag itself. */
 export declare function tagsQuery(filter: RealmFilter): CatalogQuery;
+/**
+ * How many realms are in each category, under every facet but the category itself. The realms that
+ * state none come back too, as the row whose category is empty: how many there are is part of the answer.
+ */
+export declare function categoriesQuery(filter: RealmFilter): CatalogQuery;
 /** How many experimental realms the other facets would show if they were included. */
 export declare function experimentalQuery(filter: RealmFilter): CatalogQuery;
 export declare function toRealm(row: Record<string, unknown>): CatalogRealm;
@@ -58,6 +78,7 @@ export declare class RealmCatalog {
     constructor(run: Run);
     realms(filter: RealmFilter): Promise<Outcome<CatalogRealm[]>>;
     tags(filter: RealmFilter): Promise<Outcome<TagCount[]>>;
+    categories(filter: RealmFilter): Promise<Outcome<CategoryCount[]>>;
     hiddenExperimental(filter: RealmFilter): Promise<Outcome<number>>;
 }
 export {};

@@ -43,6 +43,7 @@ var EmbabelApplianceClient = (() => {
     WORLD_LIST_QUERIES: () => QUERIES,
     WorldLists: () => WorldLists,
     basicAuth: () => basicAuth,
+    categoriesQuery: () => categoriesQuery,
     classifySource: () => classifySource,
     createSseParser: () => createSseParser,
     expect: () => expect,
@@ -1060,7 +1061,8 @@ var EmbabelApplianceClient = (() => {
   // src/client/realmCatalog.ts
   var ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
   r.latestVersion AS latestVersion, r.author AS author, r.provider AS provider, r.maturity AS maturity,
-  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources`;
+  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources,
+  r.category AS category, r.categoryLabel AS categoryLabel, r.categoryIcon AS categoryIcon`;
   var HAYSTACK = "toLower(r.name + ' ' + r.description + ' ' + r.author + ' ' + reduce(s = '', t IN r.tags | s + ' ' + t))";
   var string = (description) => ({ type: "string", default: "", description });
   function where(filter, except = []) {
@@ -1070,6 +1072,12 @@ var EmbabelApplianceClient = (() => {
     if (filter.show === "installed") clauses.push("r.installed");
     if (filter.show === "available") clauses.push("NOT r.installed");
     if (!filter.experimental && !except.includes("experimental")) clauses.push("(r.installed OR r.maturity <> 'experimental')");
+    const category = filter.category?.trim();
+    if (category && !except.includes("category")) {
+      clauses.push("r.category = $category");
+      params["category"] = string("The category every listed realm is in");
+      args["category"] = category;
+    }
     const tag = filter.tag?.trim();
     if (tag && !except.includes("tag")) {
       clauses.push("$tag IN r.tags");
@@ -1101,6 +1109,14 @@ var EmbabelApplianceClient = (() => {
   function tagsQuery(filter) {
     return query("MATCH (r:Realm)", filter, "UNWIND r.tags AS tag RETURN tag, count(*) AS realms ORDER BY realms DESC, tag", ["tag"]);
   }
+  function categoriesQuery(filter) {
+    return query(
+      "MATCH (r:Realm)",
+      filter,
+      "RETURN r.category AS category, r.categoryLabel AS label, r.categoryIcon AS icon, count(*) AS realms ORDER BY realms DESC, label",
+      ["category"]
+    );
+  }
   function experimentalQuery(filter) {
     return query("MATCH (r:Realm)", filter, "RETURN count(r) AS hidden", ["experimental"], ["NOT r.installed", "r.maturity = 'experimental'"]);
   }
@@ -1116,6 +1132,9 @@ var EmbabelApplianceClient = (() => {
       author: text2(row["author"]),
       provider: text2(row["provider"]),
       maturity: text2(row["maturity"]).toLowerCase(),
+      category: text2(row["category"]),
+      categoryLabel: text2(row["categoryLabel"]),
+      categoryIcon: text2(row["categoryIcon"]),
       tags: texts(row["tags"]),
       url: text2(row["url"]),
       source: text2(row["source"]),
@@ -1144,6 +1163,17 @@ var EmbabelApplianceClient = (() => {
       const q = tagsQuery(filter);
       const rows = rowsOf2(await this.run(q.cypher, q.options), "Counting realm tags");
       return rows.ok ? ok(rows.value.map((r) => ({ tag: text2(r["tag"]), realms: Number(r["realms"] ?? 0) || 0 })).filter((t) => t.tag)) : rows;
+    }
+    async categories(filter) {
+      const q = categoriesQuery(filter);
+      const rows = rowsOf2(await this.run(q.cypher, q.options), "Counting realm categories");
+      if (!rows.ok) return rows;
+      return ok(rows.value.map((r) => ({
+        id: text2(r["category"]),
+        label: text2(r["label"]),
+        icon: text2(r["icon"]),
+        realms: Number(r["realms"] ?? 0) || 0
+      })));
     }
     async hiddenExperimental(filter) {
       if (filter.experimental) return ok(0);

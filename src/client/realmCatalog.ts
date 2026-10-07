@@ -14,6 +14,10 @@
  * out, since an opt-in nobody can find is not one. An INSTALLED experimental realm is never left
  * out: it is part of this world whatever its author thinks of it (realm-spec, Maturity). Unstated
  * maturity is no claim, and listed.
+ *
+ * What a realm is FOR is its `category`: one id from a published list, which the appliance has
+ * already judged, so a row carries it with its label and icon or carries none (realm-spec,
+ * Category). It is the facet to browse by. Tags are free text and stay a way of searching.
  */
 
 import type { ExecuteOptions, KgBackgroundHandle, KgQueryResult, KgViewParamSpec } from './kg.ts'
@@ -24,6 +28,8 @@ export type RealmShow = 'all' | 'installed' | 'available'
 export interface RealmFilter {
   /** Installed, on offer, or both. Default both. */
   show?: RealmShow
+  /** The category every listed realm is in, as its id. Empty is any. */
+  category?: string
   /** One tag every listed realm carries. Empty is any. */
   tag?: string
   /** Include realms their authors call experimental. Default false. */
@@ -48,6 +54,12 @@ export interface CatalogRealm {
   provider: string
   /** `experimental`, `beta`, `stable`, `deprecated`, or empty when the author states none. */
   maturity: string
+  /** What the realm is for, as an id from the published list. Empty when it states none the list has. */
+  category: string
+  /** The category's name for people. Empty when [category] is. */
+  categoryLabel: string
+  /** The category's Phosphor icon name. Empty when it has none. */
+  categoryIcon: string
   tags: string[]
   url: string
   /** What to install from: the clone URL. Empty for a realm nobody offers (path-installed, private). */
@@ -61,6 +73,16 @@ export interface TagCount {
   realms: number
 }
 
+/** A category and how many realms are in it. An empty [id] is the realms that state none. */
+export interface CategoryCount {
+  id: string
+  label: string
+  icon: string
+  realms: number
+}
+
+type Facet = 'category' | 'tag' | 'experimental'
+
 /** A query and how to run it: the text, and its declared parameters with their values. */
 export interface CatalogQuery {
   cypher: string
@@ -71,7 +93,8 @@ type Run = (cypher: string, options: ExecuteOptions) => Promise<Outcome<KgQueryR
 
 const ROW = `r.name AS name, r.description AS description, r.installed AS installed, r.version AS version,
   r.latestVersion AS latestVersion, r.author AS author, r.provider AS provider, r.maturity AS maturity,
-  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources`
+  r.tags AS tags, r.url AS url, r.source AS source, r.problems AS problems, r.missingSources AS missingSources,
+  r.category AS category, r.categoryLabel AS categoryLabel, r.categoryIcon AS categoryIcon`
 
 /* The text a word must appear in. Tags count: "accounting" finds a realm tagged accounting whose
  * description never says the word. */
@@ -83,13 +106,19 @@ const string = (description: string): KgViewParamSpec => ({ type: 'string', defa
  * The WHERE for [filter], leaving out the facets named in [except] — a facet's own counts are taken
  * with every OTHER facet applied, so a chip says how many realms choosing it would show.
  */
-function where(filter: RealmFilter, except: ReadonlyArray<'tag' | 'experimental'> = []): CatalogQuery['options'] & { clauses: string[] } {
+function where(filter: RealmFilter, except: ReadonlyArray<Facet> = []): CatalogQuery['options'] & { clauses: string[] } {
   const clauses: string[] = []
   const params: Record<string, KgViewParamSpec> = {}
   const args: Record<string, unknown> = {}
   if (filter.show === 'installed') clauses.push('r.installed')
   if (filter.show === 'available') clauses.push('NOT r.installed')
   if (!filter.experimental && !except.includes('experimental')) clauses.push("(r.installed OR r.maturity <> 'experimental')")
+  const category = filter.category?.trim()
+  if (category && !except.includes('category')) {
+    clauses.push('r.category = $category')
+    params['category'] = string('The category every listed realm is in')
+    args['category'] = category
+  }
   const tag = filter.tag?.trim()
   if (tag && !except.includes('tag')) {
     clauses.push('$tag IN r.tags')
@@ -113,7 +142,7 @@ function where(filter: RealmFilter, except: ReadonlyArray<'tag' | 'experimental'
   return { clauses, ...(Object.keys(params).length ? { params, args } : {}) }
 }
 
-function query(head: string, filter: RealmFilter, tail: string, except?: ReadonlyArray<'tag' | 'experimental'>, extra: string[] = []): CatalogQuery {
+function query(head: string, filter: RealmFilter, tail: string, except?: ReadonlyArray<Facet>, extra: string[] = []): CatalogQuery {
   const { clauses, ...options } = where(filter, except)
   const all = [...clauses, ...extra]
   return { cypher: `${head}${all.length ? ` WHERE ${all.join(' AND ')}` : ''} ${tail}`, options }
@@ -127,6 +156,19 @@ export function realmsQuery(filter: RealmFilter): CatalogQuery {
 /** How many realms carry each tag, under every facet but the tag itself. */
 export function tagsQuery(filter: RealmFilter): CatalogQuery {
   return query('MATCH (r:Realm)', filter, 'UNWIND r.tags AS tag RETURN tag, count(*) AS realms ORDER BY realms DESC, tag', ['tag'])
+}
+
+/**
+ * How many realms are in each category, under every facet but the category itself. The realms that
+ * state none come back too, as the row whose category is empty: how many there are is part of the answer.
+ */
+export function categoriesQuery(filter: RealmFilter): CatalogQuery {
+  return query(
+    'MATCH (r:Realm)',
+    filter,
+    'RETURN r.category AS category, r.categoryLabel AS label, r.categoryIcon AS icon, count(*) AS realms ORDER BY realms DESC, label',
+    ['category'],
+  )
 }
 
 /** How many experimental realms the other facets would show if they were included. */
@@ -147,6 +189,9 @@ export function toRealm(row: Record<string, unknown>): CatalogRealm {
     author: text(row['author']),
     provider: text(row['provider']),
     maturity: text(row['maturity']).toLowerCase(),
+    category: text(row['category']),
+    categoryLabel: text(row['categoryLabel']),
+    categoryIcon: text(row['categoryIcon']),
     tags: texts(row['tags']),
     url: text(row['url']),
     source: text(row['source']),
@@ -184,6 +229,18 @@ export class RealmCatalog {
     const q = tagsQuery(filter)
     const rows = rowsOf(await this.run(q.cypher, q.options), 'Counting realm tags')
     return rows.ok ? ok(rows.value.map((r) => ({ tag: text(r['tag']), realms: Number(r['realms'] ?? 0) || 0 })).filter((t) => t.tag)) : rows
+  }
+
+  async categories(filter: RealmFilter): Promise<Outcome<CategoryCount[]>> {
+    const q = categoriesQuery(filter)
+    const rows = rowsOf(await this.run(q.cypher, q.options), 'Counting realm categories')
+    if (!rows.ok) return rows
+    return ok(rows.value.map((r) => ({
+      id: text(r['category']),
+      label: text(r['label']),
+      icon: text(r['icon']),
+      realms: Number(r['realms'] ?? 0) || 0,
+    })))
   }
 
   async hiddenExperimental(filter: RealmFilter): Promise<Outcome<number>> {
