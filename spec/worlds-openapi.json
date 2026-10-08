@@ -1,6 +1,24 @@
 {
   "components" : {
     "schemas" : {
+      "APIKeySecurityScheme" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SecurityScheme"
+        }, {
+          "properties" : {
+            "in" : {
+              "type" : "string"
+            },
+            "name" : {
+              "type" : "string"
+            },
+            "type" : {
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ]
+      },
       "AboutResponse" : {
         "description" : "What this server is built from.",
         "properties" : {
@@ -207,6 +225,166 @@
         "required" : [ "confirmed" ],
         "type" : "object"
       },
+      "AgentCapabilities" : {
+        "properties" : {
+          "extensions" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentExtension"
+            },
+            "type" : "array"
+          },
+          "pushNotifications" : {
+            "type" : "boolean"
+          },
+          "stateTransitionHistory" : {
+            "type" : "boolean"
+          },
+          "streaming" : {
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "AgentCard" : {
+        "properties" : {
+          "additionalInterfaces" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentInterface"
+            },
+            "type" : "array"
+          },
+          "capabilities" : {
+            "$ref" : "#/components/schemas/AgentCapabilities"
+          },
+          "defaultInputModes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "defaultOutputModes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "documentationUrl" : {
+            "type" : "string"
+          },
+          "iconUrl" : {
+            "type" : "string"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "preferredTransport" : {
+            "type" : "string"
+          },
+          "protocolVersion" : {
+            "type" : "string"
+          },
+          "provider" : {
+            "$ref" : "#/components/schemas/AgentProvider"
+          },
+          "security" : {
+            "items" : {
+              "additionalProperties" : {
+                "items" : {
+                  "type" : "string"
+                },
+                "type" : "array"
+              },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "securitySchemes" : {
+            "additionalProperties" : {
+              "oneOf" : [ {
+                "$ref" : "#/components/schemas/APIKeySecurityScheme"
+              }, {
+                "$ref" : "#/components/schemas/HTTPAuthSecurityScheme"
+              }, {
+                "$ref" : "#/components/schemas/MutualTLSSecurityScheme"
+              }, {
+                "$ref" : "#/components/schemas/OAuth2SecurityScheme"
+              }, {
+                "$ref" : "#/components/schemas/OpenIdConnectSecurityScheme"
+              } ]
+            },
+            "type" : "object"
+          },
+          "signatures" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentCardSignature"
+            },
+            "type" : "array"
+          },
+          "skills" : {
+            "items" : {
+              "$ref" : "#/components/schemas/AgentSkill"
+            },
+            "type" : "array"
+          },
+          "supportsAuthenticatedExtendedCard" : {
+            "type" : "boolean"
+          },
+          "url" : {
+            "type" : "string"
+          },
+          "version" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AgentCardSignature" : {
+        "properties" : {
+          "header" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "protected" : {
+            "type" : "string"
+          },
+          "signature" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AgentExtension" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "params" : {
+            "additionalProperties" : { },
+            "type" : "object"
+          },
+          "required" : {
+            "type" : "boolean"
+          },
+          "uri" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
+      "AgentInterface" : {
+        "properties" : {
+          "transport" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AgentListItem" : {
         "properties" : {
           "actions" : {
@@ -281,6 +459,17 @@
           }
         },
         "required" : [ "agent", "changes", "createdAt", "id", "ownerId", "proven", "record", "status", "summary" ],
+        "type" : "object"
+      },
+      "AgentProvider" : {
+        "properties" : {
+          "organization" : {
+            "type" : "string"
+          },
+          "url" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "AgentRequest" : {
@@ -445,6 +634,56 @@
           }
         },
         "required" : [ "chain", "id", "kind", "observing", "outcome", "output", "ownerId", "requests", "runAs", "spendByModel", "spendCents", "startedAt", "trigger", "work" ],
+        "type" : "object"
+      },
+      "AgentSkill" : {
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "examples" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "id" : {
+            "type" : "string"
+          },
+          "inputModes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "outputModes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "security" : {
+            "items" : {
+              "additionalProperties" : {
+                "items" : {
+                  "type" : "string"
+                },
+                "type" : "array"
+              },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "tags" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
         "type" : "object"
       },
       "AgentSpec" : {
@@ -971,6 +1210,26 @@
         "required" : [ "default", "observe", "review", "verbs" ],
         "type" : "object"
       },
+      "AuthorizationCodeOAuthFlow" : {
+        "properties" : {
+          "authorizationUrl" : {
+            "type" : "string"
+          },
+          "refreshUrl" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "tokenUrl" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AvailableSourcesResponse" : {
         "properties" : {
           "sources" : {
@@ -1402,6 +1661,23 @@
           }
         },
         "required" : [ "finish_reason", "index", "message" ],
+        "type" : "object"
+      },
+      "ClientCredentialsOAuthFlow" : {
+        "properties" : {
+          "refreshUrl" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "tokenUrl" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "ColleaguesSpec" : {
@@ -3167,6 +3443,24 @@
         "required" : [ "description", "examples", "name", "tags" ],
         "type" : "object"
       },
+      "HTTPAuthSecurityScheme" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SecurityScheme"
+        }, {
+          "properties" : {
+            "bearerFormat" : {
+              "type" : "string"
+            },
+            "scheme" : {
+              "type" : "string"
+            },
+            "type" : {
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ]
+      },
       "HaltRequest" : {
         "properties" : {
           "reason" : {
@@ -3635,6 +3929,23 @@
         },
         "type" : "object"
       },
+      "ImplicitOAuthFlow" : {
+        "properties" : {
+          "authorizationUrl" : {
+            "type" : "string"
+          },
+          "refreshUrl" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          }
+        },
+        "type" : "object"
+      },
       "InFlight" : {
         "properties" : {
           "deadline" : {
@@ -3841,6 +4152,53 @@
         "type" : "object"
       },
       "JsonNode" : {
+        "type" : "object"
+      },
+      "JsonRpcError" : {
+        "properties" : {
+          "code" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ],
+        "type" : "object"
+      },
+      "JsonRpcRequest" : {
+        "properties" : {
+          "id" : {
+            "description" : "The caller's id for this call, echoed in the response; a string or a number"
+          },
+          "jsonrpc" : {
+            "type" : "string"
+          },
+          "method" : {
+            "type" : "string"
+          },
+          "params" : {
+            "additionalProperties" : true,
+            "description" : "The method's params, as the A2A protocol defines them",
+            "type" : "object"
+          }
+        },
+        "required" : [ "jsonrpc", "method" ],
+        "type" : "object"
+      },
+      "JsonRpcResponse" : {
+        "properties" : {
+          "error" : {
+            "$ref" : "#/components/schemas/JsonRpcError"
+          },
+          "id" : { },
+          "jsonrpc" : {
+            "type" : "string"
+          },
+          "result" : { }
+        },
+        "required" : [ "jsonrpc" ],
         "type" : "object"
       },
       "JvmSnapshot" : {
@@ -5498,6 +5856,18 @@
         "required" : [ "busy", "loaded" ],
         "type" : "object"
       },
+      "MutualTLSSecurityScheme" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SecurityScheme"
+        }, {
+          "properties" : {
+            "type" : {
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ]
+      },
       "NewDuty" : {
         "properties" : {
           "every" : {
@@ -5737,6 +6107,41 @@
         "required" : [ "displayLabel", "id", "kind", "typeName" ],
         "type" : "object"
       },
+      "OAuth2SecurityScheme" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SecurityScheme"
+        }, {
+          "properties" : {
+            "flows" : {
+              "$ref" : "#/components/schemas/OAuthFlows"
+            },
+            "oauth2MetadataUrl" : {
+              "type" : "string"
+            },
+            "type" : {
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ]
+      },
+      "OAuthFlows" : {
+        "properties" : {
+          "authorizationCode" : {
+            "$ref" : "#/components/schemas/AuthorizationCodeOAuthFlow"
+          },
+          "clientCredentials" : {
+            "$ref" : "#/components/schemas/ClientCredentialsOAuthFlow"
+          },
+          "implicit" : {
+            "$ref" : "#/components/schemas/ImplicitOAuthFlow"
+          },
+          "password" : {
+            "$ref" : "#/components/schemas/PasswordOAuthFlow"
+          }
+        },
+        "type" : "object"
+      },
       "OfferedChannel" : {
         "properties" : {
           "apps" : {
@@ -5816,6 +6221,38 @@
           }
         },
         "required" : [ "jobId", "status" ],
+        "type" : "object"
+      },
+      "OpenIdConnectSecurityScheme" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/SecurityScheme"
+        }, {
+          "properties" : {
+            "openIdConnectUrl" : {
+              "type" : "string"
+            },
+            "type" : {
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ]
+      },
+      "PasswordOAuthFlow" : {
+        "properties" : {
+          "refreshUrl" : {
+            "type" : "string"
+          },
+          "scopes" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "type" : "object"
+          },
+          "tokenUrl" : {
+            "type" : "string"
+          }
+        },
         "type" : "object"
       },
       "PostMessageRequest" : {
@@ -6427,6 +6864,21 @@
           }
         },
         "required" : [ "hasText", "id", "leaf", "title" ],
+        "type" : "object"
+      },
+      "SecurityScheme" : {
+        "discriminator" : {
+          "propertyName" : "type"
+        },
+        "properties" : {
+          "description" : {
+            "type" : "string"
+          },
+          "type" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "type" ],
         "type" : "object"
       },
       "Sender" : {
@@ -7760,6 +8212,38 @@
   },
   "openapi" : "3.1.0",
   "paths" : {
+    "/api/v1/a2a/agents" : {
+      "get" : {
+        "operationId" : "a2aAgentCards",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/AgentCard"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "One card per agent"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          }
+        },
+        "summary" : "The A2A cards of the agents you can talk to now",
+        "tags" : [ "A2A" ]
+      }
+    },
     "/api/v1/about" : {
       "get" : {
         "description" : "The server's commit and the versions of its libraries.",
@@ -11236,6 +11720,190 @@
         },
         "summary" : "One agent in your world",
         "tags" : [ "Agents" ]
+      }
+    },
+    "/api/v1/agents/{name}/a2a" : {
+      "post" : {
+        "operationId" : "a2aAgentRpc",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/JsonRpcRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcResponse"
+                }
+              }
+            },
+            "description" : "A JSON-RPC response: a Message, a Task, or an error"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcResponse"
+                }
+              }
+            },
+            "description" : "The key does not talk to this agent"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcResponse"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "A2A JSON-RPC to one agent: message/send, tasks/get, tasks/cancel",
+        "tags" : [ "A2A" ]
+      }
+    },
+    "/api/v1/agents/{name}/a2a/.well-known/agent-card.json" : {
+      "get" : {
+        "operationId" : "a2aAgentCard",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentCard"
+                }
+              }
+            },
+            "description" : "The card"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "The key does not talk to this agent"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "One agent's A2A card",
+        "tags" : [ "A2A" ]
+      }
+    },
+    "/api/v1/agents/{name}/a2a/.well-known/agent.json" : {
+      "get" : {
+        "operationId" : "a2aAgentCard_1",
+        "parameters" : [ {
+          "description" : "The agent's name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AgentCard"
+                }
+              }
+            },
+            "description" : "The card"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No API key or session"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "The key does not talk to this agent"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/JsonRpcError"
+                }
+              }
+            },
+            "description" : "No agent of that name may be talked to now"
+          }
+        },
+        "summary" : "One agent's A2A card",
+        "tags" : [ "A2A" ]
       }
     },
     "/api/v1/agents/{name}/accounts" : {
@@ -21861,7 +22529,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46193"
+    "url" : "http://localhost:36743"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -21926,6 +22594,9 @@
   }, {
     "description" : "API discovery from a natural-language description (LLM-driven) or directly from a spec URL",
     "name" : "API Discovery"
+  }, {
+    "description" : "Talk to an agent from an A2A caller",
+    "name" : "A2A"
   }, {
     "description" : "Keys the signed-in user mints to reach this world from code",
     "name" : "API keys"
