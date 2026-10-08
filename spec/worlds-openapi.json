@@ -2458,6 +2458,15 @@
       },
       "DocumentSectionView" : {
         "properties" : {
+          "chunks" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SectionChunkView"
+            },
+            "type" : "array"
+          },
+          "chunksShared" : {
+            "type" : "boolean"
+          },
           "section" : {
             "$ref" : "#/components/schemas/SectionHeadingView"
           },
@@ -6377,6 +6386,18 @@
           }
         },
         "required" : [ "value" ],
+        "type" : "object"
+      },
+      "SectionChunkView" : {
+        "properties" : {
+          "id" : {
+            "type" : "string"
+          },
+          "text" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "text" ],
         "type" : "object"
       },
       "SectionHeadingView" : {
@@ -15517,6 +15538,15 @@
             "format" : "int32",
             "type" : "integer"
           }
+        }, {
+          "description" : "true to include the chunks the section was cut into, which is what search matches against",
+          "in" : "query",
+          "name" : "chunks",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
         } ],
         "responses" : {
           "200" : {
@@ -18707,7 +18737,7 @@
         "tags" : [ "Realms" ]
       },
       "post" : {
-        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field.",
+        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. With realm admission on, installing also approves the realm's handlers and browser apps; `admission` in the response says whether it did: admitted, unchanged, not-admitted or off.",
         "operationId" : "addRealm",
         "requestBody" : {
           "content" : {
@@ -21831,7 +21861,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42185"
+    "url" : "http://localhost:46193"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
