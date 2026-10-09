@@ -6475,6 +6475,48 @@
         "required" : [ "bufferSize", "captureEnabled", "entries", "filteredOut" ],
         "type" : "object"
       },
+      "RealmProblemResponse" : {
+        "description" : "One problem found with a realm, with its cause, a suggested fix, and where it is when known.",
+        "properties" : {
+          "column" : {
+            "description" : "1-based column in the file, when known",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "file" : {
+            "description" : "The file, relative to the realm root, when known",
+            "type" : "string"
+          },
+          "line" : {
+            "description" : "1-based line in the file, when known",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "description" : "What went wrong",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "The YAML path inside the file, when known",
+            "type" : "string"
+          },
+          "severity" : {
+            "description" : "NOTE is worth a look and leaves the realm active; WARNING degrades a feature; ERROR breaks one",
+            "enum" : [ "NOTE", "WARNING", "ERROR" ],
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "Where the problem was found, such as `realms/<name>` or `realms/<name>/producers/x.yml`",
+            "type" : "string"
+          },
+          "suggestion" : {
+            "description" : "How to fix it, when there is a suggestion",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "severity", "source" ],
+        "type" : "object"
+      },
       "RealmRuntimeSnapshot" : {
         "properties" : {
           "build" : {
@@ -19607,7 +19649,7 @@
         "tags" : [ "Realms" ]
       },
       "post" : {
-        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. With realm admission on, installing also approves the realm's handlers and browser apps; `admission` in the response says whether it did: admitted, unchanged, not-admitted or off.",
+        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. With realm admission on, installing also approves the realm's handlers and browser apps; `admission` in the response says whether it did: admitted, unchanged, not-admitted, declarative (no WASM program, so it loads from its directory) or off.",
         "operationId" : "addRealm",
         "requestBody" : {
           "content" : {
@@ -19750,7 +19792,7 @@
     },
     "/api/v1/realms/{name}" : {
       "delete" : {
-        "description" : "Removes an installed realm from the world.",
+        "description" : "Removes an installed realm from the world. With realm admission on, removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed), failed or off.",
         "operationId" : "removeRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -19843,6 +19885,51 @@
           }
         },
         "summary" : "A realm's icon",
+        "tags" : [ "Realms" ]
+      }
+    },
+    "/api/v1/realms/{name}/problems" : {
+      "get" : {
+        "description" : "The problems the realm listing counts in `problems` for this realm: each with its source, what went wrong, a suggested fix when there is one, its severity, and where in the realm it is when known. 404 when no installed realm has that name.",
+        "operationId" : "realmProblems",
+        "parameters" : [ {
+          "description" : "Realm name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/RealmProblemResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The realm's problems; empty when it has none"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/RealmProblemResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No installed realm has that name"
+          }
+        },
+        "summary" : "A realm's problems",
         "tags" : [ "Realms" ]
       }
     },
@@ -22731,7 +22818,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40381"
+    "url" : "http://localhost:36713"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
