@@ -971,6 +971,19 @@
         "required" : [ "params", "statement" ],
         "type" : "object"
       },
+      "AnswerBoundary" : {
+        "properties" : {
+          "kind" : {
+            "enum" : [ "SUPPORTING_CONTEXT_ONLY" ],
+            "type" : "string"
+          },
+          "unresolvedQuestion" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "kind" ],
+        "type" : "object"
+      },
       "AnswerRequest" : {
         "properties" : {
           "choice" : {
@@ -993,6 +1006,21 @@
           }
         },
         "required" : [ "modes" ],
+        "type" : "object"
+      },
+      "ApprovalRequest" : {
+        "properties" : {
+          "revision" : {
+            "type" : "string"
+          },
+          "subjects" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "revision", "subjects" ],
         "type" : "object"
       },
       "ArtifactWriteRequest" : {
@@ -1522,11 +1550,17 @@
       },
       "ChangeRequest" : {
         "properties" : {
-          "model" : {
+          "revision" : {
+            "type" : "string"
+          },
+          "subject" : {
+            "type" : "string"
+          },
+          "value" : {
             "type" : "string"
           }
         },
-        "required" : [ "model" ],
+        "required" : [ "revision", "subject", "value" ],
         "type" : "object"
       },
       "ChannelsResponse" : {
@@ -3240,6 +3274,9 @@
               "$ref" : "#/components/schemas/EvidenceRequest"
             },
             "type" : "array"
+          },
+          "run" : {
+            "type" : "string"
           }
         },
         "required" : [ "conversation", "refused", "requests" ],
@@ -4109,21 +4146,21 @@
         "required" : [ "embeddings", "message", "status" ],
         "type" : "object"
       },
-      "InstallDescriptionRequest" : {
-        "properties" : {
-          "description" : {
-            "type" : "string"
-          }
-        },
-        "type" : "object"
-      },
       "InstallRequest" : {
         "properties" : {
-          "name" : {
+          "acknowledgedWarnings" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "description" : {
+            "type" : "string"
+          },
+          "revision" : {
             "type" : "string"
           }
         },
-        "required" : [ "name" ],
         "type" : "object"
       },
       "InvokeRequest" : {
@@ -5000,6 +5037,10 @@
       "KgQueryResult" : {
         "description" : "The outcome of a virtual-cypher query: rows, the cypher that produced them, and what it cost.",
         "properties" : {
+          "answerBoundary" : {
+            "$ref" : "#/components/schemas/AnswerBoundary",
+            "description" : "The rows are supporting context only, not a match for the original question."
+          },
           "apiCallLog" : {
             "description" : "The actual calls as `producer(keys)`, in order — fan-out is visible here.",
             "items" : {
@@ -5015,6 +5056,13 @@
           "capturedScope" : {
             "$ref" : "#/components/schemas/KgScopeInfo",
             "description" : "The scope this result set froze into — present only on a capturing execute."
+          },
+          "columnSources" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Each column -> the expression that computed it, traced back through WITH and UNWIND, e.g. {\"total\": \"sum(b.amount)\"}; an unwound column reads \"UNWIND <list>\". Where the origin cannot be traced with certainty, the column's own RETURN expression is given unchanged. A column name is the query's label for a value, not evidence of what it is.",
+            "type" : "object"
           },
           "cypher" : {
             "description" : "The cypher that actually ran, after scope rewriting.",
@@ -5033,6 +5081,11 @@
             "description" : "Why the query failed, or null when it did not.",
             "type" : "string"
           },
+          "fetchedRecords" : {
+            "description" : "Source records fetched before query-side filtering, cache-served included. Absent when none.",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "hint" : {
             "description" : "What to try instead. Accompanies an empty result only.",
             "type" : "string"
@@ -5049,12 +5102,17 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "materializedNodes" : {
+            "description" : "Graph nodes materialized from fetched records in this execution. Absent when none.",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "question" : {
             "description" : "The question asked, echoed back. Present only for `/ask`.",
             "type" : "string"
           },
           "reason" : {
-            "description" : "Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, DISCONNECTED or INTERNAL_ERROR. Absent on a real answer, so a caller can tell 'cannot answer' from a genuine zero without reading the hint text.",
+            "description" : "Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, FETCHED_NOT_MATCHED, PARTIAL_NOT_MATCHED, UNPUSHED_FILTER, DISCONNECTED or INTERNAL_ERROR. May accompany rows when a source failed, a read was refused, or a filter was not applied; absent on a clean answer, including a genuine zero.",
             "type" : "string"
           },
           "rowCount" : {
@@ -18092,6 +18150,16 @@
             },
             "description" : "No such source, or it is unreachable"
           },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "LEARNING_IN_PROGRESS: this source is being learned with a different consent or purpose"
+          },
           "422" : {
             "content" : {
               "application/json" : {
@@ -18101,6 +18169,16 @@
               }
             },
             "description" : "The source's kind is detected but not yet learnable"
+          },
+          "502" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "SOURCE_UNREADABLE: the source's current description could not be fetched"
           }
         },
         "summary" : "Mine, curate and probe a source. Writes nothing — returns the proposal to review",
@@ -18190,9 +18268,123 @@
               }
             },
             "description" : "OK"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "REVISION_STALE: another write changed the review first; fetch it again"
           }
         },
         "summary" : "Answer one open question — keep, reverse, or fall back to what the store asserted",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/{id}/approval" : {
+      "post" : {
+        "operationId" : "approveLearningDecisions",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ApprovalRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "DECISION_UNKNOWN: no subjects, or one the review does not display"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "REVISION_STALE: the review changed; fetch it again. SOURCE_CHANGED: the source served another description since; learn it again"
+          }
+        },
+        "summary" : "Approve displayed decisions against the current draft digest. Recorded, not yet enforced",
+        "tags" : [ "Learning" ]
+      }
+    },
+    "/api/v1/learn/{id}/change" : {
+      "post" : {
+        "operationId" : "changeLearningDecision",
+        "parameters" : [ {
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ChangeRequest"
+              }
+            }
+          },
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ProposalResponse"
+                }
+              }
+            },
+            "description" : "OK"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "CHANGE_INVALID: not a name or description, or a value the draft cannot carry; DECISION_UNKNOWN"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "REVISION_STALE: the review changed; fetch it again"
+          }
+        },
+        "summary" : "Change one displayed name or description to a person's words, and re-emit the draft",
         "tags" : [ "Learning" ]
       }
     },
@@ -18211,13 +18403,13 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/InstallDescriptionRequest"
+                "$ref" : "#/components/schemas/InstallRequest"
               }
             }
           }
         },
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -18225,10 +18417,20 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "WARNINGS_NOT_ACKNOWLEDGED: a warning the review shows was not acknowledged"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "REVISION_STALE or WARNINGS_STALE: the review changed; fetch it again. SOURCE_CHANGED: the source served another description since; learn it again"
           }
         },
-        "summary" : "Install the reviewed proposal and rebuild the world",
+        "summary" : "Install the reviewed proposal: a PROVISIONAL realm, queryable immediately, or a database description",
         "tags" : [ "Learning" ]
       }
     },
@@ -18262,7 +18464,7 @@
                 }
               }
             },
-            "description" : "A realm of that name already exists — promotion never overwrites"
+            "description" : "A realm of that name already exists — promotion never overwrites; REVISION_STALE: the installed realm came from another revision of this source; or DIGEST_STALE: the realm's files changed since its install receipt"
           }
         },
         "summary" : "Promote a reviewed provisional realm to a name you stand behind",
@@ -22529,7 +22731,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36743"
+    "url" : "http://localhost:40381"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
