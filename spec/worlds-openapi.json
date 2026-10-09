@@ -578,6 +578,12 @@
             "enum" : [ "ROUTINE", "REPAIR", "DUTY_CHECK", "CONVERSATION", "TEST" ],
             "type" : "string"
           },
+          "notes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "observing" : {
             "type" : "boolean"
           },
@@ -633,7 +639,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "chain", "id", "kind", "observing", "outcome", "output", "ownerId", "requests", "runAs", "spendByModel", "spendCents", "startedAt", "trigger", "work" ],
+        "required" : [ "chain", "id", "kind", "notes", "observing", "outcome", "output", "ownerId", "requests", "runAs", "spendByModel", "spendCents", "startedAt", "trigger", "work" ],
         "type" : "object"
       },
       "AgentSkill" : {
@@ -2810,6 +2816,12 @@
             "format" : "date-time",
             "type" : "string"
           },
+          "notes" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "onDemand" : {
             "type" : "boolean"
           },
@@ -2842,7 +2854,7 @@
             "type" : "array"
           }
         },
-        "required" : [ "agent", "checkedAt", "duty", "onDemand", "onFallbacks", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
+        "required" : [ "agent", "checkedAt", "duty", "notes", "onDemand", "onFallbacks", "repairFailures", "repaired", "state", "violations", "wouldHaveCalled" ],
         "type" : "object"
       },
       "DutySpec" : {
@@ -22818,7 +22830,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41501"
+    "url" : "http://localhost:39337"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
