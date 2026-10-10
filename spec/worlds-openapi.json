@@ -1296,6 +1296,9 @@
           "currentUser" : {
             "$ref" : "#/components/schemas/BootstrapUser"
           },
+          "licence" : {
+            "$ref" : "#/components/schemas/LicenceSummary"
+          },
           "preferredLogin" : {
             "type" : "string"
           },
@@ -5702,6 +5705,34 @@
           }
         },
         "required" : [ "label", "name", "required", "type" ],
+        "type" : "object"
+      },
+      "LicenceSummary" : {
+        "properties" : {
+          "daysLeft" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "endsAt" : {
+            "type" : "string"
+          },
+          "keyExpired" : {
+            "type" : "boolean"
+          },
+          "licensee" : {
+            "type" : "string"
+          },
+          "registerUrl" : {
+            "type" : "string"
+          },
+          "state" : {
+            "type" : "string"
+          },
+          "warn" : {
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "keyExpired", "registerUrl", "state", "warn" ],
         "type" : "object"
       },
       "LlmConfig" : {
@@ -22830,7 +22861,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46211"
+    "url" : "http://localhost:40195"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
