@@ -11400,7 +11400,7 @@
     },
     "/api/v1/admin/realms/observability/logs" : {
       "get" : {
-        "description" : "Guest log lines from the same 200-event ring buffer [LogController] serves. That buffer is shared across this whole process. A realm that last logged more than 200 events ago has aged out of it entirely. Attribution is best-effort: a line from a code path that never set the realm on the MDC comes back with realm null rather than a guess. Capture itself depends on assistant.infrastructure.diagnostics-enabled. When that is off nothing is recorded at all, and captureEnabled says so rather than leaving an empty list to be misread as a quiet realm.",
+        "description" : "Guest log lines from the same 200-event ring buffer [LogController] serves. That buffer is shared across this whole process. A realm that last logged more than 200 events ago has aged out of it entirely. Attribution is best-effort: a line from a code path that never set the realm on the MDC comes back with realm null rather than a guess. Capture itself depends on assistant.infrastructure.features.diagnostics. When that is off nothing is recorded at all, and captureEnabled says so rather than leaving an empty list to be misread as a quiet realm.",
         "operationId" : "logs",
         "parameters" : [ {
           "description" : "Restrict to one realm's entries. Omit for every realm.",
@@ -22861,7 +22861,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40195"
+    "url" : "http://localhost:36757"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -22996,6 +22996,9 @@
     "description" : "Guided walks through a surface, shipped as content",
     "name" : "Tours"
   }, {
+    "description" : "Development diagnostic tools; present only when assistant.infrastructure.features.diagnostics is true",
+    "name" : "Diagnostics"
+  }, {
     "description" : "Admin: inspect node decorators and fire them on demand instead of waiting for the scheduled tick",
     "name" : "KG Decoration"
   }, {
@@ -23016,9 +23019,6 @@
   }, {
     "description" : "Manage user notifications",
     "name" : "Notifications"
-  }, {
-    "description" : "Development diagnostic tools; present only when assistant.infrastructure.diagnostics-enabled is true",
-    "name" : "Diagnostics"
   }, {
     "description" : "List and delete the user's persisted chat sessions",
     "name" : "Chat sessions"
