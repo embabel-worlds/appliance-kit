@@ -19826,7 +19826,7 @@
     },
     "/api/v1/realms/updates" : {
       "get" : {
-        "description" : "Reads each git-backed realm's remote refs (ls-remote — no objects are transferred) and compares to the local checkout. `behind` is null when it cannot be determined.",
+        "description" : "Compares each git-backed realm's local checkout to its remote refs (ls-remote — no objects are transferred). Remote reads are remembered for minutes and refreshed in the background; `checkedAt` is when each was read. `behind` is null when it cannot be determined, including while a realm's first read is still running.",
         "operationId" : "realmUpdates",
         "responses" : {
           "200" : {
@@ -22873,7 +22873,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:38885"
+    "url" : "http://localhost:42965"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
