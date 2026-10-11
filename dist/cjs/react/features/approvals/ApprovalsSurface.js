@@ -1,6 +1,7 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.displayName = displayName;
+exports.askerOf = askerOf;
 exports.RequestStatusPill = RequestStatusPill;
 exports.ApprovalsSurface = ApprovalsSurface;
 const jsx_runtime_1 = require("react/jsx-runtime");
@@ -44,6 +45,20 @@ function displayName(slug) {
     const words = slug.replace(/[-_]/g, ' ').trim();
     return words.charAt(0).toUpperCase() + words.slice(1);
 }
+/**
+ * Who asked, as the card's reader sees it. A person's own held call is theirs: "You" to the person who
+ * made it — today the only one shown it, as the request's owner — and their name to anyone else, as
+ * the appliance words its notification. Otherwise the agent, else the routine. A person's request
+ * carries the appliance's placeholder routine, which names nobody, so it is never the fallback there.
+ */
+function askerOf(request, viewer = request.ownerId) {
+    if (request.raisedBy) {
+        if (request.raisedBy === viewer)
+            return 'You';
+        return request.raisedByName?.trim() || request.raisedBy;
+    }
+    return displayName(request.agent ?? request.routine);
+}
 /** The verb's arguments, indented if they are JSON, as they were if not. */
 function pretty(args) {
     try {
@@ -61,7 +76,7 @@ function pretty(args) {
 function RequestStatusPill({ status }) {
     return ((0, jsx_runtime_1.jsxs)("span", { className: `pill ${TONE[status]}`.trim(), children: [(0, jsx_runtime_1.jsx)("span", { className: "dot", "aria-hidden": "true" }), STATUS_WORDS[status]] }));
 }
-function ApprovalsSurface({ services, host }) {
+function ApprovalsSurface({ services, host, focusRequest }) {
     const [requests, setRequests] = (0, react_1.useState)([]);
     const [loaded, setLoaded] = (0, react_1.useState)(false);
     const [absent, setAbsent] = (0, react_1.useState)(false);
@@ -86,9 +101,15 @@ function ApprovalsSurface({ services, host }) {
     }, []);
     const pending = requests.filter((r) => r.status === 'PENDING');
     const decided = requests.filter((r) => r.status !== 'PENDING');
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-approvals approvals", children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: pending.length ? `Waiting for you (${pending.length})` : 'Waiting for you', aside: (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => void load(), children: "Refresh" }), children: absent ? ((0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "caution", children: problem })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [problem && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: problem }), loaded && pending.length === 0 && !problem && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing to decide. When an agent wants to do something it should not do alone, it asks here." })), pending.map((r) => ((0, jsx_runtime_1.jsx)(RequestCard, { request: r, services: services, host: host, onDecided: replace }, r.id)))] })) }), decided.length > 0 && ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Decided", children: decided.map((r) => ((0, jsx_runtime_1.jsx)(RequestCard, { request: r, services: services, host: host, onDecided: replace }, r.id))) }))] }));
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-approvals approvals", children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: pending.length ? `Waiting for you (${pending.length})` : 'Waiting for you', aside: (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => void load(), children: "Refresh" }), children: absent ? ((0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "caution", children: problem })) : ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [problem && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: problem }), loaded && pending.length === 0 && !problem && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing to decide. When an agent wants to do something it should not do alone, it asks here." })), pending.map((r) => ((0, jsx_runtime_1.jsx)(RequestCard, { request: r, services: services, host: host, onDecided: replace, focused: r.id === focusRequest }, r.id)))] })) }), decided.length > 0 && ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: "Decided", children: decided.map((r) => ((0, jsx_runtime_1.jsx)(RequestCard, { request: r, services: services, host: host, onDecided: replace, focused: r.id === focusRequest }, r.id))) }))] }));
 }
-function RequestCard({ request, services, host, onDecided, }) {
+function RequestCard({ request, services, host, onDecided, focused, }) {
+    const card = (0, react_1.useRef)(null);
+    /* The card exists only once the list has loaded, so the scroll waits for it rather than for the link. */
+    (0, react_1.useEffect)(() => {
+        if (focused)
+            card.current?.scrollIntoView?.({ block: 'center' });
+    }, [focused]);
     const [busy, setBusy] = (0, react_1.useState)(false);
     const [refusal, setRefusal] = (0, react_1.useState)('');
     const [rejecting, setRejecting] = (0, react_1.useState)(false);
@@ -108,9 +129,18 @@ function RequestCard({ request, services, host, onDecided, }) {
         setRejecting(false);
         onDecided(result.value);
     }
-    const asker = displayName(request.agent ?? request.routine);
+    const person = Boolean(request.raisedBy);
+    const asker = askerOf(request);
+    /*
+     * A second person is what the rule asks for, but the appliance lets the person who asked approve
+     * it anyway and records that they did — so the card says so before they choose, not after.
+     */
+    const ownAsk = person && request.raisedBy === request.ownerId;
+    const secondPerson = ownAsk && request.secondPersonAsked === true;
     const first = request.evidence[0];
     const columns = first ? Object.keys(first) : [];
-    return ((0, jsx_runtime_1.jsxs)("article", { className: "request", children: [(0, jsx_runtime_1.jsxs)("header", { className: "request-head", children: [(0, jsx_runtime_1.jsxs)("span", { className: "request-who", children: [host?.openAgent ? ((0, jsx_runtime_1.jsx)("button", { className: "request-agentlink", onClick: () => host.openAgent?.(request.routine), children: asker })) : (asker), ' ', "asks your OK"] }), (0, jsx_runtime_1.jsx)(RequestStatusPill, { status: request.status })] }), (0, jsx_runtime_1.jsx)("p", { className: "request-detail", children: request.detail }), request.quote && (0, jsx_runtime_1.jsx)("blockquote", { className: "request-quote", children: request.quote }), request.untrusted && request.untrusted.length > 0 && ((0, jsx_runtime_1.jsxs)("p", { className: "request-untrusted", children: ["Drafted after reading text from outside the business (", request.untrusted.join('; '), "). Such text can carry instructions meant for whoever reads it: read the draft with that in mind."] })), columns.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "request-evidence", children: (0, jsx_runtime_1.jsxs)("table", { children: [(0, jsx_runtime_1.jsx)("thead", { children: (0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => (0, jsx_runtime_1.jsx)("th", { children: c }, c)) }) }), (0, jsx_runtime_1.jsx)("tbody", { children: request.evidence.map((row, i) => ((0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => (0, jsx_runtime_1.jsx)("td", { children: String(row[c] ?? '') }, c)) }, i))) })] }) })), (0, jsx_runtime_1.jsxs)("details", { className: "request-call", children: [(0, jsx_runtime_1.jsx)("summary", { children: "Technical details" }), (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: ["Routine ", (0, jsx_runtime_1.jsx)("code", { children: request.routine }), " would call ", (0, jsx_runtime_1.jsx)("code", { children: request.verb }), " with:"] }), (0, jsx_runtime_1.jsx)("pre", { children: pretty(request.args) })] }), (0, jsx_runtime_1.jsxs)("p", { className: "request-when hint", children: ["Asked ", when(request.raisedAt), open && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [" \u00B7 expires ", when(request.expiresAt)] }), request.decidedBy && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [" \u00B7 ", request.status === 'REJECTED' ? 'rejected' : 'approved', " by ", request.decidedBy, " ", when(request.decidedAt)] })] }), request.reason && (0, jsx_runtime_1.jsxs)("p", { className: "request-reason", children: ["Why not: ", request.reason] }), request.status === 'FAILED' && request.result && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: request.result }), refusal && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: refusal }), open && !rejecting && ((0, jsx_runtime_1.jsxs)("div", { className: "row request-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy, onClick: () => void decide(true), children: "Approve" }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => setRejecting(true), children: "Reject\u2026" })] })), open && rejecting && ((0, jsx_runtime_1.jsxs)("div", { className: "row request-actions", children: [(0, jsx_runtime_1.jsx)("input", { "aria-label": "Why reject", placeholder: "Why not? The agent learns from this.", value: reason, onChange: (e) => setReason(e.target.value) }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy || !reason.trim(), onClick: () => void decide(false), children: "Reject" }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => setRejecting(false), children: "Cancel" })] }))] }));
+    return ((0, jsx_runtime_1.jsxs)("article", { ref: card, className: focused ? 'request is-focused' : 'request', "aria-current": focused ? 'true' : undefined, children: [(0, jsx_runtime_1.jsxs)("header", { className: "request-head", children: [(0, jsx_runtime_1.jsxs)("span", { className: "request-who", children: [person ? (`${asker} asked`) : host?.openAgent ? ((0, jsx_runtime_1.jsx)("button", { className: "request-agentlink", onClick: () => host.openAgent?.(request.routine), children: asker })) : (asker), !person && ' asks your OK'] }), (0, jsx_runtime_1.jsx)(RequestStatusPill, { status: request.status })] }), (0, jsx_runtime_1.jsx)("p", { className: "request-detail", children: request.detail }), request.quote && (0, jsx_runtime_1.jsx)("blockquote", { className: "request-quote", children: request.quote }), request.untrusted && request.untrusted.length > 0 && ((0, jsx_runtime_1.jsxs)("p", { className: "request-untrusted", children: ["Drafted after reading text from outside the business (", request.untrusted.join('; '), "). Such text can carry instructions meant for whoever reads it: read the draft with that in mind."] })), columns.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "request-evidence", children: (0, jsx_runtime_1.jsxs)("table", { children: [(0, jsx_runtime_1.jsx)("thead", { children: (0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => (0, jsx_runtime_1.jsx)("th", { children: c }, c)) }) }), (0, jsx_runtime_1.jsx)("tbody", { children: request.evidence.map((row, i) => ((0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => (0, jsx_runtime_1.jsx)("td", { children: String(row[c] ?? '') }, c)) }, i))) })] }) })), (0, jsx_runtime_1.jsxs)("details", { className: "request-call", children: [(0, jsx_runtime_1.jsx)("summary", { children: "Technical details" }), (0, jsx_runtime_1.jsxs)("p", { className: "hint", children: [person ? 'This' : (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: ["Routine ", (0, jsx_runtime_1.jsx)("code", { children: request.routine })] }), " would call ", (0, jsx_runtime_1.jsx)("code", { children: request.verb }), " with:"] }), (0, jsx_runtime_1.jsx)("pre", { children: pretty(request.args) })] }), (0, jsx_runtime_1.jsxs)("p", { className: "request-when hint", children: ["Asked ", when(request.raisedAt), open && (0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [" \u00B7 expires ", when(request.expiresAt)] }), request.decidedBy && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [' · ', request.selfApproved
+                                ? 'approved by you — your own request'
+                                : `${request.status === 'REJECTED' ? 'rejected' : 'approved'} by ${request.decidedBy}`, ' ', when(request.decidedAt)] }))] }), request.reason && (0, jsx_runtime_1.jsxs)("p", { className: "request-reason", children: ["Why not: ", request.reason] }), request.status === 'FAILED' && request.result && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: request.result }), refusal && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: "error", children: refusal }), open && secondPerson && ((0, jsx_runtime_1.jsx)("p", { className: "request-self hint", children: "You asked for this yourself. This change asks for a second person's approval; approving it yourself will be recorded." })), open && !rejecting && ((0, jsx_runtime_1.jsxs)("div", { className: "row request-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy, onClick: () => void decide(true), children: "Approve" }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => setRejecting(true), children: "Reject\u2026" })] })), open && rejecting && ((0, jsx_runtime_1.jsxs)("div", { className: "row request-actions", children: [(0, jsx_runtime_1.jsx)("input", { "aria-label": "Why reject", placeholder: "Why not? The agent learns from this.", value: reason, onChange: (e) => setReason(e.target.value) }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy || !reason.trim(), onClick: () => void decide(false), children: "Reject" }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost", disabled: busy, onClick: () => setRejecting(false), children: "Cancel" })] }))] }));
 }
 //# sourceMappingURL=ApprovalsSurface.js.map

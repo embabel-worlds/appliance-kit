@@ -1669,6 +1669,12 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .request:first-of-type { border-top: none; padding-top: 0; }
 
+/* The request a notification's link named: marked at the edge, so the rest still read as its neighbours. */
+:where(.kit-feature) .request.is-focused { box-shadow: inset 2px 0 0 var(--signal); padding-left: 12px; }
+
+/* A person approving their own request is told before they choose that it will be recorded as such. */
+:where(.kit-feature) .request-self { margin: 0; }
+
 :where(.kit-feature) .request-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
 
 :where(.kit-feature) .request-who { font-weight: 650; font-size: 13.5px; }

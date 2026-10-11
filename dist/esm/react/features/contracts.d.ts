@@ -479,6 +479,11 @@ export interface ApprovalsHost {
 export interface ApprovalsSurfaceProps {
     services: ApprovalsServices;
     host?: ApprovalsHost;
+    /**
+     * A request to single out, by id — the one a notification's link names. Its card is scrolled into
+     * view and marked once it has loaded; an id no listed request has marks nothing.
+     */
+    focusRequest?: string;
 }
 export interface ThreadsServices {
     listThreads(): Promise<Outcome<Thread[]>>;
