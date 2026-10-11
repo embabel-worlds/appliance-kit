@@ -517,6 +517,12 @@
             "format" : "date-time",
             "type" : "string"
           },
+          "raisedBy" : {
+            "type" : "string"
+          },
+          "raisedByName" : {
+            "type" : "string"
+          },
           "reason" : {
             "type" : "string"
           },
@@ -528,6 +534,12 @@
           },
           "runId" : {
             "type" : "string"
+          },
+          "secondPersonAsked" : {
+            "type" : "boolean"
+          },
+          "selfApproved" : {
+            "type" : "boolean"
           },
           "status" : {
             "enum" : [ "PENDING", "APPROVED", "FAILED", "REJECTED", "EXPIRED" ],
@@ -543,7 +555,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "status", "untrusted", "verb" ],
+        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "secondPersonAsked", "selfApproved", "status", "untrusted", "verb" ],
         "type" : "object"
       },
       "AgentRun" : {
@@ -22861,7 +22873,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43185"
+    "url" : "http://localhost:38885"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
