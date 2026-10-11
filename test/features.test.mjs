@@ -2451,6 +2451,86 @@ describe('an approval request', () => {
     assert.match(details.textContent, /chase-failed-payment[\s\S]*odoo_partnerMessagePost/)
   })
 
+  const held = {
+    id: 'req_2', ownerId: 'rod', routine: '(unnamed routine)', runId: null,
+    raisedBy: 'rod', raisedByName: 'Rod Johnson',
+    verb: 'petclinic_updateOwner',
+    args: '{"ownerId":6,"telephone":"6085550000"}',
+    detail: "Change owner 6's telephone to 6085550000 in Pet Clinic. Contact details are changed only with a second person's approval.",
+    evidence: [], status: 'PENDING', raisedAt: '2026-10-10T08:00:00Z', expiresAt: '2026-10-13T08:00:00Z',
+    decidedAt: null, decidedBy: null, reason: null, result: null, untrusted: [],
+  }
+  const services = (request) => ({ listRequests: async () => ok([request]), approve: async () => ok(request), reject: async () => ok(request) })
+
+  it('says a person asked, to the person who did, and never names the placeholder routine', async () => {
+    const opened = []
+    const { container } = await render(h(features.ApprovalsSurface, { services: services(held), host: { openAgent: (r) => opened.push(r) } }))
+
+    const card = container.querySelector('.request')
+    assert.equal(card.querySelector('.request-who').textContent, 'You asked')
+    assert.equal(card.querySelector('.request-agentlink'), null)
+    assert.doesNotMatch(card.textContent, /unnamed routine|asks your OK/i)
+    assert.match(card.querySelector('details.request-call p').textContent, /^This would call petclinic_updateOwner with:/)
+  })
+
+  it('says before the buttons that a second person is asked for, and that approving it yourself is recorded', async () => {
+    const { container } = await render(h(features.ApprovalsSurface, { services: services({ ...held, secondPersonAsked: true }) }))
+
+    const card = container.querySelector('.request')
+    const note = card.querySelector('.request-self')
+    assert.match(note.textContent, /You asked for this yourself\. This change asks for a second person's approval; approving it yourself\s+will be recorded\./)
+    assert.ok(note.compareDocumentPosition(card.querySelector('.request-actions')) & Node.DOCUMENT_POSITION_FOLLOWING)
+  })
+
+  it('says nothing of a second person when the appliance does not, or when someone else asked', async () => {
+    const older = await render(h(features.ApprovalsSurface, { services: services(held) }))
+    assert.equal(older.container.querySelector('.request-self'), null)
+    const theirs = await render(h(features.ApprovalsSurface, { services: services({ ...held, raisedBy: 'ada', secondPersonAsked: true }) }))
+    assert.equal(theirs.container.querySelector('.request-self'), null)
+  })
+
+  it('records a request its asker approved as their own', async () => {
+    const approved = {
+      ...held, secondPersonAsked: true, selfApproved: true, status: 'APPROVED',
+      decidedBy: 'rod', decidedAt: '2026-10-10T09:00:00Z', result: '{}',
+    }
+    const { container } = await render(h(features.ApprovalsSurface, { services: services(approved) }))
+
+    const line = container.querySelector('.request-when').textContent
+    assert.match(line, /approved by you — your own request/)
+    assert.doesNotMatch(line, /approved by rod/)
+    assert.equal(container.querySelector('.request-self'), null)
+  })
+
+  it('singles out the request a link names, and only that one', async () => {
+    const other = { ...held, id: 'req_3' }
+    const scrolled = []
+    const scroll = HTMLElement.prototype.scrollIntoView
+    HTMLElement.prototype.scrollIntoView = function () { scrolled.push(this) }
+    try {
+      const list = { listRequests: async () => ok([other, held]), approve: async () => ok(held), reject: async () => ok(held) }
+      const { container } = await render(h(features.ApprovalsSurface, { services: list, focusRequest: 'req_2' }))
+
+      const marked = [...container.querySelectorAll('.request.is-focused')]
+      assert.equal(marked.length, 1)
+      assert.equal(marked[0].getAttribute('aria-current'), 'true')
+      assert.match(marked[0].querySelector('details.request-call').textContent, /petclinic_updateOwner/)
+      assert.equal(container.querySelectorAll('.request')[1], marked[0])
+      assert.deepEqual(scrolled, [marked[0]])
+    } finally {
+      HTMLElement.prototype.scrollIntoView = scroll
+    }
+  })
+
+  it('names the person who asked to anyone else who reads it, and shows their words as text', async () => {
+    const theirs = { ...held, raisedBy: 'ada', raisedByName: '<b>Ada</b>' }
+    const { container } = await render(h(features.ApprovalsSurface, { services: services(theirs) }))
+
+    const who = container.querySelector('.request-who')
+    assert.equal(who.textContent, '<b>Ada</b> asked')
+    assert.equal(who.querySelector('b'), null)
+  })
+
 })
 
 describe('realm lists are queries over (:Realm)', () => {

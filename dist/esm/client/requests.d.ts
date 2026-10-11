@@ -8,6 +8,21 @@ export interface AgentRequest {
     routine: string;
     /** The agent whose work that was: who is asking, as an approver reads it. Absent on older appliances. */
     agent?: string | null;
+    /**
+     * The person who asked, by user id, when it was a PERSON's own call that was held — made outside
+     * any routine run, so `routine` is only the appliance's placeholder for "no routine". Absent when a
+     * routine or an agent asked, and on appliances older than embabel/me#2544.
+     */
+    raisedBy?: string | null;
+    /** `raisedBy`'s display name, for whoever reads the request who is not them. */
+    raisedByName?: string | null;
+    /**
+     * The request's rule asks for a second person's approval. The person who raised it may still
+     * approve it themselves; the appliance records that it was their own. Absent on older appliances.
+     */
+    secondPersonAsked?: boolean | null;
+    /** Set once the person who raised the request approved it themselves. */
+    selfApproved?: boolean | null;
     runId: string | null;
     /** The gateway verb approving it calls, e.g. `odoo_partnerMessagePost`. */
     verb: string;

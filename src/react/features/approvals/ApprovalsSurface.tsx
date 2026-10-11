@@ -12,7 +12,7 @@
  * "what did my agents ask, and what did I say" is a question people come back with.
  */
 
-import React, { useCallback, useEffect, useState } from 'react'
+import React, { useCallback, useEffect, useRef, useState } from 'react'
 import type { AgentRequest, RequestStatus } from '../../../client/requests.ts'
 import type { ApprovalsSurfaceProps } from '../contracts.ts'
 import { Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
@@ -45,6 +45,20 @@ export function displayName(slug: string): string {
   return words.charAt(0).toUpperCase() + words.slice(1)
 }
 
+/**
+ * Who asked, as the card's reader sees it. A person's own held call is theirs: "You" to the person who
+ * made it — today the only one shown it, as the request's owner — and their name to anyone else, as
+ * the appliance words its notification. Otherwise the agent, else the routine. A person's request
+ * carries the appliance's placeholder routine, which names nobody, so it is never the fallback there.
+ */
+export function askerOf(request: AgentRequest, viewer: string = request.ownerId): string {
+  if (request.raisedBy) {
+    if (request.raisedBy === viewer) return 'You'
+    return request.raisedByName?.trim() || request.raisedBy
+  }
+  return displayName(request.agent ?? request.routine)
+}
+
 /** The verb's arguments, indented if they are JSON, as they were if not. */
 function pretty(args: string): string {
   try {
@@ -68,7 +82,7 @@ export function RequestStatusPill({ status }: { status: RequestStatus }) {
   )
 }
 
-export function ApprovalsSurface({ services, host }: ApprovalsSurfaceProps) {
+export function ApprovalsSurface({ services, host, focusRequest }: ApprovalsSurfaceProps) {
   const [requests, setRequests] = useState<AgentRequest[]>([])
   const [loaded, setLoaded] = useState(false)
   const [absent, setAbsent] = useState(false)
@@ -113,7 +127,7 @@ export function ApprovalsSurface({ services, host }: ApprovalsSurfaceProps) {
               <p className="hint">Nothing to decide. When an agent wants to do something it should not do alone, it asks here.</p>
             )}
             {pending.map((r) => (
-              <RequestCard key={r.id} request={r} services={services} host={host} onDecided={replace} />
+              <RequestCard key={r.id} request={r} services={services} host={host} onDecided={replace} focused={r.id === focusRequest} />
             ))}
           </>
         )}
@@ -122,7 +136,7 @@ export function ApprovalsSurface({ services, host }: ApprovalsSurfaceProps) {
       {decided.length > 0 && (
         <StudioPanel title="Decided">
           {decided.map((r) => (
-            <RequestCard key={r.id} request={r} services={services} host={host} onDecided={replace} />
+            <RequestCard key={r.id} request={r} services={services} host={host} onDecided={replace} focused={r.id === focusRequest} />
           ))}
         </StudioPanel>
       )}
@@ -135,12 +149,19 @@ function RequestCard({
   services,
   host,
   onDecided,
+  focused,
 }: {
   request: AgentRequest
   services: ApprovalsSurfaceProps['services']
   host: ApprovalsSurfaceProps['host']
   onDecided: (request: AgentRequest) => void
+  focused: boolean
 }) {
+  const card = useRef<HTMLElement>(null)
+  /* The card exists only once the list has loaded, so the scroll waits for it rather than for the link. */
+  useEffect(() => {
+    if (focused) card.current?.scrollIntoView?.({ block: 'center' })
+  }, [focused])
   const [busy, setBusy] = useState(false)
   const [refusal, setRefusal] = useState('')
   const [rejecting, setRejecting] = useState(false)
@@ -161,20 +182,30 @@ function RequestCard({
     onDecided(result.value)
   }
 
-  const asker = displayName(request.agent ?? request.routine)
+  const person = Boolean(request.raisedBy)
+  const asker = askerOf(request)
+  /*
+   * A second person is what the rule asks for, but the appliance lets the person who asked approve
+   * it anyway and records that they did — so the card says so before they choose, not after.
+   */
+  const ownAsk = person && request.raisedBy === request.ownerId
+  const secondPerson = ownAsk && request.secondPersonAsked === true
   const first = request.evidence[0]
   const columns = first ? Object.keys(first) : []
 
   return (
-    <article className="request">
+    <article ref={card} className={focused ? 'request is-focused' : 'request'} aria-current={focused ? 'true' : undefined}>
       <header className="request-head">
         <span className="request-who">
-          {host?.openAgent ? (
+          {/* A person already asked, so the line says that; an agent asks the reader's OK. */}
+          {person ? (
+            `${asker} asked`
+          ) : host?.openAgent ? (
             <button className="request-agentlink" onClick={() => host.openAgent?.(request.routine)}>{asker}</button>
           ) : (
             asker
-          )}{' '}
-          asks your OK
+          )}
+          {!person && ' asks your OK'}
         </span>
         <RequestStatusPill status={request.status} />
       </header>
@@ -205,7 +236,7 @@ function RequestCard({
       <details className="request-call">
         <summary>Technical details</summary>
         <p className="hint">
-          Routine <code>{request.routine}</code> would call <code>{request.verb}</code> with:
+          {person ? 'This' : <>Routine <code>{request.routine}</code></>} would call <code>{request.verb}</code> with:
         </p>
         <pre>{pretty(request.args)}</pre>
       </details>
@@ -213,12 +244,26 @@ function RequestCard({
       <p className="request-when hint">
         Asked {when(request.raisedAt)}
         {open && <> · expires {when(request.expiresAt)}</>}
-        {request.decidedBy && <> · {request.status === 'REJECTED' ? 'rejected' : 'approved'} by {request.decidedBy} {when(request.decidedAt)}</>}
+        {request.decidedBy && (
+          <>
+            {' · '}
+            {request.selfApproved
+              ? 'approved by you — your own request'
+              : `${request.status === 'REJECTED' ? 'rejected' : 'approved'} by ${request.decidedBy}`}{' '}
+            {when(request.decidedAt)}
+          </>
+        )}
       </p>
       {request.reason && <p className="request-reason">Why not: {request.reason}</p>}
       {request.status === 'FAILED' && request.result && <Status tone="error">{request.result}</Status>}
 
       {refusal && <Status tone="error">{refusal}</Status>}
+      {open && secondPerson && (
+        <p className="request-self hint">
+          You asked for this yourself. This change asks for a second person's approval; approving it yourself
+          will be recorded.
+        </p>
+      )}
       {open && !rejecting && (
         <div className="row request-actions">
           <button className="btn" disabled={busy} onClick={() => void decide(true)}>Approve</button>
