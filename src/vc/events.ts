@@ -71,6 +71,16 @@ export interface VcProducerError extends VcEventBase {
   kind: string
   detail: string
 }
+/**
+ * A producer saying what the answer COST, over an answer that is correct. Same fields as an error,
+ * because until embabel/me#2615 it was sent as one; an appliance from before that still is.
+ */
+export interface VcProducerNote extends VcEventBase {
+  type: 'producer.note'
+  producer: string
+  kind: string
+  detail: string
+}
 export interface VcProducerProgress extends VcEventBase {
   type: 'producer.progress'
   producer: string
@@ -101,6 +111,7 @@ export type VcEvent =
   | VcProducerFetch
   | VcNodesMaterialized
   | VcProducerError
+  | VcProducerNote
   | VcProducerProgress
   | VcRetrievalStep
   | VcQueryCompleted
@@ -111,9 +122,24 @@ export type VcEvent =
 export const isTerminal = (event: VcEvent): boolean =>
   event.type === 'query.completed' || event.type === 'query.rejected'
 
+/*
+ * THE TWO PRODUCER KINDS THAT ARE NOTES, NOT FAILURES. A pushed-down filter the source could not
+ * honour is re-applied in the graph, and the engine says so because it fetched more than it kept —
+ * the rows are right, only the bill was higher. The engine's own `DutyWarnings` classes exactly
+ * these two as NOTE and every other producer kind as doubting the rows. A newer appliance sends
+ * them as `producer.note` (embabel/me#2615); one from before that sends them as `producer.error`
+ * with the same kind, and painting that red told people a producer had failed on a query that
+ * then returned rows.
+ */
+const COST_NOTE_KINDS = new Set(['FILTERED_IN_GRAPH', 'PUSHED_FILTER_REAPPLIED'])
+
+const isNote = (event: VcEvent): boolean =>
+  event.type === 'producer.note' ||
+  (event.type === 'producer.error' && COST_NOTE_KINDS.has((event as VcProducerError).kind))
+
 /** Whether this event reports something going wrong, for a surface choosing a tone. */
 export const isFailure = (event: VcEvent): boolean =>
-  event.type === 'producer.error' || event.type === 'query.rejected'
+  (event.type === 'producer.error' && !isNote(event)) || event.type === 'query.rejected'
 
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`
 
@@ -157,9 +183,10 @@ export function describeVcEvent(event: VcEvent): string {
       const e = event as VcNodesMaterialized
       return `Materialized ${plural(e.count, e.targetLabel)} via ${e.relationship}`
     }
+    case 'producer.note':
     case 'producer.error': {
-      const e = event as VcProducerError
-      return `${e.producer} failed: ${e.detail}`
+      const e = event as VcProducerError | VcProducerNote
+      return isNote(event) ? `${e.producer}: ${e.detail}` : `${e.producer} failed: ${e.detail}`
     }
     case 'producer.progress': {
       const e = event as VcProducerProgress

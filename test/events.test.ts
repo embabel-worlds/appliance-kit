@@ -82,3 +82,29 @@ describe('terminal and failure classification', () => {
     assert.equal(isTerminal({ ...base, type: 'producer.error' } as VcEvent), false)
   })
 })
+
+describe('a cost note is not a failure', () => {
+  const note = (type: string, kind: string, detail = 'pushdown: fetched 74 record(s) and then filtered them in the graph') =>
+    ({ ...base, type, producer: 'chatwootMessagesByConversation', kind, detail }) as VcEvent
+
+  it('renders producer.note as a plain line and never flags it', () => {
+    const e = note('producer.note', 'FILTERED_IN_GRAPH')
+    assert.equal(describeVcEvent(e), 'chatwootMessagesByConversation: pushdown: fetched 74 record(s) and then filtered them in the graph')
+    assert.equal(isFailure(e), false)
+    assert.equal(isTerminal(e), false)
+  })
+
+  it('treats a producer.error carrying a note kind the same way — an older appliance sends notes as errors', () => {
+    for (const kind of ['FILTERED_IN_GRAPH', 'PUSHED_FILTER_REAPPLIED']) {
+      const e = note('producer.error', kind)
+      assert.equal(describeVcEvent(e), 'chatwootMessagesByConversation: pushdown: fetched 74 record(s) and then filtered them in the graph', kind)
+      assert.equal(isFailure(e), false, kind)
+    }
+  })
+
+  it('still says "failed" for a producer.error whose kind doubts the rows', () => {
+    const e = note('producer.error', 'FETCH_FAILURE', '502 from chatwoot')
+    assert.equal(describeVcEvent(e), 'chatwootMessagesByConversation failed: 502 from chatwoot')
+    assert.equal(isFailure(e), true)
+  })
+})

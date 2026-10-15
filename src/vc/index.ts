@@ -27,6 +27,7 @@ export type {
   VcNodesMaterialized,
   VcProducerError,
   VcProducerFetch,
+  VcProducerNote,
   VcProducerProgress,
   VcQueryCompleted,
   VcQueryRejected,

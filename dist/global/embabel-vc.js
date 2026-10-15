@@ -337,7 +337,9 @@ var EmbabelVc = (() => {
 
   // src/vc/events.ts
   var isTerminal = (event) => event.type === "query.completed" || event.type === "query.rejected";
-  var isFailure = (event) => event.type === "producer.error" || event.type === "query.rejected";
+  var COST_NOTE_KINDS = /* @__PURE__ */ new Set(["FILTERED_IN_GRAPH", "PUSHED_FILTER_REAPPLIED"]);
+  var isNote = (event) => event.type === "producer.note" || event.type === "producer.error" && COST_NOTE_KINDS.has(event.kind);
+  var isFailure = (event) => event.type === "producer.error" && !isNote(event) || event.type === "query.rejected";
   var plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
   var RETRIEVAL_STEPS = {
     // A search by meaning and keyword together, fused: neither of the two below.
@@ -369,9 +371,10 @@ var EmbabelVc = (() => {
         const e = event;
         return `Materialized ${plural(e.count, e.targetLabel)} via ${e.relationship}`;
       }
+      case "producer.note":
       case "producer.error": {
         const e = event;
-        return `${e.producer} failed: ${e.detail}`;
+        return isNote(event) ? `${e.producer}: ${e.detail}` : `${e.producer} failed: ${e.detail}`;
       }
       case "producer.progress": {
         const e = event;

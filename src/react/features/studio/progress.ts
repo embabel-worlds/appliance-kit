@@ -18,7 +18,7 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { type VcEvent, describeVcEvent, isTerminal } from '../../../vc/events.ts'
+import { type VcEvent, describeVcEvent, isFailure, isTerminal } from '../../../vc/events.ts'
 
 export interface ProgressLine {
   /** `seq` within the run, which is also a stable React key — the server guarantees monotonicity. */
@@ -111,7 +111,7 @@ export function useRunProgress(
         const line: ProgressLine = {
           key: event.seq ?? current.length,
           text: describeVcEvent(event),
-          failed: event.type === 'producer.error' || event.type === 'query.rejected',
+          failed: isFailure(event),
         }
         const next = [...current, line]
         return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next

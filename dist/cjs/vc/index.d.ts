@@ -7,7 +7,7 @@ export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, Edge
 export { declaredParams, RESERVED_PARAMS } from './params.ts';
 export { rowColumns, rowsToMarkdown, rowsToCsv } from './rows.ts';
 export { describeVcEvent, isTerminal, isFailure } from './events.ts';
-export type { VcEvent, VcEventBase, VcNodesMaterialized, VcProducerError, VcProducerFetch, VcProducerProgress, VcQueryCompleted, VcQueryRejected, VcRetrievalStep, VcStageStarted, VcQueryStarted, } from './events.ts';
+export type { VcEvent, VcEventBase, VcNodesMaterialized, VcProducerError, VcProducerFetch, VcProducerNote, VcProducerProgress, VcQueryCompleted, VcQueryRejected, VcRetrievalStep, VcStageStarted, VcQueryStarted, } from './events.ts';
 export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from './scopes.ts';
 export { PEEK_LIMIT, completeQuery, pipelineText, planLine } from './session.ts';
 export type { LinePlan, SessionBinding } from './session.ts';

@@ -76,7 +76,7 @@ function useRunProgress(subscribe) {
                 const line = {
                     key: event.seq ?? current.length,
                     text: (0, events_ts_1.describeVcEvent)(event),
-                    failed: event.type === 'producer.error' || event.type === 'query.rejected',
+                    failed: (0, events_ts_1.isFailure)(event),
                 };
                 const next = [...current, line];
                 return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next;

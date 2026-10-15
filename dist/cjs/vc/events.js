@@ -26,8 +26,20 @@ exports.describeVcEvent = describeVcEvent;
 /** The run is over: nothing further will arrive for this queryId. */
 const isTerminal = (event) => event.type === 'query.completed' || event.type === 'query.rejected';
 exports.isTerminal = isTerminal;
+/*
+ * THE TWO PRODUCER KINDS THAT ARE NOTES, NOT FAILURES. A pushed-down filter the source could not
+ * honour is re-applied in the graph, and the engine says so because it fetched more than it kept —
+ * the rows are right, only the bill was higher. The engine's own `DutyWarnings` classes exactly
+ * these two as NOTE and every other producer kind as doubting the rows. A newer appliance sends
+ * them as `producer.note` (embabel/me#2615); one from before that sends them as `producer.error`
+ * with the same kind, and painting that red told people a producer had failed on a query that
+ * then returned rows.
+ */
+const COST_NOTE_KINDS = new Set(['FILTERED_IN_GRAPH', 'PUSHED_FILTER_REAPPLIED']);
+const isNote = (event) => event.type === 'producer.note' ||
+    (event.type === 'producer.error' && COST_NOTE_KINDS.has(event.kind));
 /** Whether this event reports something going wrong, for a surface choosing a tone. */
-const isFailure = (event) => event.type === 'producer.error' || event.type === 'query.rejected';
+const isFailure = (event) => (event.type === 'producer.error' && !isNote(event)) || event.type === 'query.rejected';
 exports.isFailure = isFailure;
 const plural = (n, one, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 /** The retrieval loop's steps, said as what the model is doing rather than as its tool name. */
@@ -69,9 +81,10 @@ function describeVcEvent(event) {
             const e = event;
             return `Materialized ${plural(e.count, e.targetLabel)} via ${e.relationship}`;
         }
+        case 'producer.note':
         case 'producer.error': {
             const e = event;
-            return `${e.producer} failed: ${e.detail}`;
+            return isNote(event) ? `${e.producer}: ${e.detail}` : `${e.producer} failed: ${e.detail}`;
         }
         case 'producer.progress': {
             const e = event;

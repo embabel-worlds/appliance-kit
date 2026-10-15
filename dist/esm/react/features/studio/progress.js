@@ -17,7 +17,7 @@
  * nothing is being narrated between runs.
  */
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { describeVcEvent, isTerminal } from "../../../vc/events.js";
+import { describeVcEvent, isFailure, isTerminal } from "../../../vc/events.js";
 /** How many lines to keep. A wide fan-out can emit hundreds; the recent ones are the interesting ones. */
 const MAX_LINES = 200;
 export function useRunProgress(subscribe) {
@@ -73,7 +73,7 @@ export function useRunProgress(subscribe) {
                 const line = {
                     key: event.seq ?? current.length,
                     text: describeVcEvent(event),
-                    failed: event.type === 'producer.error' || event.type === 'query.rejected',
+                    failed: isFailure(event),
                 };
                 const next = [...current, line];
                 return next.length > MAX_LINES ? next.slice(-MAX_LINES) : next;
