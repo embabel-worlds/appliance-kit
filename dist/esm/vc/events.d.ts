@@ -51,6 +51,16 @@ export interface VcProducerError extends VcEventBase {
     kind: string;
     detail: string;
 }
+/**
+ * A producer saying what the answer COST, over an answer that is correct. Same fields as an error,
+ * because until embabel/me#2615 it was sent as one; an appliance from before that still is.
+ */
+export interface VcProducerNote extends VcEventBase {
+    type: 'producer.note';
+    producer: string;
+    kind: string;
+    detail: string;
+}
 export interface VcProducerProgress extends VcEventBase {
     type: 'producer.progress';
     producer: string;
@@ -77,7 +87,7 @@ export interface VcQueryRejected extends VcEventBase {
     type: 'query.rejected';
     reason: string;
 }
-export type VcEvent = VcQueryStarted | VcStageStarted | VcProducerFetch | VcNodesMaterialized | VcProducerError | VcProducerProgress | VcRetrievalStep | VcQueryCompleted | VcQueryRejected | VcEventBase;
+export type VcEvent = VcQueryStarted | VcStageStarted | VcProducerFetch | VcNodesMaterialized | VcProducerError | VcProducerNote | VcProducerProgress | VcRetrievalStep | VcQueryCompleted | VcQueryRejected | VcEventBase;
 /** The run is over: nothing further will arrive for this queryId. */
 export declare const isTerminal: (event: VcEvent) => boolean;
 /** Whether this event reports something going wrong, for a surface choosing a tone. */
