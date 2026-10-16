@@ -3413,6 +3413,9 @@
           },
           "userId" : {
             "type" : "string"
+          },
+          "warning" : {
+            "type" : "string"
           }
         },
         "required" : [ "budgetPerTick", "cypher", "id", "label", "progress", "userId" ],
@@ -3420,6 +3423,9 @@
       },
       "FillProgress" : {
         "properties" : {
+          "coverage" : {
+            "$ref" : "#/components/schemas/KeyCoverage"
+          },
           "createdAt" : {
             "format" : "int64",
             "type" : "integer"
@@ -3428,6 +3434,10 @@
             "type" : "string"
           },
           "lastTickAt" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "liveCallsLastTick" : {
             "format" : "int64",
             "type" : "integer"
           },
@@ -3441,9 +3451,13 @@
           "ticks" : {
             "format" : "int64",
             "type" : "integer"
+          },
+          "trend" : {
+            "enum" : [ "UNKNOWN", "CONVERGING", "NOT_CONVERGING" ],
+            "type" : "string"
           }
         },
-        "required" : [ "createdAt", "liveCallsTotal", "state", "ticks" ],
+        "required" : [ "coverage", "createdAt", "liveCallsLastTick", "liveCallsTotal", "state", "ticks", "trend" ],
         "type" : "object"
       },
       "Firing" : {
@@ -4289,6 +4303,28 @@
           }
         },
         "required" : [ "gcPauseCount", "gcPauseTotalMillis" ],
+        "type" : "object"
+      },
+      "KeyCoverage" : {
+        "properties" : {
+          "fractionResolved" : {
+            "format" : "double",
+            "type" : "number"
+          },
+          "keysResolved" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "keysTotal" : {
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "totality" : {
+            "enum" : [ "KNOWN", "UNKNOWN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "keysResolved", "totality" ],
         "type" : "object"
       },
       "KgAnnotationDiff" : {
@@ -10094,7 +10130,7 @@
             "description" : "No authenticated principal and no resolvable username"
           }
         },
-        "summary" : "The acting user's fills, newest first, with tick and live-call progress",
+        "summary" : "The acting user's fills, newest first, with key coverage, tick and live-call progress",
         "tags" : [ "KG Fills" ]
       },
       "post" : {
@@ -10126,7 +10162,7 @@
                 }
               }
             },
-            "description" : "The fill, as started"
+            "description" : "The fill, as started — carrying a warning when its producers cannot outlive the sweep, so it will poll rather than converge"
           },
           "401" : {
             "content" : {
@@ -22873,7 +22909,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36175"
+    "url" : "http://localhost:40101"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
