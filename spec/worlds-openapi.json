@@ -3411,6 +3411,9 @@
           "progress" : {
             "$ref" : "#/components/schemas/FillProgress"
           },
+          "routine" : {
+            "type" : "string"
+          },
           "userId" : {
             "type" : "string"
           },
@@ -5161,7 +5164,7 @@
             "type" : "array"
           },
           "llmCalls" : {
-            "description" : "LLM calls: the generation plus any aggregate reductions.",
+            "description" : "LLM calls: the generation plus any aggregate reductions. Reasoning only — a semantic anchor's embedding is on `semanticCalls`.",
             "format" : "int32",
             "type" : "integer"
           },
@@ -5192,6 +5195,18 @@
           "run" : {
             "$ref" : "#/components/schemas/KgRunRef"
           },
+          "semanticCallLog" : {
+            "description" : "The actual searches as `producer: mode search on index (k=…)`, in order.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "semanticCalls" : {
+            "description" : "Relevance searches behind a semantic anchor: one embedding plus one similarity scan per anchor. The third call axis — a search of an index is neither a producer fetch nor a reduction, and a semantic query spends here and nowhere else.",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "warnings" : {
             "items" : {
               "type" : "string"
@@ -5199,7 +5214,7 @@
             "type" : "array"
           }
         },
-        "required" : [ "apiCallLog", "apiCalls", "cypher", "durationMs", "llmCallLog", "llmCalls", "rowCount", "rows", "warnings" ],
+        "required" : [ "apiCallLog", "apiCalls", "cypher", "durationMs", "llmCallLog", "llmCalls", "rowCount", "rows", "semanticCallLog", "semanticCalls", "warnings" ],
         "type" : "object"
       },
       "KgRefineRequest" : {
@@ -22909,7 +22924,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40467"
+    "url" : "http://localhost:43607"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
