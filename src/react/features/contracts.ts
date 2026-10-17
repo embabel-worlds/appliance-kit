@@ -20,6 +20,7 @@ import type {
 } from '../../client/kg.ts'
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts'
 import type { AgentRequest } from '../../client/requests.ts'
+import type { Fill, StartFill } from '../../client/fills.ts'
 import type { CompiledSchedule } from '../../client/cron.ts'
 import type { Outcome } from '../../client/outcome.ts'
 import type { TourSummary } from '../../client/tours.ts'
@@ -512,6 +513,24 @@ export interface ApprovalsSurfaceProps {
    * view and marked once it has loaded; an id no listed request has marks nothing.
    */
   focusRequest?: string
+}
+
+/*
+ * FILLS — the sweeps the appliance is driving, and what each has covered.
+ *
+ * `start` is here because the best place to begin one is where a query was just refused as too
+ * expensive, not a form on a different page; a host that has no such moment simply omits it.
+ */
+export interface FillsServices {
+  listFills(): Promise<Outcome<Fill[]>>
+  cancelFill(id: string): Promise<Outcome<void>>
+  startFill?(request: StartFill): Promise<Outcome<Fill>>
+}
+
+export interface FillsSurfaceProps {
+  services: FillsServices
+  /** Poll interval in ms. A fill ticks every two minutes, so anything faster only costs requests. */
+  refreshMs?: number
 }
 
 export interface ThreadsServices {

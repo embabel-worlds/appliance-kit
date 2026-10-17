@@ -10,6 +10,7 @@ import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, Handl
 import type { ExecuteOptions, KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
 import type { AgentRequest } from '../../client/requests.ts';
+import type { Fill, StartFill } from '../../client/fills.ts';
 import type { CompiledSchedule } from '../../client/cron.ts';
 import type { Outcome } from '../../client/outcome.ts';
 import type { TourSummary } from '../../client/tours.ts';
@@ -484,6 +485,16 @@ export interface ApprovalsSurfaceProps {
      * view and marked once it has loaded; an id no listed request has marks nothing.
      */
     focusRequest?: string;
+}
+export interface FillsServices {
+    listFills(): Promise<Outcome<Fill[]>>;
+    cancelFill(id: string): Promise<Outcome<void>>;
+    startFill?(request: StartFill): Promise<Outcome<Fill>>;
+}
+export interface FillsSurfaceProps {
+    services: FillsServices;
+    /** Poll interval in ms. A fill ticks every two minutes, so anything faster only costs requests. */
+    refreshMs?: number;
 }
 export interface ThreadsServices {
     listThreads(): Promise<Outcome<Thread[]>>;
