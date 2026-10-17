@@ -787,12 +787,18 @@
             "enum" : [ "draft", "submitted", "active", "suspended", "retired" ],
             "type" : "string"
           },
+          "sweeps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SweepSpec"
+            },
+            "type" : "array"
+          },
           "version" : {
             "format" : "int32",
             "type" : "integer"
           }
         },
-        "required" : [ "disclosesAsAgent", "duties", "identity", "job", "models", "name", "operators", "owners", "routines", "routing", "stage", "state", "version" ],
+        "required" : [ "disclosesAsAgent", "duties", "identity", "job", "models", "name", "operators", "owners", "routines", "routing", "stage", "state", "sweeps", "version" ],
         "type" : "object"
       },
       "AgentSuggestion" : {
@@ -962,6 +968,12 @@
             "enum" : [ "draft", "submitted", "active", "suspended", "retired" ],
             "type" : "string"
           },
+          "sweeps" : {
+            "items" : {
+              "$ref" : "#/components/schemas/SweepSpec"
+            },
+            "type" : "array"
+          },
           "unsignedChanges" : {
             "items" : {
               "type" : "string"
@@ -973,7 +985,7 @@
             "type" : "integer"
           }
         },
-        "required" : [ "duties", "identity", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "unsignedChanges", "version" ],
+        "required" : [ "duties", "identity", "job", "name", "needs", "operators", "origin", "owners", "routines", "routing", "stage", "state", "sweeps", "unsignedChanges", "version" ],
         "type" : "object"
       },
       "AnnotateDryRunRequest" : {
@@ -7531,6 +7543,22 @@
           }
         },
         "required" : [ "fields", "surface" ],
+        "type" : "object"
+      },
+      "SweepSpec" : {
+        "properties" : {
+          "budgetPerTick" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "name" : {
+            "type" : "string"
+          },
+          "view" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "view" ],
         "type" : "object"
       },
       "SystemStatus" : {
@@ -22924,7 +22952,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43607"
+    "url" : "http://localhost:35207"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
