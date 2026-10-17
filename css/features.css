@@ -1825,3 +1825,34 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .agent-reflection { margin-top: 16px; }
 :where(.kit-feature) .proposal { display: grid; gap: 6px; border-left: 2px solid var(--rule); padding-left: 10px; margin-top: 8px; }
 :where(.kit-feature) .proposal-changes { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/*
+ * Sweeps (fills): one row per campaign, with how far the last pass got.
+ *
+ * The bar is only ever drawn where the server gave a denominator; the unknown case renders as
+ * words, so there is no empty track to misread as "0% done". `--signal` fills it because a sweep
+ * is live work the appliance is doing on your behalf, and the track is `--inset-bg` rather than a
+ * tinted version of the fill, so an unfilled bar cannot be mistaken for a faintly filled one.
+ */
+:where(.kit-feature) .fill-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+:where(.kit-feature) .fill-row { display: grid; gap: 6px; border-left: 2px solid var(--rule); padding-left: 10px; }
+:where(.kit-feature) .fill-head { display: flex; gap: 8px; align-items: baseline; flex-wrap: wrap; }
+:where(.kit-feature) .fill-label { font-weight: 600; color: var(--heading); }
+:where(.kit-feature) .fill-coverage { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+:where(.kit-feature) .fill-bar { flex: 1 1 12em; min-width: 8em; height: 6px; border-radius: var(--radius); background: var(--inset-bg); overflow: hidden; }
+/* No transition: coverage is a reading that each tick replaces, and it can fall as well as rise —
+   an animated slide would read as progress being undone rather than re-measured. */
+:where(.kit-feature) .fill-bar-filled { height: 100%; background: var(--signal); }
+:where(.kit-feature) .fill-coverage-words, :where(.kit-feature) .fill-coverage-unknown { font-variant-numeric: tabular-nums; }
+:where(.kit-feature) .fill-coverage-unknown { color: var(--mid); }
+:where(.kit-feature) .fill-asof { color: var(--faint); font-size: var(--caption-size); letter-spacing: var(--caption-tracking); }
+/* The warning is a standing property of how the realm declared its producers, not an event, so it
+   sits in the row rather than flashing past — and it is caution, not alert: nothing is broken. */
+:where(.kit-feature) .fill-warning { margin: 0; color: var(--caution); }
+:where(.kit-feature) .fill-error { margin: 0; color: var(--alert); }
+:where(.kit-feature) .fill-details summary { cursor: pointer; color: var(--faint); font-size: var(--caption-size); }
+:where(.kit-feature) .fill-details dl { display: grid; grid-template-columns: max-content 1fr; gap: 2px 10px; margin: 6px 0 0; }
+:where(.kit-feature) .fill-details dt { color: var(--faint); }
+:where(.kit-feature) .fill-details dd { margin: 0; }
+:where(.kit-feature) .fill-details code { font-family: var(--mono); background: var(--code-bg); padding: 1px 4px; overflow-wrap: anywhere; }
+:where(.kit-feature) .fill-settled-heading { margin: 16px 0 6px; font-size: 1em; color: var(--faint); }

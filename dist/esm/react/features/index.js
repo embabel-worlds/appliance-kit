@@ -10,6 +10,7 @@ export { ApiKeysSurface } from "./api-keys/ApiKeysSurface.js";
 export { AgentsSurface, StagePill, firingOf } from "./agents/AgentsSurface.js";
 export { presentationOf, canTalkNow, unavailableBecause } from "./agents/presentation.js";
 export { ApprovalsSurface, RequestStatusPill } from "./approvals/ApprovalsSurface.js";
+export { FillsSurface } from "./fills/FillsSurface.js";
 export { Prose } from "./prose/Prose.js";
 export { ThreadsSurface } from "./threads/ThreadsSurface.js";
 export { MentionMenu } from "./threads/MentionMenu.js";

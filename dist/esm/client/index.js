@@ -17,6 +17,7 @@ export { classifySource } from "./citations.js";
 export { CronClient } from "./cron.js";
 export { AgentsClient } from "./agents.js";
 export { RequestsClient } from "./requests.js";
+export { FillsClient, coveragePercent, coverageWords, fillStatusWords } from "./fills.js";
 export { ThreadsClient } from "./threads.js";
 export { AgentSuggestionsClient } from "./agentSuggestions.js";
 export { AgentRunsClient } from "./agentRuns.js";
@@ -27,6 +28,7 @@ export { RealmCatalog, ranInBackground, realmsQuery, tagsQuery, categoriesQuery,
 export { HandlersClient } from "./handlers.js";
 import { AgentsClient as AgentsClientImpl } from "./agents.js";
 import { RequestsClient as RequestsClientImpl } from "./requests.js";
+import { FillsClient as FillsClientImpl } from "./fills.js";
 import { ThreadsClient as ThreadsClientImpl } from "./threads.js";
 import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from "./agentSuggestions.js";
 import { AgentRunsClient as AgentRunsClientImpl } from "./agentRuns.js";
@@ -45,6 +47,7 @@ export class ApplianceClient {
     kg;
     agents;
     requests;
+    fills;
     threads;
     agentSuggestions;
     agentRuns;
@@ -60,6 +63,7 @@ export class ApplianceClient {
         this.kg = new KgClient(transport);
         this.agents = new AgentsClientImpl(transport);
         this.requests = new RequestsClientImpl(transport);
+        this.fills = new FillsClientImpl(transport);
         this.threads = new ThreadsClientImpl(transport);
         this.agentSuggestions = new AgentSuggestionsClientImpl(transport);
         this.agentRuns = new AgentRunsClientImpl(transport);
