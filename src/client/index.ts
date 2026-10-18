@@ -75,6 +75,7 @@ export { CronClient } from './cron.ts'
 export type { CompiledSchedule } from './cron.ts'
 export { AgentsClient } from './agents.ts'
 export { RequestsClient } from './requests.ts'
+export { FillsClient, coveragePercent, coverageWords, fillStatusWords } from './fills.ts'
 export { ThreadsClient } from './threads.ts'
 export { AgentSuggestionsClient } from './agentSuggestions.ts'
 export { AgentRunsClient } from './agentRuns.ts'
@@ -90,6 +91,7 @@ export type { AgentRun, Firing, Receipt, ReceiptVerification, RunDetail, RunKind
 export type { AgentSuggestion, SuggestionEvidence, SuggestionKind, SuggestionStatus } from './agentSuggestions.ts'
 export type { Attachment, AttachmentKind, AttachmentRequest, Sender, SenderKind, Thread, ThreadMessage, ThreadView } from './threads.ts'
 export type { AgentRequest, RequestStatus } from './requests.ts'
+export type { Fill, FillProgress, FillState, FillTrend, KeyCoverage, StartFill, Totality } from './fills.ts'
 export type { Agent, AgentDuty, AgentRoutine, AgentStage, AgentState, AgentVersion, DutyCheck, DutyState, Halt } from './agents.ts'
 
 export { HandlersClient } from './handlers.ts'
@@ -112,6 +114,7 @@ export type { components, paths } from './generated/openapi.ts'
 
 import { AgentsClient as AgentsClientImpl } from './agents.ts'
 import { RequestsClient as RequestsClientImpl } from './requests.ts'
+import { FillsClient as FillsClientImpl } from './fills.ts'
 import { ThreadsClient as ThreadsClientImpl } from './threads.ts'
 import { AgentSuggestionsClient as AgentSuggestionsClientImpl } from './agentSuggestions.ts'
 import { AgentRunsClient as AgentRunsClientImpl } from './agentRuns.ts'
@@ -135,6 +138,7 @@ export class ApplianceClient {
   readonly kg: KgClient
   readonly agents: AgentsClientImpl
   readonly requests: RequestsClientImpl
+  readonly fills: FillsClientImpl
   readonly threads: ThreadsClientImpl
   readonly agentSuggestions: AgentSuggestionsClientImpl
   readonly agentRuns: AgentRunsClientImpl
@@ -150,6 +154,7 @@ export class ApplianceClient {
     this.kg = new KgClient(transport)
     this.agents = new AgentsClientImpl(transport)
     this.requests = new RequestsClientImpl(transport)
+    this.fills = new FillsClientImpl(transport)
     this.threads = new ThreadsClientImpl(transport)
     this.agentSuggestions = new AgentSuggestionsClientImpl(transport)
     this.agentRuns = new AgentRunsClientImpl(transport)

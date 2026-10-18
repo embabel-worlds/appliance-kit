@@ -32,6 +32,7 @@ var EmbabelApplianceClient = (() => {
     DEFAULT_INGEST_STALLED_AFTER_MS: () => DEFAULT_INGEST_STALLED_AFTER_MS,
     DEFAULT_INGEST_TIMEOUT_MS: () => DEFAULT_INGEST_TIMEOUT_MS,
     DocumentsClient: () => DocumentsClient,
+    FillsClient: () => FillsClient,
     HandlersClient: () => HandlersClient,
     HintsClient: () => HintsClient,
     HttpTransport: () => HttpTransport,
@@ -45,9 +46,12 @@ var EmbabelApplianceClient = (() => {
     basicAuth: () => basicAuth,
     categoriesQuery: () => categoriesQuery,
     classifySource: () => classifySource,
+    coveragePercent: () => coveragePercent,
+    coverageWords: () => coverageWords,
     createSseParser: () => createSseParser,
     expect: () => expect,
     experimentalQuery: () => experimentalQuery,
+    fillStatusWords: () => fillStatusWords,
     followIngest: () => followIngest,
     isBackgroundHandle: () => isBackgroundHandle,
     isOk: () => isOk,
@@ -841,6 +845,47 @@ var EmbabelApplianceClient = (() => {
     }
   };
 
+  // src/client/fills.ts
+  var FILLS = "/api/v1/admin/kg/fills";
+  var FillsClient = class {
+    constructor(transport) {
+      this.transport = transport;
+    }
+    /** The acting user's fills, newest first. */
+    list() {
+      return this.transport.send({ method: "GET", path: FILLS });
+    }
+    /** Start a sweep. The marker is durable immediately; the first chunk runs on the next tick. */
+    start(request) {
+      return this.transport.send({ method: "POST", path: FILLS, body: request });
+    }
+    /** Stop driving it. Completed work stays cached — nothing rolls back. */
+    cancel(id) {
+      return this.transport.send({ method: "DELETE", path: `${FILLS}/${encodeURIComponent(id)}` });
+    }
+  };
+  function coveragePercent(coverage) {
+    if (coverage.totality !== "KNOWN") return null;
+    if (typeof coverage.fractionResolved === "number") return Math.round(coverage.fractionResolved * 100);
+    const total = coverage.keysTotal;
+    if (typeof total !== "number" || total <= 0) return null;
+    return Math.round(coverage.keysResolved / total * 100);
+  }
+  function coverageWords(coverage) {
+    const resolved = coverage.keysResolved.toLocaleString();
+    const percent = coveragePercent(coverage);
+    if (percent === null) return `${resolved} assessed (total unknown)`;
+    return `${resolved} of ${(coverage.keysTotal ?? 0).toLocaleString()} (${percent}%)`;
+  }
+  function fillStatusWords(fill) {
+    const { state, trend } = fill.progress;
+    if (state === "DONE") return "complete";
+    if (state === "CANCELLED") return "cancelled";
+    if (trend === "NOT_CONVERGING") return "polling, not progressing";
+    if (trend === "CONVERGING") return "converging";
+    return "running";
+  }
+
   // src/client/threads.ts
   var THREADS = "/api/v1/threads";
   var ThreadsClient = class {
@@ -1302,6 +1347,7 @@ var EmbabelApplianceClient = (() => {
       this.kg = new KgClient(transport);
       this.agents = new AgentsClient(transport);
       this.requests = new RequestsClient(transport);
+      this.fills = new FillsClient(transport);
       this.threads = new ThreadsClient(transport);
       this.agentSuggestions = new AgentSuggestionsClient(transport);
       this.agentRuns = new AgentRunsClient(transport);
@@ -1316,6 +1362,7 @@ var EmbabelApplianceClient = (() => {
     kg;
     agents;
     requests;
+    fills;
     threads;
     agentSuggestions;
     agentRuns;
