@@ -4467,6 +4467,64 @@
         "required" : [ "choice" ],
         "type" : "object"
       },
+      "KgAskExposure" : {
+        "properties" : {
+          "generationPromptChars" : {
+            "description" : "Characters in the Cypher-generation prompt. Absent when no query was generated.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "groups" : {
+            "description" : "The schema groups rendered in full for generation, and whose views view selection was offered.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "indexed" : {
+            "description" : "Groups named to the generator by one index line only — no labels, properties or examples.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "matched" : {
+            "additionalProperties" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            },
+            "description" : "Each named group -> the words that named it, tier first: name:, label: or weak:.",
+            "type" : "object"
+          },
+          "resolvedBy" : {
+            "description" : "How the groups were chosen: WHOLE (nothing to narrow), SCOPE, QUESTION, UNRESOLVED or SELECTOR.",
+            "type" : "string"
+          },
+          "spineOnly" : {
+            "description" : "True when the always-on core was cut to the spine anchors (the user, Person, Organization).",
+            "type" : "boolean"
+          },
+          "viewSelectPromptChars" : {
+            "description" : "Characters in the view-selection prompt. Absent when no view selection ran.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "viewsInWorld" : {
+            "description" : "Saved views in the world.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "viewsOffered" : {
+            "description" : "Saved views offered to view selection, of `viewsInWorld`.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "groups", "indexed", "resolvedBy", "spineOnly" ],
+        "type" : "object"
+      },
       "KgAskRequest" : {
         "properties" : {
           "question" : {
@@ -5158,6 +5216,10 @@
           "error" : {
             "description" : "Why the query failed, or null when it did not.",
             "type" : "string"
+          },
+          "exposure" : {
+            "$ref" : "#/components/schemas/KgAskExposure",
+            "description" : "What the models behind an `/ask` answer were shown: resolved schema groups and prompt sizes."
           },
           "fetchedRecords" : {
             "description" : "Source records fetched before query-side filtering, cache-served included. Absent when none.",
@@ -9620,7 +9682,7 @@
     },
     "/api/v1/admin/kg/ask" : {
       "post" : {
-        "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.",
+        "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation and view selection see only that scope's realms, plus the spine. Not a captured query scope. Omitted, the question's own words decide what is shown; the whole world never is.",
         "operationId" : "ask_1",
         "parameters" : [ {
           "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
@@ -22952,7 +23014,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42379"
+    "url" : "http://localhost:46877"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
