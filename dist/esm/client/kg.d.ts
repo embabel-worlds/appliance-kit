@@ -59,6 +59,8 @@ export interface ExecuteOptions {
     /** Arguments for `params`. A blank value means not supplied, so the default applies. */
     args?: Record<string, unknown>;
 }
+/** What {@link KgClient.userExecute} takes: everything but the background modes. */
+export type UserExecuteOptions = Omit<ExecuteOptions, 'background' | 'waitSeconds'>;
 export declare class KgClient {
     private readonly transport;
     constructor(transport: Transport);
@@ -99,6 +101,12 @@ export declare class KgClient {
      * the run has not finished, NEVER because the graph is empty.
      */
     execute(cypher: string, options?: ExecuteOptions): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>;
+    /**
+     * {@link execute} for a caller who may not hold the admin role — what a list every signed-in
+     * user sees, such as the realm catalogue, must run through. Synchronous only: the answer is
+     * always a finished result, never a handle.
+     */
+    userExecute(cypher: string, options?: UserExecuteOptions): Promise<Outcome<KgQueryResult>>;
     /** The acting user's live captured scopes, newest first. An expired scope is already absent. */
     scopes(): Promise<Outcome<KgScopeList>>;
     /** Delete a captured scope. `deleted: false` is an honest no-op, not an error. */

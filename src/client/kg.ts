@@ -44,6 +44,13 @@ export type KgRunChoice = 'proceed' | 'narrow' | 'background' | 'cancel'
 
 const KG = '/api/v1/admin/kg'
 
+/*
+ * The signed-in user's twin of `KG`. The admin tree answers 403 to anyone without the admin role;
+ * this one runs the same engine, scoped the same way, for every signed-in user — synchronously
+ * only, since a parked run's links point back into the admin tree.
+ */
+const USER_KG = '/api/v1/kg/studio'
+
 /**
  * Generation and execution are not interactive-fast. A cold extract or aggregate materializes on
  * first traversal, so a 30s default would time out calls that were going to succeed.
@@ -93,6 +100,17 @@ export interface ExecuteOptions {
   params?: Record<string, KgViewParamSpec>
   /** Arguments for `params`. A blank value means not supplied, so the default applies. */
   args?: Record<string, unknown>
+}
+
+/** What {@link KgClient.userExecute} takes: everything but the background modes. */
+export type UserExecuteOptions = Omit<ExecuteOptions, 'background' | 'waitSeconds'>
+
+const executeBody = (cypher: string, options: UserExecuteOptions): Record<string, unknown> => {
+  const body: Record<string, unknown> = { cypher }
+  if (options.captureAs !== undefined) body['captureAs'] = options.captureAs
+  if (options.params !== undefined) body['params'] = options.params
+  if (options.args !== undefined) body['args'] = options.args
+  return body
 }
 
 export class KgClient {
@@ -174,15 +192,25 @@ export class KgClient {
     const query: Record<string, string | number | boolean | undefined> = {}
     if (options.background) query['background'] = true
     if (options.waitSeconds !== undefined) query['waitSeconds'] = options.waitSeconds
-    const body: Record<string, unknown> = { cypher }
-    if (options.captureAs !== undefined) body['captureAs'] = options.captureAs
-    if (options.params !== undefined) body['params'] = options.params
-    if (options.args !== undefined) body['args'] = options.args
     return this.transport.send({
       method: 'POST',
       path: `${KG}/execute`,
       query,
-      body,
+      body: executeBody(cypher, options),
+      timeoutMs: TIMEOUTS.execute,
+    })
+  }
+
+  /**
+   * {@link execute} for a caller who may not hold the admin role — what a list every signed-in
+   * user sees, such as the realm catalogue, must run through. Synchronous only: the answer is
+   * always a finished result, never a handle.
+   */
+  userExecute(cypher: string, options: UserExecuteOptions = {}): Promise<Outcome<KgQueryResult>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${USER_KG}/execute`,
+      body: executeBody(cypher, options),
       timeoutMs: TIMEOUTS.execute,
     })
   }

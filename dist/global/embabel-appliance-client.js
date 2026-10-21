@@ -211,6 +211,7 @@ var EmbabelApplianceClient = (() => {
 
   // src/client/kg.ts
   var KG = "/api/v1/admin/kg";
+  var USER_KG = "/api/v1/kg/studio";
   var TIMEOUTS = {
     execute: 18e4,
     generate: 12e4,
@@ -219,6 +220,13 @@ var EmbabelApplianceClient = (() => {
   function isBackgroundHandle(outcome) {
     return "runId" in outcome && outcome.runId !== void 0;
   }
+  var executeBody = (cypher, options) => {
+    const body = { cypher };
+    if (options.captureAs !== void 0) body["captureAs"] = options.captureAs;
+    if (options.params !== void 0) body["params"] = options.params;
+    if (options.args !== void 0) body["args"] = options.args;
+    return body;
+  };
   var KgClient = class {
     constructor(transport) {
       this.transport = transport;
@@ -293,15 +301,24 @@ var EmbabelApplianceClient = (() => {
       const query2 = {};
       if (options.background) query2["background"] = true;
       if (options.waitSeconds !== void 0) query2["waitSeconds"] = options.waitSeconds;
-      const body = { cypher };
-      if (options.captureAs !== void 0) body["captureAs"] = options.captureAs;
-      if (options.params !== void 0) body["params"] = options.params;
-      if (options.args !== void 0) body["args"] = options.args;
       return this.transport.send({
         method: "POST",
         path: `${KG}/execute`,
         query: query2,
-        body,
+        body: executeBody(cypher, options),
+        timeoutMs: TIMEOUTS.execute
+      });
+    }
+    /**
+     * {@link execute} for a caller who may not hold the admin role — what a list every signed-in
+     * user sees, such as the realm catalogue, must run through. Synchronous only: the answer is
+     * always a finished result, never a handle.
+     */
+    userExecute(cypher, options = {}) {
+      return this.transport.send({
+        method: "POST",
+        path: `${USER_KG}/execute`,
+        body: executeBody(cypher, options),
         timeoutMs: TIMEOUTS.execute
       });
     }

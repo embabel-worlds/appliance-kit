@@ -18,6 +18,7 @@ export type { Outcome, Ok, Failure, FailureKind } from './outcome.ts'
 export { KgClient, isBackgroundHandle } from './kg.ts'
 export type {
   ExecuteOptions,
+  UserExecuteOptions,
   KgAnswerAccepted,
   KgBackgroundHandle,
   KgDeleteViewResult,
