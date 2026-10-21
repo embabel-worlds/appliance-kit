@@ -7257,17 +7257,24 @@
           "createdAt" : {
             "type" : "string"
           },
+          "kind" : {
+            "enum" : [ "CHAT", "THREAD" ],
+            "type" : "string"
+          },
           "lastActivityAt" : {
             "type" : "string"
           },
           "sessionId" : {
             "type" : "string"
           },
+          "startedBy" : {
+            "$ref" : "#/components/schemas/Sender"
+          },
           "title" : {
             "type" : "string"
           }
         },
-        "required" : [ "createdAt", "lastActivityAt", "sessionId" ],
+        "required" : [ "createdAt", "kind", "lastActivityAt", "sessionId" ],
         "type" : "object"
       },
       "SetContextBody" : {
@@ -14488,7 +14495,7 @@
     },
     "/api/v1/chat/sessions" : {
       "get" : {
-        "description" : "Returns the authenticated user's persisted sessions, newest first, capped at 50 entries — the same cap and ordering the Vaadin sidebar uses. Metadata only (no message bodies).",
+        "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. Each says its kind — a thread is posted in through /threads — and who started it, when anyone has written in it yet. Metadata only (no message bodies).",
         "operationId" : "listSessions",
         "responses" : {
           "200" : {
@@ -23014,7 +23021,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45711"
+    "url" : "http://localhost:34767"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
