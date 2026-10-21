@@ -27,11 +27,12 @@ import '@embabel/appliance-kit/css/features.css'                    // browser f
 `src/client/generated/openapi.ts` is generated, never hand-edited. Its source is
 `spec/client-surface.json`, copied verbatim from the assistant repo where
 `OpenApiClientContractTest` regenerates it and fails the build when the published surface moves.
-Two prefixes are guarded, and they are exactly the two the studios stand on:
+These prefixes are guarded:
 
 | Prefix | Behind |
 | --- | --- |
 | `/api/v1/admin/kg` | Query Studio — virtual Cypher |
+| `/api/v1/kg/studio` | The same virtual Cypher for a member without the admin role — the realm catalogue and world lists |
 | `/api/v1/admin/handlers` | Handler Studio — TypeScript event handlers |
 
 To take a newer server: copy that file in, `npm run generate`, `npm run check`, and read the diff

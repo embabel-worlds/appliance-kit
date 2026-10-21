@@ -61,6 +61,7 @@ export interface PinStore {
 
 export interface AppsServices {
   listApps(): Promise<Outcome<AppArtifact[]>>
+  /** Runs the apps search query. Every signed-in user searches, so run it with `KgClient.userExecute`, not the admin `execute`. */
   searchApps(cypher: string): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>
 }
 
@@ -130,7 +131,10 @@ export interface RealmServices {
   listUpdates(): Promise<Outcome<RealmUpdates>>
   updateRealm(name: string): Promise<Outcome<RealmUpdateResult>>
   updateAll(): Promise<Outcome<RealmUpdateAllResult>>
-  /** Runs a `(:Realm)` catalogue query — see `RealmCatalog`, which builds them. Values travel as declared params. */
+  /**
+   * Runs a `(:Realm)` catalogue query — see `RealmCatalog`, which builds them. Values travel as declared params.
+   * Every signed-in user browses realms, so run it with `KgClient.userExecute`, not the admin `execute`.
+   */
   searchRealms(cypher: string, options?: ExecuteOptions): Promise<Outcome<KgQueryResult | KgBackgroundHandle>>
   listTours(): Promise<Outcome<TourSummary[]>>
 }

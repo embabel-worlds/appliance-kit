@@ -1,4 +1,10 @@
 const KG = '/api/v1/admin/kg';
+/*
+ * The signed-in user's twin of `KG`. The admin tree answers 403 to anyone without the admin role;
+ * this one runs the same engine, scoped the same way, for every signed-in user — synchronously
+ * only, since a parked run's links point back into the admin tree.
+ */
+const USER_KG = '/api/v1/kg/studio';
 /**
  * Generation and execution are not interactive-fast. A cold extract or aggregate materializes on
  * first traversal, so a 30s default would time out calls that were going to succeed.
@@ -24,6 +30,16 @@ const TIMEOUTS = {
 export function isBackgroundHandle(outcome) {
     return 'runId' in outcome && outcome.runId !== undefined;
 }
+const executeBody = (cypher, options) => {
+    const body = { cypher };
+    if (options.captureAs !== undefined)
+        body['captureAs'] = options.captureAs;
+    if (options.params !== undefined)
+        body['params'] = options.params;
+    if (options.args !== undefined)
+        body['args'] = options.args;
+    return body;
+};
 export class KgClient {
     transport;
     constructor(transport) {
@@ -101,18 +117,24 @@ export class KgClient {
             query['background'] = true;
         if (options.waitSeconds !== undefined)
             query['waitSeconds'] = options.waitSeconds;
-        const body = { cypher };
-        if (options.captureAs !== undefined)
-            body['captureAs'] = options.captureAs;
-        if (options.params !== undefined)
-            body['params'] = options.params;
-        if (options.args !== undefined)
-            body['args'] = options.args;
         return this.transport.send({
             method: 'POST',
             path: `${KG}/execute`,
             query,
-            body,
+            body: executeBody(cypher, options),
+            timeoutMs: TIMEOUTS.execute,
+        });
+    }
+    /**
+     * {@link execute} for a caller who may not hold the admin role — what a list every signed-in
+     * user sees, such as the realm catalogue, must run through. Synchronous only: the answer is
+     * always a finished result, never a handle.
+     */
+    userExecute(cypher, options = {}) {
+        return this.transport.send({
+            method: 'POST',
+            path: `${USER_KG}/execute`,
+            body: executeBody(cypher, options),
             timeoutMs: TIMEOUTS.execute,
         });
     }

@@ -84,6 +84,21 @@ describe('KgClient request shaping', () => {
     assert.deepEqual(transport.last.query, {})
   })
 
+  it("runs a non-admin caller's query on the user tree, with the same body and budget", async () => {
+    const { kg, transport } = client()
+    await kg.userExecute('MATCH (n) RETURN n LIMIT $limit', { params: { limit: { type: 'int', default: 10 } }, args: { limit: '5' } })
+    assert.deepEqual(transport.last, {
+      method: 'POST',
+      path: '/api/v1/kg/studio/execute',
+      body: {
+        cypher: 'MATCH (n) RETURN n LIMIT $limit',
+        params: { limit: { type: 'int', default: 10 } },
+        args: { limit: '5' },
+      },
+      timeoutMs: 180_000,
+    })
+  })
+
   it('encodes run and view names into the path', async () => {
     const { kg, transport } = client()
     await kg.run('run/with slash')
