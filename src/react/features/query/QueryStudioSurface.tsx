@@ -23,7 +23,7 @@
  */
 
 import { ArrowClockwise, Question } from '@phosphor-icons/react'
-import React, { useCallback, useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import {
   type KgQueryResult,
   type KgScopeInfo,
@@ -842,22 +842,22 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
   return (
     <StudioPanel title="Ask">
       <div className="ask-row">
-        <input
+        <AskField
           value={question}
-          aria-label="Describe the query you want"
+          label="Describe the query you want"
           placeholder="which documents mention the renewal? · files about trip logistics…"
-          onChange={(e) => setQuestion(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void go(false) }}
+          onChange={setQuestion}
+          onSubmit={() => void go(false)}
         />
         <button className="btn primary" disabled={busy} onClick={() => void go(false)}>Write the query</button>
       </div>
       <div className="ask-row">
-        <input
+        <AskField
           value={instruction}
-          aria-label="Describe the change to the query"
+          label="Describe the change to the query"
           placeholder="refine what's in the editor: also show the margin · sort by state · drop the limit…"
-          onChange={(e) => setInstruction(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') void go(true) }}
+          onChange={setInstruction}
+          onSubmit={() => void go(true)}
         />
         {/* Refine sends the query that is IN the editor, so it revises what you are looking at
             rather than regenerating around your words. */}
@@ -866,6 +866,44 @@ function Ask({ onLand, current }: { onLand(cypher: string): void; current(): str
       <Status tone={status.tone}>{status.text}</Status>
       {explanation && <p className="hint">{explanation}</p>}
     </StudioPanel>
+  )
+}
+
+/**
+ * One line until the words need more: the field grows with its text — or with its hint while it is
+ * empty, so a narrow window still shows the whole example — up to the CSS max-height, then
+ * scrolls. Enter asks, as the one-line field did; Shift+Enter breaks the line.
+ */
+function AskField({ value, label, placeholder, onChange, onSubmit }: {
+  value: string; label: string; placeholder: string; onChange(value: string): void; onSubmit(): void
+}) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+  useLayoutEffect(() => {
+    const field = ref.current
+    if (!field) return
+    const fit = () => {
+      const typed = field.value
+      if (!typed) field.value = field.placeholder
+      field.style.height = 'auto'
+      field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`
+      field.value = typed
+    }
+    fit()
+    window.addEventListener('resize', fit)
+    return () => window.removeEventListener('resize', fit)
+  }, [value])
+  return (
+    <textarea
+      ref={ref}
+      rows={1}
+      value={value}
+      aria-label={label}
+      placeholder={placeholder}
+      onChange={(e) => onChange(e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) { e.preventDefault(); onSubmit() }
+      }}
+    />
   )
 }
 

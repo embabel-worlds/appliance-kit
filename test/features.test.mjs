@@ -215,6 +215,42 @@ describe('the public browser feature entry point', () => {
     assert.equal(fill.disabled, false)
   })
 
+  it('grows the Ask fields with their text, submitting on Enter and breaking the line on Shift+Enter', async () => {
+    const asked = []
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }), scopes: async () => ok({ scopes: [] }),
+        validate: async () => ok({ ok: true }), generate: async (text) => { asked.push(text); return ok({ cypher: 'RETURN 1', valid: true }) } },
+      fills: { list: async () => ok([]) }, subscribeProgress() {},
+    }
+    const host = { history: { read: () => [], write() {} }, interactive: { session: { read: () => null, write() {} } } }
+    const rendered = await render(h(features.QueryStudioSurface, { services, host, handedOver: null }))
+    const fields = [...rendered.container.querySelectorAll('.studio-pane-query .ask-row > textarea')]
+    assert.deepEqual(fields.map((f) => f.getAttribute('aria-label')),
+      ['Describe the query you want', 'Describe the change to the query'])
+    assert.equal(fields.every((f) => f.rows === 1), true, 'an empty Ask field starts one line tall')
+    const [ask] = fields
+    Object.defineProperty(ask, 'scrollHeight', { configurable: true, get: () => ask.value.length > 40 ? 76 : 34 })
+    const setter = Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set
+    await act(async () => {
+      setter.call(ask, 'which documents mention the renewal and who signed each of them last spring?')
+      ask.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    assert.equal(ask.style.height, '76px', 'the field is as tall as its text')
+    await act(async () => ask.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', shiftKey: true, bubbles: true })))
+    assert.deepEqual(asked, [], 'Shift+Enter is a new line, not a submit')
+    await act(async () => ask.dispatchEvent(new KeyboardEvent('keydown', { key: 'Enter', bubbles: true, cancelable: true })))
+    await flush()
+    assert.deepEqual(asked, ['which documents mention the renewal and who signed each of them last spring?'])
+
+    const css = postcss.parse(readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'), { from: 'features.css' })
+    let capped
+    css.walkRules((rule) => {
+      if (rule.selectors.includes(':where(.kit-feature) .studio-pane-query .ask-row > textarea')) capped = rule
+    })
+    assert.ok(capped?.nodes.some((node) => node.prop === 'max-height'), 'a long Ask stops growing and scrolls')
+    assert.ok(capped?.nodes.some((node) => node.prop === 'overflow-y' && node.value === 'auto'))
+  })
+
   it('lets only the Query studio\'s schema panel take a share of the rail, so no other rail panel is squeezed', () => {
     const root = postcss.parse(
       readFileSync(new URL('../css/features.css', import.meta.url), 'utf8'),
@@ -1636,7 +1672,7 @@ describe('the public browser feature entry point', () => {
           rule.nodes.some((node) => node.type === 'decl' && node.prop === 'box-sizing')) fieldSkinRule = rule
     })
     assert.ok(fieldSkinRule, 'shared field skin rule')
-    const nativeAskInput = rendered.container.querySelector('.studio-pane-query .ask-row > input')
+    const nativeAskInput = rendered.container.querySelector('.studio-pane-query .ask-row > textarea')
     const codeMirrorInput = rendered.container.querySelector('.session-cm .CodeMirror textarea')
     assert.equal(codeMirrorInput.getAttribute('aria-label'), 'Session query')
     assert.equal(sessionCm.getScrollerElement().tabIndex, 0)
