@@ -7261,7 +7261,7 @@
             "type" : "string"
           },
           "kind" : {
-            "enum" : [ "CHAT", "THREAD", "AGENT" ],
+            "enum" : [ "CHAT", "THREAD", "AGENT", "CHANNEL" ],
             "type" : "string"
           },
           "lastActivityAt" : {
@@ -14498,7 +14498,7 @@
     },
     "/api/v1/chat/sessions" : {
       "get" : {
-        "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. An agent's own sessions, held through an OpenAI, A2A or MCP client, are listed only when asked for with `kind=agent`; `kind` names one kind of session to list. Each says its kind — a thread is posted in through /threads — who started it, when anyone has written in it yet, and the agent it is held with, if any. Metadata only (no message bodies).",
+        "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. An agent's own sessions, held through an OpenAI, A2A or MCP client, are listed only when asked for with `kind=agent`, and a Telegram, Slack or Discord chat only with `kind=channel`; `kind` names one kind of session to list. Each says its kind — a thread is posted in through /threads — who started it, when anyone has written in it yet, and the agent it is held with, if any. Metadata only (no message bodies).",
         "operationId" : "listSessions",
         "parameters" : [ {
           "in" : "query",
@@ -23045,7 +23045,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46609"
+    "url" : "http://localhost:41427"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
