@@ -7257,8 +7257,11 @@
           "createdAt" : {
             "type" : "string"
           },
+          "heldWith" : {
+            "type" : "string"
+          },
           "kind" : {
-            "enum" : [ "CHAT", "THREAD" ],
+            "enum" : [ "CHAT", "THREAD", "AGENT" ],
             "type" : "string"
           },
           "lastActivityAt" : {
@@ -14495,8 +14498,16 @@
     },
     "/api/v1/chat/sessions" : {
       "get" : {
-        "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. Each says its kind — a thread is posted in through /threads — and who started it, when anyone has written in it yet. Metadata only (no message bodies).",
+        "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. An agent's own sessions, held through an OpenAI, A2A or MCP client, are listed only when asked for with `kind=agent`; `kind` names one kind of session to list. Each says its kind — a thread is posted in through /threads — who started it, when anyone has written in it yet, and the agent it is held with, if any. Metadata only (no message bodies).",
         "operationId" : "listSessions",
+        "parameters" : [ {
+          "in" : "query",
+          "name" : "kind",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {
@@ -14510,6 +14521,19 @@
               }
             },
             "description" : "Session summaries"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SessionSummaryResponse"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "No such kind of session"
           }
         },
         "summary" : "List the user's chat sessions",
@@ -23021,7 +23045,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43381"
+    "url" : "http://localhost:38581"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
