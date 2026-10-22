@@ -42,6 +42,7 @@ function resize(target, width) {
     if (observer.targets.has(target)) observer.callback([{ target, contentRect: { width } }], observer)
   }
 }
+const nextFrame = () => new Promise((resolve) => requestAnimationFrame(resolve))
 
 const { createRoot } = await import('react-dom/client')
 const features = await import('@embabel/appliance-kit/react/features')
@@ -275,14 +276,18 @@ describe('the public browser feature entry point', () => {
     const refine = rendered.container.querySelector('.studio-pane-query .ask-row > textarea[aria-label="Describe the change to the query"]')
     let width = 1100
     Object.defineProperty(refine, 'scrollHeight', { configurable: true, get: () => width < 900 ? 73 : 35 })
-    await act(async () => resize(refine, 1100))
+    await act(async () => { resize(refine, 1100); await nextFrame() })
     assert.equal(refine.style.height, '35px', 'a wide field shows its hint on one line')
     width = 800
-    await act(async () => resize(refine, 800))
-    assert.equal(refine.style.height, '73px', 'the narrowed field grows to show its whole hint')
+    await act(async () => {
+      resize(refine, 800)
+      assert.equal(refine.style.height, '35px', 'the observer callback does not resize the field it observes')
+      await nextFrame()
+    })
+    assert.equal(refine.style.height, '73px', 'the narrowed field grows to show its whole hint on the next frame')
     let fits = 0
     Object.defineProperty(refine, 'scrollHeight', { configurable: true, get: () => { fits++; return 73 } })
-    await act(async () => resize(refine, 800))
+    await act(async () => { resize(refine, 800); await nextFrame() })
     assert.equal(fits, 0, 'a height-only change does not refit, so growing cannot loop the observer')
     await act(async () => rendered.root.unmount())
     activeRoots.delete(rendered.root)

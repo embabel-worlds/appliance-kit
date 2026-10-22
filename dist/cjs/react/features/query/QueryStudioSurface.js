@@ -690,19 +690,23 @@ function AskField({ value, label, placeholder, onChange, onSubmit }) {
     (0, react_2.useLayoutEffect)(fit, [value]);
     // A desk window resizes the field without resizing the browser window, so watch the field
     // itself. Only a width change refits: fitting changes the height, which would re-fire forever.
+    // The fit waits a frame, since resizing an observed element inside its own callback makes the
+    // browser report a ResizeObserver loop error.
     (0, react_2.useLayoutEffect)(() => {
         const field = ref.current;
         if (!field)
             return;
         let width = -1;
+        let frame = 0;
         const observer = new ResizeObserver(([entry]) => {
             if (!entry || entry.contentRect.width === width)
                 return;
             width = entry.contentRect.width;
-            fit();
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(fit);
         });
         observer.observe(field);
-        return () => observer.disconnect();
+        return () => { cancelAnimationFrame(frame); observer.disconnect(); };
     }, []);
     return ((0, jsx_runtime_1.jsx)("textarea", { ref: ref, rows: 1, value: value, "aria-label": label, placeholder: placeholder, onChange: (e) => onChange(e.target.value), onKeyDown: (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
