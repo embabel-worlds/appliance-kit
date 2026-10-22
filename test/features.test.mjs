@@ -29,6 +29,19 @@ globalThis.requestAnimationFrame = dom.window.requestAnimationFrame.bind(dom.win
 globalThis.cancelAnimationFrame = dom.window.cancelAnimationFrame.bind(dom.window)
 globalThis.IS_REACT_ACT_ENVIRONMENT = true
 globalThis.confirm = () => true
+// jsdom lays nothing out, so no ResizeObserver: tests fire `resizeObservers` callbacks themselves.
+const resizeObservers = new Set()
+globalThis.ResizeObserver = class {
+  constructor(callback) { this.callback = callback; this.targets = new Set() }
+  observe(target) { this.targets.add(target); resizeObservers.add(this) }
+  unobserve(target) { this.targets.delete(target) }
+  disconnect() { this.targets.clear(); resizeObservers.delete(this) }
+}
+function resize(target, width) {
+  for (const observer of resizeObservers) {
+    if (observer.targets.has(target)) observer.callback([{ target, contentRect: { width } }], observer)
+  }
+}
 
 const { createRoot } = await import('react-dom/client')
 const features = await import('@embabel/appliance-kit/react/features')
@@ -249,6 +262,31 @@ describe('the public browser feature entry point', () => {
     })
     assert.ok(capped?.nodes.some((node) => node.prop === 'max-height'), 'a long Ask stops growing and scrolls')
     assert.ok(capped?.nodes.some((node) => node.prop === 'overflow-y' && node.value === 'auto'))
+  })
+
+  it('refits an Ask field when only its container narrows, without a window resize', async () => {
+    const services = {
+      kg: { schema: async () => ok({ labels: [], relationships: [] }), scopes: async () => ok({ scopes: [] }),
+        validate: async () => ok({ ok: true }), generate: async () => ok({ cypher: 'RETURN 1', valid: true }) },
+      fills: { list: async () => ok([]) }, subscribeProgress() {},
+    }
+    const host = { history: { read: () => [], write() {} }, interactive: { session: { read: () => null, write() {} } } }
+    const rendered = await render(h(features.QueryStudioSurface, { services, host, handedOver: null }))
+    const refine = rendered.container.querySelector('.studio-pane-query .ask-row > textarea[aria-label="Describe the change to the query"]')
+    let width = 1100
+    Object.defineProperty(refine, 'scrollHeight', { configurable: true, get: () => width < 900 ? 73 : 35 })
+    await act(async () => resize(refine, 1100))
+    assert.equal(refine.style.height, '35px', 'a wide field shows its hint on one line')
+    width = 800
+    await act(async () => resize(refine, 800))
+    assert.equal(refine.style.height, '73px', 'the narrowed field grows to show its whole hint')
+    let fits = 0
+    Object.defineProperty(refine, 'scrollHeight', { configurable: true, get: () => { fits++; return 73 } })
+    await act(async () => resize(refine, 800))
+    assert.equal(fits, 0, 'a height-only change does not refit, so growing cannot loop the observer')
+    await act(async () => rendered.root.unmount())
+    activeRoots.delete(rendered.root)
+    assert.equal([...resizeObservers].some((o) => o.targets.has(refine)), false, 'unmounting disconnects the observer')
   })
 
   it('lets only the Query studio\'s schema panel take a share of the rail, so no other rail panel is squeezed', () => {

@@ -676,22 +676,34 @@ function Ask({ onLand, current }) {
  */
 function AskField({ value, label, placeholder, onChange, onSubmit }) {
     const ref = (0, react_2.useRef)(null);
+    const fit = () => {
+        const field = ref.current;
+        if (!field)
+            return;
+        const typed = field.value;
+        if (!typed)
+            field.value = field.placeholder;
+        field.style.height = 'auto';
+        field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`;
+        field.value = typed;
+    };
+    (0, react_2.useLayoutEffect)(fit, [value]);
+    // A desk window resizes the field without resizing the browser window, so watch the field
+    // itself. Only a width change refits: fitting changes the height, which would re-fire forever.
     (0, react_2.useLayoutEffect)(() => {
         const field = ref.current;
         if (!field)
             return;
-        const fit = () => {
-            const typed = field.value;
-            if (!typed)
-                field.value = field.placeholder;
-            field.style.height = 'auto';
-            field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`;
-            field.value = typed;
-        };
-        fit();
-        window.addEventListener('resize', fit);
-        return () => window.removeEventListener('resize', fit);
-    }, [value]);
+        let width = -1;
+        const observer = new ResizeObserver(([entry]) => {
+            if (!entry || entry.contentRect.width === width)
+                return;
+            width = entry.contentRect.width;
+            fit();
+        });
+        observer.observe(field);
+        return () => observer.disconnect();
+    }, []);
     return ((0, jsx_runtime_1.jsx)("textarea", { ref: ref, rows: 1, value: value, "aria-label": label, placeholder: placeholder, onChange: (e) => onChange(e.target.value), onKeyDown: (e) => {
             if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
                 e.preventDefault();
