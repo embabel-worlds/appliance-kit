@@ -14965,7 +14965,7 @@
     },
     "/api/v1/config/llm-roles/{roleId}" : {
       "put" : {
-        "description" : "Maps a role (e.g. code_best) to a model for this world. Send a body with both model and role blank to clear the override (inherit the deployment default). Nothing reads a role's reasoning effort, so a body that names reasoningEffort, even as an empty string, is rejected.",
+        "description" : "Maps a role (e.g. code_best) to a model for this world, with an optional reasoning effort every call naming the role runs at (none, minimal, low, medium, high, xhigh; `none` turns a thinking model's reasoning off). The effort changes only when the body names reasoningEffort: a value sets it, an empty string clears it, omitting it keeps it. Send a body with model, role and effort all blank to clear the override (inherit the deployment default).",
         "operationId" : "updateLlmRole",
         "parameters" : [ {
           "in" : "path",
@@ -15006,7 +15006,7 @@
                 }
               }
             },
-            "description" : "The body names a reasoning effort"
+            "description" : "Unsupported reasoning effort"
           }
         },
         "summary" : "Set or clear an LLM role override",
@@ -23045,7 +23045,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41427"
+    "url" : "http://localhost:42369"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
