@@ -6510,6 +6510,9 @@
       },
       "PreferencesBody" : {
         "properties" : {
+          "boltMode" : {
+            "type" : "string"
+          },
           "greetingEnabled" : {
             "type" : "boolean"
           },
@@ -6522,6 +6525,9 @@
       },
       "PreferencesView" : {
         "properties" : {
+          "boltMode" : {
+            "type" : "string"
+          },
           "greetingEnabled" : {
             "type" : "boolean"
           },
@@ -23045,7 +23051,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41203"
+    "url" : "http://localhost:38241"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
