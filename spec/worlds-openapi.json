@@ -10285,6 +10285,16 @@
             },
             "description" : "The fill, as started — carrying a warning when its producers cannot outlive the sweep, so it will poll rather than converge"
           },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "cypher is required: a fill needs the materialization it is filling"
+          },
           "401" : {
             "content" : {
               "application/json" : {
@@ -13191,6 +13201,16 @@
             },
             "description" : "No API key or session"
           },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "This key does not talk to that agent — the agent exists, the key's scope does not reach it"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -13928,7 +13948,7 @@
           }
         } ],
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -13936,7 +13956,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "days is negative. The reason is carried in the body's error field, alongside an empty events list"
           }
         },
         "summary" : "Calendar events across all connected accounts in a time window",
@@ -15155,6 +15175,17 @@
               }
             },
             "description" : "Mode updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : { },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The mode is not one the gate offers. An unrecognised mode is a client bug, so it is refused rather than silently resolved to a default"
           }
         },
         "summary" : "Set what a connected coding agent may do",
@@ -15501,7 +15532,7 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -15509,7 +15540,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "The name is blank. An unused name is accepted and starts an empty context, but a blank one names nothing"
           }
         },
         "summary" : "Switch this user's active context, creating a new one if the name hasn't been used before",
@@ -15610,6 +15641,19 @@
               }
             },
             "description" : "Job created/updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The job config is not valid — the reason is in the message field. Note that an unparseable cron expression is NOT rejected here: validate it with /compile-schedule"
           }
         },
         "summary" : "Create or update a cron job",
@@ -16816,7 +16860,7 @@
           }
         } ],
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -16824,7 +16868,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "days or maxPerAccount is not positive. The reason is carried in the body's error field, alongside an empty threads list"
           }
         },
         "summary" : "Recent email threads across all connected accounts",
@@ -18544,6 +18588,16 @@
             },
             "description" : "OK"
           },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No draft review of that id is held for this owner"
+          },
           "409" : {
             "content" : {
               "application/json" : {
@@ -18590,6 +18644,16 @@
               }
             },
             "description" : "DECISION_UNKNOWN: no subjects, or one the review does not display"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No draft review of that id is held for this owner"
           },
           "409" : {
             "content" : {
@@ -18647,6 +18711,16 @@
               }
             },
             "description" : "CHANGE_INVALID: not a name or description, or a value the draft cannot carry; DECISION_UNKNOWN"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "No draft review of that id is held for this owner"
           },
           "409" : {
             "content" : {
@@ -19595,7 +19669,7 @@
           }
         } ],
         "responses" : {
-          "200" : {
+          "404" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -19603,7 +19677,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "No onboarding job of that id: either it never existed, or it finished over an hour ago and the next status call cleaned it up"
           }
         },
         "summary" : "Get onboarding job status",
@@ -19722,7 +19796,7 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -19730,7 +19804,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "The name is blank. A display name is never cleared by sending an empty one"
           }
         },
         "summary" : "Rename this user — pushes to WorkOS and heals proposition prose, same as the Vaadin profile editor",
@@ -19797,7 +19871,7 @@
           "required" : true
         },
         "responses" : {
-          "200" : {
+          "400" : {
             "content" : {
               "*/*" : {
                 "schema" : {
@@ -19805,7 +19879,7 @@
                 }
               }
             },
-            "description" : "OK"
+            "description" : "boltMode is a value the Bolt port does not offer. Send it blank to clear the choice back to the port's default"
           }
         },
         "summary" : "Set this user's greeting and login-hints preferences",
@@ -19876,6 +19950,20 @@
               }
             },
             "description" : "List of realms"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "additionalProperties" : { },
+                    "type" : "object"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "The Realms view is unavailable, or the engine read failed. Deliberately not an empty list: a failed read must never present as no realms installed"
           }
         },
         "summary" : "List installed realms",
@@ -19907,6 +19995,19 @@
               }
             },
             "description" : "Realm installed"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "additionalProperties" : {
+                    "type" : "string"
+                  },
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Neither repo nor path was given: an install is either a git spec to clone or a directory to load where it is"
           },
           "409" : {
             "content" : {
@@ -23051,7 +23152,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43175"
+    "url" : "http://localhost:42231"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
