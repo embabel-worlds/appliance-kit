@@ -667,9 +667,53 @@ function Ask({ onLand, current }) {
             ? { tone: 'ok', text: 'Landed in the editor — read it before you run it.' }
             : { tone: 'error', text: `Landed, but it has ${(generated.violations ?? []).length} schema problem(s).` });
     }
-    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Ask", children: [(0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: question, "aria-label": "Describe the query you want", placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: (e) => setQuestion(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
-                            void go(false); } }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)("input", { value: instruction, "aria-label": "Describe the change to the query", placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: (e) => setInstruction(e.target.value), onKeyDown: (e) => { if (e.key === 'Enter')
-                            void go(true); } }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy || !current().trim(), onClick: () => void go(true), children: "Refine" })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text }), explanation && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: explanation })] }));
+    return ((0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Ask", children: [(0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)(AskField, { value: question, label: "Describe the query you want", placeholder: "which documents mention the renewal? \u00B7 files about trip logistics\u2026", onChange: setQuestion, onSubmit: () => void go(false) }), (0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: busy, onClick: () => void go(false), children: "Write the query" })] }), (0, jsx_runtime_1.jsxs)("div", { className: "ask-row", children: [(0, jsx_runtime_1.jsx)(AskField, { value: instruction, label: "Describe the change to the query", placeholder: "refine what's in the editor: also show the margin \u00B7 sort by state \u00B7 drop the limit\u2026", onChange: setInstruction, onSubmit: () => void go(true) }), (0, jsx_runtime_1.jsx)("button", { className: "btn", disabled: busy || !current().trim(), onClick: () => void go(true), children: "Refine" })] }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: status.tone, children: status.text }), explanation && (0, jsx_runtime_1.jsx)("p", { className: "hint", children: explanation })] }));
+}
+/**
+ * One line until the words need more: the field grows with its text — or with its hint while it is
+ * empty, so a narrow window still shows the whole example — up to the CSS max-height, then
+ * scrolls. Enter asks, as the one-line field did; Shift+Enter breaks the line.
+ */
+function AskField({ value, label, placeholder, onChange, onSubmit }) {
+    const ref = (0, react_2.useRef)(null);
+    const fit = () => {
+        const field = ref.current;
+        if (!field)
+            return;
+        const typed = field.value;
+        if (!typed)
+            field.value = field.placeholder;
+        field.style.height = 'auto';
+        field.style.height = `${field.scrollHeight + field.offsetHeight - field.clientHeight}px`;
+        field.value = typed;
+    };
+    (0, react_2.useLayoutEffect)(fit, [value]);
+    // A desk window resizes the field without resizing the browser window, so watch the field
+    // itself. Only a width change refits: fitting changes the height, which would re-fire forever.
+    // The fit waits a frame, since resizing an observed element inside its own callback makes the
+    // browser report a ResizeObserver loop error.
+    (0, react_2.useLayoutEffect)(() => {
+        const field = ref.current;
+        if (!field)
+            return;
+        let width = -1;
+        let frame = 0;
+        const observer = new ResizeObserver(([entry]) => {
+            if (!entry || entry.contentRect.width === width)
+                return;
+            width = entry.contentRect.width;
+            cancelAnimationFrame(frame);
+            frame = requestAnimationFrame(fit);
+        });
+        observer.observe(field);
+        return () => { cancelAnimationFrame(frame); observer.disconnect(); };
+    }, []);
+    return ((0, jsx_runtime_1.jsx)("textarea", { ref: ref, rows: 1, value: value, "aria-label": label, placeholder: placeholder, onChange: (e) => onChange(e.target.value), onKeyDown: (e) => {
+            if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault();
+                onSubmit();
+            }
+        } }));
 }
 // ── the schema browser ────────────────────────────────────────────────────────────────────────
 /**
