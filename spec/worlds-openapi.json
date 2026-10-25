@@ -20,8 +20,12 @@
         } ]
       },
       "AboutResponse" : {
-        "description" : "What this server is built from.",
+        "description" : "What this server is built from, and where else it can be reached.",
         "properties" : {
+          "bolt" : {
+            "$ref" : "#/components/schemas/BoltAbout",
+            "description" : "The Bolt server, when it is on and listening; absent otherwise"
+          },
           "components" : {
             "description" : "The server first, then the libraries it is built on",
             "items" : {
@@ -1053,6 +1057,162 @@
         "required" : [ "revision", "subjects" ],
         "type" : "object"
       },
+      "ArtifactContent" : {
+        "description" : "An artifact's content, as stored",
+        "properties" : {
+          "content" : {
+            "description" : "The content, verbatim",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The artifact's name",
+            "type" : "string"
+          },
+          "type" : {
+            "description" : "The ArtifactType name, upper case, as resolved from the request's case-insensitive type",
+            "type" : "string"
+          }
+        },
+        "required" : [ "content", "name", "type" ],
+        "type" : "object"
+      },
+      "ArtifactDeleted" : {
+        "description" : "Confirmation that an artifact was deleted",
+        "properties" : {
+          "name" : {
+            "description" : "The artifact's name",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `deleted`",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status" ],
+        "type" : "object"
+      },
+      "ArtifactError" : {
+        "description" : "A refusal carrying only its reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why the request was refused, written to be shown",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "ArtifactListing" : {
+        "description" : "Every artifact in the world, grouped by type",
+        "properties" : {
+          "artifacts" : {
+            "additionalProperties" : {
+              "items" : {
+                "$ref" : "#/components/schemas/ArtifactSummary"
+              },
+              "type" : "array"
+            },
+            "description" : "Artifacts by lower-case ArtifactType name. Every type is present, carrying an empty list when it holds nothing",
+            "type" : "object"
+          }
+        },
+        "required" : [ "artifacts" ],
+        "type" : "object"
+      },
+      "ArtifactSummary" : {
+        "description" : "One artifact as the listings describe it: its identity, size, provenance and, for an app, where it is served",
+        "properties" : {
+          "createdAt" : {
+            "description" : "When it was created, ISO-8601. Null where the filesystem does not expose creation time",
+            "type" : "string"
+          },
+          "createdBy" : {
+            "description" : "Who or what created it. Null for artifacts older than change tracking",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "The artifact's own description where it declares one, null where it does not",
+            "type" : "string"
+          },
+          "iconUrl" : {
+            "description" : "Where this app's icon is served from. Null for non-apps and for the many apps that declare no icon — a client keeps whatever it drew before",
+            "type" : "string"
+          },
+          "lastModified" : {
+            "description" : "When this artifact was last written, ISO-8601",
+            "type" : "string"
+          },
+          "lastModifiedBy" : {
+            "description" : "Who or what most recently wrote it",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The artifact's name, unique within its type",
+            "type" : "string"
+          },
+          "readOnly" : {
+            "description" : "True for an artifact from a read-only source — a world template or an installed realm — which cannot be edited or deleted here",
+            "type" : "boolean"
+          },
+          "scope" : {
+            "description" : "The URL scope an app is served under: the workspace, the world, or a realm name. Non-app artifacts carry the default",
+            "type" : "string"
+          },
+          "servable" : {
+            "description" : "True when this artifact's TYPE can be served as files, which is a property of the type and not of this artifact",
+            "type" : "boolean"
+          },
+          "sizeBytes" : {
+            "description" : "File size in bytes",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "type" : {
+            "description" : "The ArtifactType name, upper case",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "Where an app is served from. Null for every artifact that is not an app",
+            "type" : "string"
+          }
+        },
+        "required" : [ "lastModified", "lastModifiedBy", "name", "readOnly", "scope", "servable", "sizeBytes", "type" ],
+        "type" : "object"
+      },
+      "ArtifactValidationFailure" : {
+        "description" : "A write refused because the content did not validate",
+        "properties" : {
+          "error" : {
+            "description" : "Always `Validation failed`; the detail is in violations",
+            "type" : "string"
+          },
+          "violations" : {
+            "description" : "Every rule the content broke",
+            "items" : {
+              "$ref" : "#/components/schemas/ArtifactViolation"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "error", "violations" ],
+        "type" : "object"
+      },
+      "ArtifactViolation" : {
+        "properties" : {
+          "message" : {
+            "type" : "string"
+          },
+          "rule" : {
+            "type" : "string"
+          },
+          "severity" : {
+            "enum" : [ "ERROR", "WARNING" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "rule", "severity" ],
+        "type" : "object"
+      },
       "ArtifactWriteRequest" : {
         "description" : "An artifact's new content",
         "properties" : {
@@ -1062,6 +1222,30 @@
           }
         },
         "required" : [ "content" ],
+        "type" : "object"
+      },
+      "ArtifactWritten" : {
+        "description" : "Confirmation that an artifact was created or replaced",
+        "properties" : {
+          "name" : {
+            "description" : "The artifact's name",
+            "type" : "string"
+          },
+          "size" : {
+            "description" : "The stored content's length in characters, which is not necessarily its size in bytes",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "Always `written`",
+            "type" : "string"
+          },
+          "type" : {
+            "description" : "The ArtifactType name, upper case",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "size", "status", "type" ],
         "type" : "object"
       },
       "AskRequest" : {
@@ -1298,6 +1482,55 @@
           }
         },
         "required" : [ "sources" ],
+        "type" : "object"
+      },
+      "BoltAbout" : {
+        "description" : "The Bolt server: the ports Neo4j drivers and tools connect to.",
+        "properties" : {
+          "endpoints" : {
+            "description" : "Each port that is listening, Virtual Cypher first",
+            "items" : {
+              "$ref" : "#/components/schemas/BoltEndpointAbout"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "endpoints" ],
+        "type" : "object"
+      },
+      "BoltEndpointAbout" : {
+        "description" : "One Bolt port, as a Neo4j driver or Neo4j Browser dials it.",
+        "properties" : {
+          "address" : {
+            "description" : "The address the server advertises for this port, host:port",
+            "example" : "localhost:11050",
+            "type" : "string"
+          },
+          "answers" : {
+            "description" : "What that database answers, in a sentence",
+            "type" : "string"
+          },
+          "database" : {
+            "description" : "The database a session on this port gets when it names none",
+            "example" : "world",
+            "type" : "string"
+          },
+          "mode" : {
+            "description" : "What a session on this port runs against when it names no database",
+            "enum" : [ "virtual", "persisted" ],
+            "type" : "string"
+          },
+          "tls" : {
+            "description" : "Whether the port speaks TLS, so the URL is bolt+s:// rather than bolt://",
+            "type" : "boolean"
+          },
+          "url" : {
+            "description" : "The URL to connect to",
+            "example" : "bolt://localhost:11050",
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "answers", "database", "mode", "tls", "url" ],
         "type" : "object"
       },
       "BootstrapCapabilities" : {
@@ -6239,6 +6472,32 @@
         "required" : [ "createdAt", "createdBy", "event", "id", "kind", "read", "source", "sourceSignalIds", "sources", "supersedes", "tier", "userId" ],
         "type" : "object"
       },
+      "NotificationAck" : {
+        "description" : "Confirmation that one notification changed state",
+        "properties" : {
+          "id" : {
+            "description" : "The notification this acknowledges, echoed from the path",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "What the notification now is: `read` or `dismissed`",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "status" ],
+        "type" : "object"
+      },
+      "NotificationBulkAck" : {
+        "description" : "Confirmation that every notification changed state at once",
+        "properties" : {
+          "status" : {
+            "description" : "What they all now are: `all_read` or `all_dismissed`. No id, because the call named none",
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
+      },
       "NotificationNode" : {
         "properties" : {
           "actionKind" : {
@@ -8424,6 +8683,216 @@
         },
         "type" : "object"
       },
+      "WebhookBatch" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "count" : {
+              "description" : "How many events the body carried",
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "errors" : {
+              "description" : "How many threw. A partial failure still answers 200 or 202, so a caller must read this rather than the status code",
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "processed" : {
+              "description" : "How many were dispatched and ran",
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "queued" : {
+              "description" : "How many were queued against an unconfigured source",
+              "format" : "int32",
+              "type" : "integer"
+            },
+            "status" : {
+              "description" : "Always `batch`",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "A batch of events, counted by outcome. Answers 200 when any ran, 202 when any queued, and 500 only when EVERY event failed",
+        "required" : [ "count", "errors", "processed", "queued", "status" ]
+      },
+      "WebhookConfiguredSource" : {
+        "description" : "A webhook source this world can handle",
+        "properties" : {
+          "action" : {
+            "description" : "The action that handles it, prefix included",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "The action's own description, where it declares one",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "The source name a provider posts to, with the `webhook-` prefix removed",
+            "type" : "string"
+          }
+        },
+        "required" : [ "action", "source" ],
+        "type" : "object"
+      },
+      "WebhookProcessed" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "output" : {
+              "description" : "Whatever the handler returned, verbatim and unshaped — a handler's output is the handler's business"
+            },
+            "status" : {
+              "description" : "Always `processed`",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "A single event was dispatched to its handler and ran",
+        "required" : [ "status" ]
+      },
+      "WebhookQueued" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "message" : {
+              "description" : "Why it was queued rather than handled, written to be shown",
+              "type" : "string"
+            },
+            "source" : {
+              "description" : "The source the event was queued against",
+              "type" : "string"
+            },
+            "status" : {
+              "description" : "Always `queued`",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "A single event was accepted but not dispatched, because its source is not configured yet",
+        "required" : [ "message", "source", "status" ]
+      },
+      "WebhookQueuedSource" : {
+        "description" : "A source with events waiting for a handler",
+        "properties" : {
+          "eventCount" : {
+            "description" : "How many are waiting",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "source" : {
+            "description" : "The source the events arrived for",
+            "type" : "string"
+          }
+        },
+        "required" : [ "eventCount", "source" ],
+        "type" : "object"
+      },
+      "WebhookReceipt" : {
+        "description" : "What the webhook endpoint answers: a receipt for the event, a refusal, or a provider's registration handshake",
+        "type" : "object"
+      },
+      "WebhookRefused" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "message" : {
+              "description" : "What went wrong, written to be shown",
+              "type" : "string"
+            },
+            "status" : {
+              "description" : "Always `error`",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "The request was refused: 400 for a body that would not parse, 500 for a dispatch that threw",
+        "required" : [ "message", "status" ]
+      },
+      "WebhookStatus" : {
+        "description" : "Where this appliance receives webhooks, and what it is configured to receive",
+        "properties" : {
+          "configured" : {
+            "description" : "The webhook sources this world declares handlers for",
+            "items" : {
+              "$ref" : "#/components/schemas/WebhookConfiguredSource"
+            },
+            "type" : "array"
+          },
+          "localUrl" : {
+            "description" : "The address reachable on this machine",
+            "type" : "string"
+          },
+          "publicUrl" : {
+            "description" : "The internet-reachable address, when a Tailscale funnel was detected. Null means providers outside this machine cannot reach it",
+            "type" : "string"
+          },
+          "queued" : {
+            "description" : "Sources holding events that arrived before a handler existed, with how many are waiting",
+            "items" : {
+              "$ref" : "#/components/schemas/WebhookQueuedSource"
+            },
+            "type" : "array"
+          },
+          "tailscale" : {
+            "additionalProperties" : true,
+            "description" : "What the Tailscale probe found. Open by contract — it mirrors whatever `tailscale status` reported",
+            "type" : "object"
+          },
+          "webhookUrl" : {
+            "description" : "The template a provider should be pointed at, with {source} left to substitute. Uses the public URL when one was detected, otherwise the local one",
+            "type" : "string"
+          }
+        },
+        "required" : [ "configured", "localUrl", "queued", "tailscale", "webhookUrl" ],
+        "type" : "object"
+      },
+      "WebhookUnauthorized" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "reason" : {
+              "description" : "Which check refused it. Deliberately coarse — a precise reason would tell an attacker which half of the credential was wrong",
+              "type" : "string"
+            },
+            "status" : {
+              "description" : "Always `unauthorized`",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "The caller was not admitted: signature verification, tenant resolution or source installation failed",
+        "required" : [ "reason", "status" ]
+      },
+      "WebhookUrlValidation" : {
+        "allOf" : [ {
+          "$ref" : "#/components/schemas/WebhookReceipt"
+        }, {
+          "properties" : {
+            "encryptedToken" : {
+              "description" : "The hex HMAC-SHA256 of plainToken, keyed by the provider's stored webhook secret",
+              "type" : "string"
+            },
+            "plainToken" : {
+              "description" : "The token the provider sent, echoed back unchanged",
+              "type" : "string"
+            }
+          },
+          "type" : "object"
+        } ],
+        "description" : "A provider's URL-registration handshake. THIS SHAPE IS THE PROVIDER'S, not this API's: Zoom requires exactly these two fields and no status, so it must not be made to resemble the other receipts.",
+        "required" : [ "encryptedToken", "plainToken" ]
+      },
       "WorldConfig" : {
         "properties" : {
           "actionCompilerLlm" : {
@@ -8558,7 +9027,7 @@
     },
     "/api/v1/about" : {
       "get" : {
-        "description" : "The server's commit and the versions of its libraries.",
+        "description" : "The server's commit, the versions of its libraries, and the Bolt ports that are listening.",
         "operationId" : "about",
         "responses" : {
           "200" : {
@@ -8569,10 +9038,10 @@
                 }
               }
             },
-            "description" : "Components, server first"
+            "description" : "Components, server first, and Bolt when it is on"
           }
         },
-        "summary" : "Component versions",
+        "summary" : "Component versions and Bolt endpoints",
         "tags" : [ "About" ]
       }
     },
@@ -13365,12 +13834,11 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactListing"
                 }
               }
             },
-            "description" : "OK"
+            "description" : "Every artifact, grouped by lower-case type name"
           }
         },
         "summary" : "List all artifacts",
@@ -13398,18 +13866,6 @@
             "description" : "The file content"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              },
-              "text/html" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such app artifact"
           }
         },
@@ -13422,6 +13878,7 @@
         "description" : "Returns an empty list for an unknown type rather than an error. Type is one of the ArtifactType names (case-insensitive).",
         "operationId" : "listByType",
         "parameters" : [ {
+          "description" : "The ArtifactType to list, case-insensitive. An unrecognised type answers an EMPTY LIST here rather than a refusal — the only route on this surface that does",
           "in" : "path",
           "name" : "type",
           "required" : true,
@@ -13435,8 +13892,7 @@
               "*/*" : {
                 "schema" : {
                   "items" : {
-                    "additionalProperties" : { },
-                    "type" : "object"
+                    "$ref" : "#/components/schemas/ArtifactSummary"
                   },
                   "type" : "array"
                 }
@@ -13454,6 +13910,7 @@
         "description" : "Type is one of the ArtifactType names (case-insensitive).",
         "operationId" : "delete",
         "parameters" : [ {
+          "description" : "The artifact's type, one of the ArtifactType names, case-insensitive. An unrecognised type is refused with 400",
           "in" : "path",
           "name" : "type",
           "required" : true,
@@ -13461,6 +13918,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The artifact's name, including its extension, unique within its type",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13473,10 +13931,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactDeleted"
                 }
               }
             },
@@ -13486,26 +13941,13 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactError"
                 }
               }
             },
             "description" : "Unknown type"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such artifact"
           }
         },
@@ -13516,6 +13958,7 @@
         "description" : "Type is one of the ArtifactType names (case-insensitive).",
         "operationId" : "read_1",
         "parameters" : [ {
+          "description" : "The artifact's type, one of the ArtifactType names, case-insensitive. An unrecognised type is refused with 400",
           "in" : "path",
           "name" : "type",
           "required" : true,
@@ -13523,6 +13966,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The artifact's name, including its extension, unique within its type",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13535,8 +13979,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactContent"
                 }
               }
             },
@@ -13546,22 +13989,13 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactError"
                 }
               }
             },
             "description" : "Unknown type"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such artifact"
           }
         },
@@ -13572,6 +14006,7 @@
         "description" : "The JSON body carries the content under a content key. Type is one of the ArtifactType names (case-insensitive).",
         "operationId" : "write",
         "parameters" : [ {
+          "description" : "The artifact's type, one of the ArtifactType names, case-insensitive. An unrecognised type is refused with 400",
           "in" : "path",
           "name" : "type",
           "required" : true,
@@ -13579,6 +14014,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The artifact's name, including its extension, unique within its type",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13594,6 +14030,7 @@
               }
             }
           },
+          "description" : "The content to store, verbatim. A write REPLACES an existing artifact of that name rather than merging, and the content is validated first: a failure answers 400 with the rules it broke, and nothing is written. The stored `size` is the content's length in CHARACTERS, which is not necessarily its size in bytes.",
           "required" : true
         },
         "responses" : {
@@ -13601,8 +14038,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ArtifactWritten"
                 }
               }
             },
@@ -13612,12 +14048,15 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ArtifactError"
+                  }, {
+                    "$ref" : "#/components/schemas/ArtifactValidationFailure"
+                  } ]
                 }
               }
             },
-            "description" : "Unknown type, missing content, or validation failure with a violations array"
+            "description" : "An unknown type or missing content answers with the reason alone; a validation failure also carries violations"
           }
         },
         "summary" : "Create or update an artifact",
@@ -19431,10 +19870,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NotificationBulkAck"
                 }
               }
             },
@@ -19475,6 +19911,7 @@
               }
             }
           },
+          "description" : "The notification to raise. `userId` is IGNORED and overwritten with the authenticated user — a REST caller cannot raise a notification on someone else's behalf. The body goes through the same admission filter every producer takes, so a notification below the user's bar is accepted and discarded rather than stored.",
           "required" : true
         },
         "responses" : {
@@ -19511,10 +19948,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NotificationBulkAck"
                 }
               }
             },
@@ -19564,10 +19998,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NotificationAck"
                 }
               }
             },
@@ -19595,10 +20026,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NotificationAck"
                 }
               }
             },
@@ -20126,7 +20554,7 @@
     },
     "/api/v1/realms/{name}" : {
       "delete" : {
-        "description" : "Removes an installed realm from the world. With realm admission on, removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed), failed or off.",
+        "description" : "Removes an installed realm from the world, with the reference nodes it seeded and the documents its sources ingested unless `keepData` is set; `data` in the response counts them. With realm admission on, removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed), failed or off.",
         "operationId" : "removeRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -20136,15 +20564,22 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "description" : "Keep the reference nodes the realm seeded and the documents it ingested; the response counts what stays",
+          "in" : "query",
+          "name" : "keepData",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
+          }
         } ],
         "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -20155,9 +20590,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -20168,9 +20601,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
+                  "additionalProperties" : { },
                   "type" : "object"
                 }
               }
@@ -22032,8 +22463,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WebhookStatus"
                 }
               }
             },
@@ -22066,6 +22496,7 @@
               }
             }
           },
+          "description" : "The provider's payload: a single JSON event object, or an array of them for providers that batch. Taken as RAW BYTES rather than a parsed type because the signature is computed over the bytes exactly as sent — reserializing a parsed body would change them and every signature check would fail. An empty body is read as an empty object. Non-object elements of an array are ignored rather than refused.",
           "required" : true
         },
         "responses" : {
@@ -22073,8 +22504,19 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookProcessed"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookQueued"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUnauthorized"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUrlValidation"
+                  } ]
                 }
               }
             },
@@ -22084,8 +22526,19 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookProcessed"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookQueued"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUnauthorized"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUrlValidation"
+                  } ]
                 }
               }
             },
@@ -22095,8 +22548,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WebhookRefused"
                 }
               }
             },
@@ -22106,8 +22558,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WebhookUnauthorized"
                 }
               }
             },
@@ -22117,12 +22568,15 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  } ]
                 }
               }
             },
-            "description" : "Processing error"
+            "description" : "Every event in the batch threw. A PARTIAL failure answers 200 or 202 with a non-zero `errors` count instead"
           }
         },
         "summary" : "Receive a webhook event",
@@ -22159,6 +22613,7 @@
               }
             }
           },
+          "description" : "The provider's payload: a single JSON event object, or an array of them for providers that batch. Taken as RAW BYTES rather than a parsed type because the signature is computed over the bytes exactly as sent — reserializing a parsed body would change them and every signature check would fail. An empty body is read as an empty object. Non-object elements of an array are ignored rather than refused.",
           "required" : true
         },
         "responses" : {
@@ -22166,8 +22621,19 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookProcessed"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookQueued"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUnauthorized"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUrlValidation"
+                  } ]
                 }
               }
             },
@@ -22177,8 +22643,19 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookProcessed"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookQueued"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUnauthorized"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookUrlValidation"
+                  } ]
                 }
               }
             },
@@ -22188,8 +22665,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WebhookRefused"
                 }
               }
             },
@@ -22199,8 +22675,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WebhookUnauthorized"
                 }
               }
             },
@@ -22210,12 +22685,15 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/WebhookRefused"
+                  }, {
+                    "$ref" : "#/components/schemas/WebhookBatch"
+                  } ]
                 }
               }
             },
-            "description" : "Processing error"
+            "description" : "Every event in the batch threw. A PARTIAL failure answers 200 or 202 with a non-zero `errors` count instead"
           }
         },
         "summary" : "Receive a webhook event",
@@ -23152,7 +23630,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41049"
+    "url" : "http://localhost:36341"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
