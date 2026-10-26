@@ -30,6 +30,7 @@ var EmbabelBackdrop = (() => {
   var PALETTE = [INDIGO, INDIGO, VIOLET, GREEN, ICE];
   var someColour = () => PALETTE[Math.random() * PALETTE.length | 0] ?? INDIGO;
   var LINK = 240;
+  var BLUR_SCALE = 0.5;
   var FOG = [16, 20, 48];
   var hazed = (c, fog, amount) => [
     Math.round(c[0] + (fog[0] - c[0]) * amount),
@@ -58,6 +59,8 @@ var EmbabelBackdrop = (() => {
     let snips = [];
     let scratch = null;
     let scratchCtx = null;
+    let soft = null;
+    let softCtx = null;
     const size = () => {
       const dpr = Math.min(devicePixelRatio, 2);
       canvas.width = innerWidth * dpr;
@@ -88,10 +91,12 @@ var EmbabelBackdrop = (() => {
       });
       if (canBlur) {
         scratch = scratch ?? document.createElement("canvas");
-        scratch.width = canvas.width;
-        scratch.height = canvas.height;
+        soft = soft ?? document.createElement("canvas");
+        scratch.width = soft.width = Math.ceil(innerWidth * BLUR_SCALE);
+        scratch.height = soft.height = Math.ceil(innerHeight * BLUR_SCALE);
         scratchCtx = scratch.getContext("2d");
-        scratchCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+        scratchCtx?.setTransform(BLUR_SCALE, 0, 0, BLUR_SCALE, 0, 0);
+        softCtx = soft.getContext("2d");
       }
     };
     const bandOf = (z) => Math.min(bands - 1, Math.floor(z * bands));
@@ -183,13 +188,17 @@ var EmbabelBackdrop = (() => {
       collectEdges();
       for (let band = bands - 1; band >= 0; band--) {
         const blur = canBlur ? blurOf(band) : 0;
-        if (blur > 0 && scratchCtx && scratch) {
-          scratchCtx.clearRect(0, 0, w, h);
+        if (blur > 0 && scratchCtx && scratch && softCtx && soft) {
+          const sw = scratch.width / BLUR_SCALE;
+          const sh = scratch.height / BLUR_SCALE;
+          scratchCtx.clearRect(0, 0, sw, sh);
           drawBand(scratchCtx, band);
-          ctx.filter = `blur(${blur.toFixed(2)}px)`;
+          softCtx.clearRect(0, 0, soft.width, soft.height);
+          softCtx.filter = `blur(${(blur * BLUR_SCALE).toFixed(2)}px)`;
+          softCtx.drawImage(scratch, 0, 0);
+          softCtx.filter = "none";
           ctx.globalAlpha = 1;
-          ctx.drawImage(scratch, 0, 0, w, h);
-          ctx.filter = "none";
+          ctx.drawImage(soft, 0, 0, sw, sh);
           ctx.globalAlpha = brightness;
         } else {
           drawBand(ctx, band);
@@ -213,13 +222,17 @@ var EmbabelBackdrop = (() => {
       }
       if (!reduced) raf = requestAnimationFrame(frame);
     };
+    const resize = () => {
+      size();
+      if (reduced) frame();
+    };
     size();
-    addEventListener("resize", size);
+    addEventListener("resize", resize);
     if (reduced) frame();
     else raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
-      removeEventListener("resize", size);
+      removeEventListener("resize", resize);
     };
   }
   return __toCommonJS(backdrop_exports);

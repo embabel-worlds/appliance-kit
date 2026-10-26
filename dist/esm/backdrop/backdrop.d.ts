@@ -93,9 +93,9 @@ export interface DepthOptions {
      *
      * Bands, not per-node blur, because blur is applied PER DRAWING OPERATION: 150 individually
      * blurred arcs is 150 filtered compositions a frame, which is where the frame budget goes. Each
-     * band is drawn sharp onto a scratch canvas and composited once through the filter, so the cost
-     * is one filtered draw per band no matter how many nodes are in it. Three is enough for the eye;
-     * more bands buy smoothness nobody sees and pay a full-canvas composite each.
+     * band is drawn sharp onto a small scratch canvas and blurred once there (see [BLUR_SCALE]), so the
+     * cost is one small filtered draw per band no matter how many nodes are in it. Three is enough for
+     * the eye; more bands buy smoothness nobody sees and pay a composite each.
      */
     bands?: number;
     /**
