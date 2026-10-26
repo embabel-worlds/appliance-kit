@@ -44,7 +44,7 @@ function fakeCanvas(ctx) {
 }
 
 /** Run one frame with the browser globals the backdrop reaches for. */
-function runFrame(options, screen = { width: 1200, height: 800 }) {
+function runFrame(options, screen = { width: 1200, height: 800 }, { resize = false } = {}) {
   const ctx = fakeContext()
   const canvas = fakeCanvas(ctx)
   const scratches = []
@@ -66,8 +66,11 @@ function runFrame(options, screen = { width: 1200, height: 800 }) {
   globalThis.matchMedia = () => ({ matches: true })
   globalThis.requestAnimationFrame = () => 0
   globalThis.cancelAnimationFrame = () => {}
-  globalThis.addEventListener = () => {}
-  globalThis.removeEventListener = () => {}
+  const listeners = new Map()
+  globalThis.addEventListener = (type, listener) => listeners.set(type, listener)
+  globalThis.removeEventListener = (type, listener) => {
+    if (listeners.get(type) === listener) listeners.delete(type)
+  }
   globalThis.document = {
     createElement: () => {
       const c = fakeCanvas(fakeContext())
@@ -77,8 +80,11 @@ function runFrame(options, screen = { width: 1200, height: 800 }) {
   }
   try {
     const stop = startBackdrop(canvas, options)
+    const before = ctx.calls.fills.length
+    if (resize) listeners.get('resize')?.()
+    const afterResize = ctx.calls.fills.length - before
     stop()
-    return { ctx, scratches }
+    return { ctx, scratches, afterResize, listening: listeners.size }
   } finally {
     Object.assign(globalThis, previous)
   }
@@ -138,4 +144,12 @@ test('one band is a flat picture again, whatever blur was asked for', () => {
 
   assert.deepEqual(ctx.calls.filters, [])
   assert.equal(ctx.calls.images, 0)
+})
+
+test('under reduced motion a resize paints the still frame again', () => {
+  // Setting the canvas's size clears it, and with no frame loop nothing else would repaint it.
+  const { afterResize, listening } = runFrame({ snippets: ['x'] }, undefined, { resize: true })
+
+  assert.ok(afterResize > 0, 'the graph is drawn again after the resize')
+  assert.equal(listening, 0, 'and stop() takes the resize listener away')
 })

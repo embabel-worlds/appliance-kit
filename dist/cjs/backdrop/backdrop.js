@@ -300,15 +300,25 @@ function startBackdrop(canvas, options) {
         if (!reduced)
             raf = requestAnimationFrame(frame);
     };
+    /*
+     * A resize sets the canvas's size, which clears it. With the loop running the next frame paints it
+     * again; under reduced motion there is no next frame, so the still one is drawn again here, or a
+     * window resized once is a window with no graph in it.
+     */
+    const resize = () => {
+        size();
+        if (reduced)
+            frame();
+    };
     size();
-    addEventListener('resize', size);
+    addEventListener('resize', resize);
     if (reduced)
         frame(); // one static frame — the constellation, not the drift
     else
         raf = requestAnimationFrame(frame);
     return () => {
         cancelAnimationFrame(raf);
-        removeEventListener('resize', size);
+        removeEventListener('resize', resize);
     };
 }
 //# sourceMappingURL=backdrop.js.map

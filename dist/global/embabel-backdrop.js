@@ -222,13 +222,17 @@ var EmbabelBackdrop = (() => {
       }
       if (!reduced) raf = requestAnimationFrame(frame);
     };
+    const resize = () => {
+      size();
+      if (reduced) frame();
+    };
     size();
-    addEventListener("resize", size);
+    addEventListener("resize", resize);
     if (reduced) frame();
     else raf = requestAnimationFrame(frame);
     return () => {
       cancelAnimationFrame(raf);
-      removeEventListener("resize", size);
+      removeEventListener("resize", resize);
     };
   }
   return __toCommonJS(backdrop_exports);
