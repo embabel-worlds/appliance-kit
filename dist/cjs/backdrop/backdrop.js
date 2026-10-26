@@ -30,6 +30,14 @@ const PALETTE = [INDIGO, INDIGO, VIOLET, GREEN, ICE];
 const someColour = () => PALETTE[(Math.random() * PALETTE.length) | 0] ?? INDIGO;
 /** px at which two nodes acknowledge each other. */
 const LINK = 240;
+/**
+ * How finely a blurred band is drawn: scratch pixels for each CSS pixel. A QUARTER of the pixels
+ * at 1x, a sixteenth on a 2x screen, and that is free: a blurred band has no detail to lose, and
+ * scaling it back up smooths it the way the blur would. A filter's cost goes with the pixels it
+ * covers and its radius, both of which shrink with this, so the blur that took a whole frame at
+ * full size is cheap at this one.
+ */
+const BLUR_SCALE = 0.5;
 /** The haze colour when the caller names none: the indigo the Embabel grounds are built on. */
 const FOG = [16, 20, 48];
 /** Toward [FOG] by [amount]: 0 leaves the colour alone, 1 is pure haze. */
@@ -70,9 +78,16 @@ function startBackdrop(canvas, options) {
     let raf = 0;
     let nodes = [];
     let snips = [];
-    /** The scratch canvas a blurred band is drawn on before it is composited. Never shown. */
+    /** The scratch canvas a blurred band is drawn on, sharp and small. Never shown. */
     let scratch = null;
     let scratchCtx = null;
+    /**
+     * The band blurred, the same small size, which is what is composited. The blur happens HERE, from
+     * one small canvas to another, and not on the way onto the visible canvas: a filter on that draw
+     * would run at the visible canvas's full size, which is the cost this is avoiding.
+     */
+    let soft = null;
+    let softCtx = null;
     const size = () => {
         const dpr = Math.min(devicePixelRatio, 2);
         canvas.width = innerWidth * dpr;
@@ -109,10 +124,12 @@ function startBackdrop(canvas, options) {
         });
         if (canBlur) {
             scratch = scratch ?? document.createElement('canvas');
-            scratch.width = canvas.width;
-            scratch.height = canvas.height;
+            soft = soft ?? document.createElement('canvas');
+            scratch.width = soft.width = Math.ceil(innerWidth * BLUR_SCALE);
+            scratch.height = soft.height = Math.ceil(innerHeight * BLUR_SCALE);
             scratchCtx = scratch.getContext('2d');
-            scratchCtx?.setTransform(dpr, 0, 0, dpr, 0, 0);
+            scratchCtx?.setTransform(BLUR_SCALE, 0, 0, BLUR_SCALE, 0, 0);
+            softCtx = soft.getContext('2d');
         }
     };
     /** Which focal band a distance falls in: 0 is the front, [bands] - 1 the back. */
@@ -235,14 +252,22 @@ function startBackdrop(canvas, options) {
         // one ordering rule a scene with depth cannot get wrong.
         for (let band = bands - 1; band >= 0; band--) {
             const blur = canBlur ? blurOf(band) : 0;
-            if (blur > 0 && scratchCtx && scratch) {
-                scratchCtx.clearRect(0, 0, w, h);
+            if (blur > 0 && scratchCtx && scratch && softCtx && soft) {
+                // The scratch's whole extent in user space, not w × h: on an odd width that is half a pixel
+                // short, and the column it leaves keeps a ghost of every frame before.
+                const sw = scratch.width / BLUR_SCALE;
+                const sh = scratch.height / BLUR_SCALE;
+                scratchCtx.clearRect(0, 0, sw, sh);
                 drawBand(scratchCtx, band);
-                ctx.filter = `blur(${blur.toFixed(2)}px)`;
+                // The radius in the small canvas's own pixels, which is the asked-for blur once it is scaled up.
+                softCtx.clearRect(0, 0, soft.width, soft.height);
+                softCtx.filter = `blur(${(blur * BLUR_SCALE).toFixed(2)}px)`;
+                softCtx.drawImage(scratch, 0, 0);
+                softCtx.filter = 'none';
                 // Alpha is already in the band's own pixels; compositing at 1 avoids applying it twice.
                 ctx.globalAlpha = 1;
-                ctx.drawImage(scratch, 0, 0, w, h);
-                ctx.filter = 'none';
+                // Back up by the same scale, so a pixel lands where it was drawn even when the size was rounded up.
+                ctx.drawImage(soft, 0, 0, sw, sh);
                 ctx.globalAlpha = brightness;
             }
             else {
