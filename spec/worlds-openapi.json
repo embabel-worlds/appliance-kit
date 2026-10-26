@@ -476,6 +476,17 @@
         },
         "type" : "object"
       },
+      "AgentReflectionProposalResponse" : {
+        "properties" : {
+          "proposal" : {
+            "$ref" : "#/components/schemas/AgentProposal"
+          },
+          "refused" : {
+            "type" : "string"
+          }
+        },
+        "type" : "object"
+      },
       "AgentRequest" : {
         "properties" : {
           "about" : {
@@ -823,7 +834,7 @@
           },
           "evidence" : {
             "items" : {
-              "$ref" : "#/components/schemas/Evidence"
+              "$ref" : "#/components/schemas/AgentSuggestionEvidence"
             },
             "type" : "array"
           },
@@ -865,6 +876,32 @@
           }
         },
         "required" : [ "createdAt", "evidence", "feasibility", "id", "job", "kind", "name", "ownerId", "preview", "rank", "status" ],
+        "type" : "object"
+      },
+      "AgentSuggestionEvidence" : {
+        "properties" : {
+          "count" : {
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "period" : {
+            "type" : "string"
+          },
+          "query" : {
+            "type" : "string"
+          },
+          "sample" : {
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "summary" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "count", "period", "sample", "summary" ],
         "type" : "object"
       },
       "AgentVersionView" : {
@@ -2871,6 +2908,15 @@
         "required" : [ "location", "name", "required", "type" ],
         "type" : "object"
       },
+      "DiscoveryInstallRequest" : {
+        "properties" : {
+          "name" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
       "DiscoveryResult" : {
         "properties" : {
           "authDetails" : {
@@ -3374,6 +3420,15 @@
         "required" : [ "uri" ],
         "type" : "object"
       },
+      "EmbeddingModelChangeRequest" : {
+        "properties" : {
+          "model" : {
+            "type" : "string"
+          }
+        },
+        "required" : [ "model" ],
+        "type" : "object"
+      },
       "EmbeddingsStatus" : {
         "description" : "The embedding model, where it runs, and whether every stored chunk has the embedding vector search needs",
         "properties" : {
@@ -3767,6 +3822,146 @@
           }
         },
         "required" : [ "description", "examples", "name", "tags" ],
+        "type" : "object"
+      },
+      "GraphFactProjected" : {
+        "description" : "The size of the graph a fact read.",
+        "properties" : {
+          "edges" : {
+            "description" : "Edges between those nodes.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nodes" : {
+            "description" : "Nodes the fact's declaration selected.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "edges", "nodes" ],
+        "type" : "object"
+      },
+      "GraphFactRefreshRequest" : {
+        "description" : "Which graph fact to bring up to date.",
+        "properties" : {
+          "fact" : {
+            "description" : "The fact's name as its declaration gives it, e.g. `support/customer-groups`.",
+            "type" : "string"
+          },
+          "force" : {
+            "description" : "Recompute even when the recompute policy says the graph has not changed enough. Defaults to false.",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "fact", "force" ],
+        "type" : "object"
+      },
+      "GraphFactRefreshResponse" : {
+        "description" : "One refresh of one graph fact for the signed-in user: what was decided and why, what changed, and the top results.",
+        "properties" : {
+          "algorithm" : {
+            "description" : "The algorithm the fact runs, e.g. `components`.",
+            "type" : "string"
+          },
+          "fact" : {
+            "description" : "The fact refreshed.",
+            "type" : "string"
+          },
+          "projected" : {
+            "$ref" : "#/components/schemas/GraphFactProjected",
+            "description" : "How much of the graph the fact read."
+          },
+          "read" : {
+            "description" : "The Cypher that reads the whole result, to run through the ordinary query surfaces.",
+            "type" : "string"
+          },
+          "reason" : {
+            "description" : "Why the policy recomputed or skipped, in words.",
+            "type" : "string"
+          },
+          "recomputed" : {
+            "description" : "True when the algorithm ran; false when the policy found the graph unchanged and kept the stored result.",
+            "type" : "boolean"
+          },
+          "reports" : {
+            "$ref" : "#/components/schemas/GraphFactReports",
+            "description" : "Community names and summaries brought up to date; absent for a fact with no reports."
+          },
+          "top" : {
+            "description" : "The top results as rows keyed by the fact's `read` columns, at most ten.",
+            "items" : {
+              "additionalProperties" : { },
+              "type" : "object"
+            },
+            "type" : "array"
+          },
+          "warnings" : {
+            "description" : "Anything the refresh left out or could not do, e.g. nodes with no key; empty when nothing was.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "writes" : {
+            "$ref" : "#/components/schemas/GraphFactWrites",
+            "description" : "What the refresh wrote into the caller's scope."
+          }
+        },
+        "required" : [ "algorithm", "fact", "projected", "read", "reason", "recomputed", "top", "warnings", "writes" ],
+        "type" : "object"
+      },
+      "GraphFactReports" : {
+        "description" : "Community names and summaries brought up to date, against the fact's cap on model calls.",
+        "properties" : {
+          "cached" : {
+            "description" : "Reports kept because their community had not changed.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ceiling" : {
+            "description" : "The most model calls one refresh may make.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "deferred" : {
+            "description" : "Reports left for a later refresh because the cap was reached.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "modelCalls" : {
+            "description" : "Model calls this refresh made.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "written" : {
+            "description" : "Reports written this refresh.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "cached", "ceiling", "deferred", "modelCalls", "written" ],
+        "type" : "object"
+      },
+      "GraphFactWrites" : {
+        "description" : "What a refresh changed in the caller's graph.",
+        "properties" : {
+          "created" : {
+            "description" : "Nodes, edges or properties newly written.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "removed" : {
+            "description" : "Ones the new result no longer holds, removed.",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updated" : {
+            "description" : "Ones that existed and changed.",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "created", "removed", "updated" ],
         "type" : "object"
       },
       "HTTPAuthSecurityScheme" : {
@@ -4728,7 +4923,7 @@
               },
               "type" : "array"
             },
-            "description" : "Each named group -> the words that named it, tier first: name:, label: or weak:.",
+            "description" : "Each named group -> the words that named it, tier first: name:, label:, weak: or keyword:.",
             "type" : "object"
           },
           "resolvedBy" : {
@@ -6036,6 +6231,33 @@
         "required" : [ "descriptionsOnly" ],
         "type" : "object"
       },
+      "LearningError" : {
+        "description" : "A refusal carrying only its explanation, with no code to branch on",
+        "properties" : {
+          "error" : {
+            "description" : "What went wrong, written to be shown. Carries the underlying driver's or parser's own message where there is one",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "LearningRefused" : {
+        "description" : "A refusal that names a machine-readable code beside its explanation",
+        "properties" : {
+          "code" : {
+            "description" : "The refusal's code, for a client that branches rather than reads. Every value comes from the sealed LearningReviewRefusal hierarchy, except SOURCE_UNREADABLE which the 502 path builds directly.",
+            "enum" : [ "REVISION_STALE", "WARNINGS_STALE", "WARNINGS_NOT_ACKNOWLEDGED", "DIGEST_STALE", "SOURCE_CHANGED", "LEARNING_IN_PROGRESS", "DECISION_UNKNOWN", "CHANGE_INVALID", "SOURCE_UNREADABLE" ],
+            "type" : "string"
+          },
+          "error" : {
+            "description" : "What was refused and what to do about it, written to be shown to the person reviewing",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "error" ],
+        "type" : "object"
+      },
       "LensChatRequest" : {
         "properties" : {
           "conversationId" : {
@@ -7149,6 +7371,32 @@
         "required" : [ "custom", "id", "usedBy" ],
         "type" : "object"
       },
+      "RouterChangeApplied" : {
+        "description" : "The change was applied and the world's config saved; it takes effect on the next request",
+        "properties" : {
+          "ok" : {
+            "description" : "Always true. A client that only branches on the status code can ignore it; one that reads the body does not have to special-case the shape",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "ok" ],
+        "type" : "object"
+      },
+      "RouterChangeRefused" : {
+        "description" : "The change was refused and nothing was saved. The status code says which kind of refusal: 400 for something unknown or invalid, 409 while a context still uses the role",
+        "properties" : {
+          "detail" : {
+            "description" : "Why it was refused, written to be shown. Carries the router's own sentence, which names the context, role or model at fault",
+            "type" : "string"
+          },
+          "ok" : {
+            "description" : "Always false",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "detail", "ok" ],
+        "type" : "object"
+      },
       "RouterView" : {
         "properties" : {
           "contexts" : {
@@ -7289,6 +7537,34 @@
           }
         },
         "required" : [ "edges", "matched", "name", "nodes", "realm", "truncated" ],
+        "type" : "object"
+      },
+      "SampleLoadResult" : {
+        "description" : "What a sample-data load did, or why it refused. The same shape either way: a refusal is this with `ok` false and the reasons in `problems`",
+        "properties" : {
+          "edges" : {
+            "description" : "How many edges were written. Zero on a refusal",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "nodes" : {
+            "description" : "How many nodes were written. Zero on a refusal",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "ok" : {
+            "description" : "Whether the set was loaded. False means nothing was written and `problems` says why",
+            "type" : "boolean"
+          },
+          "problems" : {
+            "description" : "Why the load was refused, one sentence per problem. Empty when `ok` is true",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "edges", "nodes", "ok", "problems" ],
         "type" : "object"
       },
       "SampleSetRequest" : {
@@ -7667,27 +7943,6 @@
         "required" : [ "cited", "dates", "n", "passages", "score" ],
         "type" : "object"
       },
-      "SourceConnection" : {
-        "properties" : {
-          "fields" : {
-            "additionalProperties" : {
-              "type" : "string"
-            },
-            "type" : "object"
-          },
-          "hasSecret" : {
-            "type" : "boolean"
-          },
-          "kind" : {
-            "type" : "string"
-          },
-          "variant" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "fields", "hasSecret", "kind" ],
-        "type" : "object"
-      },
       "SourceDates" : {
         "properties" : {
           "createdAt" : {
@@ -8044,6 +8299,27 @@
           }
         },
         "required" : [ "attachments", "createdAt", "from", "id", "mentions", "text", "threadId", "wordsOnly" ],
+        "type" : "object"
+      },
+      "ThreadView" : {
+        "properties" : {
+          "messages" : {
+            "items" : {
+              "$ref" : "#/components/schemas/ThreadMessage"
+            },
+            "type" : "array"
+          },
+          "thread" : {
+            "$ref" : "#/components/schemas/Thread"
+          },
+          "waitingOn" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "messages", "thread", "waitingOn" ],
         "type" : "object"
       },
       "ThreadsResponse" : {
@@ -8491,27 +8767,6 @@
           }
         },
         "required" : [ "intact", "receipts" ],
-        "type" : "object"
-      },
-      "View" : {
-        "properties" : {
-          "messages" : {
-            "items" : {
-              "$ref" : "#/components/schemas/ThreadMessage"
-            },
-            "type" : "array"
-          },
-          "thread" : {
-            "$ref" : "#/components/schemas/Thread"
-          },
-          "waitingOn" : {
-            "items" : {
-              "type" : "string"
-            },
-            "type" : "array"
-          }
-        },
-        "required" : [ "messages", "thread", "waitingOn" ],
         "type" : "object"
       },
       "ViewDebugInfo" : {
@@ -8965,6 +9220,49 @@
           }
         },
         "required" : [ "activePersonality", "filesTrustedRoots", "llmRoles", "version" ],
+        "type" : "object"
+      },
+      "WorldDocumentMissing" : {
+        "description" : "A document this world does not have. Carries the name asked for rather than a sentence, because the only fact is which name missed",
+        "properties" : {
+          "name" : {
+            "description" : "The document name that was asked for, echoed back unchanged",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `not_found` — not the `error` the rest of this surface answers",
+            "example" : "not_found",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status" ],
+        "type" : "object"
+      },
+      "WorldManagementRefusal" : {
+        "description" : "A refusal from the world management surface. Carries only the reason, with no status word — the status code is the only other fact and the body does not repeat it",
+        "properties" : {
+          "error" : {
+            "description" : "Why the operation was refused, written to be shown. Names the world where the refusal is about a particular one",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "WorldRefusal" : {
+        "description" : "A refusal from the world administration surface: what went wrong, and the word `error` so a client reading the body need not consult the status code",
+        "properties" : {
+          "message" : {
+            "description" : "What was refused and why, written to be shown. Names the offending value where there is one — the unknown mode, the out-of-range threshold, the invalid cron expression",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`. Present because the map this replaces carried it and a consumer may branch on it",
+            "example" : "error",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
         "type" : "object"
       }
     },
@@ -10170,7 +10468,7 @@
         "description" : "`scope` names a declared scope (a focus) to answer WITHIN: generation and view selection see only that scope's realms, plus the spine. Not a captured query scope. Omitted, the question's own words decide what is shown; the whole world never is.",
         "operationId" : "ask_1",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10215,7 +10513,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -10236,7 +10544,7 @@
       "get" : {
         "operationId" : "askScopes",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10266,7 +10574,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "List the named scopes the acting user's asks can be narrowed to",
@@ -10275,7 +10593,7 @@
       "post" : {
         "operationId" : "createAskScope",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10322,7 +10640,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -10343,7 +10671,7 @@
       "delete" : {
         "operationId" : "deleteAskScope",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10378,7 +10706,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -10550,6 +10888,7 @@
         "description" : "The rule set's derived label is visible to the query as an ordinary label; nothing persists. Invalid rule sets are refused with the validator's messages.",
         "operationId" : "derive",
         "parameters" : [ {
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10596,7 +10935,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Execute Cypher with a caller-supplied DERIVE rule set evaluated for this query only",
@@ -10608,7 +10957,7 @@
         "description" : "Three modes: background=true returns a run handle immediately and may park awaiting input; waitSeconds=N watches for that long then returns a run handle; with neither, the call is fully synchronous.",
         "operationId" : "execute",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10677,7 +11026,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Execute verbatim Cypher through the virtual-cypher engine, synchronously, watched, or in the background",
@@ -10828,7 +11187,7 @@
       "post" : {
         "operationId" : "generate",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10873,7 +11232,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "500" : {
             "content" : {
@@ -10894,7 +11263,7 @@
       "post" : {
         "operationId" : "kill",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10929,7 +11298,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Cancel an in-flight run by id (owner-guarded)",
@@ -10940,7 +11319,7 @@
       "post" : {
         "operationId" : "refine",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -10985,7 +11364,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "500" : {
             "content" : {
@@ -11062,7 +11451,7 @@
       "get" : {
         "operationId" : "runs_1",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11092,7 +11481,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "List the acting user's in-flight virtual-cypher runs",
@@ -11103,7 +11502,7 @@
       "get" : {
         "operationId" : "run_7",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11138,7 +11537,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -11159,7 +11568,7 @@
       "post" : {
         "operationId" : "answer_1",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11214,7 +11623,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -11245,7 +11664,7 @@
       "get" : {
         "operationId" : "schema",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11272,7 +11691,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "The acting user's graph schema — labels, properties, relationship triples",
@@ -11283,7 +11712,7 @@
       "get" : {
         "operationId" : "propertyValues",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11326,7 +11755,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "The legal values of a property: the set, or its size when too wide, or why it cannot be enumerated",
@@ -11472,7 +11911,7 @@
       "post" : {
         "operationId" : "validate",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11509,7 +11948,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Validate Cypher against the schema without executing it",
@@ -11520,7 +11969,7 @@
       "get" : {
         "operationId" : "views_1",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11550,7 +11999,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "List the acting user's saved views with their cache state",
@@ -11559,7 +12018,7 @@
       "post" : {
         "operationId" : "saveView",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11606,7 +12065,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Save a user-authored view (optionally parameterized) into the acting user's world",
@@ -11617,7 +12086,7 @@
       "delete" : {
         "operationId" : "deleteView",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11652,7 +12121,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -11673,7 +12152,7 @@
       "post" : {
         "operationId" : "generateViewContract",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11727,7 +12206,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Draft an ODCS contract for a saved view, optionally sampling, saving and binding it",
@@ -11738,7 +12227,7 @@
       "post" : {
         "operationId" : "viewInvocation",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11792,7 +12281,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -11813,7 +12312,7 @@
       "post" : {
         "operationId" : "refreshView",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11848,7 +12347,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Force-recompute a materialised view's cache now, ignoring its TTL",
@@ -11859,7 +12368,7 @@
       "post" : {
         "operationId" : "runView",
         "parameters" : [ {
-          "description" : "The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only.",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -11913,7 +12422,17 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           },
           "404" : {
             "content" : {
@@ -12963,7 +13482,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -12973,7 +13492,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -12983,7 +13502,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -12993,7 +13512,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13029,7 +13548,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13039,7 +13558,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13049,7 +13568,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13059,7 +13578,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13088,7 +13607,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13098,7 +13617,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13108,7 +13627,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -13118,7 +13637,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ProposalResponse"
+                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
                 }
               }
             },
@@ -14093,6 +14612,7 @@
               }
             }
           },
+          "description" : "Every channel the user should be in afterwards. A channel left out is left; an empty list leaves them all.",
           "required" : true
         },
         "responses" : {
@@ -15332,8 +15852,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -15393,8 +15912,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -15466,8 +15984,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -15537,8 +16054,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -15619,8 +16135,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -15749,8 +16264,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeApplied"
                 }
               }
             },
@@ -15760,8 +16274,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeRefused"
                 }
               }
             },
@@ -15791,8 +16304,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeApplied"
                 }
               }
             },
@@ -15802,8 +16314,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeRefused"
                 }
               }
             },
@@ -15832,8 +16343,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeApplied"
                 }
               }
             },
@@ -15843,8 +16353,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeRefused"
                 }
               }
             },
@@ -15854,8 +16363,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeRefused"
                 }
               }
             },
@@ -15892,8 +16400,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeApplied"
                 }
               }
             },
@@ -15903,8 +16410,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RouterChangeRefused"
                 }
               }
             },
@@ -16452,7 +16958,7 @@
     "/api/v1/directory/refresh" : {
       "post" : {
         "description" : "The GitHub realm scan is cached for the life of the process; this evicts it — the way a newly published realm becomes visible without a restart. Optionally scoped by type.",
-        "operationId" : "refresh",
+        "operationId" : "refresh_1",
         "parameters" : [ {
           "description" : "Only refresh directories of this type",
           "in" : "query",
@@ -16600,7 +17106,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/InstallRequest"
+                "$ref" : "#/components/schemas/DiscoveryInstallRequest"
               }
             }
           },
@@ -17341,7 +17847,7 @@
           "content" : {
             "application/json" : {
               "schema" : {
-                "$ref" : "#/components/schemas/ChangeRequest"
+                "$ref" : "#/components/schemas/EmbeddingModelChangeRequest"
               }
             }
           },
@@ -17898,6 +18404,67 @@
         },
         "summary" : "Serve an image by filename",
         "tags" : [ "Images" ]
+      }
+    },
+    "/api/v1/kg/graph-facts/refresh" : {
+      "post" : {
+        "description" : "Recomputes only if the graph the fact reads changed (or `force` is set), writes the derived results into the caller's own scope, and names only the communities that changed. Answers what was decided and why, what changed, and the top results.",
+        "operationId" : "refresh",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/GraphFactRefreshRequest"
+              }
+            }
+          },
+          "description" : "The fact to refresh, by the name its declaration gives, and whether to ignore the recompute policy",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/GraphFactRefreshResponse"
+                }
+              }
+            },
+            "description" : "What the refresh decided and wrote"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "not authenticated"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The caller's world declares no such fact; `error` names the ones it does"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "The fact's declaration cannot run as declared; `error` says why"
+          }
+        },
+        "summary" : "Bring one graph fact up to date for the signed-in user, under its recompute policy",
+        "tags" : [ "Graph facts" ]
       }
     },
     "/api/v1/kg/studio/execute" : {
@@ -18544,7 +19111,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18600,7 +19167,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18610,7 +19177,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18639,7 +19206,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18695,7 +19262,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18705,7 +19272,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18751,7 +19318,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18775,13 +19342,6 @@
         } ],
         "responses" : {
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SourceConnection"
-                }
-              }
-            },
             "description" : "Not a source this user connected"
           }
         },
@@ -18812,7 +19372,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18839,7 +19399,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18866,7 +19426,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18902,7 +19462,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningError"
                 }
               }
             },
@@ -18912,27 +19472,17 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
             "description" : "LEARNING_IN_PROGRESS: this source is being learned with a different consent or purpose"
           },
-          "422" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
-            "description" : "The source's kind is detected but not yet learnable"
-          },
           "502" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -18956,13 +19506,6 @@
         } ],
         "responses" : {
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such review for this user — unknown, expired, or already discarded"
           }
         },
@@ -19028,20 +19571,13 @@
             "description" : "OK"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No draft review of that id is held for this owner"
           },
           "409" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -19078,27 +19614,20 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
             "description" : "DECISION_UNKNOWN: no subjects, or one the review does not display"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No draft review of that id is held for this owner"
           },
           "409" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -19145,27 +19674,20 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
             "description" : "CHANGE_INVALID: not a name or description, or a value the draft cannot carry; DECISION_UNKNOWN"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No draft review of that id is held for this owner"
           },
           "409" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -19201,7 +19723,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -19211,7 +19733,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -19248,7 +19770,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LearningRefused"
                 }
               }
             },
@@ -20995,7 +21517,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SampleLoadResult"
                 }
               }
             },
@@ -21005,7 +21527,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SampleLoadResult"
                 }
               }
             },
@@ -21524,7 +22046,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/View"
+                  "$ref" : "#/components/schemas/ThreadView"
                 }
               }
             },
@@ -21534,7 +22056,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/View"
+                  "$ref" : "#/components/schemas/ThreadView"
                 }
               }
             },
@@ -21544,7 +22066,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/View"
+                  "$ref" : "#/components/schemas/ThreadView"
                 }
               }
             },
@@ -22796,7 +23318,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -22836,7 +23358,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -22930,8 +23452,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldDocumentMissing"
                 }
               }
             },
@@ -23047,7 +23568,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23085,7 +23606,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23121,7 +23642,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23157,7 +23678,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23205,7 +23726,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23293,10 +23814,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23306,10 +23824,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldRefusal"
                 }
               }
             },
@@ -23468,8 +23983,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23479,8 +23993,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23519,8 +24032,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23530,8 +24042,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23570,8 +24081,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23610,8 +24120,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
                 }
               }
             },
@@ -23630,7 +24139,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36341"
+    "url" : "http://localhost:40933"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -23815,6 +24324,9 @@
   }, {
     "description" : "Realm runtime metrics and logs",
     "name" : "Realm observability"
+  }, {
+    "description" : "Bring the signed-in user's declared graph facts (algorithm results kept in the graph) up to date",
+    "name" : "Graph facts"
   }, {
     "description" : "Fictional records, marked and removable",
     "name" : "Sample data"
