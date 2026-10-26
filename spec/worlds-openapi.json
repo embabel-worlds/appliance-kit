@@ -32,6 +32,10 @@
               "$ref" : "#/components/schemas/ComponentVersion"
             },
             "type" : "array"
+          },
+          "sql" : {
+            "$ref" : "#/components/schemas/SqlAbout",
+            "description" : "The SQL door, when it is on and listening; absent otherwise"
           }
         },
         "required" : [ "components" ],
@@ -5412,6 +5416,22 @@
         "required" : [ "cypher" ],
         "type" : "object"
       },
+      "KgFillCancelled" : {
+        "description" : "A cancelled fill: which one, and the state it is now in",
+        "properties" : {
+          "id" : {
+            "description" : "The fill's id, echoed back unchanged",
+            "type" : "string"
+          },
+          "state" : {
+            "description" : "Always `CANCELLED`. Completed chunks stay cached and nothing is rolled back, so this says the fill stopped rather than that its work was undone",
+            "example" : "CANCELLED",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "state" ],
+        "type" : "object"
+      },
       "KgGenerateContractRequest" : {
         "description" : "How to draft an ODCS contract for a named view, and how far to go with it.",
         "properties" : {
@@ -8029,6 +8049,32 @@
         "required" : [ "sources" ],
         "type" : "object"
       },
+      "SqlAbout" : {
+        "description" : "The SQL door: the Postgres wire protocol, which psql, JDBC and BI tools connect to.",
+        "properties" : {
+          "address" : {
+            "description" : "The address the server advertises for the door, host:port",
+            "example" : "localhost:11052",
+            "type" : "string"
+          },
+          "answers" : {
+            "description" : "What that database answers, in a sentence",
+            "type" : "string"
+          },
+          "database" : {
+            "description" : "The database the door answers as, whatever name a client connects to",
+            "example" : "world",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The URL to connect to; the client supplies the user and password",
+            "example" : "postgresql://localhost:11052/world",
+            "type" : "string"
+          }
+        },
+        "required" : [ "address", "answers", "database", "url" ],
+        "type" : "object"
+      },
       "SseEmitter" : {
         "properties" : {
           "timeout" : {
@@ -9325,7 +9371,7 @@
     },
     "/api/v1/about" : {
       "get" : {
-        "description" : "The server's commit, the versions of its libraries, and the Bolt ports that are listening.",
+        "description" : "The server's commit, the versions of its libraries, and the Bolt ports and SQL door that are listening.",
         "operationId" : "about",
         "responses" : {
           "200" : {
@@ -9336,10 +9382,10 @@
                 }
               }
             },
-            "description" : "Components, server first, and Bolt when it is on"
+            "description" : "Components, server first, and Bolt and SQL when they are on"
           }
         },
-        "summary" : "Component versions and Bolt endpoints",
+        "summary" : "Component versions, Bolt endpoints and the SQL door",
         "tags" : [ "About" ]
       }
     },
@@ -11161,8 +11207,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/KgFillCancelled"
                 }
               }
             },
@@ -24139,7 +24184,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34603"
+    "url" : "http://localhost:46003"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
