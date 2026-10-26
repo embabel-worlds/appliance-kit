@@ -6368,6 +6368,26 @@
         },
         "type" : "object"
       },
+      "LoadedSampleSet" : {
+        "description" : "One loaded sample set, and how much of this world it accounts for",
+        "properties" : {
+          "name" : {
+            "description" : "The set's name, which is what removes it again",
+            "type" : "string"
+          },
+          "nodes" : {
+            "description" : "How many nodes this set put into the world",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "realm" : {
+            "description" : "The realm the set belongs to, where it came from one. Null for a set loaded on its own",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "nodes" ],
+        "type" : "object"
+      },
       "LogEntry" : {
         "properties" : {
           "level" : {
@@ -6500,6 +6520,27 @@
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "MixedLabel" : {
+        "description" : "A label holding sample and real records at once — the case where a view over it returns both with nothing on the row to tell them apart",
+        "properties" : {
+          "label" : {
+            "description" : "The label carrying both kinds",
+            "type" : "string"
+          },
+          "real" : {
+            "description" : "How many are real records",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sample" : {
+            "description" : "How many of its nodes are sample data",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "label", "real", "sample" ],
         "type" : "object"
       },
       "Model" : {
@@ -7528,6 +7569,18 @@
         },
         "type" : "object"
       },
+      "SampleDataCleared" : {
+        "description" : "Every sample node removed, whatever loaded it",
+        "properties" : {
+          "nodes" : {
+            "description" : "How many nodes went. Zero means this world held no sample data",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "nodes" ],
+        "type" : "object"
+      },
       "SampleDataExportResponse" : {
         "properties" : {
           "edges" : {
@@ -7587,6 +7640,22 @@
         "required" : [ "edges", "nodes", "ok", "problems" ],
         "type" : "object"
       },
+      "SampleSetRemoved" : {
+        "description" : "One sample set removed, and how much went with it",
+        "properties" : {
+          "nodes" : {
+            "description" : "How many nodes that set had loaded. Zero means the name matched nothing",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "removed" : {
+            "description" : "The set that was removed, echoed back unchanged",
+            "type" : "string"
+          }
+        },
+        "required" : [ "nodes", "removed" ],
+        "type" : "object"
+      },
       "SampleSetRequest" : {
         "properties" : {
           "edges" : {
@@ -7616,6 +7685,27 @@
           }
         },
         "required" : [ "edges", "name", "nodes", "realm" ],
+        "type" : "object"
+      },
+      "SampleSetsLoaded" : {
+        "description" : "What sample data this world holds: the sets that were loaded, and any label where sample records now sit beside real ones",
+        "properties" : {
+          "mixedLabels" : {
+            "description" : "Labels holding sample and real records at once. Reported alongside deliberately: the answer to \"what is loaded\" is incomplete without \"and is any of it sitting next to real records of the same type\"",
+            "items" : {
+              "$ref" : "#/components/schemas/MixedLabel"
+            },
+            "type" : "array"
+          },
+          "sets" : {
+            "description" : "One entry per loaded set, with how many nodes it put in",
+            "items" : {
+              "$ref" : "#/components/schemas/LoadedSampleSet"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "mixedLabels", "sets" ],
         "type" : "object"
       },
       "SamplingSpec" : {
@@ -21514,8 +21604,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SampleDataCleared"
                 }
               }
             },
@@ -21533,8 +21622,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SampleSetsLoaded"
                 }
               }
             },
@@ -21630,8 +21718,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SampleSetRemoved"
                 }
               }
             },
@@ -24184,7 +24271,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42685"
+    "url" : "http://localhost:45737"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
