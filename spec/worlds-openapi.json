@@ -9284,6 +9284,26 @@
         "description" : "A provider's URL-registration handshake. THIS SHAPE IS THE PROVIDER'S, not this API's: Zoom requires exactly these two fields and no status, so it must not be made to resemble the other receipts.",
         "required" : [ "encryptedToken", "plainToken" ]
       },
+      "WorldChanged" : {
+        "description" : "A world was created or switched to. The same three keys either way; `status` says which happened",
+        "properties" : {
+          "name" : {
+            "description" : "The world's name",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "Where the world lives on the appliance's disk",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "`created` from a create, `switched` from a switch",
+            "example" : "created",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "path", "status" ],
+        "type" : "object"
+      },
       "WorldConfig" : {
         "properties" : {
           "actionCompilerLlm" : {
@@ -9358,6 +9378,22 @@
         "required" : [ "activePersonality", "filesTrustedRoots", "llmRoles", "version" ],
         "type" : "object"
       },
+      "WorldDeleted" : {
+        "description" : "A world was deleted, with everything in it. Carries no path, because there is no longer one",
+        "properties" : {
+          "name" : {
+            "description" : "The world that was deleted",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `deleted`",
+            "example" : "deleted",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status" ],
+        "type" : "object"
+      },
       "WorldDocumentMissing" : {
         "description" : "A document this world does not have. Carries the name asked for rather than a sentence, because the only fact is which name missed",
         "properties" : {
@@ -9372,6 +9408,24 @@
           }
         },
         "required" : [ "name", "status" ],
+        "type" : "object"
+      },
+      "WorldListing" : {
+        "description" : "Every world this user has, and which one they are in",
+        "properties" : {
+          "current" : {
+            "description" : "The world the user is currently in, by name",
+            "type" : "string"
+          },
+          "worlds" : {
+            "description" : "Every world discovered on disk for this user, sorted by name",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldSummary"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "current", "worlds" ],
         "type" : "object"
       },
       "WorldManagementRefusal" : {
@@ -9399,6 +9453,45 @@
           }
         },
         "required" : [ "message", "status" ],
+        "type" : "object"
+      },
+      "WorldReset" : {
+        "description" : "A world's config was reset to the template. Its `data/` was left alone, which the warning says out loud",
+        "properties" : {
+          "name" : {
+            "description" : "The world that was reset",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `reset`",
+            "example" : "reset",
+            "type" : "string"
+          },
+          "warning" : {
+            "description" : "That the config went back to defaults and the data directory was preserved — said in the body because a caller who reads only the status code would not know the difference between this and a delete",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status", "warning" ],
+        "type" : "object"
+      },
+      "WorldSummary" : {
+        "description" : "One of a user's worlds, as the listing describes it",
+        "properties" : {
+          "active" : {
+            "description" : "Whether this is the world the user is currently in",
+            "type" : "boolean"
+          },
+          "name" : {
+            "description" : "The world's name, which is what the other endpoints take in the path",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "Where the world lives on the appliance's disk",
+            "type" : "string"
+          }
+        },
+        "required" : [ "active", "name", "path" ],
         "type" : "object"
       }
     },
@@ -24075,8 +24168,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldListing"
                 }
               }
             },
@@ -24104,8 +24196,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldChanged"
                 }
               }
             },
@@ -24153,8 +24244,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldDeleted"
                 }
               }
             },
@@ -24202,8 +24292,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldReset"
                 }
               }
             },
@@ -24241,8 +24330,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldChanged"
                 }
               }
             },
@@ -24271,7 +24359,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:38959"
+    "url" : "http://localhost:45861"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
