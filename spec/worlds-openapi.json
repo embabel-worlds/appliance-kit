@@ -7436,18 +7436,23 @@
         "type" : "object"
       },
       "McpServerInfo" : {
+        "description" : "An MCP server reachable from this world, configured by the world itself or wired in at the installation level",
         "properties" : {
           "description" : {
+            "description" : "What the server is for, when its configuration says",
             "type" : "string"
           },
           "name" : {
+            "description" : "The server's name, as its configuration gives it",
             "type" : "string"
           },
           "toolCount" : {
+            "description" : "How many tools the server exposes. 0 for a world server not yet started, whose tools are discovered on first use",
             "format" : "int32",
             "type" : "integer"
           },
           "toolNames" : {
+            "description" : "The names of those tools; empty while the server has not been started",
             "items" : {
               "type" : "string"
             },
@@ -26417,7 +26422,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46191"
+    "url" : "http://localhost:36311"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
