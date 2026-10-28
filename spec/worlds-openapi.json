@@ -13202,6 +13202,7 @@
               }
             }
           },
+          "description" : "What to compile into a world action. `name` names the action and its file, `config/actions/<name>.yml`, which is overwritten if it exists; `description` is the natural-language brief an LLM turns into the Jinja2 prompt. `inputTypeNames`, `toolNames` and `referenceNames` default to empty, `outputTypeName` to `com.embabel.agent.spec.model.BackgroundMessage`; `llmModel` (default: the platform default) and `llmTemperature` (default `0.0`) are saved on the action and also drive the compiling call, which uses `0.1` when the temperature is not positive",
           "required" : true
         },
         "responses" : {
@@ -13238,6 +13239,7 @@
         "description" : "Deletes an action spec from the world's config/actions directory, along with any sibling TypeScript file of the same name. Realm-shipped and platform actions cannot be deleted.",
         "operationId" : "deleteAction",
         "parameters" : [ {
+          "description" : "Name of the world action to delete, matched exactly: its `config/actions/<name>.yml` is removed, with any sibling `<name>.ts`. An action without that YAML in this world (realm-shipped or platform-defined) is refused with 400",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13287,6 +13289,7 @@
         "description" : "Returns the full spec for a world action. Only PromptedActionSpecs in the world (not realms) include editable fields.",
         "operationId" : "getAction",
         "parameters" : [ {
+          "description" : "Name of the action, as listed by GET /api/v1/actions; matched exactly. A world action's YAML at `config/actions/<name>.yml` is read fresh from disk, otherwise any loaded action of that name (realm-shipped included) is returned with `editable` false; no match is 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13323,6 +13326,7 @@
         "description" : "Updates a PromptedActionSpec in the world. Only actions in the world's config/actions directory (not realm-shipped ones) can be edited.",
         "operationId" : "updateAction",
         "parameters" : [ {
+          "description" : "Name of the action to edit, matched exactly against the world's loaded actions (404 if none). It must be a prompted action whose YAML is at `config/actions/<name>.yml` in this world; a realm-shipped or non-prompted action is refused with 400",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -13338,6 +13342,7 @@
               }
             }
           },
+          "description" : "Fields to change on the action; each one omitted or null keeps its current value, and a list given replaces the existing list. The merged spec is written back to the world's YAML and the world reloads in the background, so the change may not be live when the response arrives",
           "required" : true
         },
         "responses" : {
@@ -13413,6 +13418,7 @@
               }
             }
           },
+          "description" : "The pinned job's `label`, exactly as the activity list shows it (prose such as `Learning the X API`); only the caller's own pin is dismissed, and a label with nothing pinned is still a 204. The job itself is untouched and pins again on its next failure",
           "required" : true
         },
         "responses" : {
@@ -13496,6 +13502,7 @@
       "get" : {
         "operationId" : "catalog",
         "parameters" : [ {
+          "description" : "Login username of the user whose installed realms' API operations are listed; an unknown username is refused with 400",
           "in" : "query",
           "name" : "username",
           "required" : true,
@@ -13533,6 +13540,7 @@
       "post" : {
         "operationId" : "respond",
         "parameters" : [ {
+          "description" : "Id of the agent process parked at the confirmation gate, as returned in `processId` by a run that answered `awaitingConfirmation`; 400 when the process is unknown, expired or not awaiting confirmation",
           "in" : "query",
           "name" : "processId",
           "required" : true,
@@ -13540,6 +13548,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "`true` (the default) approves the parked write so its commit step runs; `false` rejects it, and the write never happens",
           "in" : "query",
           "name" : "accepted",
           "required" : false,
@@ -13578,6 +13587,7 @@
       "post" : {
         "operationId" : "run_4",
         "parameters" : [ {
+          "description" : "Login username of the user whose world, repositories and realm tools the catalog is built from and the run acts as; an unknown username is refused with 400",
           "in" : "query",
           "name" : "username",
           "required" : true,
@@ -13585,6 +13595,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Name of the type the plan must produce, such as `CommitActivity`, matched against the world's types; a type no action produces is bridged by a model-backed converter from `Person`. Used when no `question` is given; one of `goal` or `question` is required (400 otherwise)",
           "in" : "query",
           "name" : "goal",
           "required" : false,
@@ -13592,6 +13603,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "A natural-language question; a model ranks the catalog's goals and the best fit is planned and run. Takes precedence over `goal` when both are given",
           "in" : "query",
           "name" : "question",
           "required" : false,
@@ -13599,6 +13611,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Text handed to the plan's first step as its `Query` seed on the typed-goal path; defaults to `run`. Ignored when a `question` is given, which seeds the plan itself",
           "in" : "query",
           "name" : "seed",
           "required" : false,
@@ -13607,6 +13620,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "With a `question`, `true` returns only the routing decision (the chosen goal, its confidence and the reason) without executing anything; defaults to `false`. Has no effect on the typed-goal path",
           "in" : "query",
           "name" : "dryRun",
           "required" : false,
@@ -13646,6 +13660,7 @@
       "post" : {
         "operationId" : "run_3",
         "parameters" : [ {
+          "description" : "Username whose world's `persist: true` virtual joins are run, writing their bridge anchors into the graph for that user; an unknown user is refused with 400. A world with no persisted joins answers 200 with `persistJoins` 0 and runs nothing",
           "in" : "query",
           "name" : "username",
           "required" : true,
@@ -13683,6 +13698,7 @@
       "post" : {
         "operationId" : "delete_1",
         "parameters" : [ {
+          "description" : "Name of a handler the caller authored. A realm-shipped handler is refused (disable it instead) and an unknown name finds nothing; both answer 200 with `ok: false`",
           "in" : "query",
           "name" : "name",
           "required" : true,
@@ -13727,6 +13743,7 @@
               }
             }
           },
+          "description" : "The TypeScript `source` to run and what to run it against. A `sample` is bound as the signal when given, its `typeName` and `id` keys naming it; otherwise the most recent signal of `signalType` in the caller's graph is used, and with `signalType` omitted, `*`, or no such signal in the graph the handler runs against a cron tick. Observe-only: nothing is saved and nothing external changes",
           "required" : true
         },
         "responses" : {
@@ -13766,6 +13783,7 @@
               }
             }
           },
+          "description" : "`english` describes the handler to write; when `current` is given, `english` is instead a change to make to that source. `skills` names skills handed to the writing model as references, prompt and tools both. Nothing is saved: the answer is the source with its tsc verdict",
           "required" : true
         },
         "responses" : {
@@ -13827,6 +13845,7 @@
       "post" : {
         "operationId" : "open",
         "parameters" : [ {
+          "description" : "Name of the handler, as `name` in the POST /admin/handlers/list response; an exact match against every handler in the caller's world, realm-shipped ones included. 400 when none has that name",
           "in" : "query",
           "name" : "name",
           "required" : true,
@@ -13881,6 +13900,7 @@
               }
             }
           },
+          "description" : "The handler to create, or to replace when the caller's world already has one of that `name`; persisted only when `source` passes the tsc gate, else `ok: false` with the reason. `signalType` `*` (the default) means no signal trigger, `schedule` is an optional 6-field cron expression, `autonomous` marks a handler that writes, and `inputTypeNames` with `outputTypeName` make it planner-chainable. A blank `description` falls back to the name",
           "required" : true
         },
         "responses" : {
@@ -13913,6 +13933,7 @@
       "post" : {
         "operationId" : "setEnabled_1",
         "parameters" : [ {
+          "description" : "Name of the handler, as listed by POST /admin/handlers/list. Not checked against the world: an unknown name is recorded as an override all the same and reported as set",
           "in" : "query",
           "name" : "name",
           "required" : true,
@@ -13920,6 +13941,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "`true` adopts the handler so it fires, `false` stops it firing. Recorded as this user's override, keeping any per-user schedule, and the world is refreshed so schedules re-sync",
           "in" : "query",
           "name" : "enabled",
           "required" : true,
@@ -13957,6 +13979,7 @@
       "post" : {
         "operationId" : "setSchedule",
         "parameters" : [ {
+          "description" : "Name of the handler to schedule, as listed by POST /admin/handlers/list. Not checked against the world: an unknown name is recorded and reported as set",
           "in" : "query",
           "name" : "name",
           "required" : true,
@@ -13964,6 +13987,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Spring 6-field cron expression (seconds minutes hours day-of-month month day-of-week) recorded as this user's schedule for the handler; not validated here. Optional: omitted or blank clears the per-user schedule, keeping the handler's enabled state",
           "in" : "query",
           "name" : "schedule",
           "required" : false,
@@ -14008,6 +14032,7 @@
               }
             }
           },
+          "description" : "The TypeScript handler body in `source`, type-checked by the same tsc gate a save applies. Nothing is saved or run",
           "required" : true
         },
         "responses" : {
@@ -14040,6 +14065,7 @@
       "post" : {
         "operationId" : "dryRun",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14055,6 +14081,7 @@
               }
             }
           },
+          "description" : "The annotation statement to validate and select with, writing nothing: a read prefix, `WITH DISTINCT <target> ORDER BY … LIMIT n`, then exactly one `SET <target>.<property> = <value>` on a property the world declares annotatable. `params` binds the statement's `$name` parameters and may be omitted. 409 when the statement falls outside that grammar",
           "required" : true
         },
         "responses" : {
@@ -14107,6 +14134,7 @@
       "post" : {
         "operationId" : "apply",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14114,6 +14142,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The `planId` a dry-run returned. One-shot: a second apply, an unknown id, a plan past its `expiresAt` (300 seconds by default) or one frozen for another user or world is a 409",
           "in" : "path",
           "name" : "planId",
           "required" : true,
@@ -14171,6 +14200,7 @@
       "post" : {
         "operationId" : "undo",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14178,6 +14208,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The `planId` of an applied plan, looked up in the acting user's annotation audit journal for this world rather than the plan store, so it works after the plan is consumed or expired; 409 when nothing under it is left to undo",
           "in" : "path",
           "name" : "planId",
           "required" : true,
@@ -14260,6 +14291,7 @@
               }
             }
           },
+          "description" : "The natural-language question, in `question`: Cypher is generated for it (within `scope` when one is given), run scoped to the acting user, and answered with the rows, the Cypher that produced them and what it cost",
           "required" : true
         },
         "responses" : {
@@ -14377,6 +14409,7 @@
               }
             }
           },
+          "description" : "The scope to declare: `name`, a slug matching `[a-z0-9][a-z0-9-]*` (otherwise a 400; a name already declared is a 409), an optional `description`, and `realms`, at least one and every one installed or a 400 naming the unknown ones. Written as a world-tier focus and the world refreshed, so `scope=<name>` is accepted at once",
           "required" : true
         },
         "responses" : {
@@ -14447,7 +14480,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "The view's name, as `GET /views` lists it.",
+          "description" : "The world-tier scope to delete, by the name `GET /ask/scopes` lists it under. A realm-shipped scope is refused with 409",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -14544,6 +14577,7 @@
       "post" : {
         "operationId" : "runNow",
         "parameters" : [ {
+          "description" : "The decorator's registered name, exact and case-sensitive, as listed by GET /admin/kg/decorate; an unknown name answers 404 with the reason in `error`",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -14591,6 +14625,7 @@
       "post" : {
         "operationId" : "runFor",
         "parameters" : [ {
+          "description" : "The decorator's registered name, exact and case-sensitive, as listed by GET /admin/kg/decorate; an unknown name answers 404 with the reason in `error`",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -14598,6 +14633,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The `id` of the graph node to decorate, run whether or not it is stale; 404 when no node has it. A node with no owning `userId` is refused when the decorator writes private artifacts and more than one user can see the node",
           "in" : "path",
           "name" : "nodeId",
           "required" : true,
@@ -14672,6 +14708,7 @@
               }
             }
           },
+          "description" : "The rule set to evaluate for this one query, and the query that reads it: `cypher` (sees the derived label as an ordinary label), `derives` (the label the rules conclude), `rules` (each a `derive` head pattern and a RETURN-less Cypher `from` body), and optionally `name` (default `adhoc/<derives>`), `description`, `paramSpecs` (declared bind variables, referenced as `$name` in rule bodies), `params` (values for them; the whole map also binds the outer query) and `requires` (materialization demands run before the rules). Rule bodies are scoped to the acting user and nothing persists. An invalid rule set, a body label the world does not know, or a param that does not resolve answers 400",
           "required" : true
         },
         "responses" : {
@@ -14759,6 +14796,7 @@
               }
             }
           },
+          "description" : "The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400",
           "required" : true
         },
         "responses" : {
@@ -14815,6 +14853,7 @@
       "get" : {
         "operationId" : "list_5",
         "parameters" : [ {
+          "description" : "Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14853,6 +14892,7 @@
       "post" : {
         "operationId" : "start",
         "parameters" : [ {
+          "description" : "Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14868,6 +14908,7 @@
               }
             }
           },
+          "description" : "The fill to start, owned by the acting user: `cypher` (required, 400 when blank) is the query the scheduler re-runs one chunk per tick until a pass makes no live call; `budgetPerTick` caps live producer calls per chunk, default 60, clamped to 1–500; `label` names the fill in progress and activity, and the fill's id stands in when it is blank",
           "required" : true
         },
         "responses" : {
@@ -14910,6 +14951,7 @@
       "delete" : {
         "operationId" : "cancel",
         "parameters" : [ {
+          "description" : "Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14917,6 +14959,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The fill's id (`fill_` plus 12 characters), as start or list returned it, matched only among the acting user's fills; an id that matches nothing is not refused and still answers `CANCELLED`",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -14978,6 +15021,7 @@
               }
             }
           },
+          "description" : "The question, in `question`, and `preferViews` (default true): a question a saved view answers comes back as that view's invocation with `view` set, and no model is asked. The catalogue is skipped under `scope` or with `preferViews: false`, and Cypher is then generated and validated, never run",
           "required" : true
         },
         "responses" : {
@@ -15110,6 +15154,7 @@
               }
             }
           },
+          "description" : "The current, possibly hand-edited Cypher in `cypher` and what to change about it in `instruction`; the revision is written within `scope` when one is given, validated but never run, and the response's `question` echoes the instruction",
           "required" : true
         },
         "responses" : {
@@ -15162,6 +15207,7 @@
       "post" : {
         "operationId" : "reproject",
         "parameters" : [ {
+          "description" : "Username whose stored propositions, in their current context, are re-projected; it selects the user regardless of who is calling. 400 when no user has it",
           "in" : "query",
           "name" : "username",
           "required" : true,
@@ -15169,6 +15215,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Re-project only the first this-many propositions, to bound a smoke test; `0` (the default) or any non-positive value means all of them, up to 100,000",
           "in" : "query",
           "name" : "limit",
           "required" : false,
@@ -15359,6 +15406,7 @@
               }
             }
           },
+          "description" : "The owner's pick, in `choice`: one of the options the parked run's question offers — `proceed`, `narrow`, `background` or `cancel` for a cost-gate park, or the offered values for any other question — matched trimmed and case-insensitively; anything else is a 400 listing the accepted values. `proceed` and `background` resume the run; `narrow` and `cancel` settle it CANCELLED without running",
           "required" : true
         },
         "responses" : {
@@ -15543,6 +15591,7 @@
       "get" : {
         "operationId" : "list_9",
         "parameters" : [ {
+          "description" : "Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -15580,6 +15629,7 @@
       "delete" : {
         "operationId" : "delete_4",
         "parameters" : [ {
+          "description" : "Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -15587,6 +15637,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The scope's name as given in `captureAs` (the identifier referenced as `$name` in a query, without the `$`), among the acting user's scopes; a name that matches nothing answers `deleted: false`, not an error",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -15624,6 +15675,7 @@
       "post" : {
         "operationId" : "pin",
         "parameters" : [ {
+          "description" : "Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -15631,6 +15683,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The scope's name as given in `captureAs` (the identifier referenced as `$name` in a query, without the `$`), among the acting user's scopes; 404 when there is no such live scope, including one that has already expired",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -15694,6 +15747,7 @@
               }
             }
           },
+          "description" : "The Cypher to check, in `cypher`, against the acting user's schema with the same preflight strict execution runs; only `cypher` is read, so `params`/`args` are not substituted and `captureAs` is ignored",
           "required" : true
         },
         "responses" : {
@@ -15801,6 +15855,7 @@
               }
             }
           },
+          "description" : "The view to store in the acting user's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400",
           "required" : true
         },
         "responses" : {
@@ -15942,7 +15997,8 @@
                 "$ref" : "#/components/schemas/KgGenerateContractRequest"
               }
             }
-          }
+          },
+          "description" : "Optional; omitted is a declaration-only preview that reads no data and writes nothing. `sample` runs the view under a row cap (with `args` for a parameterized view) to infer types; `persist` writes the draft into the world; `bind` also pins the view to it in `observe` mode and needs `persist`. Each defaults to false"
         },
         "responses" : {
           "200" : {
@@ -16017,7 +16073,8 @@
                 "$ref" : "#/components/schemas/KgInvokeViewRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty resolves it on the defaults. A missing required or uncoercible argument is a 400. Keys sent beside `args` rather than inside it are ignored here"
         },
         "responses" : {
           "200" : {
@@ -16158,7 +16215,8 @@
                 "$ref" : "#/components/schemas/KgInvokeViewRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty runs it on the defaults. A missing required or uncoercible argument is a 400, and so is any key sent beside `args` instead of inside it"
         },
         "responses" : {
           "200" : {
@@ -16303,6 +16361,7 @@
               }
             }
           },
+          "description" : "The principles as plain text or markdown in `content`, saved as the operator's file in place of the shipped default and handed verbatim to coding agents in their authoring brief. Blank `content` is a 400: DELETE returns to the default",
           "required" : true
         },
         "responses" : {
@@ -16507,6 +16566,7 @@
               }
             }
           },
+          "description" : "The suggestion to record as open. `name` (lowercase letters, digits and dashes), `job` (one sentence) and at least one `evidence` entry are required. Give either `adopt`, naming an installed realm agent (and then `name` must equal it), or `agent`, the definition to draft, never both; a `TALKS` kind drafts no duties or routines and names `conversation.realms`. The server sets `id`, `ownerId`, `status`, `createdAt`, `decidedAt` and `preview`, and drafts `agent` off duty, unsponsored and unsigned whatever it says. An open suggestion of the same `name` is replaced",
           "required" : true
         },
         "responses" : {
@@ -16847,6 +16907,7 @@
               }
             }
           },
+          "description" : "One JSON-RPC 2.0 call, its `id` echoed in the response. `message/send` takes a message whose text parts are joined into one turn, continuing the conversation when it names a `taskId` this agent holds (an unknown one is refused, not restarted); `tasks/get` and `tasks/cancel` take the task's `id` in `params`, and no task can be cancelled. Streaming and push-notification methods answer an error naming the alternative",
           "required" : true
         },
         "responses" : {
@@ -17140,6 +17201,7 @@
               }
             }
           },
+          "description" : "`value` is the agent's own credential for this secret, kept as an API key in the caller's wallet and sent instead of the sponsor's; it replaces any value the agent already had, and is never returned",
           "required" : true
         },
         "responses" : {
@@ -17505,6 +17567,7 @@
               }
             }
           },
+          "description" : "`reason`, optional, is recorded (trimmed) with the retirement for whoever reads the agent later; send `{}` to retire without one",
           "required" : true
         },
         "responses" : {
@@ -17744,6 +17807,7 @@
               }
             }
           },
+          "description" : "`stage` is `off`, `observing` or `on` (case-insensitive; any other value is read as `off`). With `routine`, the name of one routine the agent holds, only that routine moves (404 when it holds none of that name); without it, the whole agent does. Lowering is always allowed. 409 when anything above `off` is asked for while every agent is halted, when raising by a sponsor where only owners may or while the agent still needs something, and when the whole agent is raised to `on` before each duty has passed a test run of its signed version. Raising an agent nobody sponsors makes the caller its sponsor",
           "required" : true
         },
         "responses" : {
@@ -17862,6 +17926,7 @@
               }
             }
           },
+          "description" : "`job` names one of the agent's scheduled jobs, as `job` in its upcoming work; it is started now, outside its schedule, and the run appears on the agent's runs. 409 when the agent has no such job",
           "required" : true
         },
         "responses" : {
@@ -17929,6 +17994,7 @@
               }
             }
           },
+          "description" : "`job` names one of the agent's scheduled jobs, as `job` in its upcoming work; its next firing is skipped. With `until`, an ISO-8601 instant that has not yet passed, the firing is postponed to then instead of dropped. `reason` is kept with the skip. 409 when the agent has no such job, the job has no next firing, that firing is already skipped, or `until` is not in the future",
           "required" : true
         },
         "responses" : {
@@ -17996,6 +18062,7 @@
               }
             }
           },
+          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1` and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms; `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts; `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
           "required" : true
         },
         "responses" : {
@@ -18038,6 +18105,7 @@
       "get" : {
         "operationId" : "openAiAgentModels",
         "parameters" : [ {
+          "description" : "The agent's name, exactly as `id` in `GET /openai/v1/models`; an agent that does not exist, was never signed, is off or is halted is a 404, and one the calling API key is not scoped to is a 403",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -18172,6 +18240,7 @@
               }
             }
           },
+          "description" : "`name` labels the key: trimmed, 1 to 64 characters (400 otherwise). `agents`, when present, makes an agent key that talks only to the agents it names, `*` for any, and reaches nothing else; it must name at least one. Omitted, the key is a full key acting as the caller",
           "required" : true
         },
         "responses" : {
@@ -18194,6 +18263,7 @@
       "delete" : {
         "operationId" : "revokeApiKey",
         "parameters" : [ {
+          "description" : "Key id (16 hex characters), as `id` in the list or mint response. 404 when the caller has no key with that id",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -18509,6 +18579,7 @@
         "description" : "Redirects to the provider's consent screen when a client app is configured. Without one, an HTML caller is redirected to the chat view to be prompted for credentials, and any other caller gets 409 with a remedy.",
         "operationId" : "authorize",
         "parameters" : [ {
+          "description" : "The provider key, as `name` in `GET /auth/oauth2/providers` — an `apis.yml` entry's `oauth2.provider`, so one key covers every entry grouped under it (e.g. `google-workspace`); a key no oauth2 entry in this world declares is a 404",
           "in" : "path",
           "name" : "provider",
           "required" : true,
@@ -18516,6 +18587,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The caller's `Accept` header, sent by the browser or client; it matters only when no client app is configured, where one listing `text/html` is redirected to the chat view and any other caller gets the 409",
           "in" : "header",
           "name" : "Accept",
           "required" : false,
@@ -18557,6 +18629,7 @@
         "description" : "Landing for the provider redirect; renders a human-readable HTML result page rather than JSON.",
         "operationId" : "callback",
         "parameters" : [ {
+          "description" : "The authorization code the provider appends to its redirect, exchanged here for tokens; missing (without `error`) is a 400",
           "in" : "query",
           "name" : "code",
           "required" : false,
@@ -18564,6 +18637,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The opaque flow id this server issued at `authorize` and the provider echoes back; it must match a live flow on this instance, so an expired one is a 410 and one this instance never issued is a 400",
           "in" : "query",
           "name" : "state",
           "required" : false,
@@ -18571,6 +18645,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The provider's error code when the user declined or consent failed (e.g. `access_denied`); when present the flow stops and an HTML failure page is returned",
           "in" : "query",
           "name" : "error",
           "required" : false,
@@ -18621,6 +18696,7 @@
       "post" : {
         "operationId" : "disconnect",
         "parameters" : [ {
+          "description" : "The provider key, as `name` in `GET /auth/oauth2/providers`; every connected account under it and its stored tokens are removed. An unknown key is not refused and answers `removed: 0`",
           "in" : "path",
           "name" : "provider",
           "required" : true,
@@ -18648,6 +18724,7 @@
       "post" : {
         "operationId" : "disconnectAccount",
         "parameters" : [ {
+          "description" : "The provider key, as `name` in `GET /auth/oauth2/providers`",
           "in" : "path",
           "name" : "provider",
           "required" : true,
@@ -18655,6 +18732,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The account to disconnect, as `accountId` in that provider's `accounts` (the identity the provider's introspection resolved, or `default` for a single-account provider); an id with nothing connected is not refused and still answers `disconnected`",
           "in" : "path",
           "name" : "accountId",
           "required" : true,
@@ -18744,6 +18822,7 @@
       "delete" : {
         "operationId" : "disconnect_2",
         "parameters" : [ {
+          "description" : "The `accountId` of one of the caller's connected accounts, as listed by GET /calendar/connections; an id that matches none of them is a silent no-op and still answers 204",
           "in" : "path",
           "name" : "accountId",
           "required" : true,
@@ -18764,6 +18843,7 @@
       "get" : {
         "operationId" : "events",
         "parameters" : [ {
+          "description" : "Length of the window in days, starting now and running forward, so past events are never included; defaults to `7`, `0` gives a zero-length window, and a negative value is a 400. No upper limit is applied",
           "in" : "query",
           "name" : "days",
           "required" : false,
@@ -18847,6 +18927,7 @@
         "description" : "Stores the file, links it to the conversation, and raises an `attachment.received` signal that handlers may claim. Accepts any media type — what happens to a file is decided by dispatch, not by this endpoint. If more than one handler could take it, a question is posted into the conversation.",
         "operationId" : "sendAttachment",
         "parameters" : [ {
+          "description" : "Optional text posted as the user's message the file is attached to; omitted or blank, the message reads `[attached: <filename>]`. Not yet read for routing intent — use `target` for that",
           "in" : "query",
           "name" : "caption",
           "required" : false,
@@ -18868,6 +18949,7 @@
               "schema" : {
                 "properties" : {
                   "file" : {
+                    "description" : "The file, as a multipart part; any media type is accepted, and its original filename and content type are kept (`application/octet-stream` when the part has none). Empty is a 400; the upload is bounded by the configured multipart limit (50MB as shipped)",
                     "format" : "binary",
                     "type" : "string"
                   }
@@ -18919,6 +19001,7 @@
         "description" : "Applies the capability the user chose. Accepts human phrasing (\"yes\", \"add it to my documents\") or a capability id. Omit `attachmentId` to answer the most recent question.",
         "operationId" : "answer",
         "parameters" : [ {
+          "description" : "The user's reply, in their own words (`yes`, `add it to my documents`, a decline such as `no`) or a capability id from the question's options; one that matches no option answers `unclear` with the options rather than guessing",
           "in" : "query",
           "name" : "answer",
           "required" : true,
@@ -18926,6 +19009,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The attachment whose question this answers, as `attachmentId` from `POST /chat/attachment`; omitted, the caller's most recently asked, unexpired question is answered",
           "in" : "query",
           "name" : "attachmentId",
           "required" : false,
@@ -19338,6 +19422,7 @@
         "description" : "Returns the authenticated user's persisted sessions, chats and threads alike, most recently active first, capped at 50 entries. An agent's own sessions, held through an OpenAI, A2A or MCP client, are listed only when asked for with `kind=agent`, and a Telegram, Slack or Discord chat only with `kind=channel`; `kind` names one kind of session to list. Each says its kind — a thread is posted in through /threads — who started it, when anyone has written in it yet, and the agent it is held with, if any. Metadata only (no message bodies).",
         "operationId" : "listSessions",
         "parameters" : [ {
+          "description" : "One kind of session to list, case-insensitive: `thread`, `agent`, `channel`, or the stored name of the plain chat kind. Omitted, chats and threads are listed and agent and channel sessions are left out; an unrecognised kind is refused with 400",
           "in" : "query",
           "name" : "kind",
           "required" : false,
@@ -19372,6 +19457,7 @@
         "description" : "Hard-deletes a session and its messages. Refuses (404) if the session doesn't exist or isn't owned by the caller — [ChatSessionService.deleteSession] can't tell those two cases apart from the outside, and shouldn't: leaking which is which would tell a caller whether an id belongs to someone else. If the deleted session was the one currently attached to this user's live chat stream, it's detached too (`wasActive: true` in the response), so the SPA knows to navigate back to a blank chat rather than keep talking into a session that no longer exists — mirrors ChatSessionsSidebar.onDelete's navigate-to-blank-/chat.",
         "operationId" : "deleteSession",
         "parameters" : [ {
+          "description" : "Id of the session to delete, as listed in `sessionId` by GET /api/v1/chat/sessions; 404 when no session of the caller's has it",
           "in" : "path",
           "name" : "sessionId",
           "required" : true,
@@ -19539,6 +19625,7 @@
               }
             }
           },
+          "description" : "The command to save: `command` is the slash command's name without the leading slash, `actionName` the world action it runs, and `description` optional help text (empty when omitted). Saved as `config/commands/<command>.yml` in the user's world, replacing any command of the same name, after which the world's GOAP specs are redeployed; the action name is not checked against the world here",
           "required" : true
         },
         "responses" : {
@@ -19742,6 +19829,7 @@
               }
             }
           },
+          "description" : "The complete collector settings, replacing what this world stores: `enabled`, `dryRun`, `matcher` (`cosine` or `multi-signal`), `similarityThreshold` (0 to 1) and `cron` (a Spring 6-field expression) are all required. The five weights `vector`, `lexical`, `entityOverlap`, `groundingOverlap` and `provenanceOverlap` sit flat on the body, are optional, and must each be 0 to 1; null or omitted means the matcher's own default. Validated before anything is saved, and the first problem found answers 400",
           "required" : true
         },
         "responses" : {
@@ -19963,6 +20051,7 @@
               }
             }
           },
+          "description" : "`mode`: `ASSISTANT` or `DEVELOPER`, trimmed and matched case-insensitively. Persisted to config.yml and read on every MCP call, so it applies without a reconnect; a missing or unrecognised mode answers 400",
           "required" : true
         },
         "responses" : {
@@ -20041,6 +20130,7 @@
               }
             }
           },
+          "description" : "The whole routing to store, replacing the current one in config.yml. `tierChannels` maps an upper-case tier name (`AMBIENT`, `DEFERRED`, `TIMELY`, `INTERRUPTIVE`, `ACTING`, `ESCALATING`; matched exactly) to the channel kinds it reaches (e.g. `vaadin`, `telegram`, `discord`, `sms`); a tier left out inherits the deployment default. `quietHours` (`enabled`, and local-time `start` and `end` as `HH:mm`) overrides the deployment window; omitted, the deployment window applies. Nothing is validated: unknown tiers and channels are stored as sent",
           "required" : true
         },
         "responses" : {
@@ -20100,6 +20190,7 @@
               }
             }
           },
+          "description" : "Replaces the context's setting in this world's config. Send `role` (a role id from GET /config/router) or `model` (one of the chat models it lists), trimmed, not both; either keeps the context's temperature and reasoning effort. Send neither, or both blank, to return the context to the deployment default, keeping only its reasoning effort. Both at once, or an unknown role or model, answers 400",
           "required" : true
         },
         "responses" : {
@@ -20140,6 +20231,7 @@
               }
             }
           },
+          "description" : "The custom role to add to this world's config: `id` (trimmed; 2-40 lowercase letters, digits and underscores, starting with a letter, and not already a built-in, deployment or custom role), `description` (required; what the role is for) and `model` (one of the chat models GET /config/router lists). Any of these failing answers 400; nothing is saved",
           "required" : true
         },
         "responses" : {
@@ -20236,6 +20328,7 @@
               }
             }
           },
+          "description" : "`model`: one of the chat models GET /config/router lists, trimmed, which the role then uses in this world. Blank or omitted removes the world's override so a built-in role falls back to the deployment's choice; a custom role refuses that with 400, as does an unknown model",
           "required" : true
         },
         "responses" : {
@@ -20314,6 +20407,7 @@
               }
             }
           },
+          "description" : "The context to switch to in `name`, trimmed and matched exactly. A name not used before starts a new, empty context; a blank one is a 400",
           "required" : true
         },
         "responses" : {
@@ -20344,6 +20438,7 @@
               }
             }
           },
+          "description" : "`lat` and `lng` (both required): the browser's position in decimal degrees, as `navigator.geolocation` reports it. Recorded as the user's `browser-geolocation` observation at confidence 0.9, replacing the previous one from that source. A latitude outside -90..90 or a longitude outside -180..180 is dropped and still answers 204",
           "required" : true
         },
         "responses" : {
@@ -20367,6 +20462,7 @@
               }
             }
           },
+          "description" : "`zone`: the browser's IANA time zone id (e.g. `Europe/London`, as `Intl.DateTimeFormat().resolvedOptions().timeZone` reports it); anything `java.time.ZoneId` parses is accepted, fixed offsets such as `+02:00` included. A new zone is saved on the user and the world's time zone refreshed. A blank or unparseable zone is ignored and still answers 204, leaving the stored value as it was",
           "required" : true
         },
         "responses" : {
@@ -20411,6 +20507,7 @@
               }
             }
           },
+          "description" : "The job to save as `config/cron/<name>.yml` in the caller's world and schedule, replacing any job with the same `name`. `cron` is a Spring 6-field expression, fired in the caller's own time zone unless `zone` names an IANA zone; `actionName` is the world action the job runs, and `payload` travels on the event each firing raises. An unparseable `cron` is saved but never fires",
           "required" : true
         },
         "responses" : {
@@ -20454,6 +20551,7 @@
               }
             }
           },
+          "description" : "The job to build and when to run it. `description` says in natural language what the job does: it is compiled into a world action named `cron-<name>` and kept as the job's description. `cron` is the Spring 6-field expression it fires on, in the caller's own time zone. `toolNames`, `inputTypeNames` and `outputTypeName` are optional and passed to the compiler; omitted means none. A job with the same `name` is replaced",
           "required" : true
         },
         "responses" : {
@@ -20497,6 +20595,7 @@
               }
             }
           },
+          "description" : "The schedule in words under `schedule`, e.g. `every day at 7am`; a missing one is a 400. Nothing is saved or scheduled: the answer is a cron expression, checked to parse before it is returned, to pass on to `POST /cron` or `POST /cron/compile`",
           "required" : true
         },
         "responses" : {
@@ -20744,6 +20843,7 @@
               }
             }
           },
+          "description" : "A directory entry as search returns it, installed into the authenticated user's world; `type` picks how. SKILL installs the GitHub skill at `source`. API learns the OpenAPI spec at `source` (400 when blank), keeping `metadata.headers`, a string map, as the API's custom headers. REALM clones and admits the realm repository at `source` under `name`. MCP_SERVER fetches the README at `source` (then `url`), has a model extract the launch configuration, and files it under a name derived from `name`. `description` is not used. Any failure answers 400 with `status: error`",
           "required" : true
         },
         "responses" : {
@@ -20871,6 +20971,7 @@
               }
             }
           },
+          "description" : "What to discover, in `query`: a URL starting `http://` or `https://` (a website, docs page or spec) is probed for a spec first and read as docs when none is found; anything else is a natural-language description such as `weather API`, searched for on the web and read by an LLM, unless a cached discovery's name already contains it, which is returned instead. A result read from docs is cached under its `name`, which `POST /discovery/install` takes; a spec the URL probe finds directly is not cached",
           "required" : true
         },
         "responses" : {
@@ -20923,6 +21024,7 @@
               }
             }
           },
+          "description" : "The `name` a prior discovery assigned, as `GET /discovery/cache` lists it; that cached result is installed into the caller's world, learning the real spec when possible. A name not in the cache, which does not survive a restart, is a 404",
           "required" : true
         },
         "responses" : {
@@ -21026,6 +21128,7 @@
               }
             }
           },
+          "description" : "The question to answer from the caller's own documents, and how to search for them. `question` must not be blank (400). `window`, `tag` and `uri` narrow which documents are searched, and a `uri` the caller's world does not hold is 404. `topK` defaults to 6 and is clamped to 1..25; `maxSnippet` raises the per-passage cap from its 400-character default, up to 8000; `minScore` (default 0.25) applies only when `answer` is false. `answer=false` skips composing an answer and returns ranked sources only. `history` carries prior turns, oldest first, of which the last six reach the prompt",
           "required" : true
         },
         "responses" : {
@@ -21076,6 +21179,7 @@
               }
             }
           },
+          "description" : "The document to complete, by the `uri` GET /api/v1/documents lists it under in the caller's world (404 if the world holds none there). Only its chunks stored without a vector are embedded, as a job; the document is not re-ingested",
           "required" : true
         },
         "responses" : {
@@ -21137,6 +21241,7 @@
         "description" : "Answers 202 once the file is received, with a job to follow at GET /documents/ingests/{id}, rather than holding the request until the document is written.",
         "operationId" : "upload",
         "parameters" : [ {
+          "description" : "Domain of the organisation the file is really from, recorded as its publisher (the upload dialog's From field); omitted or blank records none",
           "in" : "query",
           "name" : "fromOrgDomain",
           "required" : false,
@@ -21144,6 +21249,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Tags to stamp on the document and its chunks, as repeated `tags` fields or one comma-separated value; trimmed, blanks dropped, duplicates collapsed. Omitted leaves the document untagged",
           "in" : "query",
           "name" : "tags",
           "required" : false,
@@ -21160,6 +21266,7 @@
               "schema" : {
                 "properties" : {
                   "file" : {
+                    "description" : "The file to ingest (PDF, text, HTML and other formats the converter reads), spooled to disk before the 202 so the job survives a restart. Its original filename names the job and the document; a part with no filename is called `upload`",
                     "format" : "binary",
                     "type" : "string"
                   }
@@ -21208,6 +21315,7 @@
               }
             }
           },
+          "description" : "What to fetch and ingest, read as by `POST /api/v1/documents/url` but run as a job: `url` is fetched and ingested after the 202, and names the job; its host's domain is the publisher unless `fromOrgDomain` names another; `tags` are trimmed, blanks dropped and duplicates collapsed, and omitted leaves the document untagged",
           "required" : true
         },
         "responses" : {
@@ -21241,6 +21349,7 @@
         "description" : "Where the caller's ingest has got: its stage, embedding progress, and how it ended.",
         "operationId" : "job",
         "parameters" : [ {
+          "description" : "The job's UUID, as returned in the 202 of an ingest or embed-missing request (and its `Location`), or listed by GET /api/v1/documents/ingests. Another user's job, or one forgotten after its retention, is 404",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -21382,6 +21491,7 @@
               }
             }
           },
+          "description" : "The document, by the `uri` GET /api/v1/documents lists it under in the caller's world, and the complete tag list it should carry. The list replaces the existing tags on the document and every chunk; entries are trimmed, blanks dropped and duplicates collapsed, and an empty list removes every tag. Nothing is re-ingested",
           "required" : true
         },
         "responses" : {
@@ -21422,6 +21532,7 @@
               }
             }
           },
+          "description" : "Inline text to keep and ingest. `content` is saved as `data/documents/<name>` in the world, overwriting any file of that name, then ingested from there; `name` doubles as the title when none can be parsed from the content. `tags` are trimmed, blanks dropped and duplicates collapsed; omitted or empty leaves the document untagged",
           "required" : true
         },
         "responses" : {
@@ -21465,6 +21576,7 @@
         "description" : "Upload a file (PDF, text, HTML, etc.) for ingestion. The optional fromOrgDomain field records which org the file is really from (the upload dialog's From field).",
         "operationId" : "uploadFile",
         "parameters" : [ {
+          "description" : "Domain of the organisation the file is really from, recorded as its publisher (the upload dialog's From field); omitted or blank records none",
           "in" : "query",
           "name" : "fromOrgDomain",
           "required" : false,
@@ -21472,6 +21584,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Tags to stamp on the document and its chunks, as repeated `tags` fields or one comma-separated value; trimmed, blanks dropped, duplicates collapsed. Omitted leaves the document untagged",
           "in" : "query",
           "name" : "tags",
           "required" : false,
@@ -21488,6 +21601,7 @@
               "schema" : {
                 "properties" : {
                   "file" : {
+                    "description" : "The file to ingest (PDF, text, HTML and other formats the converter reads). Its original filename names the document, whose uri is `upload://<world context>/<filename>`; a part with no filename is called `upload`",
                     "format" : "binary",
                     "type" : "string"
                   }
@@ -21536,6 +21650,7 @@
               }
             }
           },
+          "description" : "What to fetch and ingest into the caller's world, synchronously. `url` is fetched, converted and chunked; its host's domain is recorded as the publisher unless `fromOrgDomain` names another (blank keeps the host). `tags` are trimmed, blanks dropped and duplicates collapsed; omitted or empty leaves the document untagged",
           "required" : true
         },
         "responses" : {
@@ -21597,6 +21712,7 @@
       "delete" : {
         "operationId" : "disconnect_1",
         "parameters" : [ {
+          "description" : "The account's provider-assigned id, as listed in `accounts[].accountId` by GET /api/v1/email/connections. Looked up in the caller's own world only; an id not found there changes nothing and still answers 204",
           "in" : "path",
           "name" : "accountId",
           "required" : true,
@@ -21617,6 +21733,7 @@
       "get" : {
         "operationId" : "threads",
         "parameters" : [ {
+          "description" : "How far back to look, in whole days ending now; defaults to `14`, and zero or negative is refused with 400",
           "in" : "query",
           "name" : "days",
           "required" : false,
@@ -21626,6 +21743,7 @@
             "type" : "integer"
           }
         }, {
+          "description" : "Most threads taken from each connected account, so the response holds at most this many per account; defaults to `50`, and zero or negative is refused with 400",
           "in" : "query",
           "name" : "maxPerAccount",
           "required" : false,
@@ -21691,6 +21809,7 @@
               }
             }
           },
+          "description" : "`model` names the embedding model to switch to, or a role that resolves to one such as `hosted`; trimmed, and 400 when blank or when nothing here resolves it. Naming the model already in use changes nothing and answers `unchanged`; any other model drops and rebuilds every vector index and re-embeds every store",
           "required" : true
         },
         "responses" : {
@@ -21817,6 +21936,7 @@
               }
             }
           },
+          "description" : "`reason`, optional, says why everything is being stopped and is shown with the halt to whoever reads it later; send `{}` to halt without one",
           "required" : true
         },
         "responses" : {
@@ -21886,6 +22006,7 @@
         "description" : "Adopting a realm-shipped handler that writes. Scoped to the authenticated user's world; no parameter can name another.",
         "operationId" : "setEnabled",
         "parameters" : [ {
+          "description" : "Name of a TypeScript handler in the caller's world, as `name` in GET /handlers; an exact match. 404 when the world has no handler of that name",
           "in" : "query",
           "name" : "name",
           "required" : true,
@@ -21893,6 +22014,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "`true` adopts the handler so it may fire, which a realm handler that writes needs because it defaults to off; `false` switches it off. Stored as the caller's own override, keeping any schedule already recorded for it",
           "in" : "query",
           "name" : "enabled",
           "required" : true,
@@ -22078,6 +22200,7 @@
               }
             }
           },
+          "description" : "The whole schedule, replacing the one stored in the signed-in user's world. `frequency` is `NEVER`, `DAILY`, `WEEKDAYS` (Monday to Friday) or `WEEKLY` (Mondays), default `WEEKDAYS`; `NEVER` removes the job. `hour` is the hour, 0-23 in the user's own zone, a tip is posted at, default 9. A field left out takes its default, not the stored value; the record of tips already posted is kept",
           "required" : true
         },
         "responses" : {
@@ -22211,6 +22334,7 @@
         "description" : "Scoped to the authenticated user. The content type is derived from the file extension.",
         "operationId" : "serve",
         "parameters" : [ {
+          "description" : "The image's stored file name with its extension, which sets the content type: `jpg`, `jpeg`, `png`, `gif`, `webp` or `bmp`, case-insensitive; any other extension is a 403. Looked up among the caller's own chat images, then the world's legacy `data/images/`",
           "in" : "path",
           "name" : "filename",
           "required" : true,
@@ -22319,6 +22443,7 @@
               }
             }
           },
+          "description" : "The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`",
           "required" : true
         },
         "responses" : {
@@ -22368,6 +22493,7 @@
               }
             }
           },
+          "description" : "The natural-language question, in `question`. Cypher is written for it and validated against the caller's schema, regenerating on failure, but never run; saved views are not consulted first as they are on the admin `/admin/kg/generate`",
           "required" : true
         },
         "responses" : {
@@ -22410,6 +22536,7 @@
       "post" : {
         "operationId" : "studioKill",
         "parameters" : [ {
+          "description" : "The run's id, as `GET /kg/studio/runs` lists it (the `queryId` its SSE stream carries); a run that has settled or is not the caller's answers `killed: false`",
           "in" : "path",
           "name" : "runId",
           "required" : true,
@@ -22454,6 +22581,7 @@
               }
             }
           },
+          "description" : "The current, possibly hand-edited Cypher in `cypher` and what to change about it in `instruction`; the revision is validated but never run, and the response's `question` echoes the instruction",
           "required" : true
         },
         "responses" : {
@@ -22586,6 +22714,7 @@
       "delete" : {
         "operationId" : "studioDeleteScope",
         "parameters" : [ {
+          "description" : "The captured scope's name, as given in `captureAs` and listed by `GET /kg/studio/scopes`; an unknown or expired name is not an error and answers `deleted: false`",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -22623,6 +22752,7 @@
       "post" : {
         "operationId" : "studioPinScope",
         "parameters" : [ {
+          "description" : "The captured scope's name, as listed by `GET /kg/studio/scopes`; pinning removes its expiry, and a name with no live scope behind it is a 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -22677,6 +22807,7 @@
               }
             }
           },
+          "description" : "The Cypher to check, in `cypher`, preflighted against the caller's schema exactly as strict execution would; only `cypher` is read, so `params`/`args` are not substituted and `captureAs` is ignored",
           "required" : true
         },
         "responses" : {
@@ -22746,6 +22877,7 @@
               }
             }
           },
+          "description" : "The view to store in the caller's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a same-named view the caller saved is replaced, and a name a shipped view owns is a 400",
           "required" : true
         },
         "responses" : {
@@ -22788,6 +22920,7 @@
       "delete" : {
         "operationId" : "studioDeleteView",
         "parameters" : [ {
+          "description" : "The name of a view the caller saved, as `GET /kg/studio/views` lists it; a shipped or realm view is not the caller's to remove and, like an unknown name, is a 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -22835,6 +22968,7 @@
       "post" : {
         "operationId" : "studioViewInvocation",
         "parameters" : [ {
+          "description" : "The view's name, as `GET /kg/studio/views` lists it — a world or realm view, saved or shipped; no view of that name is a 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -22849,7 +22983,8 @@
                 "$ref" : "#/components/schemas/KgInvokeViewRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty runs on the defaults. A missing required or uncoercible argument is a 400. Keys sent beside `args` rather than inside it are ignored here"
         },
         "responses" : {
           "200" : {
@@ -22901,6 +23036,7 @@
       "post" : {
         "operationId" : "studioRefreshView",
         "parameters" : [ {
+          "description" : "The materialised view's name, as `GET /kg/studio/views` lists it; a regular or unknown view is not an error and answers `refreshed: false`",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -22945,6 +23081,7 @@
               }
             }
           },
+          "description" : "The API to connect. `mode` is an auth-mode id from GET /api/v1/learn/apis/modes: `none` (the default when omitted), `bearer` or `api-key`; any other is refused with 400. `specUrl` (required, the OpenAPI document's URL), `name`, `token` and `headerName` may be given top-level or inside `fields`, the top-level value winning. `token` is required unless the mode is `none` and is stored in the user's wallet; `headerName` is used by `api-key` and defaults to `X-API-Key`; `name` defaults to the name the spec gives itself, slugged. The spec is fetched and parsed before anything is saved, and the world is rebuilt",
           "required" : true
         },
         "responses" : {
@@ -22986,6 +23123,7 @@
       "put" : {
         "operationId" : "updateLearnSourceApi",
         "parameters" : [ {
+          "description" : "Name of the connected API to change, as listed by GET /api/v1/learn/sources; 404 when it is not an API this user connected",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23001,6 +23139,7 @@
               }
             }
           },
+          "description" : "The new connection, in the shape POST /api/v1/learn/apis takes. `specUrl` is required, `mode` defaults to `none`, a blank `token` keeps the stored one, and `headerName` defaults to `X-API-Key`; a `name` in the body is ignored, since the path names the API. The spec is fetched first and nothing changes when that fails; a saved change drops the reviews held for this source and rebuilds the world",
           "required" : true
         },
         "responses" : {
@@ -23040,6 +23179,7 @@
               }
             }
           },
+          "description" : "The database to connect: preferably `engine` (an id from GET /api/v1/learn/databases/engines) with `fields` keyed by that engine's field names, otherwise a ready `jdbcUrl` (400 when neither is given). Top-level `username` and `password` apply to either shape and, when not blank, override the same keys in `fields`. The password goes to the user's wallet, never into world YAML. The database is introspected before the datasource is saved, and the world is rebuilt",
           "required" : true
         },
         "responses" : {
@@ -23081,6 +23221,7 @@
       "put" : {
         "operationId" : "updateLearnSourceDatabase",
         "parameters" : [ {
+          "description" : "Name of the connected database to change, as listed by GET /api/v1/learn/sources; 404 when it is not a database this user connected",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23096,6 +23237,7 @@
               }
             }
           },
+          "description" : "The new connection, in the shape POST /api/v1/learn/databases takes: `engine` with `fields`, or a `jdbcUrl`, plus `username` and `password`. A blank password keeps the stored one. The connection is introspected first and nothing changes when that fails or finds no tables; a saved change drops the reviews held for this source and rebuilds the world",
           "required" : true
         },
         "responses" : {
@@ -23147,6 +23289,7 @@
       "delete" : {
         "operationId" : "disconnectLearnSource",
         "parameters" : [ {
+          "description" : "Name of the connected source to disconnect; its stored secret and any provisional realm learned from it go too. 404 when it is not a source this user connected",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23174,6 +23317,7 @@
       "get" : {
         "operationId" : "learnSourceConnection",
         "parameters" : [ {
+          "description" : "Name of a source this user connected, as listed by GET /api/v1/learn/sources; 404 for an unknown name or a source a realm declares itself",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23194,6 +23338,7 @@
       "get" : {
         "operationId" : "descriptionBrief",
         "parameters" : [ {
+          "description" : "Name of the connected database to brief on, as listed by GET /api/v1/learn/sources; 404 when no reachable connected database has that name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23201,6 +23346,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "How much the drafter may read, case-insensitive: `METADATA` (schema only; the default when omitted or unrecognised) or `SAMPLE_ROWS` (a model may also read example rows). `DISTINCT_VALUES` is refused with 400 here",
           "in" : "query",
           "name" : "consent",
           "required" : false,
@@ -23228,6 +23374,7 @@
       "post" : {
         "operationId" : "descriptionReview",
         "parameters" : [ {
+          "description" : "Name of the connected database whose current state is held as the baseline for saving reviewed wording, as listed by GET /api/v1/learn/sources; 404 when no connected database has that name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23255,6 +23402,7 @@
       "delete" : {
         "operationId" : "uninstallLearnSourceRealm",
         "parameters" : [ {
+          "description" : "Name of the source whose provisional realm is uninstalled; the connection itself stays. 404 when no provisional realm is installed for it",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23282,6 +23430,7 @@
       "post" : {
         "operationId" : "learn",
         "parameters" : [ {
+          "description" : "Name of the source to learn, as listed by GET /api/v1/learn/sources; 404 when no reachable source has that name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -23296,7 +23445,8 @@
                 "$ref" : "#/components/schemas/LearnRequest"
               }
             }
-          }
+          },
+          "description" : "Optional; omitted, the source is learned as a realm from metadata alone. `consent` sets how much may be read, case-insensitive: `METADATA` (the default, also used for an unrecognised value), `DISTINCT_VALUES` or `SAMPLE_ROWS`. `purpose` is one line on what the source is, used as evidence by the curation. `descriptionsOnly: true` drafts a database description instead of a realm, and then takes only `METADATA` or `SAMPLE_ROWS` (400 otherwise). Nothing is written to the world either way"
         },
         "responses" : {
           "404" : {
@@ -23338,6 +23488,7 @@
       "delete" : {
         "operationId" : "discardLearnReview",
         "parameters" : [ {
+          "description" : "Id of the held realm-draft review to discard, as returned by POST /api/v1/learn/sources/{name}/learn; 404 when it is unknown, expired, already discarded or another user's",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23356,6 +23507,7 @@
       "get" : {
         "operationId" : "proposal",
         "parameters" : [ {
+          "description" : "Id of a held review, as returned by a learn or a description review or listed as `pendingReview` by GET /api/v1/learn/sources. Realm drafts and database-description reviews are both answered. Only the five most recent of each per user are held; 404 when the id is unknown, has fallen off, or is another user's",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23383,6 +23535,7 @@
       "post" : {
         "operationId" : "answerLearningQuestion",
         "parameters" : [ {
+          "description" : "Id of the held draft review (`learn-` plus a UUID, as returned by POST /api/v1/learn/sources/{name}/learn) whose open question is answered; 404 when no draft of that id is held for this user, which includes an expired id and a database-description review",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23398,6 +23551,7 @@
               }
             }
           },
+          "description" : "The question to settle: `subject` is an open question's subject as the review lists it, and `choice` one of that question's option values. For a SQL source, a mined decision takes `keep`, `reverse` (flip an edge's direction), or anything else to fall back to the mined default; a proposed join takes `accept` to add the key, and anything else drops the candidate. The draft is re-emitted with the answer recorded under the caller's name",
           "required" : true
         },
         "responses" : {
@@ -23433,6 +23587,7 @@
       "post" : {
         "operationId" : "approveLearningDecisions",
         "parameters" : [ {
+          "description" : "Id of the held draft review (`learn-` plus a UUID, as returned by POST /api/v1/learn/sources/{name}/learn) whose decisions are approved; 404 when no draft of that id is held for this user, which includes an expired id and a database-description review",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23448,6 +23603,7 @@
               }
             }
           },
+          "description" : "What the reviewer approves: `revision` is the draft revision they read (409 REVISION_STALE when the draft has moved on), and `subjects` the subjects of displayed decisions they approve, such as `rename:Grant` (400 DECISION_UNKNOWN when empty or naming one the review does not display). The approvals are recorded against the draft and shown on the review; they do not yet gate the install",
           "required" : true
         },
         "responses" : {
@@ -23483,6 +23639,7 @@
       "post" : {
         "operationId" : "changeLearningDecision",
         "parameters" : [ {
+          "description" : "Id of the held draft review (`learn-` plus a UUID, as returned by POST /api/v1/learn/sources/{name}/learn) in which a decision is changed; 404 when no draft of that id is held for this user, which includes an expired id and a database-description review",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23498,6 +23655,7 @@
               }
             }
           },
+          "description" : "One change in a person's own words: `revision` is the draft revision they read (409 REVISION_STALE when the draft has moved on), `subject` a displayed name or description decision, and `value` the wording that replaces it. A subject that is not a name or description, or a value the draft cannot carry, is refused with 400 CHANGE_INVALID. The draft is re-emitted with the change recorded under the caller's name",
           "required" : true
         },
         "responses" : {
@@ -23543,6 +23701,7 @@
       "post" : {
         "operationId" : "install",
         "parameters" : [ {
+          "description" : "Id of the held review to install: a realm draft installs as a provisional realm, a database-description review saves its reviewed description. 404 when it is unknown, expired or another user's",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23557,7 +23716,8 @@
                 "$ref" : "#/components/schemas/InstallRequest"
               }
             }
-          }
+          },
+          "description" : "Optional for a realm draft. `revision` and `acknowledgedWarnings` claim the review the installer read: when either is given, the revision must be the draft's current one (409 REVISION_STALE) and every warning the review shows must be acknowledged by id (400 WARNINGS_NOT_ACKNOWLEDGED; an unknown id is 409 WARNINGS_STALE); both absent installs unacknowledged. For a database-description review, `description` is the reviewed wording to save and is required (400 when absent); it is ignored for a realm draft"
         },
         "responses" : {
           "400" : {
@@ -23589,6 +23749,7 @@
       "post" : {
         "operationId" : "promote",
         "parameters" : [ {
+          "description" : "Id of the held realm-draft review whose installed provisional realm is promoted; 404 when it is unknown, expired or another user's. The review is released once the promotion succeeds",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23604,6 +23765,7 @@
               }
             }
           },
+          "description" : "`name` is the realm name to promote to: it becomes the realm's directory under the world's realms and the name in its manifest. Promotion never overwrites, so an existing realm of that name is refused with 409, as is a provisional realm whose files or revision no longer match its install receipt",
           "required" : true
         },
         "responses" : {
@@ -23626,6 +23788,7 @@
       "get" : {
         "operationId" : "list",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23651,6 +23814,7 @@
       "put" : {
         "operationId" : "create",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23666,6 +23830,7 @@
               }
             }
           },
+          "description" : "Saves a CypherScript lens for the caller. `name` and `script` are required and must be non-blank (400 otherwise); the lens id is the slug of `name` (lowercased, runs of other characters turned to `-`), so saving under an existing name replaces that lens. `params` declares the parameters callers may supply as `args`; `persona` and `schedule` are stored with the definition",
           "required" : true
         },
         "responses" : {
@@ -23688,6 +23853,7 @@
       "post" : {
         "operationId" : "briefing",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23702,7 +23868,8 @@
                 "$ref" : "#/components/schemas/BriefingLensRequest"
               }
             }
-          }
+          },
+          "description" : "Optional window for the brief. `since` and `asOf` are ISO-8601 dates or instants, `lookbackDays` a whole number of days; every field is optional and an omitted one is not passed to the lens, so with none (or no body) the configured briefing strategy's window applies. Reading the brief this way does not move the daily brief's cursor"
         },
         "responses" : {
           "404" : {
@@ -23724,6 +23891,7 @@
       "post" : {
         "operationId" : "chat",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23739,6 +23907,7 @@
               }
             }
           },
+          "description" : "`question` is answered from the lens's focused entities. The lens comes from `lensId` (a saved, world or realm lens id, or a saved view name) when it is non-blank and resolves, else from `script` (a CypherScript, run without saving), else is generated from `english`. Omit `conversationId` on the first turn and send back the returned one to continue the same conversation",
           "required" : true
         },
         "responses" : {
@@ -23861,6 +24030,7 @@
       "post" : {
         "operationId" : "present",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23868,6 +24038,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Lens id, resolved in order: the caller's saved lens (the slug of its name, as `PUT /lenses` returns it), a world or realm lens, then a saved view by name; 404 when none matches",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23882,7 +24053,8 @@
                 "$ref" : "#/components/schemas/RunSavedRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults, and the presented content is rendered from them; omit the body or `args` to present on the defaults alone. A required parameter left unset fails the request"
         },
         "responses" : {
           "200" : {
@@ -23904,6 +24076,7 @@
       "post" : {
         "operationId" : "run_2",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23911,6 +24084,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Lens id, resolved in order: the caller's saved lens (the slug of its name, as `PUT /lenses` returns it), a world or realm lens, then a saved view by name; 404 when none matches",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23925,7 +24099,8 @@
                 "$ref" : "#/components/schemas/RunSavedRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults; omit the body or `args` to run on the defaults alone. A required parameter left unset fails the request"
         },
         "responses" : {
           "404" : {
@@ -23947,6 +24122,7 @@
       "post" : {
         "operationId" : "views",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23954,6 +24130,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Lens id, resolved in order: the caller's saved lens (the slug of its name, as `PUT /lenses` returns it), a world or realm lens, then a saved view by name; 404 when none matches",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -23968,7 +24145,8 @@
                 "$ref" : "#/components/schemas/RunSavedRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults. The opened result is cached per lens and `args`, so the view listing and each view render share one retrieval only when they send the same `args`; a required parameter left unset fails the request"
         },
         "responses" : {
           "200" : {
@@ -23990,6 +24168,7 @@
       "post" : {
         "operationId" : "renderView",
         "parameters" : [ {
+          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -23997,6 +24176,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Lens id, resolved in order: the caller's saved lens (the slug of its name, as `PUT /lenses` returns it), a world or realm lens, then a saved view by name; 404 when none matches",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -24004,6 +24184,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "View id, one of those `POST /lenses/{id}/views` lists for this lens (for example `items`, `table` or `brief`); 404 when no view has this id, 409 when it does not apply to this lens's result",
           "in" : "path",
           "name" : "view",
           "required" : true,
@@ -24018,7 +24199,8 @@
                 "$ref" : "#/components/schemas/RunSavedRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults. The opened result is cached per lens and `args`, so the view listing and each view render share one retrieval only when they send the same `args`; a required parameter left unset fails the request"
         },
         "responses" : {
           "404" : {
@@ -24084,7 +24266,8 @@
                 "$ref" : "#/components/schemas/InvokeRequest"
               }
             }
-          }
+          },
+          "description" : "The lens's arguments under `args`, keyed by its declared parameter names; an argument left out takes the parameter's default, and a required parameter left with no value is refused with 400. Omitting the body, or `args`, runs the lens on its defaults. Any top-level field other than `args` and `idempotencyKey` is refused with 400 rather than ignored; `idempotencyKey` is accepted but does not deduplicate invocations here"
         },
         "responses" : {
           "400" : {
@@ -24156,6 +24339,7 @@
               }
             }
           },
+          "description" : "The fact, in `text`, stored verbatim after trimming with no LLM extraction; blank or over 2000 characters is a 400. `confidence` is optional, defaults to 0.9 and is clamped to 0–1; it is ignored when an ACTIVE fact with the same text, ignoring case and surrounding whitespace, already exists and is returned instead",
           "required" : true
         },
         "responses" : {
@@ -24208,6 +24392,7 @@
         "description" : "`status` is DONE, TODO or UNKNOWN. UNKNOWN means the step's own query could not be answered — `detail` says why — and must not be shown as outstanding work: a surface that nags on a broken query nags hardest when the appliance is least well.",
         "operationId" : "nextSteps",
         "parameters" : [ {
+          "description" : "Username whose world is read; when it names an existing user it is used even if the request is authenticated as someone else. Omitted, blank or unknown, the authenticated user is used; 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24236,6 +24421,7 @@
         "description" : "The only remembered thing here: every other answer is derived from the graph. Dismissing does NOT mark a step done — it is still evaluated, so one waved away and then done anyway still reports DONE.",
         "operationId" : "setDismissed",
         "parameters" : [ {
+          "description" : "Step id as the list returns it, `<source>_<declared id or position>`. Not checked against the declared steps: an id nothing declares is recorded and has no effect",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -24243,6 +24429,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Username whose world the dismissal is recorded in, and whose list comes back; when it names an existing user it is used even if the request is authenticated as someone else. Omitted, blank or unknown, the authenticated user is used; 401 when neither resolves to a user",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24258,6 +24445,7 @@
               }
             }
           },
+          "description" : "`dismissed: true` records the step as dismissed in the acting user's world, `false` takes that back; omitted, it defaults to `true`. The step is still evaluated, so dismissing never makes it DONE",
           "required" : true
         },
         "responses" : {
@@ -24462,6 +24650,7 @@
               }
             }
           },
+          "description" : "What to profile: `sources` (required; source ids from GET /onboarding/sources such as `email`, `calendar`, `osx`, and an empty list means every available source), `lookbackDays` (how many days of activity to read; default 30, not clamped) and `buildMeApp` (default false; true also builds a Me app from the persona, the expensive part). The run happens in the background and answers 202 with a `jobId` to poll",
           "required" : true
         },
         "responses" : {
@@ -24503,6 +24692,7 @@
       "get" : {
         "operationId" : "status_2",
         "parameters" : [ {
+          "description" : "Job id (a UUID) returned by POST /onboarding/run. Jobs are held in this server's memory only, so a restart forgets them; a job that finished more than an hour ago is answered once more and then removed, after which it answers 404",
           "in" : "path",
           "name" : "jobId",
           "required" : true,
@@ -24531,6 +24721,7 @@
               }
             }
           },
+          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1` and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms; `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts; `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
           "required" : true
         },
         "responses" : {
@@ -24628,6 +24819,7 @@
               }
             }
           },
+          "description" : "The new display name in `name`, trimmed. It is pushed to WorkOS and proposition prose naming the user is updated to match. Blank is a 400: a display name cannot be cleared",
           "required" : true
         },
         "responses" : {
@@ -24657,6 +24849,7 @@
               }
             }
           },
+          "description" : "The home location, replacing any stored one. `latitude` and `longitude` are decimal degrees; a blank `label` becomes `home`. No coordinates and no label other than `home` clears the home location instead",
           "required" : true
         },
         "responses" : {
@@ -24703,6 +24896,7 @@
               }
             }
           },
+          "description" : "The whole preference set, not a patch: an omitted `greetingEnabled` is stored as `false` and an omitted `hintsEnabled` as `true`. `boltMode` is the exception: omitted leaves it as it is, blank clears it to the Bolt port's default, and otherwise it is `virtual` or `persisted`, case-insensitive (400 for anything else)",
           "required" : true
         },
         "responses" : {
@@ -24749,6 +24943,7 @@
               }
             }
           },
+          "description" : "The voice preference, replacing the stored one: `voiceName` is a voice `id` from GET /profile/voice, blank or omitted clearing it, and `effects` the effect names to apply, omitted or empty clearing them. Neither is checked against what GET /profile/voice offers",
           "required" : true
         },
         "responses" : {
@@ -24811,6 +25006,7 @@
               }
             }
           },
+          "description" : "Where the realm comes from: either `repo`, an `owner/repo` GitHub shorthand or a git URL (`https://`, `git@`, `file://`), cloned into the world under the repository's name, with an optional `ref` branch or commit to check out; or `path`, a realm directory already mounted into the appliance, loaded in place under its directory name with nothing cloned or copied. `path` wins when both are given, and `ref` and `confirmed` are ignored with it. On a `repo` install, `confirmed: true` is the user's explicit go-ahead for an experimental realm, which is otherwise refused with 409 `needs-confirmation`",
           "required" : true
         },
         "responses" : {
@@ -25009,6 +25205,7 @@
         "description" : "The image the realm declares as `icon` in realm.yml. 404 when the realm has none, names one that is missing, or names one outside its own directory.",
         "operationId" : "icon",
         "parameters" : [ {
+          "description" : "Name of an installed realm, as its realm.yml gives it and GET /api/v1/realms lists it; 404 when no loaded realm has that name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -25277,6 +25474,7 @@
               }
             }
           },
+          "description" : "The decision on a pending request: `decision` is `approve` or `reject`, case-insensitive, and anything else is a 409. Approving runs the request's verb as the caller and ignores `reason`; rejecting requires a non-blank `reason`, which is recorded on the request and in the run ledger",
           "required" : true
         },
         "responses" : {
@@ -25375,6 +25573,7 @@
               }
             }
           },
+          "description" : "The sample set to write. `name` (required) tags every node so the set can be removed by it; `realm` (required, non-blank) is not checked against what is installed; `nodes` (at least one) each carry a plain-identifier `label`, an `id` unique within the set, an optional `displayName` and `properties` with no leading-underscore keys; `edges` join nodes by `from`/`type`/`to` id, with at least one end in this set. Nodes are merged on label, id and the user's scope, so a second load does not duplicate. `matched` and `truncated` from an export are accepted and ignored. Any problem refuses the whole set with 400 before anything is written",
           "required" : true
         },
         "responses" : {
@@ -25415,6 +25614,7 @@
               }
             }
           },
+          "description" : "What to read out. `name` and `realm` (required) are copied onto the exported set. `labels` selects records carrying any of them (empty means any label) and `source` only the records that sample set loaded; at least one of the two is required. `limit` caps the nodes returned, in id order (default 500, not clamped). `mode` is `SHAPE_ONLY` (the default; values and ids replaced) or `WITH_VALUES` (verbatim). Only edges between exported nodes are included, and `matched`/`truncated` in the answer say whether the limit cut the selection",
           "required" : true
         },
         "responses" : {
@@ -25438,6 +25638,7 @@
         "description" : "Every node that set loaded, and nothing else.",
         "operationId" : "remove",
         "parameters" : [ {
+          "description" : "Name of a loaded sample set, as listed by GET /samples, matched exactly; every sample node of the current user that this set loaded is deleted along with its edges. An unknown name removes nothing and still answers 200 with a count of 0",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -25473,6 +25674,7 @@
               }
             }
           },
+          "description" : "The verbs this machine can be asked to run, each with its `name`, consent `group`, `description` and named `args`; replaces the authenticated user's previous catalog in full, and an empty or omitted `verbs` withdraws every verb",
           "required" : true
         },
         "responses" : {
@@ -25495,6 +25697,7 @@
               }
             }
           },
+          "description" : "A batch from one sensor, for the authenticated user: `source` (required, 400 when blank) names the sensor and namespaces its context streams; each event's `kind` is `fact` (stored as a memory, `{user}` replaced by the user's name, at most 2,000 characters, skipped as `duplicate` when an active memory has the same text ignoring case) or `context` (replaces that stream's previous right-now signal, never stored). Events are accepted or rejected one by one; `timeZone`, an IANA zone, updates the user's zone and is ignored when invalid",
           "required" : true
         },
         "responses" : {
@@ -25547,6 +25750,7 @@
       "post" : {
         "operationId" : "result",
         "parameters" : [ {
+          "description" : "The `id` of the command being answered, as GET /sensor/outbox delivered it (a UUID); an id whose request has already timed out, or is unknown, is dropped and still answers 202",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -25564,6 +25768,7 @@
               }
             }
           },
+          "description" : "The verb's result, passed unread and verbatim to the request waiting on this command; its shape is the verb's own",
           "required" : true
         },
         "responses" : {
@@ -25579,6 +25784,7 @@
       "get" : {
         "operationId" : "catalogue",
         "parameters" : [ {
+          "description" : "How many days back from now each type's count and last arrival are taken over; default 30, clamped to 1-365. A type sampled but with nothing in the window is still listed, with a count of zero",
           "in" : "query",
           "name" : "days",
           "required" : false,
@@ -25684,6 +25890,7 @@
         "description" : "Returns a 302 whose Location header carries the raw external URL, preserving URL fragments through to the browser's final navigation.",
         "operationId" : "redirect",
         "parameters" : [ {
+          "description" : "The kind of source the cited link points at, which picks the resolver, case-sensitive; `email` is the kind this appliance resolves. Any other kind is answered 404",
           "in" : "path",
           "name" : "kind",
           "required" : true,
@@ -25691,6 +25898,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "The source's id as the citation carries it; for `email`, a provider thread id, bare or as the last `:`-separated segment of a form such as `email:<userId>:<threadId>`. 404 when no stored message has it or it has no URL",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -25776,6 +25984,7 @@
         "description" : "Sets the theme on the in-memory user; the choice is not persisted across restarts by this endpoint.",
         "operationId" : "applyTheme",
         "parameters" : [ {
+          "description" : "Theme name, as `name` in `GET /themes` (case-sensitive); 404 when no theme has this name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -25849,6 +26058,7 @@
               }
             }
           },
+          "description" : "The new thread's `title`, trimmed; omitted or blank, the thread is called `Untitled`. The thread starts empty and belongs to the caller",
           "required" : true
         },
         "responses" : {
@@ -25890,6 +26100,7 @@
       "get" : {
         "operationId" : "getThread",
         "parameters" : [ {
+          "description" : "The thread's id (a UUIDv7), as returned when it was created or listed by GET /api/v1/threads. Only the caller's own threads are found; any other id is 404",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -25940,6 +26151,7 @@
         "description" : "Attachments are resolved and frozen now: a view is run, a request read, a record taken as you send it.",
         "operationId" : "postThreadMessage",
         "parameters" : [ {
+          "description" : "The thread's id (a UUIDv7), as returned when it was created or listed by GET /api/v1/threads. Only the caller's own threads are found; any other id is 404",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -25955,6 +26167,7 @@
               }
             }
           },
+          "description" : "The message: `text`, and `attachments` resolved and frozen as it is posted (`entity` a record as the caller saw it, by `label`, `id`, `title` and `properties`; `view` the saved view named by `label` run now with `args`, keeping up to 25 rows; `request` the agent request whose `id` is given). At most 10 attachments are kept, and one that cannot be resolved is dropped. Each `@name` in the text that matches an agent (case-insensitive) answers in the background, and one that matches none gets a note from the appliance instead; text with no `@name` at all goes to the agent that spoke last. Blank text with no attachments is 400",
           "required" : true
         },
         "responses" : {
@@ -26003,6 +26216,7 @@
         "description" : "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
         "operationId" : "list_7",
         "parameters" : [ {
+          "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -26034,6 +26248,7 @@
         "description" : "`yaml` carries a tour FILE, not a JSON rendering of a tour: the exchange format and the storage format are the same thing, so what is imported is what a realm would ship and what `/export` returned. A name a realm or this world already owns is refused with 409 rather than written, because the loader keeps what it finds and the write would never load.",
         "operationId" : "import",
         "parameters" : [ {
+          "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -26049,6 +26264,7 @@
               }
             }
           },
+          "description" : "A tour file in `yaml`, in the format GET /tours/{id}/export returns and a realm ships; every tour in it is stored as the acting user's own. 409 when a realm or the world already owns a tour of that name, 400 when the file cannot be read",
           "required" : true
         },
         "responses" : {
@@ -26085,6 +26301,7 @@
         "description" : "A realm's tour and the world's own are not deletable here — they leave when whatever shipped them leaves. `deleted` is false rather than a 404 for those: the tour exists, it is simply not the caller's to remove.",
         "operationId" : "delete_3",
         "parameters" : [ {
+          "description" : "The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; only a tour this user saved is removed, and any other id, including an unknown one, answers `deleted: false`",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -26092,6 +26309,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -26123,6 +26341,7 @@
         "description" : "What a user hands to somebody else. Round-trips through the import below, and is byte-for-byte the shape this server loads from a realm — so a tour that was exported, edited and re-imported is not a second dialect.",
         "operationId" : "export_1",
         "parameters" : [ {
+          "description" : "The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; 404 when the acting user's world has no such tour",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -26130,6 +26349,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -26171,6 +26391,7 @@
         "description" : "Answered WHEN THE STEP IS REACHED, not when the tour is fetched: a tour changes the world as it walks through it, so a verdict computed at load time describes a world that no longer exists. UNKNOWN means the step's own query could not be answered — `detail` says why — and a client should run the step anyway. Repeating a step is visible and recoverable; silently skipping one is neither. A POST rather than a GET because the tour's collected parameters are the body: the condition worth writing is usually about the thing the user just named, and without them the only expressible preconditions are those that depend on no answer.",
         "operationId" : "stepStatus",
         "parameters" : [ {
+          "description" : "The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; an unknown tour answers `UNKNOWN` with the reason in `detail`, not a 404",
           "in" : "path",
           "name" : "id",
           "required" : true,
@@ -26178,6 +26399,7 @@
             "type" : "string"
           }
         }, {
+          "description" : "Zero-based position of the step within the tour; an index out of range answers `UNKNOWN` with the reason in `detail`",
           "in" : "path",
           "name" : "index",
           "required" : true,
@@ -26186,6 +26408,7 @@
             "type" : "integer"
           }
         }, {
+          "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -26200,7 +26423,8 @@
                 "$ref" : "#/components/schemas/TourStepStatusRequest"
               }
             }
-          }
+          },
+          "description" : "The answers the tour has collected so far, as `params`, bound as query parameters into the step's `when` and `doneWhen` conditions; may be omitted, which binds nothing"
         },
         "responses" : {
           "200" : {
@@ -26233,6 +26457,7 @@
               }
             }
           },
+          "description" : "The screen's tour dictionary, sent verbatim: `surface` names the screen (`console`, `me`), `version` the dictionary format, and `panels` maps each panel to its `fields` and controls. The field names across every panel become what the assistant may offer to fill; `states`, `dynamic` and any other key are ignored. Replaces whatever dictionary this user last published, from any screen",
           "required" : true
         },
         "responses" : {
@@ -26274,7 +26499,8 @@
                 "$ref" : "#/components/schemas/InvokeRequest"
               }
             }
-          }
+          },
+          "description" : "The view's arguments under `args`, keyed by its declared parameter names; an argument that is missing or does not fit the view's parameters is refused with 400. Omitting the body, or `args`, runs the view on its defaults. Any top-level field other than `args` and `idempotencyKey` is refused with 400 rather than ignored; `idempotencyKey` is accepted but does not deduplicate invocations here"
         },
         "responses" : {
           "400" : {
@@ -26385,6 +26611,7 @@
               }
             }
           },
+          "description" : "The watch to create over one of the caller's saved lenses. `lensId` must name a lens the caller can open (400 otherwise); `name` defaults to the lens id; `params` are the lens arguments every run uses. `cron` is a Spring six-field cron expression (seconds first) that schedules runs, and omitted or blank means runs happen only on request; an unparseable one is 400. `diffSpec` chooses what counts as a change, `delivery` where changes are sent (omitted: kept in history only), `firstRunPolicy` whether the first run only records a baseline (`ESTABLISH_BASELINE`, the default) or reports everything as new (`EMIT_CURRENT`), and `enabled` (default `true`) whether it runs at all",
           "required" : true
         },
         "responses" : {
@@ -26475,6 +26702,7 @@
               }
             }
           },
+          "description" : "A partial update: every field omitted or null keeps its current value, and a blank `name` is ignored. A `cron` replaces the schedule, and `clearCron=true` with no `cron` removes it; a `delivery` replaces the delivery, `clearDelivery=true` with no `delivery` removes it, and a masked secret or header value in it keeps the stored one. `params` and `diffSpec` replace the stored values whole. The schedule is reconciled with the result",
           "required" : true
         },
         "responses" : {
@@ -26702,7 +26930,8 @@
                 "$ref" : "#/components/schemas/RunWatchRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. An `idempotencyKey` (trimmed; blank counts as none) makes the call repeatable: a later call on the same watch with the same key returns the run that key first started instead of running the lens again. Without a body or key, every call is a new run"
         },
         "responses" : {
           "200" : {
@@ -27168,6 +27397,7 @@
               }
             }
           },
+          "description" : "The API entry to save to the world's API config: `url` (required; the spec URL), `type` (`openapi` by default, or `graphql`), `auth` (the scheme the API expects, e.g. `bearer`; `none` or omitted saves no auth) and `token_env` (the environment variable that holds its token). The spec is not fetched here; the world is rebuilt after the save. A missing `url` answers 400",
           "required" : true
         },
         "responses" : {
@@ -27208,6 +27438,7 @@
               }
             }
           },
+          "description" : "Where the spec lives: `url` (required; an OpenAPI document URL or a GraphQL endpoint) and `type` (`graphql`; any other value is treated as `openapi`). The spec is fetched and parsed during the request and its name, description and auth requirements returned; nothing is saved. A missing `url`, or a spec that cannot be fetched or parsed, answers 400",
           "required" : true
         },
         "responses" : {
@@ -27241,6 +27472,7 @@
         "description" : "Removes an API entry from the world.",
         "operationId" : "deleteApi",
         "parameters" : [ {
+          "description" : "Text matched against the spec URL of each API entry in the world's `config/apis` manifests; every entry whose `url` contains it (a substring match, not the API's learned name) is removed and the world rebuilt. Answers 200 whether or not anything matched",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27296,6 +27528,7 @@
         "description" : "Returns the content of a document from the world data/documents directory, truncated to the first 10000 characters.",
         "operationId" : "readDocument",
         "parameters" : [ {
+          "description" : "File name of a document directly inside the world's `data/documents` directory, as listed by GET /world/documents; a name that is missing, is a directory, or resolves anywhere else (a subdirectory, `..`) answers 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27357,6 +27590,7 @@
         "description" : "Removes an MCP server entry from the world.",
         "operationId" : "deleteMcp",
         "parameters" : [ {
+          "description" : "Exact name of an MCP server entry in the world's `config/mcp` files, as shown by GET /world/mcp; servers wired in at the installation level are not world entries and cannot be removed here. Answers 200 whether or not an entry matched",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27417,6 +27651,7 @@
               }
             }
           },
+          "description" : "The world-tier personality to create: `slug` (trimmed; 1-40 lowercase letters, digits and hyphens, not starting with a hyphen), `name` (the display name written into its `identity.yml`, which is stamped `source: user`) and optional `from` (slug of a personality of any tier whose files are copied; omit for empty sections). Answers 400 when the slug is taken or invalid, `from` is unknown, or the result does not render",
           "required" : true
         },
         "responses" : {
@@ -27450,6 +27685,7 @@
         "description" : "The active personality is refused — switch first. Realm personalities are removed by uninstalling their realm.",
         "operationId" : "deletePersonality",
         "parameters" : [ {
+          "description" : "Slug of a world-tier personality the user made; the active personality (switch first), shipped and realm personalities, and unknown slugs answer 400",
           "in" : "path",
           "name" : "slug",
           "required" : true,
@@ -27486,6 +27722,7 @@
         "description" : "The identity and jinja sections of one personality, with whether it is editable. Realm personalities are readable but read-only — duplicating one into the world is how it becomes editable.",
         "operationId" : "personalitySections",
         "parameters" : [ {
+          "description" : "Slug of the personality to read, as listed by GET /world/personalities; any tier can be read. An unknown slug answers 404",
           "in" : "path",
           "name" : "slug",
           "required" : true,
@@ -27522,6 +27759,7 @@
         "description" : "Sets the active personality for the current world.",
         "operationId" : "switchPersonality",
         "parameters" : [ {
+          "description" : "Slug of the personality to make active, as listed by GET /world/personalities (any tier: world, shipped or realm); saved as the world's `activePersonality`. An unknown slug answers 400 with the available slugs",
           "in" : "path",
           "name" : "slug",
           "required" : true,
@@ -27560,6 +27798,7 @@
         "description" : "World-tier personalities only; a realm personality answers with the duplicate-first instruction. The save is validated by rendering, and rolls back if the persona no longer renders.",
         "operationId" : "updatePersonality",
         "parameters" : [ {
+          "description" : "Slug of a world-tier personality the user made; shipped and realm personalities are read-only and answer 400 asking for a duplicate first, as does an unknown slug",
           "in" : "path",
           "name" : "slug",
           "required" : true,
@@ -27575,6 +27814,7 @@
               }
             }
           },
+          "description" : "Files to write, keyed by file name (`identity.yml`, `personality.jinja`, `behaviours.jinja`, `guardrails.jinja`, `response_format.jinja`, `verbosity.jinja`), each replacing that file's whole content; files not named are left as they are, and any other name answers 400. If the persona no longer renders afterwards the personality is rolled back to its previous files and the render error returned as 400",
           "required" : true
         },
         "responses" : {
@@ -27659,6 +27899,7 @@
               }
             }
           },
+          "description" : "The skill to write to `config/skills/local/<name>/SKILL.md`: `name` (1-64 lowercase letters, digits and hyphens, not starting or ending with a hyphen; it becomes the directory name), `description` (at most 1024 characters, written into the frontmatter) and `instructions` (the markdown body). The world is refreshed on success; an existing skill of that name answers 409, an invalid name or over-long description 400",
           "required" : true
         },
         "responses" : {
@@ -27728,6 +27969,7 @@
         "description" : "Removes a skill entry from the world.",
         "operationId" : "deleteSkill",
         "parameters" : [ {
+          "description" : "Text matched against the `url` and `path` of the skill entries in the world's `config/skills` manifests; every entry containing it (a substring match, not an exact name) is removed and the world rebuilt. Skills created with POST /world/skills live under `config/skills/local` and are not manifest entries, so this does not remove them. Answers 200 whether or not anything matched",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27828,6 +28070,7 @@
               }
             }
           },
+          "description" : "`name` (required): the new world's directory name among the current user's worlds, trimmed; missing, blank, or containing `/` or `..`, it answers 400, and a name that already holds a world answers 409. The world is cloned from the deployment's bootstrap template; creating it does not switch to it",
           "required" : true
         },
         "responses" : {
@@ -27871,6 +28114,7 @@
         "description" : "Deletes a world. Cannot delete the currently active world.",
         "operationId" : "deleteWorld",
         "parameters" : [ {
+          "description" : "Name of one of the current user's worlds, as listed by GET /worlds; its whole directory, `data/` included, is deleted. The active world answers 400 (switch first), a name with no directory 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27919,6 +28163,7 @@
         "description" : "Wipes the world's `config/` directory and re-clones it from the default template. **The `data/` directory is left untouched** — documents, vibe-coded apps, tasks, learnings, generated artifacts and entered secrets are preserved. To wipe everything including data, delete the world instead.",
         "operationId" : "factoryReset",
         "parameters" : [ {
+          "description" : "Name of one of the current user's worlds, as listed by GET /worlds; its `config/` is replaced from the bootstrap template and `data/` kept. The active world is rebuilt straight away; a name with no directory answers 404",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27957,6 +28202,7 @@
         "description" : "Switches the current user to a different world.",
         "operationId" : "switchWorld",
         "parameters" : [ {
+          "description" : "Name of one of the current user's worlds, as listed by GET /worlds; a name with no world content answers 404. The choice is saved on the user, so it holds across sessions",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -27998,7 +28244,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40923"
+    "url" : "http://localhost:43725"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
