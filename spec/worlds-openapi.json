@@ -2102,6 +2102,60 @@
         "required" : [ "cron", "dryRun", "enabled", "matcher", "similarityThreshold" ],
         "type" : "object"
       },
+      "CollectorSettingsView" : {
+        "description" : "The memory-dedup collector settings in force for this world. The first five are resolved against the deployment defaults and are never null; the five weights are returned as stored, where null means the matcher's own default applies.",
+        "properties" : {
+          "cron" : {
+            "description" : "When the sweep runs, as a Spring six-field cron expression",
+            "type" : "string"
+          },
+          "dryRun" : {
+            "description" : "Whether the sweep reports what it would merge instead of merging it",
+            "type" : "boolean"
+          },
+          "enabled" : {
+            "description" : "Whether the dedup sweep runs at all",
+            "type" : "boolean"
+          },
+          "entityOverlap" : {
+            "description" : "Weight of shared entities. Null means the matcher's own default",
+            "format" : "double",
+            "type" : "number"
+          },
+          "groundingOverlap" : {
+            "description" : "Weight of shared grounding. Null means the matcher's own default",
+            "format" : "double",
+            "type" : "number"
+          },
+          "lexical" : {
+            "description" : "Weight of lexical overlap. Null means the matcher's own default",
+            "format" : "double",
+            "type" : "number"
+          },
+          "matcher" : {
+            "description" : "Which matcher decides that two memories are the same",
+            "example" : "multi-signal",
+            "type" : "string"
+          },
+          "provenanceOverlap" : {
+            "description" : "Weight of shared provenance. Null means the matcher's own default",
+            "format" : "double",
+            "type" : "number"
+          },
+          "similarityThreshold" : {
+            "description" : "How similar two memories must be to merge, in [0, 1]",
+            "format" : "double",
+            "type" : "number"
+          },
+          "vector" : {
+            "description" : "Weight of vector similarity. Null means the matcher's own default",
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "required" : [ "cron", "dryRun", "enabled", "matcher", "similarityThreshold" ],
+        "type" : "object"
+      },
       "CommandRunRequest" : {
         "properties" : {
           "argument" : {
@@ -2211,6 +2265,18 @@
           }
         },
         "required" : [ "name" ],
+        "type" : "object"
+      },
+      "ConfigUpdated" : {
+        "description" : "A config change was saved. Carries only the acknowledgement — the caller already knows what it sent",
+        "properties" : {
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          }
+        },
+        "required" : [ "status" ],
         "type" : "object"
       },
       "ConnectApiRequest" : {
@@ -6429,6 +6495,25 @@
         "required" : [ "bufferSize", "entries", "truncated" ],
         "type" : "object"
       },
+      "McpDoorsView" : {
+        "description" : "Where a coding agent connects. The chat door is always there; the code door is present only on an appliance that enabled it, and its key is ABSENT rather than null when it is not.",
+        "properties" : {
+          "chatAliasUrl" : {
+            "description" : "The same door under its alias, for a client pinned to the older path",
+            "type" : "string"
+          },
+          "developerUrl" : {
+            "description" : "The code door's URL, present only where the code door is enabled. ABSENT, not null, so `if (developerUrl)` is right on every server that ever shipped",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The chat door's URL — a server fact no client can derive, because the published port is a host-side mapping",
+            "type" : "string"
+          }
+        },
+        "required" : [ "chatAliasUrl", "url" ],
+        "type" : "object"
+      },
       "McpModeRequest" : {
         "description" : "The mode a connected coding agent runs under",
         "properties" : {
@@ -6439,6 +6524,50 @@
           }
         },
         "required" : [ "mode" ],
+        "type" : "object"
+      },
+      "McpModeUpdated" : {
+        "description" : "The coding-agent mode was changed, and is live immediately",
+        "properties" : {
+          "mode" : {
+            "description" : "The mode now in force",
+            "example" : "DEVELOPER",
+            "type" : "string"
+          },
+          "requiresReconnect" : {
+            "description" : "Always false: the gate is read on every call, so an already-connected client simply retries",
+            "type" : "boolean"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          }
+        },
+        "required" : [ "mode", "requiresReconnect", "status" ],
+        "type" : "object"
+      },
+      "McpModeView" : {
+        "description" : "What a connected coding agent may do, and what it could be set to",
+        "properties" : {
+          "mode" : {
+            "description" : "The mode in force for this user, resolved through the service rather than re-derived from config",
+            "example" : "ASSISTANT",
+            "type" : "string"
+          },
+          "modes" : {
+            "description" : "Every mode this appliance offers, so a client need not hardcode the list",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "requiresReconnect" : {
+            "description" : "Always false. Nothing here needs a reconnect — the gate is read on every call, orientation re-reads the mode, and the realm tools export unconditionally. Kept as a field because clients already read it, and a client that stops telling people to reconnect is the point",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "mode", "modes", "requiresReconnect" ],
         "type" : "object"
       },
       "McpServerInfo" : {
@@ -6864,6 +6993,33 @@
           }
         },
         "required" : [ "tierChannels" ],
+        "type" : "object"
+      },
+      "NotificationRoutingUpdated" : {
+        "description" : "Notification routing was saved",
+        "properties" : {
+          "quietHours" : {
+            "$ref" : "#/components/schemas/QuietHoursConfig",
+            "description" : "The quiet-hours window, as stored. Null where this world sets none"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          },
+          "tierChannels" : {
+            "additionalProperties" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array",
+              "uniqueItems" : true
+            },
+            "description" : "Which channels each tier routes to, as stored — a tier may fan out to several",
+            "type" : "object"
+          }
+        },
+        "required" : [ "status", "tierChannels" ],
         "type" : "object"
       },
       "NotificationSource" : {
@@ -8199,6 +8355,18 @@
           }
         },
         "required" : [ "budgetPerTick", "cypher", "label" ],
+        "type" : "object"
+      },
+      "StorageEngineInfo" : {
+        "description" : "Which graph engine this appliance stores its memory in",
+        "properties" : {
+          "engine" : {
+            "description" : "The engine's name, as the deployment configured it",
+            "example" : "embabel",
+            "type" : "string"
+          }
+        },
+        "required" : [ "engine" ],
         "type" : "object"
       },
       "SuggestionResponse" : {
@@ -16100,8 +16268,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/CollectorSettingsView"
                 }
               }
             },
@@ -16129,8 +16296,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ConfigUpdated"
                 }
               }
             },
@@ -16302,8 +16468,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/McpDoorsView"
                 }
               }
             },
@@ -16323,8 +16488,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/McpModeView"
                 }
               }
             },
@@ -16352,8 +16516,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/McpModeUpdated"
                 }
               }
             },
@@ -16432,8 +16595,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NotificationRoutingUpdated"
                 }
               }
             },
@@ -16658,10 +16820,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/StorageEngineInfo"
                 }
               }
             },
@@ -24359,7 +24518,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:38293"
+    "url" : "http://localhost:43051"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
