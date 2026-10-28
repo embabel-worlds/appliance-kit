@@ -719,6 +719,9 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 /* Views | Lenses: which of the world's saved answers the list shows. Above the filter, which it scopes. */
 :where(.kit-feature) .viewmode { display: flex; flex: none; gap: 4px; padding: 10px 10px 0; }
 
+/* With no list beside it (the listing failed, is loading, or is empty) the switch keeps the list's width. */
+:where(.kit-feature).viewspage:not(.viewspage-selected) > .viewmode { max-width: 300px; padding: 0 0 12px; }
+
 :where(.kit-feature) .viewmode-tab {
   flex: 1; min-height: 34px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: var(--radius);
   background: transparent; color: var(--mid); cursor: pointer;
