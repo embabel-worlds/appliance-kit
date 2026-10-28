@@ -30,6 +30,11 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * SAVING. Only a view the user saved themselves is saved in place. A realm's view, or one shipped
  * with the world, is saved as a COPY under a new name — the appliance refuses to shadow it, and it
  * would not load if it did.
+ *
+ * LENSES. Where the host gives `services.lenses`, a switch at the head of the list turns the window
+ * to the world's lenses (LensRunner.tsx): the same list-and-detail, run by id with declared params.
+ * The URL says which mode is showing — the host's `selectedLens` is non-null on a lens route — so a
+ * link to `#lenses/<id>/run` opens this window on that lens and runs it.
  */
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react';
 import { isBackgroundHandle } from "../../../client/kg.js";
@@ -39,6 +44,7 @@ import { formatDuration } from "../../../studio-kit/format.js";
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage } from "../studio/chrome.js";
 import { useRunProgress } from "../studio/progress.js";
 import { RunWait, cancelRun } from "./runWait.js";
+import { LensRunner } from "./LensRunner.js";
 import { SaveCopyDialog } from "./SaveCopyDialog.js";
 import { ViewCypherEditor } from "./ViewCypherEditor.js";
 const PANE_LABELS = { results: 'Results', schema: 'Schema', watch: 'Watch / receipts' };
@@ -76,6 +82,8 @@ export function SavedViewsSurface({ services, host }) {
 }
 /** A host that gives no trace: the run is still timed and still cancellable, just not narrated. */
 const NO_TRACE = () => { };
+/** A host with no lens routing: the URL never names a lens. */
+const NO_LENS_ROUTE = () => null;
 function SavedViewsBody() {
     const { services, host } = useViewsRuntime();
     const [views, setViews] = useState(null);
@@ -159,6 +167,21 @@ function SavedViewsBody() {
      * described PlaceDossier while the panel still showed DistrictCrimeLeague.
      */
     const hashRest = useSyncExternalStore(host.subscribeSelection, host.selectedView, host.selectedView);
+    const lensRoute = useSyncExternalStore(host.subscribeSelection, host.selectedLens ?? NO_LENS_ROUTE, host.selectedLens ?? NO_LENS_ROUTE);
+    const [mode, setMode] = useState(() => services.lenses && host.selectedLens?.() != null ? 'lenses' : 'views');
+    // The URL decides which mode shows; a route that is on neither leaves the mode as it was.
+    useEffect(() => {
+        if (!services.lenses)
+            return;
+        if (lensRoute !== null)
+            setMode('lenses');
+        else if (hashRest !== null)
+            setMode('views');
+    }, [lensRoute, hashRest, services.lenses]);
+    /** The lens last open, so switching back to Lenses returns to it. */
+    const lastLens = useRef(null);
+    if (lensRoute)
+        lastLens.current = lensRoute.split(/[/?]/)[0] || null;
     const drivenBy = useRef('');
     /** Keep the requested values explicit; React may not have committed the form update yet. */
     const pendingRun = useRef(null);
@@ -477,9 +500,25 @@ function SavedViewsBody() {
         setStatus({ tone: 'ok', text: `'${name}' recomputed` });
         void load();
     }
+    function switchTo(next) {
+        if (next === mode)
+            return;
+        // Leaving a view for the lenses is leaving it: its run is cancelled, as choosing another view does.
+        if (next === 'lenses')
+            abandonOnUnmount.current();
+        setMode(next);
+        if (next === 'lenses')
+            host.navigateToLens?.(lastLens.current, 'open');
+        else
+            navigate(selected, 'open');
+    }
+    /* Views | Lenses, at the head of whichever list is showing. Only where the host can run lenses. */
+    const modeSwitch = services.lenses ? (_jsx("div", { className: "viewmode", role: "tablist", "aria-label": "Show", children: ['views', 'lenses'].map((option) => (_jsx("button", { role: "tab", "aria-selected": mode === option, className: `viewmode-tab${mode === option ? ' active' : ''}`, "data-view-mode": option, onClick: () => switchTo(option), children: option === 'views' ? 'Views' : 'Lenses' }, option))) })) : null;
+    if (mode === 'lenses' && services.lenses)
+        return _jsx(LensRunner, { services: services.lenses, host: host, modeSwitch: modeSwitch });
     // Nothing to choose from yet: the listing failed, is still loading, or is empty.
     if (error || views == null || list.length === 0)
-        return (_jsx("div", { className: "kit-feature kit-feature-views viewspage", children: error ? _jsx(Status, { tone: "error", children: error }) : views == null ? _jsx("p", { className: "hint", children: "loading\u2026" }) : (_jsx(StudioPanel, { title: "Saved views", children: _jsx("p", { className: "hint", children: "No saved views yet. Write a query in Query Studio and save it \u2014 that is where views come from." }) })) }));
+        return (_jsxs("div", { className: "kit-feature kit-feature-views viewspage", children: [modeSwitch, error ? _jsx(Status, { tone: "error", children: error }) : views == null ? _jsx("p", { className: "hint", children: "loading\u2026" }) : (_jsx(StudioPanel, { title: "Saved views", children: _jsx("p", { className: "hint", children: "No saved views yet. Write a query in Query Studio and save it \u2014 that is where views come from." }) }))] }));
     const reason = view ? copyReason(view) : null;
     const paneLabel = (name) => name === 'results' && ran ? `Results · ${rows.length}` : PANE_LABELS[name];
     /* Every view, grouped by where it came from, under one filter. The filter reads the name, the
@@ -492,7 +531,7 @@ function SavedViewsBody() {
             || `${candidate.name} ${candidate.description ?? ''} ${name}`.toLowerCase().includes(wanted)),
     }))
         .filter((group) => group.views.length > 0);
-    const navigator = () => (_jsxs(_Fragment, { children: [_jsx("div", { className: "viewnav-filter", children: _jsx("input", { type: "search", "aria-label": "Filter views", placeholder: `Filter ${list.length} views`, value: filter, onChange: (event) => setFilter(event.target.value) }) }), _jsxs("div", { className: "viewnav-list", children: [shown.length === 0 && _jsxs("p", { className: "hint viewnav-none", children: ["No view matches \u201C", filter.trim(), "\u201D."] }), shown.map((group) => (_jsxs("nav", { className: "viewnav-section", "aria-label": `${group.name} views`, "data-viewgroup": group.name, children: [_jsxs("span", { className: "viewnav-label", children: [group.name, " \u00B7 ", group.views.length] }), group.views.map((candidate) => (_jsxs("button", { className: `viewsibling${candidate.name === view?.name ? ' active' : ''}`, "aria-current": candidate.name === view?.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [_jsx("strong", { children: candidate.name }), watchedViews?.has(candidate.name) && _jsx("span", { className: "viewtag", children: "watched" }), _jsx("small", { title: candidate.description || undefined, children: candidate.description || `${Object.keys(candidate.params ?? {}).length} parameter(s) · ${candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}` })] }, candidate.name)))] }, group.name)))] })] }));
+    const navigator = () => (_jsxs(_Fragment, { children: [modeSwitch, _jsx("div", { className: "viewnav-filter", children: _jsx("input", { type: "search", "aria-label": "Filter views", placeholder: `Filter ${list.length} views`, value: filter, onChange: (event) => setFilter(event.target.value) }) }), _jsxs("div", { className: "viewnav-list", children: [shown.length === 0 && _jsxs("p", { className: "hint viewnav-none", children: ["No view matches \u201C", filter.trim(), "\u201D."] }), shown.map((group) => (_jsxs("nav", { className: "viewnav-section", "aria-label": `${group.name} views`, "data-viewgroup": group.name, children: [_jsxs("span", { className: "viewnav-label", children: [group.name, " \u00B7 ", group.views.length] }), group.views.map((candidate) => (_jsxs("button", { className: `viewsibling${candidate.name === view?.name ? ' active' : ''}`, "aria-current": candidate.name === view?.name ? 'page' : undefined, onClick: () => pick(candidate, pane), children: [_jsx("strong", { children: candidate.name }), watchedViews?.has(candidate.name) && _jsx("span", { className: "viewtag", children: "watched" }), _jsx("small", { title: candidate.description || undefined, children: candidate.description || `${Object.keys(candidate.params ?? {}).length} parameter(s) · ${candidate.materialized ? 'Materialized' : candidate.outputLabel ?? 'Tabular'}` })] }, candidate.name)))] }, group.name)))] })] }));
     const saveControls = (_jsxs(_Fragment, { children: [saveNote && (_jsxs("span", { className: `viewcypher-note${saveNote.tone ? ` ${saveNote.tone}` : ''}`, role: "status", children: [saveNote.text, saveNote.undo !== undefined && _jsxs(_Fragment, { children: [" \u00B7 ", _jsx("button", { className: "viewlink", onClick: () => void undoSave(saveNote.undo ?? ''), children: "Undo" })] })] })), _jsx("button", { className: `btn tiny${edited && !reason ? ' primary' : ''}`, disabled: !edited, title: reason ? 'This view is not yours to change, so your edits save as a new view' : undefined, onClick: () => void save(), children: reason ? 'Save as copy…' : 'Save' })] }));
     return (_jsxs("div", { className: "kit-feature kit-feature-views viewspage viewspage-selected", children: [_jsx("aside", { className: "panel viewspage-sidebar", "aria-label": "Views", children: navigator() }), _jsxs("details", { className: "panel viewspage-mobile-nav", children: [_jsx("summary", { children: _jsxs("span", { children: [_jsx("strong", { children: "Browse views" }), _jsx("small", { children: view ? `${groupOf(view)} · ${view.name}` : `${list.length} views` })] }) }), _jsx("div", { className: "viewspage-mobile-nav-body", children: navigator() })] }), !view ? (_jsx("div", { className: "viewspage-operation viewspage-none", children: _jsx("p", { className: "hint", children: "Choose a view to see what it takes and run it." }) })) : (_jsxs("div", { className: "viewspage-operation", children: [_jsxs("section", { className: "panel viewoperation-head", children: [_jsxs("div", { children: [_jsxs("span", { className: "viewnav-label", children: [groupOf(view), " \u00B7 operation"] }), _jsxs("div", { className: "viewoperation-title", children: [_jsx("h2", { children: view.name }), _jsx(OriginChip, { view: view })] }), _jsxs("span", { className: "viewnote", children: [Object.keys(params).length, " parameter(s) \u00B7 ", view.materialized ? 'Materialized — Run reads its cache' : view.outputLabel ?? 'Tabular'] })] }), _jsxs("div", { className: "row", children: [view.materialized && _jsx("button", { className: "btn ghost", onClick: () => void refresh(view.name), children: "Refresh cache" }), _jsx("button", { className: "btn", onClick: () => void openInStudio(), children: "Open in Query Studio" }), view.source === USER_SAVED && _jsx("button", { className: "btn ghost", onClick: () => void remove(view.name), children: "Delete" })] }), view.description && _jsx("p", { className: "hint", children: view.description })] }), _jsxs("div", { className: "viewrunbar", children: [Object.keys(params).length === 0 ? _jsx("span", { className: "hint", children: "No parameters." }) : Object.entries(params).map(([key, spec]) => (_jsxs("label", { className: "paramrow", title: spec?.description, children: [_jsxs("span", { className: "paramname", children: [key, " ", _jsx("em", { children: spec?.type })] }), _jsx("input", { value: args[key] ?? '', placeholder: spec?.default != null ? `default: ${spec.default}` : 'required', onChange: (event) => setArgs((current) => ({ ...current, [key]: event.target.value })), onKeyDown: (event) => { if (event.key === 'Enter')
                                             void run(); } })] }, key))), _jsxs("div", { className: "row viewrunbar-actions", children: [_jsxs("button", { className: "btn ghost viewcypher-toggle", "aria-expanded": editorSize !== 'closed', title: editorSize === 'closed' ? 'Show and edit the Cypher' : 'Close the Cypher editor', onClick: () => setEditorSize(editorSize === 'closed' ? 'mini' : 'closed'), children: ['{ }', " Cypher", edited ? ' •' : ''] }), _jsx("button", { className: "btn primary", disabled: busy, onClick: () => void run(), children: busy ? 'running…' : 'Run' }), busy && services.kg.kill && (_jsx("button", { className: "btn ghost", "data-view-cancel": true, onClick: () => void cancel(), children: cancelling ? 'cancelling…' : 'Cancel' }))] })] }), _jsxs("div", { className: `viewoperation-body${editorSize === 'full' ? ' covered' : ''}`, children: [_jsx("nav", { className: "viewoperation-nav", role: "tablist", "aria-label": "Operation sections", children: Object.keys(PANE_LABELS).map((name) => (_jsx("button", { role: "tab", id: `viewtab-${name}`, "aria-controls": `viewpane-${name}`, "aria-selected": pane === name, "data-view-pane": name, className: `viewoperation-nav-link${pane === name ? ' active' : ''}`, onClick: () => showPane(name), children: paneLabel(name) }, name))) }), _jsxs("section", { className: "viewpane viewpane-results", role: "tabpanel", id: "viewpane-results", "data-view-pane": "results", "aria-labelledby": "viewtab-results", hidden: pane !== 'results', children: [_jsx("span", { "data-state": "view.ran", hidden: !ran }), _jsxs("div", { className: "viewpane-scroll view-results", tabIndex: 0, children: [!ran ? (busy ? _jsx("p", { className: "hint", children: "Running\u2026 Results will appear here." }) : status.tone === 'error' || status.tone === 'caution' ? null : _jsx("p", { className: "hint", children: "Nothing run yet." })) : rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) : (_jsx(RowTable, { rows: rows, columns: rowColumns(rows) })), !ran && progress.lines.length > 0 && (_jsx("div", { className: "progresslist viewrun-trace", ref: traceRef, "aria-label": "What the engine has done so far", children: progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))) }))] }), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && _jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] }), busy && startedAt != null && _jsx(RunWait, { startedAt: startedAt, lastStep: progress.lines.at(-1)?.text ?? null }), _jsx(Status, { tone: status.tone, children: status.text })] })] }), _jsx("section", { className: "viewpane", role: "tabpanel", id: "viewpane-schema", "data-view-pane": "schema", "aria-labelledby": "viewtab-schema", hidden: pane !== 'schema', children: _jsxs("div", { className: "viewpane-scroll", children: [schema && _jsxs("p", { className: "hint", children: [viewSchemaLabels.length, " labels used"] }), schemaError ? _jsx(Status, { tone: "error", children: schemaError }) : schema == null ? _jsx("p", { className: "hint", children: "loading\u2026" }) : viewSchemaLabels.length === 0 ? (_jsx("p", { className: "hint", children: "No declared schema labels were found in this operation's query." })) : (_jsx("div", { className: "viewschema", children: viewSchemaLabels.map((label) => (_jsxs("article", { className: "viewschema-label", children: [_jsxs("div", { className: "row", children: [_jsx("strong", { children: label.label }), _jsx("span", { className: "viewtag", children: label.anchor === false ? 'reach-only' : 'anchor' })] }), label.description && _jsx("p", { children: label.description }), _jsxs("small", { children: [label.realm ?? 'World', " \u00B7 ", label.sampleCount, " sampled"] }), label.properties.length > 0 && _jsx("dl", { children: label.properties.map((property) => _jsxs(React.Fragment, { children: [_jsx("dt", { children: property.name }), _jsx("dd", { children: property.type })] }, property.name)) })] }, label.label))) }))] }) }), _jsx("section", { className: "viewpane", role: "tabpanel", id: "viewpane-watch", "data-view-pane": "watch", "aria-labelledby": "viewtab-watch", hidden: pane !== 'watch', children: _jsx("div", { className: "viewpane-scroll", children: _jsx(WatchPanel, { viewName: view.name, args: args, onWatchChange: (watching) => setWatchedViews((current) => {

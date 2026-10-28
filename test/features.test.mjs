@@ -348,7 +348,7 @@ describe('the public browser feature entry point', () => {
       '.receipts', '.receipt-delivery', '.skillpicker', '.skillchips', '.skillchip.is-on',
       '.realm-problem', '.pinchip.is-gone', '.viewnav-filter', '.viewnav-list', '.viewspage-none',
       '.viewspage-sidebar', '.viewspage-mobile-nav', '.viewoperation-nav', '.viewpane', '.viewrunbar', '.viewcypher', '.viewcopy', '.viewsibling', '.viewschema-label',
-      '.view-results',
+      '.view-results', '.viewmode-tab', '.lensdata',
     ]) assert.equal(css.includes(selector), true, `${selector} style`)
 
     const ruleFor = (selector) => root.nodes
@@ -2747,3 +2747,139 @@ describe('the realm catalogue queries', () => {
   })
 })
 
+
+/*
+ * The Views window's Lenses mode: a lens could be run only from REST or an app until the console
+ * listed the world's lenses beside its views and ran one with its params.
+ */
+describe('lenses in the Views window', () => {
+  const lensList = [
+    { id: 'briefing', name: 'Daily Briefing', description: 'What changed', params: [
+      { name: 'since', type: 'DATE' }, { name: 'lookbackDays', type: 'INT', default: 7 }, { name: 'deep', type: 'BOOLEAN' },
+    ] },
+    { id: 'quiet', name: 'Quiet week', params: [] },
+    { id: 'broken', name: 'Vendor health', params: [] },
+  ]
+  const envelope = (id, rest = {}) => ({ executionId: `exec_${id}`, operationId: id, status: 'SUCCEEDED', outcome: 'OK', warnings: [], error: null, metrics: { durationMs: 12, externalCalls: 2 }, ...rest })
+  const viewsServices = (lenses) => ({
+    kg: { views: async () => ok([{ name: 'Alpha', cypher: 'RETURN 1', params: {} }]), schema: async () => ok({ labels: [], relationships: [] }), runView: async () => ok({ rows: [] }) },
+    watches: { list: async () => ok([]), create: async () => ok({}), delete: async () => ok(undefined), run: async () => ok(undefined), runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]) },
+    lenses,
+  })
+  const lensServices = () => {
+    const invoked = [], polled = [], killed = []
+    return {
+      invoked, polled, killed,
+      services: {
+        list: async () => ok(lensList),
+        invoke: async (id, args) => {
+          invoked.push({ id, args })
+          if (id === 'quiet') return ok(envelope(id, { outcome: 'EMPTY', outputType: 'entities', data: [] }))
+          if (id === 'broken') return ok(envelope(id, { status: 'FAILED', outcome: 'SOURCE_UNAVAILABLE', error: { code: 'SERVICE_UNAVAILABLE', message: 'A source could not be reached.' } }))
+          return ok(envelope(id, { outputType: 'briefing', data: { kind: 'briefing', headline: 'three things' } }))
+        },
+        run: async (runId) => { polled.push(runId); return ok(envelope('briefing', { executionId: runId, outputType: 'entities', data: [{ id: 'd1', name: 'Fathom' }] })) },
+        kill: async (runId) => { killed.push(runId); return ok(envelope('briefing', { executionId: runId, status: 'CANCELLED', outcome: 'FAILED', error: { code: 'CANCELLED', message: 'killed by owner' } })) },
+      },
+    }
+  }
+  const routedHost = (initial = { view: 'Alpha', lens: null }) => {
+    let view = initial.view, lens = initial.lens
+    const listeners = new Set(), lensNav = []
+    return {
+      lensNav,
+      go: async (next) => { view = next.view ?? null; lens = next.lens ?? null; await act(async () => listeners.forEach(l => l())); await flush() },
+      host: {
+        selectedView: () => view,
+        selectedLens: () => lens,
+        subscribeSelection: listener => { listeners.add(listener); return () => listeners.delete(listener) },
+        navigateToView: (name, destination) => { lens = null; view = name ? name + (destination === 'open' ? '' : '/' + destination) : '' },
+        navigateToLens: (id, destination) => { lensNav.push([id, destination]); view = null; lens = id ? id + (destination === 'open' ? '' : '/' + destination) : '' },
+        onOpenInStudio() {}, onCreateHandler() {},
+      },
+    }
+  }
+  const lensRow = (container, name) => [...container.querySelectorAll('.viewsibling')].find(e => e.textContent.includes(name))
+  const result = (container) => container.querySelector('[data-lens-result]')
+
+  it('a host without lenses shows views only, with no switch', async () => {
+    const services = viewsServices(undefined)
+    const { container } = await render(h(features.SavedViewsSurface, { services, host: routedHost().host }))
+    assert.equal(container.querySelector('.viewmode'), null)
+  })
+
+  it('switches to the lenses, runs one with typed args, and draws the envelope it answered', async () => {
+    const { services: lenses, invoked } = lensServices()
+    const routed = routedHost()
+    const { container } = await render(h(features.SavedViewsSurface, { services: viewsServices(lenses), host: routed.host }))
+    await act(async () => container.querySelector('[data-view-mode="lenses"]').click())
+    await flush()
+    assert.deepEqual(routed.lensNav[0], [null, 'open'], 'the URL follows the mode')
+    assert.equal(container.querySelector('[data-view-mode="lenses"]').getAttribute('aria-selected'), 'true')
+    assert.equal(container.querySelectorAll('.viewspage-sidebar .viewsibling').length, 3)
+    await act(async () => lensRow(container, 'Daily Briefing').click())
+    assert.equal(container.querySelector('.viewoperation-title h2').textContent, 'Daily Briefing')
+    const inputs = container.querySelectorAll('.viewrunbar input')
+    await act(async () => setInput(inputs[1], '3'))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    await flush()
+    assert.deepEqual(invoked, [{ id: 'briefing', args: { lookbackDays: 3 } }], 'blank params are left to their defaults; an INT is sent as a number')
+    assert.match(result(container).querySelector('.lensdata').textContent, /"headline": "three things"/)
+    assert.match(result(container).querySelector('.status').textContent, /^OK · 12 ms · 2 external call\(s\)$/)
+  })
+
+  it('a link to a lens with /run opens it and runs it with the params it carries', async () => {
+    const { services: lenses, invoked } = lensServices()
+    const routed = routedHost({ view: null, lens: 'briefing/run?since=2026-10-01' })
+    const { container } = await render(h(features.SavedViewsSurface, { services: viewsServices(lenses), host: routed.host }))
+    await flush()
+    assert.deepEqual(invoked, [{ id: 'briefing', args: { since: '2026-10-01', lookbackDays: 7 } }])
+    // And a view route turns the window back to the views.
+    await routed.go({ view: 'Alpha' })
+    assert.equal(container.querySelector('[data-view-mode="views"]').getAttribute('aria-selected'), 'true')
+    assert.equal(container.querySelector('.viewoperation-title h2').textContent, 'Alpha')
+  })
+
+  it('an EMPTY answer reads as nothing found, and a failure carries its own safe message', async () => {
+    const { services: lenses } = lensServices()
+    const routed = routedHost({ view: null, lens: 'quiet/run' })
+    const { container } = await render(h(features.SavedViewsSurface, { services: viewsServices(lenses), host: routed.host }))
+    await flush()
+    assert.match(result(container).textContent, /EMPTY — the lens ran and found nothing/)
+    assert.match(result(container).textContent, /Nothing to show/)
+    await routed.go({ lens: 'broken/run' })
+    assert.match(result(container).textContent, /SOURCE_UNAVAILABLE — A source could not be reached\./)
+    assert.equal(result(container).querySelector('.status.error') !== null, true)
+  })
+
+  it('a lens that answers RUNNING is polled until it settles, and can be cancelled', async () => {
+    const { services: lenses, polled, killed } = lensServices()
+    lenses.invoke = async (id) => ok(envelope(id, { executionId: 'run-1', status: 'RUNNING', outcome: 'PENDING' }))
+    let settle
+    lenses.run = (runId) => { polled.push(runId); return new Promise(resolve => { settle = resolve }) }
+    const routed = routedHost({ view: null, lens: 'quiet' })
+    const { container } = await render(h(features.SavedViewsSurface, { services: viewsServices(lenses), host: routed.host }))
+    await act(async () => container.querySelector('.viewrunbar .btn.primary').click())
+    assert.ok(container.querySelector('[data-lens-cancel]'), 'a run with a handle can be cancelled')
+    await act(async () => { await new Promise(resolve => setTimeout(resolve, 1600)) })
+    assert.deepEqual(polled, ['run-1'])
+    await act(async () => container.querySelector('[data-lens-cancel]').click())
+    await flush()
+    assert.deepEqual(killed, ['run-1'])
+    assert.match(result(container).textContent, /Cancelled\. killed by owner/)
+    // The poll that was in flight answers late, and lands nowhere.
+    await act(async () => settle(ok(envelope('quiet', { executionId: 'run-1', data: [{ id: 'late' }] }))))
+    assert.doesNotMatch(result(container).textContent, /late/)
+  })
+
+  it('a views listing that fails still offers the lenses', async () => {
+    const { services: lenses } = lensServices()
+    const services = viewsServices(lenses)
+    services.kg.views = async () => ({ ok: false, kind: 'unauthorized', status: 403, message: 'Forbidden' })
+    const { container } = await render(h(features.SavedViewsSurface, { services, host: routedHost().host }))
+    assert.match(container.textContent, /not allowed to list saved views/)
+    await act(async () => container.querySelector('[data-view-mode="lenses"]').click())
+    await flush()
+    assert.equal(container.querySelectorAll('.viewspage-sidebar .viewsibling').length, 3)
+  })
+})

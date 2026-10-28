@@ -29,6 +29,11 @@
  * SAVING. Only a view the user saved themselves is saved in place. A realm's view, or one shipped
  * with the world, is saved as a COPY under a new name — the appliance refuses to shadow it, and it
  * would not load if it did.
+ *
+ * LENSES. Where the host gives `services.lenses`, a switch at the head of the list turns the window
+ * to the world's lenses (LensRunner.tsx): the same list-and-detail, run by id with declared params.
+ * The URL says which mode is showing — the host's `selectedLens` is non-null on a lens route — so a
+ * link to `#lenses/<id>/run` opens this window on that lens and runs it.
  */
 
 import React, { createContext, useCallback, useContext, useEffect, useRef, useState, useSyncExternalStore } from 'react'
@@ -48,6 +53,7 @@ import type {
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage } from '../studio/chrome.tsx'
 import { useRunProgress } from '../studio/progress.ts'
 import { RunWait, cancelRun } from './runWait.tsx'
+import { LensRunner } from './LensRunner.tsx'
 import { SaveCopyDialog, type CopyReason } from './SaveCopyDialog.tsx'
 import { ViewCypherEditor, type EditorSize, type ViewCypherEditorHandle } from './ViewCypherEditor.tsx'
 
@@ -94,6 +100,11 @@ export function SavedViewsSurface({ services, host }: SavedViewsSurfaceProps) {
 
 /** A host that gives no trace: the run is still timed and still cancellable, just not narrated. */
 const NO_TRACE = (): void => {}
+
+/** A host with no lens routing: the URL never names a lens. */
+const NO_LENS_ROUTE = (): string | null => null
+
+type Mode = 'views' | 'lenses'
 
 interface SaveNote { tone: 'ok' | 'error' | null; text: string; undo?: string }
 
@@ -177,6 +188,17 @@ function SavedViewsBody() {
    * described PlaceDossier while the panel still showed DistrictCrimeLeague.
    */
   const hashRest = useSyncExternalStore(host.subscribeSelection, host.selectedView, host.selectedView)
+  const lensRoute = useSyncExternalStore(host.subscribeSelection, host.selectedLens ?? NO_LENS_ROUTE, host.selectedLens ?? NO_LENS_ROUTE)
+  const [mode, setMode] = useState<Mode>(() => services.lenses && host.selectedLens?.() != null ? 'lenses' : 'views')
+  // The URL decides which mode shows; a route that is on neither leaves the mode as it was.
+  useEffect(() => {
+    if (!services.lenses) return
+    if (lensRoute !== null) setMode('lenses')
+    else if (hashRest !== null) setMode('views')
+  }, [lensRoute, hashRest, services.lenses])
+  /** The lens last open, so switching back to Lenses returns to it. */
+  const lastLens = useRef<string | null>(null)
+  if (lensRoute) lastLens.current = lensRoute.split(/[/?]/)[0] || null
 
   const drivenBy = useRef<string | null>('')
   /** Keep the requested values explicit; React may not have committed the form update yet. */
@@ -483,9 +505,39 @@ function SavedViewsBody() {
     void load()
   }
 
+  function switchTo(next: Mode): void {
+    if (next === mode) return
+    // Leaving a view for the lenses is leaving it: its run is cancelled, as choosing another view does.
+    if (next === 'lenses') abandonOnUnmount.current()
+    setMode(next)
+    if (next === 'lenses') host.navigateToLens?.(lastLens.current, 'open')
+    else navigate(selected, 'open')
+  }
+
+  /* Views | Lenses, at the head of whichever list is showing. Only where the host can run lenses. */
+  const modeSwitch = services.lenses ? (
+    <div className="viewmode" role="tablist" aria-label="Show">
+      {(['views', 'lenses'] as Mode[]).map((option) => (
+        <button
+          key={option}
+          role="tab"
+          aria-selected={mode === option}
+          className={`viewmode-tab${mode === option ? ' active' : ''}`}
+          data-view-mode={option}
+          onClick={() => switchTo(option)}
+        >
+          {option === 'views' ? 'Views' : 'Lenses'}
+        </button>
+      ))}
+    </div>
+  ) : null
+
+  if (mode === 'lenses' && services.lenses) return <LensRunner services={services.lenses} host={host} modeSwitch={modeSwitch} />
+
   // Nothing to choose from yet: the listing failed, is still loading, or is empty.
   if (error || views == null || list.length === 0) return (
     <div className="kit-feature kit-feature-views viewspage">
+      {modeSwitch}
       {error ? <Status tone="error">{error}</Status> : views == null ? <p className="hint">loading…</p> : (
         <StudioPanel title="Saved views">
           <p className="hint">No saved views yet. Write a query in Query Studio and save it — that is where views come from.</p>
@@ -508,6 +560,7 @@ function SavedViewsBody() {
     .filter((group) => group.views.length > 0)
   const navigator = () => (
     <>
+      {modeSwitch}
       <div className="viewnav-filter">
         <input
           type="search"
