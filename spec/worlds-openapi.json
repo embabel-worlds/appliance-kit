@@ -41,6 +41,17 @@
         "required" : [ "components" ],
         "type" : "object"
       },
+      "AccountRefusal" : {
+        "description" : "A refusal from the account surface. Carries only the reason; the status code is the only other fact and the body does not repeat it",
+        "properties" : {
+          "error" : {
+            "description" : "Why the request was refused, written to be shown",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "ActionCommandConfig" : {
         "properties" : {
           "actionName" : {
@@ -89,6 +100,84 @@
           }
         },
         "required" : [ "canRerun", "deletable", "description", "inputTypes", "name", "outputTypes", "readOnly" ],
+        "type" : "object"
+      },
+      "ActionRefusal" : {
+        "description" : "A refused action operation: not found, not editable, not deletable, or a compilation that failed",
+        "properties" : {
+          "message" : {
+            "description" : "Why, written to be shown, naming the action",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always error",
+            "enum" : [ "error" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
+        "type" : "object"
+      },
+      "ActionSpecDetail" : {
+        "description" : "One action's spec. The prompt, types, tools, references and model are present only for a prompted action, and absent, not null, for any other",
+        "properties" : {
+          "description" : {
+            "description" : "What the action does",
+            "type" : "string"
+          },
+          "editable" : {
+            "description" : "True only for a prompted action defined directly in this world, which is the only kind editable here",
+            "type" : "boolean"
+          },
+          "inputTypeNames" : {
+            "description" : "The types the action takes. Prompted actions only",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array",
+            "uniqueItems" : true
+          },
+          "llmModel" : {
+            "description" : "The model the action runs on. Prompted actions only, and null there for the default",
+            "type" : "string"
+          },
+          "llmTemperature" : {
+            "description" : "The sampling temperature. Prompted actions only, and null there for the default",
+            "format" : "double",
+            "type" : "number"
+          },
+          "name" : {
+            "description" : "The action's name",
+            "type" : "string"
+          },
+          "outputTypeName" : {
+            "description" : "The type the action produces. Prompted actions only, and null there when none is set",
+            "type" : "string"
+          },
+          "prompt" : {
+            "description" : "The prompt template. Prompted actions only",
+            "type" : "string"
+          },
+          "references" : {
+            "description" : "The references the action reads. Prompted actions only",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "stepType" : {
+            "description" : "The kind of step the spec defines",
+            "type" : "string"
+          },
+          "tools" : {
+            "description" : "The tools the action may call. Prompted actions only",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "description", "editable", "name", "stepType" ],
         "type" : "object"
       },
       "ActivityJobStats" : {
@@ -1071,6 +1160,25 @@
         "required" : [ "choice", "subject" ],
         "type" : "object"
       },
+      "ApiError" : {
+        "description" : "A refusal with a machine-readable code and a plain-language message. ApiErrorAdvice answers it for a failed validation, a missing resource or a conflicting state, and some controllers answer it directly",
+        "properties" : {
+          "code" : {
+            "description" : "Machine-readable key to branch on, such as validation_failed, unknown_field, not_found or conflict. Open: a surface may answer codes of its own",
+            "type" : "string"
+          },
+          "detail" : {
+            "description" : "Extra context where there is some, such as the fields a body may carry; null otherwise",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "A plain-language explanation, written to be shown. Never carries an exception message",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ],
+        "type" : "object"
+      },
       "ApiModesResponse" : {
         "properties" : {
           "modes" : {
@@ -1403,6 +1511,35 @@
         "required" : [ "args", "kind", "label", "properties", "rows", "title" ],
         "type" : "object"
       },
+      "AttachmentAccepted" : {
+        "description" : "A file stored and linked to the conversation. What happens to it next is up to dispatch",
+        "properties" : {
+          "attachmentId" : {
+            "description" : "The stored attachment's id, which a later answer may name",
+            "type" : "string"
+          },
+          "filename" : {
+            "description" : "The file's name as uploaded, or `attachment` where it had none",
+            "type" : "string"
+          },
+          "mimeType" : {
+            "description" : "The file's media type as uploaded, or application/octet-stream where it had none",
+            "type" : "string"
+          },
+          "sizeBytes" : {
+            "description" : "The file's size in bytes",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "Always `accepted`",
+            "example" : "accepted",
+            "type" : "string"
+          }
+        },
+        "required" : [ "attachmentId", "filename", "mimeType", "sizeBytes", "status" ],
+        "type" : "object"
+      },
       "AttachmentActivity" : {
         "properties" : {
           "filename" : {
@@ -1429,6 +1566,26 @@
           }
         },
         "required" : [ "filename", "handler", "stale", "startedAt", "state", "summary" ],
+        "type" : "object"
+      },
+      "AttachmentAnswerOutcome" : {
+        "description" : "What became of an answer to an attachment question. `status` names the outcome",
+        "type" : "object"
+      },
+      "AttachmentRefusal" : {
+        "description" : "A refusal from the attachment endpoints: the word `error` and the reason, written to be shown",
+        "properties" : {
+          "message" : {
+            "description" : "Why the file or the answer was refused: an empty or oversized file, or no active chat session",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`",
+            "example" : "error",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
         "type" : "object"
       },
       "AttachmentRequest" : {
@@ -1831,6 +1988,43 @@
         "required" : [ "verbs" ],
         "type" : "object"
       },
+      "CatchupRefusal" : {
+        "description" : "A catchup run that was refused or failed. Carries only the reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why: the unknown username, or the failure the pipeline reported",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "CatchupRunReport" : {
+        "description" : "What one on-demand catchup run did for a user",
+        "properties" : {
+          "durationMs" : {
+            "description" : "Wall-clock duration of the run in milliseconds",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "notifications" : {
+            "description" : "How many notifications the run produced",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "signals" : {
+            "description" : "How many in-window signals the run fanned through triage",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "username" : {
+            "description" : "The user the run was for, as requested",
+            "type" : "string"
+          }
+        },
+        "required" : [ "durationMs", "notifications", "signals", "username" ],
+        "type" : "object"
+      },
       "Change" : {
         "properties" : {
           "duty" : {
@@ -1967,6 +2161,42 @@
         "required" : [ "messages" ],
         "type" : "object"
       },
+      "ChatConfigUpdated" : {
+        "description" : "The chat settings as saved",
+        "properties" : {
+          "model" : {
+            "description" : "The pinned chat model, or null when chat inherits one",
+            "type" : "string"
+          },
+          "reasoningEffort" : {
+            "description" : "The reasoning effort chat runs at, or null for the model's default",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          },
+          "temperature" : {
+            "description" : "The sampling temperature, or null for the model's default",
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "required" : [ "status" ],
+        "type" : "object"
+      },
+      "ChatErrorRefusal" : {
+        "description" : "A refusal carrying only its reason, with no status word",
+        "properties" : {
+          "error" : {
+            "description" : "Why the request was refused, written to be shown",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "ChatFeedbackRequest" : {
         "properties" : {
           "text" : {
@@ -1979,6 +2209,46 @@
         "required" : [ "text", "verdict" ],
         "type" : "object"
       },
+      "ChatModelUpdated" : {
+        "description" : "The model chat now uses, with any role pin cleared",
+        "properties" : {
+          "inherited" : {
+            "description" : "True when no model is pinned, so chat uses the deployment default",
+            "type" : "boolean"
+          },
+          "model" : {
+            "description" : "The model now pinned, trimmed; null or blank when chat went back to inheriting",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          }
+        },
+        "required" : [ "inherited", "status" ],
+        "type" : "object"
+      },
+      "ChatProcessKilled" : {
+        "description" : "A process that was running and has been killed",
+        "properties" : {
+          "previousStatus" : {
+            "description" : "The process's status at the moment it was killed, such as RUNNING or WAITING",
+            "type" : "string"
+          },
+          "processId" : {
+            "description" : "The process id, as given",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `killed`",
+            "example" : "killed",
+            "type" : "string"
+          }
+        },
+        "required" : [ "previousStatus", "processId", "status" ],
+        "type" : "object"
+      },
       "ChatRequest" : {
         "properties" : {
           "message" : {
@@ -1986,6 +2256,42 @@
           }
         },
         "required" : [ "message" ],
+        "type" : "object"
+      },
+      "ChatSessionDeleted" : {
+        "description" : "A chat session that has been deleted, with whether it was the one the live stream was attached to",
+        "properties" : {
+          "sessionId" : {
+            "description" : "The deleted session's id",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `deleted`",
+            "example" : "deleted",
+            "type" : "string"
+          },
+          "wasActive" : {
+            "description" : "True when this was the session attached to the caller's live chat stream, which is detached too — a client should leave it for a blank chat",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "sessionId", "status", "wasActive" ],
+        "type" : "object"
+      },
+      "ChatStatusRefusal" : {
+        "description" : "A refusal from the chat surface: the word `error` and the reason, written to be shown",
+        "properties" : {
+          "message" : {
+            "description" : "What was refused and why, such as no open stream, no active session, or an unknown command",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`. A client may branch on it rather than on the status code",
+            "example" : "error",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
         "type" : "object"
       },
       "Choice" : {
@@ -2019,6 +2325,100 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "CodeActionCatalog" : {
+        "description" : "Every realm API operation available to a user, counted per source, with a sample",
+        "properties" : {
+          "bySource" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/CodeActionSourceCount"
+            },
+            "description" : "The operations counted per source realm, keyed by source name in sorted order",
+            "type" : "object"
+          },
+          "sample" : {
+            "description" : "Up to twenty operations, sorted by gateway name",
+            "items" : {
+              "$ref" : "#/components/schemas/CodeActionCatalogOp"
+            },
+            "type" : "array"
+          },
+          "totalRealmOps" : {
+            "description" : "How many realm API operations the user can reach",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "username" : {
+            "description" : "The user the catalog was built for, as given",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bySource", "sample", "totalRealmOps", "username" ],
+        "type" : "object"
+      },
+      "CodeActionCatalogOp" : {
+        "description" : "One realm API operation, as the catalog samples it",
+        "properties" : {
+          "op" : {
+            "description" : "The operation's gateway name",
+            "type" : "string"
+          },
+          "readOnly" : {
+            "description" : "True when the operation only reads",
+            "type" : "boolean"
+          },
+          "source" : {
+            "description" : "The realm the operation comes from",
+            "type" : "string"
+          }
+        },
+        "required" : [ "op", "readOnly", "source" ],
+        "type" : "object"
+      },
+      "CodeActionResumed" : {
+        "description" : "A process resumed from its confirmation gate",
+        "properties" : {
+          "accepted" : {
+            "description" : "Whether the write was approved. A rejected write's commit step never runs",
+            "type" : "boolean"
+          },
+          "awaitingConfirmation" : {
+            "description" : "True when the process has parked again at another gate — a plan with several writes asks once per write",
+            "type" : "boolean"
+          },
+          "processId" : {
+            "description" : "The process id, as given",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "The process's status after resuming, such as COMPLETED or WAITING",
+            "type" : "string"
+          }
+        },
+        "required" : [ "accepted", "awaitingConfirmation", "processId", "status" ],
+        "type" : "object"
+      },
+      "CodeActionSourceCount" : {
+        "description" : "One source's operations, split by whether they only read",
+        "properties" : {
+          "readOnly" : {
+            "description" : "The operations classified read-only",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "total" : {
+            "description" : "Every operation from this source",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "write" : {
+            "description" : "The operations classified as writes: total less readOnly",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "readOnly", "total", "write" ],
         "type" : "object"
       },
       "ColleaguesSpec" : {
@@ -2915,6 +3315,21 @@
         "required" : [ "description", "metadata", "name", "source", "type" ],
         "type" : "object"
       },
+      "DirectoryInstallRefusal" : {
+        "description" : "A directory install that failed. Every refusal carries the same two keys",
+        "properties" : {
+          "message" : {
+            "description" : "Why the install failed: an unsupported type, a missing spec URL, or what the installer reported",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always \"error\"",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
+        "type" : "object"
+      },
       "DirectoryRefreshResponse" : {
         "properties" : {
           "refreshed" : {
@@ -2976,6 +3391,21 @@
           }
         },
         "required" : [ "location", "name", "required", "type" ],
+        "type" : "object"
+      },
+      "DiscoveryInstallRefusal" : {
+        "description" : "An install refused because no discovery of that name is cached",
+        "properties" : {
+          "message" : {
+            "description" : "Why, naming the discovery asked for, and what to do: run discovery again",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always \"error\"",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
         "type" : "object"
       },
       "DiscoveryInstallRequest" : {
@@ -3073,6 +3503,26 @@
         "required" : [ "byOutcome", "hostCalls" ],
         "type" : "object"
       },
+      "DispatchedError" : {
+        "description" : "The body the servlet error dispatch answers for a status raised by an exception rather than written by the endpoint. Every failure except 404, which answers the not-found HTML page",
+        "properties" : {
+          "error" : {
+            "description" : "The status's standard reason phrase, such as Bad Request or Forbidden",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "The request path that failed",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "The HTTP status code, repeated from the status line",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "error", "path", "status" ],
+        "type" : "object"
+      },
       "DisplayNameBody" : {
         "properties" : {
           "name" : {
@@ -3118,6 +3568,140 @@
         "required" : [ "inUse" ],
         "type" : "object"
       },
+      "DocumentEmbeddingsUnavailable" : {
+        "description" : "An ingest refused because this appliance has no embedding model yet. Not set up, rather than broken",
+        "properties" : {
+          "embeddings" : {
+            "additionalProperties" : true,
+            "description" : "The embedding status this was decided from: configured, model, dimensions and reason",
+            "type" : "object"
+          },
+          "message" : {
+            "description" : "Why, in the operator's words, naming the command that sets a model",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `unavailable`",
+            "example" : "unavailable",
+            "type" : "string"
+          }
+        },
+        "required" : [ "embeddings", "message", "status" ],
+        "type" : "object"
+      },
+      "DocumentIngested" : {
+        "description" : "A document ingested. Kept and text-searchable even when some chunks could not be embedded",
+        "properties" : {
+          "chunks" : {
+            "description" : "How many chunks were stored, null where the stored record could not be read back",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "chunksWithoutEmbeddings" : {
+            "description" : "How many chunks have no embedding. Zero when every chunk was embedded",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "message" : {
+            "description" : "Present only for `ingested_incomplete`: how many chunks miss embeddings, and that re-ingesting embeds them",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "`ingested`, or `ingested_incomplete` when some chunks could not be embedded",
+            "enum" : [ "ingested", "ingested_incomplete" ],
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "The document's title. For inline text, the given name where no title was found",
+            "type" : "string"
+          },
+          "uri" : {
+            "description" : "The document's URI",
+            "type" : "string"
+          }
+        },
+        "required" : [ "chunksWithoutEmbeddings", "status", "uri" ],
+        "type" : "object"
+      },
+      "DocumentListing" : {
+        "description" : "The current world context's ingested documents",
+        "properties" : {
+          "documents" : {
+            "description" : "The documents, in the order they were tracked",
+            "items" : {
+              "$ref" : "#/components/schemas/DocumentListingEntry"
+            },
+            "type" : "array"
+          },
+          "totalChunks" : {
+            "description" : "Every chunk stored for this world context, across all its documents",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "documents", "totalChunks" ],
+        "type" : "object"
+      },
+      "DocumentListingEntry" : {
+        "description" : "One ingested document, as the listing describes it",
+        "properties" : {
+          "chunks" : {
+            "description" : "How many chunks the document was split into",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "chunksWithoutEmbeddings" : {
+            "description" : "How many of those chunks have no embedding, and so miss semantic search",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "createdAt" : {
+            "description" : "When the source was created, ISO-8601, where the ingest captured it",
+            "type" : "string"
+          },
+          "ingestedAt" : {
+            "description" : "When this server ingested it, ISO-8601",
+            "type" : "string"
+          },
+          "modifiedAt" : {
+            "description" : "When the SOURCE last changed, ISO-8601, where the ingest captured it. Null also means it was ingested before source dates were captured — itself a reason to re-read it",
+            "type" : "string"
+          },
+          "tags" : {
+            "description" : "The document's tags. Empty when it has none",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "title" : {
+            "description" : "The document's title, null where none was found",
+            "type" : "string"
+          },
+          "uri" : {
+            "description" : "The document's URI, which delete, retag and ask take",
+            "type" : "string"
+          }
+        },
+        "required" : [ "chunks", "chunksWithoutEmbeddings", "tags", "uri" ],
+        "type" : "object"
+      },
+      "DocumentMissing" : {
+        "description" : "A delete that found no document at that URI in the caller's world",
+        "properties" : {
+          "status" : {
+            "description" : "Always `not_found`",
+            "example" : "not_found",
+            "type" : "string"
+          },
+          "uri" : {
+            "description" : "The URI asked for, echoed back unchanged",
+            "type" : "string"
+          }
+        },
+        "required" : [ "status", "uri" ],
+        "type" : "object"
+      },
       "DocumentNotFound" : {
         "properties" : {
           "error" : {
@@ -3146,6 +3730,22 @@
           }
         },
         "required" : [ "sections", "uri" ],
+        "type" : "object"
+      },
+      "DocumentRefusal" : {
+        "description" : "An ingest that failed: the word `error` and the reason",
+        "properties" : {
+          "message" : {
+            "description" : "What failed — the fetch or the conversion — in the failure's own words",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`",
+            "example" : "error",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
         "type" : "object"
       },
       "DocumentSectionView" : {
@@ -3490,6 +4090,32 @@
         "required" : [ "uri" ],
         "type" : "object"
       },
+      "EmbeddingChangeFailed" : {
+        "description" : "An embedding model change that failed part-way and was rolled back",
+        "properties" : {
+          "error" : {
+            "description" : "What failed",
+            "type" : "string"
+          },
+          "status" : {
+            "$ref" : "#/components/schemas/EmbeddingModelState",
+            "description" : "The embedding state after the rollback, so the caller sees which model is in use now"
+          }
+        },
+        "required" : [ "error", "status" ],
+        "type" : "object"
+      },
+      "EmbeddingChangeRefusal" : {
+        "description" : "An embedding model change that was refused before anything was touched",
+        "properties" : {
+          "error" : {
+            "description" : "Why: no model named, no such model here, or a reindex already running",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "EmbeddingModelChangeRequest" : {
         "properties" : {
           "model" : {
@@ -3497,6 +4123,30 @@
           }
         },
         "required" : [ "model" ],
+        "type" : "object"
+      },
+      "EmbeddingModelState" : {
+        "description" : "Whether documents can be embedded on this appliance, and with what",
+        "properties" : {
+          "configured" : {
+            "description" : "False when nothing can be embedded — no local model, no provider key — so document features are off",
+            "type" : "boolean"
+          },
+          "dimensions" : {
+            "description" : "The model's vector width, or null when there is no model",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "model" : {
+            "description" : "The model in use, or null when there is none",
+            "type" : "string"
+          },
+          "reason" : {
+            "description" : "Why document features are off, written to be shown and naming the command that fixes it. Null when they are on",
+            "type" : "string"
+          }
+        },
+        "required" : [ "configured" ],
         "type" : "object"
       },
       "EmbeddingsStatus" : {
@@ -3574,6 +4224,42 @@
           }
         },
         "required" : [ "engines" ],
+        "type" : "object"
+      },
+      "EnrichmentRefusal" : {
+        "description" : "A refused enrichment run. Carries only the reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why the run was refused, naming the username",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "EnrichmentRun" : {
+        "description" : "The outcome of a manual enrichment run. Exactly one of durationMs and note is present",
+        "properties" : {
+          "durationMs" : {
+            "description" : "How long the run took, in milliseconds. Absent when nothing ran",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "note" : {
+            "description" : "Why nothing ran. Present only when there are no persisted joins",
+            "type" : "string"
+          },
+          "persistJoins" : {
+            "description" : "How many of the world's virtual joins persist their results. Zero means nothing ran",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "username" : {
+            "description" : "The user the run was for",
+            "type" : "string"
+          }
+        },
+        "required" : [ "persistJoins", "username" ],
         "type" : "object"
       },
       "ErrorBody" : {
@@ -4078,6 +4764,26 @@
         "required" : [ "halted" ],
         "type" : "object"
       },
+      "HandlerAdoptionResult" : {
+        "description" : "A handler in the caller's own world switched on or off, echoing the state now in force",
+        "properties" : {
+          "enabled" : {
+            "description" : "Whether it is now switched on",
+            "type" : "boolean"
+          },
+          "name" : {
+            "description" : "The handler switched",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `ok`",
+            "enum" : [ "ok" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "enabled", "name", "status" ],
+        "type" : "object"
+      },
       "HandlerAvailable" : {
         "description" : "A realm-shipped handler available to adopt, which this user has not enabled.",
         "properties" : {
@@ -4412,6 +5118,22 @@
         "required" : [ "name", "ok" ],
         "type" : "object"
       },
+      "HandlerStatusRefusal" : {
+        "description" : "A refusal from the cron or handler-adoption surface: the word `error` and the reason",
+        "properties" : {
+          "message" : {
+            "description" : "Why the request was refused, written to be shown. Names the job or handler where the refusal is about one",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`",
+            "enum" : [ "error" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
+        "type" : "object"
+      },
       "HandlerValidateRequest" : {
         "description" : "A handler body to type-check without saving or running it.",
         "properties" : {
@@ -4444,6 +5166,17 @@
           }
         },
         "required" : [ "durationMs", "ok", "valid", "violations" ],
+        "type" : "object"
+      },
+      "HeadlessRefusal" : {
+        "description" : "A request-level refusal from the headless surface. Carries only the reason; an execution that ran and failed answers 200 with the outcome in its envelope instead",
+        "properties" : {
+          "error" : {
+            "description" : "Why the request was refused, written to be shown: the unknown lens, view or run, the argument at fault, or the field the body should not have",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
         "type" : "object"
       },
       "Hint" : {
@@ -4520,6 +5253,17 @@
         },
         "type" : "object"
       },
+      "ImageRefusal" : {
+        "description" : "A refusal to serve an image: the file is not a supported image type, or its path escapes the images directory",
+        "properties" : {
+          "error" : {
+            "description" : "Why the image was refused, written to be shown",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "ImplicitOAuthFlow" : {
         "properties" : {
           "authorizationUrl" : {
@@ -4579,6 +5323,25 @@
           }
         },
         "required" : [ "allLocal", "cloudProviders", "models", "summary" ],
+        "type" : "object"
+      },
+      "InertApiGap" : {
+        "description" : "An API the world declares that cannot answer yet",
+        "properties" : {
+          "name" : {
+            "description" : "The API's name",
+            "type" : "string"
+          },
+          "reason" : {
+            "description" : "Why it is inert",
+            "type" : "string"
+          },
+          "unlockedBy" : {
+            "description" : "What would unlock it, typically the key to set; null where nothing the owner sets would",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "reason" ],
         "type" : "object"
       },
       "IngestJobList" : {
@@ -4715,6 +5478,29 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "InstallableRealm" : {
+        "description" : "A directory realm this world has not installed",
+        "properties" : {
+          "description" : {
+            "description" : "What the realm adds",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's directory name",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "What to install it from: a git clone URL or registry identifier",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "A page to read about it; null where the directory gives none",
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "name", "source" ],
         "type" : "object"
       },
       "InvokeRequest" : {
@@ -6385,6 +7171,17 @@
         "required" : [ "label", "name", "required", "type" ],
         "type" : "object"
       },
+      "LensRefusal" : {
+        "description" : "A refusal from the lens authoring surface. Carries only the reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why the request was refused, written to be shown. Names the lens or view where the refusal is about one",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "LicenceSummary" : {
         "properties" : {
           "daysLeft" : {
@@ -6428,6 +7225,74 @@
             "type" : "string"
           },
           "temperature" : {
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "type" : "object"
+      },
+      "LlmPurposeUpdated" : {
+        "description" : "One purpose's model settings as saved",
+        "properties" : {
+          "model" : {
+            "description" : "The pinned model, or null when the purpose inherits one",
+            "type" : "string"
+          },
+          "purpose" : {
+            "description" : "The purpose that was changed, as named in the path",
+            "type" : "string"
+          },
+          "reasoningEffort" : {
+            "description" : "The reasoning effort the purpose runs at, or null for the model's default",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "example" : "updated",
+            "type" : "string"
+          },
+          "temperature" : {
+            "description" : "The sampling temperature, or null for the model's default",
+            "format" : "double",
+            "type" : "number"
+          }
+        },
+        "required" : [ "purpose", "status" ],
+        "type" : "object"
+      },
+      "LlmRoleUpdated" : {
+        "description" : "A role override as saved, or cleared",
+        "properties" : {
+          "model" : {
+            "description" : "The model the request named, or null when it named none",
+            "type" : "string"
+          },
+          "roleId" : {
+            "description" : "The role that was changed, as named in the path",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `updated`, including when the override was cleared",
+            "example" : "updated",
+            "type" : "string"
+          }
+        },
+        "required" : [ "roleId", "status" ],
+        "type" : "object"
+      },
+      "LlmSettings" : {
+        "description" : "The model settings one purpose runs with. Each field is null where this world sets nothing and the deployment default applies",
+        "properties" : {
+          "model" : {
+            "description" : "The pinned model, or null when the purpose inherits one",
+            "type" : "string"
+          },
+          "reasoningEffort" : {
+            "description" : "The reasoning effort every call for this purpose runs at, or null for the model's default",
+            "type" : "string"
+          },
+          "temperature" : {
+            "description" : "The sampling temperature, or null for the model's default",
             "format" : "double",
             "type" : "number"
           }
@@ -6691,6 +7556,31 @@
         "required" : [ "created", "id", "object", "owned_by" ],
         "type" : "object"
       },
+      "ModelCatalog" : {
+        "description" : "The language models the provider offers, and the one auto-selection picks",
+        "properties" : {
+          "default" : {
+            "description" : "The model auto-selection picks; the first listed when none resolves, and empty when there are none",
+            "type" : "string"
+          },
+          "models" : {
+            "description" : "The model names. Empty when the provider could not be queried",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "modelsWithProvider" : {
+            "description" : "Each model with the provider that serves it. Absent, not empty, when the provider could not be queried",
+            "items" : {
+              "$ref" : "#/components/schemas/ModelWithProvider"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "default", "models" ],
+        "type" : "object"
+      },
       "ModelInUse" : {
         "properties" : {
           "local" : {
@@ -6739,6 +7629,21 @@
         "required" : [ "busy", "loaded" ],
         "type" : "object"
       },
+      "ModelWithProvider" : {
+        "description" : "One model and the provider that serves it",
+        "properties" : {
+          "name" : {
+            "description" : "The model's name",
+            "type" : "string"
+          },
+          "provider" : {
+            "description" : "The provider serving it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "provider" ],
+        "type" : "object"
+      },
       "MutualTLSSecurityScheme" : {
         "allOf" : [ {
           "$ref" : "#/components/schemas/SecurityScheme"
@@ -6785,6 +7690,49 @@
           }
         },
         "required" : [ "description", "id", "model" ],
+        "type" : "object"
+      },
+      "NextStepList" : {
+        "description" : "Every declared onboarding step, done ones included. Which to show and in what order is the client's decision",
+        "properties" : {
+          "steps" : {
+            "description" : "The steps, in declaration order",
+            "items" : {
+              "$ref" : "#/components/schemas/NextStepState"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "steps" ],
+        "type" : "object"
+      },
+      "NextStepState" : {
+        "description" : "One onboarding step and the answer to its own question",
+        "properties" : {
+          "detail" : {
+            "description" : "Why the status is UNKNOWN, in the step author's words; null otherwise",
+            "type" : "string"
+          },
+          "dismissed" : {
+            "description" : "The user said they will not do this step. Orthogonal to status: a dismissed step that gets done still reports DONE",
+            "type" : "boolean"
+          },
+          "id" : {
+            "description" : "The step's id, as the dismiss endpoint names it",
+            "type" : "string"
+          },
+          "presentation" : {
+            "additionalProperties" : true,
+            "description" : "Everything else the step's YAML declared, carried through uninterpreted: a console reads a route from it, a chat surface an input. Open by contract",
+            "type" : "object"
+          },
+          "status" : {
+            "description" : "DONE, TODO, or UNKNOWN when the step's query could not be answered — which must not be shown as outstanding work",
+            "enum" : [ "DONE", "TODO", "UNKNOWN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "dismissed", "id", "presentation", "status" ],
         "type" : "object"
       },
       "NodeRequest" : {
@@ -7043,6 +7991,75 @@
         "required" : [ "displayLabel", "id", "kind", "typeName" ],
         "type" : "object"
       },
+      "OAuth2AccountDisconnected" : {
+        "description" : "One account of an OAuth2 provider was disconnected",
+        "properties" : {
+          "accountId" : {
+            "description" : "The account disconnected, as the path named it",
+            "type" : "string"
+          },
+          "provider" : {
+            "description" : "The provider the account belonged to",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always \"disconnected\"",
+            "type" : "string"
+          }
+        },
+        "required" : [ "accountId", "provider", "status" ],
+        "type" : "object"
+      },
+      "OAuth2ClientNotConfigured" : {
+        "description" : "The provider is declared, but no OAuth2 client app is configured for it, so there is no consent screen to send the caller to",
+        "properties" : {
+          "error" : {
+            "description" : "Why, naming the provider",
+            "type" : "string"
+          },
+          "provider" : {
+            "description" : "The provider asked for",
+            "type" : "string"
+          },
+          "remedy" : {
+            "description" : "What an operator does to make the provider connectable",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error", "provider", "remedy" ],
+        "type" : "object"
+      },
+      "OAuth2ProviderDisconnected" : {
+        "description" : "Every account of one OAuth2 provider was disconnected",
+        "properties" : {
+          "provider" : {
+            "description" : "The provider disconnected",
+            "type" : "string"
+          },
+          "removed" : {
+            "description" : "How many registered accounts were removed. The provider's default slot is cleared as well and is not counted",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "status" : {
+            "description" : "Always \"disconnected\"",
+            "type" : "string"
+          }
+        },
+        "required" : [ "provider", "removed", "status" ],
+        "type" : "object"
+      },
+      "OAuth2ProviderNotFound" : {
+        "description" : "The OAuth2 provider named in the path is not one this world declares with OAuth2 auth",
+        "properties" : {
+          "error" : {
+            "description" : "Why, naming the provider asked for",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
       "OAuth2SecurityScheme" : {
         "allOf" : [ {
           "$ref" : "#/components/schemas/SecurityScheme"
@@ -7141,24 +8158,6 @@
         "required" : [ "jobId", "status" ],
         "type" : "object"
       },
-      "OnboardingStatusResponse" : {
-        "properties" : {
-          "error" : {
-            "type" : "string"
-          },
-          "jobId" : {
-            "type" : "string"
-          },
-          "progress" : {
-            "type" : "string"
-          },
-          "status" : {
-            "type" : "string"
-          }
-        },
-        "required" : [ "jobId", "status" ],
-        "type" : "object"
-      },
       "OpenIdConnectSecurityScheme" : {
         "allOf" : [ {
           "$ref" : "#/components/schemas/SecurityScheme"
@@ -7248,6 +8247,42 @@
         "required" : [ "content", "overridden" ],
         "type" : "object"
       },
+      "PrinciplesRefusal" : {
+        "description" : "A refused write of the operator's principles",
+        "properties" : {
+          "message" : {
+            "description" : "Why the write was refused, written to be shown",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always error",
+            "enum" : [ "error" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
+        "type" : "object"
+      },
+      "PrinciplesReset" : {
+        "description" : "The outcome of dropping the operator's principles: the shipped default is in force afterwards either way",
+        "properties" : {
+          "overridden" : {
+            "description" : "Whether an operator override is in force after the reset. Always false",
+            "type" : "boolean"
+          },
+          "removed" : {
+            "description" : "True when an operator file existed and was removed, false when the default was already in force",
+            "type" : "boolean"
+          },
+          "status" : {
+            "description" : "Always ok: a reset cannot be refused",
+            "enum" : [ "ok" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "overridden", "removed", "status" ],
+        "type" : "object"
+      },
       "ProfileView" : {
         "properties" : {
           "displayName" : {
@@ -7315,6 +8350,113 @@
         "required" : [ "enabled", "end", "start" ],
         "type" : "object"
       },
+      "RealmDirectoryBrowse" : {
+        "description" : "Every realm the directory knows, grouped by the account or organisation that publishes it",
+        "properties" : {
+          "complete" : {
+            "description" : "False when a source scan failed or returned partial results, so some realms may be missing",
+            "type" : "boolean"
+          },
+          "providers" : {
+            "description" : "One group per publisher",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmDirectoryProvider"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "complete", "providers" ],
+        "type" : "object"
+      },
+      "RealmDirectoryListing" : {
+        "description" : "One installable realm as the browse lists it",
+        "properties" : {
+          "description" : {
+            "description" : "What the realm is for, as its publisher describes it",
+            "type" : "string"
+          },
+          "installed" : {
+            "description" : "True when a realm of this name is already loaded in the caller's world",
+            "type" : "boolean"
+          },
+          "metadata" : {
+            "additionalProperties" : true,
+            "description" : "The source's own extras for this realm, passed through as reported. Open by contract",
+            "type" : "object"
+          },
+          "name" : {
+            "description" : "The realm's name, as an install names it",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "Where the realm installs from: a git clone URL or registry identifier",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "A human-readable page for the realm, or null when the source has none",
+            "type" : "string"
+          }
+        },
+        "required" : [ "description", "installed", "metadata", "name", "source" ],
+        "type" : "object"
+      },
+      "RealmDirectoryProvider" : {
+        "description" : "The realms one publisher offers",
+        "properties" : {
+          "provider" : {
+            "description" : "The publishing account or organisation, from the entry's `from` metadata, or \"unknown\"",
+            "type" : "string"
+          },
+          "realms" : {
+            "description" : "That publisher's realms",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmDirectoryListing"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "provider", "realms" ],
+        "type" : "object"
+      },
+      "RealmDirectoryUnavailable" : {
+        "description" : "The realm scan is incomplete and found nothing, so there is no partial catalogue to show",
+        "properties" : {
+          "message" : {
+            "description" : "What to do about it, written to be shown",
+            "type" : "string"
+          }
+        },
+        "required" : [ "message" ],
+        "type" : "object"
+      },
+      "RealmGaps" : {
+        "description" : "What this world could add: realms it could install, APIs that are inert and what would unlock each, and structural gaps",
+        "properties" : {
+          "inertApis" : {
+            "description" : "APIs declared but inert, with the reason and what would make each answer",
+            "items" : {
+              "$ref" : "#/components/schemas/InertApiGap"
+            },
+            "type" : "array"
+          },
+          "installableRealms" : {
+            "description" : "Directory realms not installed here",
+            "items" : {
+              "$ref" : "#/components/schemas/InstallableRealm"
+            },
+            "type" : "array"
+          },
+          "structuralGaps" : {
+            "description" : "Gaps in the world's shape, each written as a sentence",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "inertApis", "installableRealms", "structuralGaps" ],
+        "type" : "object"
+      },
       "RealmLogEntry" : {
         "properties" : {
           "dispatchId" : {
@@ -7359,6 +8501,26 @@
         "required" : [ "bufferSize", "captureEnabled", "entries", "filteredOut" ],
         "type" : "object"
       },
+      "RealmNeedsConfirmation" : {
+        "description" : "Not a failure: the realm is experimental and asks the owner to confirm. Retrying with `confirmed: true` installs it",
+        "properties" : {
+          "message" : {
+            "description" : "What the realm says the owner is confirming",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm that asked",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `needs-confirmation`",
+            "enum" : [ "needs-confirmation" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "name", "status" ],
+        "type" : "object"
+      },
       "RealmProblemResponse" : {
         "description" : "One problem found with a realm, with its cause, a suggested fix, and where it is when known.",
         "properties" : {
@@ -7401,6 +8563,48 @@
         "required" : [ "message", "severity", "source" ],
         "type" : "object"
       },
+      "RealmRefusal" : {
+        "description" : "A refusal from the realms surface: the word `error` and the reason",
+        "properties" : {
+          "message" : {
+            "description" : "Why the request was refused, written to be shown. A failed install or update carries the underlying failure's message",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `error`",
+            "enum" : [ "error" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "message", "status" ],
+        "type" : "object"
+      },
+      "RealmRemoved" : {
+        "description" : "The realm was removed",
+        "properties" : {
+          "admission" : {
+            "description" : "What happened to the realm's approval",
+            "enum" : [ "revoked", "none", "kept", "failed", "off" ],
+            "type" : "string"
+          },
+          "data" : {
+            "additionalProperties" : true,
+            "description" : "What became of the nodes the realm seeded and the documents it ingested, counted per type and per source. Absent when removal touched no data",
+            "type" : "object"
+          },
+          "name" : {
+            "description" : "The realm removed",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `removed`",
+            "enum" : [ "removed" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "admission", "name", "status" ],
+        "type" : "object"
+      },
       "RealmRuntimeSnapshot" : {
         "properties" : {
           "build" : {
@@ -7414,6 +8618,108 @@
           }
         },
         "required" : [ "build", "dispatch", "jvm" ],
+        "type" : "object"
+      },
+      "RealmUpdateResult" : {
+        "description" : "What updating one realm did. A failed row carries `message` in place of `summary`",
+        "properties" : {
+          "message" : {
+            "description" : "Why the pull failed. Present only on a failure",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's name",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "`updated` after a pull, `local` for a realm loaded in place, `error` when the pull failed",
+            "enum" : [ "updated", "local", "error" ],
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "What the pull did, or that a local realm is loaded in place. Absent on a failure",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status" ],
+        "type" : "object"
+      },
+      "RealmUpdateResults" : {
+        "description" : "The outcome of updating every realm, one row each. One realm failing does not stop the rest",
+        "properties" : {
+          "results" : {
+            "description" : "One row per loaded realm",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmUpdateResult"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "results" ],
+        "type" : "object"
+      },
+      "RealmUpdateState" : {
+        "description" : "Whether one realm has a newer version upstream. A legacy per-world clone answers only `name`, `behind` and `detail`",
+        "properties" : {
+          "behind" : {
+            "description" : "True when there is something to pull, false when current, null when it cannot be told — including while the first read is still running",
+            "type" : "boolean"
+          },
+          "checkedAt" : {
+            "description" : "When the remote was read, ISO-8601. Absent for a legacy clone, null when not yet read",
+            "type" : "string"
+          },
+          "current" : {
+            "description" : "The local checkout's revision. Absent for a legacy clone",
+            "type" : "string"
+          },
+          "detail" : {
+            "description" : "Why the answer is what it is, in words a user can act on. Always present, including for the unknowns",
+            "type" : "string"
+          },
+          "latest" : {
+            "description" : "The remote's revision. Absent for a legacy clone",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's name",
+            "type" : "string"
+          }
+        },
+        "required" : [ "detail", "name" ],
+        "type" : "object"
+      },
+      "RealmUpdateStates" : {
+        "description" : "Per installed realm, whether its upstream has moved",
+        "properties" : {
+          "results" : {
+            "description" : "One row per loaded realm",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmUpdateState"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "results" ],
+        "type" : "object"
+      },
+      "RealmsRefreshed" : {
+        "description" : "The world was rebuilt, and these realms are loaded now",
+        "properties" : {
+          "realms" : {
+            "description" : "The names of the realms loaded after the rebuild",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "status" : {
+            "description" : "Always `refreshed`",
+            "enum" : [ "refreshed" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "realms", "status" ],
         "type" : "object"
       },
       "Receipt" : {
@@ -7493,6 +8799,32 @@
           }
         },
         "required" : [ "text" ],
+        "type" : "object"
+      },
+      "RememberRefusal" : {
+        "description" : "A refused fact. Carries only the reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why the fact was refused: blank, or longer than the limit",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "RememberedFact" : {
+        "description" : "The fact as remembered: the proposition just stored, or the existing one whose text it matched",
+        "properties" : {
+          "id" : {
+            "description" : "The proposition's id",
+            "type" : "string"
+          },
+          "text" : {
+            "description" : "The proposition's text. For a duplicate, the EXISTING text, which may differ from the request in case and surrounding whitespace",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "text" ],
         "type" : "object"
       },
       "RequestMessage" : {
@@ -8109,6 +9441,73 @@
         "required" : [ "stage" ],
         "type" : "object"
       },
+      "SignalBackfillRefusal" : {
+        "description" : "A backfill that was refused or failed. Carries only the reason",
+        "properties" : {
+          "error" : {
+            "description" : "Why: an out-of-range lookback, or the failure the backfill reported",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
+        "type" : "object"
+      },
+      "SignalBackfillReport" : {
+        "description" : "The outcome of replaying the trailing window from every time-window ingestion source",
+        "properties" : {
+          "durationMs" : {
+            "description" : "Wall-clock duration of the backfill in milliseconds",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "results" : {
+            "description" : "One row per ingestion source, whether it ran or was skipped",
+            "items" : {
+              "$ref" : "#/components/schemas/SignalBackfillSourceResult"
+            },
+            "type" : "array"
+          },
+          "since" : {
+            "description" : "The start of the replayed window, ISO-8601",
+            "type" : "string"
+          },
+          "username" : {
+            "description" : "The user the backfill ran for",
+            "type" : "string"
+          }
+        },
+        "required" : [ "durationMs", "results", "since", "username" ],
+        "type" : "object"
+      },
+      "SignalBackfillSourceResult" : {
+        "description" : "What one ingestion source did during a backfill",
+        "properties" : {
+          "detail" : {
+            "description" : "Why a source was skipped or failed; null when there is nothing to add",
+            "type" : "string"
+          },
+          "fetched" : {
+            "description" : "How many signals the source returned, before dedup",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "published" : {
+            "description" : "How many of those were new and reached the bus. Re-running a backfill publishes only what was not seen before",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "sourceName" : {
+            "description" : "The ingestion source's name",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Whether the source ran: a BackfillStatus name, such as Ok, Failed, or one of the Skipped reasons",
+            "type" : "string"
+          }
+        },
+        "required" : [ "fetched", "published", "sourceName", "status" ],
+        "type" : "object"
+      },
       "SignalTypeInfo" : {
         "properties" : {
           "count" : {
@@ -8221,6 +9620,17 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "SourceLinkRefusal" : {
+        "description" : "A cited source that cannot be resolved to an external URL",
+        "properties" : {
+          "error" : {
+            "description" : "Why: the kind has no resolver here, or the resolver does not know the id or will not show it to this caller",
+            "type" : "string"
+          }
+        },
+        "required" : [ "error" ],
         "type" : "object"
       },
       "SourceWire" : {
@@ -8528,6 +9938,25 @@
           }
         },
         "required" : [ "content", "name" ],
+        "type" : "object"
+      },
+      "ThemeApplied" : {
+        "description" : "A theme switch that took effect for the current session",
+        "properties" : {
+          "displayName" : {
+            "description" : "The theme's name for display",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always \"applied\": the only outcome this body reports, since an unknown theme answers 404 with no body",
+            "type" : "string"
+          },
+          "theme" : {
+            "description" : "The name of the theme now active, as the theme list and the stylesheet path spell it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "displayName", "status", "theme" ],
         "type" : "object"
       },
       "Thread" : {
@@ -9562,6 +10991,26 @@
         "required" : [ "name", "status" ],
         "type" : "object"
       },
+      "WorldDocumentContent" : {
+        "description" : "A world document's content, capped at the first 10000 characters",
+        "properties" : {
+          "content" : {
+            "description" : "The document's text, truncated to 10000 characters",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The document name that was asked for, echoed back",
+            "type" : "string"
+          },
+          "size" : {
+            "description" : "The file's full size in bytes, before truncation",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "content", "name", "size" ],
+        "type" : "object"
+      },
       "WorldDocumentMissing" : {
         "description" : "A document this world does not have. Carries the name asked for rather than a sentence, because the only fact is which name missed",
         "properties" : {
@@ -9576,6 +11025,22 @@
           }
         },
         "required" : [ "name", "status" ],
+        "type" : "object"
+      },
+      "WorldDocumentSummary" : {
+        "description" : "One world document, and who last changed it",
+        "properties" : {
+          "lastModifiedBy" : {
+            "description" : "Who or what last wrote it",
+            "enum" : [ "USER", "ASSISTANT", "EXTERNAL", "UNKNOWN" ],
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The document's name",
+            "type" : "string"
+          }
+        },
+        "required" : [ "lastModifiedBy", "name" ],
         "type" : "object"
       },
       "WorldListing" : {
@@ -9596,6 +11061,49 @@
         "required" : [ "current", "worlds" ],
         "type" : "object"
       },
+      "WorldLlmSettings" : {
+        "description" : "The model settings of every purpose a world configures, one entry per purpose",
+        "properties" : {
+          "actionCompilerLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model that compiles actions"
+          },
+          "apiExplorerLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model that explores APIs"
+          },
+          "chat" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model a person talks to"
+          },
+          "codingLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model code is written with"
+          },
+          "fallbackCodingLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model code is written with when the coding model fails"
+          },
+          "lensLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model lenses run on"
+          },
+          "memoryLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model memory work runs on"
+          },
+          "plannerLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model that plans"
+          },
+          "rankerLlm" : {
+            "$ref" : "#/components/schemas/LlmSettings",
+            "description" : "The model that ranks results"
+          }
+        },
+        "required" : [ "actionCompilerLlm", "apiExplorerLlm", "chat", "codingLlm", "fallbackCodingLlm", "lensLlm", "memoryLlm", "plannerLlm", "rankerLlm" ],
+        "type" : "object"
+      },
       "WorldManagementRefusal" : {
         "description" : "A refusal from the world management surface. Carries only the reason, with no status word — the status code is the only other fact and the body does not repeat it",
         "properties" : {
@@ -9605,6 +11113,166 @@
           }
         },
         "required" : [ "error" ],
+        "type" : "object"
+      },
+      "WorldMcpServerSummary" : {
+        "description" : "One MCP server a world configures, and how many tools it offers",
+        "properties" : {
+          "description" : {
+            "description" : "What the server is for; empty when it declares nothing",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The server's name",
+            "type" : "string"
+          },
+          "toolCount" : {
+            "description" : "How many tools it offers",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "description", "name", "toolCount" ],
+        "type" : "object"
+      },
+      "WorldNamedEntry" : {
+        "description" : "One named thing in a world — a skill, an API, an action or a tool — and what it is for",
+        "properties" : {
+          "description" : {
+            "description" : "What it is for, as it describes itself. Empty, not null, for a tool with no description",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Its name, unique within its list",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name" ],
+        "type" : "object"
+      },
+      "WorldOverview" : {
+        "description" : "A summary of everything a world has loaded",
+        "properties" : {
+          "actions" : {
+            "description" : "The compiled actions and goals",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "apis" : {
+            "description" : "The learned APIs",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "documents" : {
+            "description" : "The world's documents",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldDocumentSummary"
+            },
+            "type" : "array"
+          },
+          "mcpServers" : {
+            "description" : "The MCP servers the world itself configures",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldMcpServerSummary"
+            },
+            "type" : "array"
+          },
+          "path" : {
+            "description" : "The world's directory on the server",
+            "type" : "string"
+          },
+          "realms" : {
+            "description" : "The installed realms",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldRealmSummary"
+            },
+            "type" : "array"
+          },
+          "skills" : {
+            "description" : "The loaded skills",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "types" : {
+            "description" : "The world's own types",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldTypeSummary"
+            },
+            "type" : "array"
+          },
+          "webhooks" : {
+            "description" : "The webhooks the world registers",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldWebhookSummary"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "actions", "apis", "documents", "mcpServers", "path", "realms", "skills", "types", "webhooks" ],
+        "type" : "object"
+      },
+      "WorldProvisioningStatus" : {
+        "description" : "How far a world being made for the first time has got. Only `provisioning` is present when nothing is being made",
+        "properties" : {
+          "elapsedSeconds" : {
+            "description" : "Whole seconds since the build started. Absent when nothing is being provisioned",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "phase" : {
+            "description" : "The current build phase, lower case. Absent when nothing is being provisioned",
+            "type" : "string"
+          },
+          "provisioning" : {
+            "description" : "True while this user's world is being built for the first time",
+            "type" : "boolean"
+          },
+          "saying" : {
+            "description" : "A sentence describing the phase, written to be shown. Absent when nothing is being provisioned",
+            "type" : "string"
+          }
+        },
+        "required" : [ "provisioning" ],
+        "type" : "object"
+      },
+      "WorldRealmSummary" : {
+        "description" : "One installed realm, as its realm.yml describes it",
+        "properties" : {
+          "author" : {
+            "description" : "Who wrote it; empty when it declares nobody",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "What the realm does; empty when it declares nothing",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's name",
+            "type" : "string"
+          },
+          "tags" : {
+            "description" : "The realm's listing tags",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "url" : {
+            "description" : "Where the realm lives, or null when its listing names nowhere",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The realm's version",
+            "type" : "string"
+          }
+        },
+        "required" : [ "author", "description", "name", "tags", "version" ],
         "type" : "object"
       },
       "WorldRefusal" : {
@@ -9660,6 +11328,111 @@
           }
         },
         "required" : [ "active", "name", "path" ],
+        "type" : "object"
+      },
+      "WorldToolCatalog" : {
+        "description" : "Every tool the model can call in this world, by category",
+        "properties" : {
+          "apiTools" : {
+            "description" : "Tools from learned APIs",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "documentTools" : {
+            "description" : "Tools over the world's documents",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "mcpTools" : {
+            "description" : "Tools from MCP servers",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "progressTools" : {
+            "description" : "Tools that report progress",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "skills" : {
+            "description" : "The loaded skills",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          },
+          "statusTools" : {
+            "description" : "Tools that report status",
+            "items" : {
+              "$ref" : "#/components/schemas/WorldNamedEntry"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "apiTools", "documentTools", "mcpTools", "progressTools", "skills", "statusTools" ],
+        "type" : "object"
+      },
+      "WorldTypeSummary" : {
+        "description" : "One of a world's own types, with the names of its properties",
+        "properties" : {
+          "description" : {
+            "description" : "What the type represents",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The type's name",
+            "type" : "string"
+          },
+          "properties" : {
+            "description" : "The names of its properties, inherited ones included",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "name", "properties" ],
+        "type" : "object"
+      },
+      "WorldWebhookSummary" : {
+        "description" : "One webhook a world registers: what it listens to and what it runs",
+        "properties" : {
+          "action" : {
+            "description" : "The action a delivery runs; empty when none is named",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "What it is for; empty when it declares nothing",
+            "type" : "string"
+          },
+          "events" : {
+            "description" : "The event names it accepts; empty for all",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "hasAutoRegister" : {
+            "description" : "True when the webhook registers itself with its source",
+            "type" : "boolean"
+          },
+          "name" : {
+            "description" : "The webhook's name",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "The system that sends it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "action", "description", "events", "hasAutoRegister", "name", "source" ],
         "type" : "object"
       }
     },
@@ -9868,10 +11641,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -9912,10 +11682,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -9925,10 +11692,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -9954,8 +11718,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionSpecDetail"
                 }
               }
             },
@@ -9965,8 +11728,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -10015,10 +11777,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -10028,10 +11787,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ActionRefusal"
                 }
               }
             },
@@ -10124,8 +11880,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/CatchupRunReport"
                 }
               }
             },
@@ -10135,8 +11890,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/CatchupRefusal"
                 }
               }
             },
@@ -10146,8 +11900,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/CatchupRefusal"
                 }
               }
             },
@@ -10170,12 +11923,21 @@
           }
         } ],
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeActionCatalog"
+                }
+              }
+            },
+            "description" : "The catalog"
+          },
           "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatErrorRefusal"
                 }
               }
             },
@@ -10206,12 +11968,21 @@
           }
         } ],
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CodeActionResumed"
+                }
+              }
+            },
+            "description" : "The resumed process"
+          },
           "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatErrorRefusal"
                 }
               }
             },
@@ -10264,12 +12035,22 @@
           }
         } ],
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "additionalProperties" : true,
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "One of five outcomes, told apart by `planned` and the keys present: a dry run's routing decision, an answered question with its results, a question no goal fits with the rankings, a write parked for confirmation, or a typed goal's plan and results. Open by contract: `results` carries whatever items the goal type produces"
+          },
           "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatErrorRefusal"
                 }
               }
             },
@@ -10292,12 +12073,21 @@
           }
         } ],
         "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EnrichmentRun"
+                }
+              }
+            },
+            "description" : "The run, or why there was nothing to run"
+          },
           "400" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/EnrichmentRefusal"
                 }
               }
             },
@@ -11209,7 +12999,7 @@
                 }
               }
             },
-            "description" : "Unknown decorator"
+            "description" : "Unknown decorator: the report carries the reason in error, with no candidates"
           }
         },
         "summary" : "Run one tick of a decorator now over its stale candidates",
@@ -11263,7 +13053,7 @@
                 }
               }
             },
-            "description" : "Unknown decorator"
+            "description" : "Unknown decorator: the report carries the reason in error, with no candidates"
           },
           "500" : {
             "content" : {
@@ -11273,7 +13063,7 @@
                 }
               }
             },
-            "description" : "Decoration failed"
+            "description" : "Decoration failed: the report says how many nodes failed"
           }
         },
         "summary" : "Force a decorator to run against one specific node, bypassing the staleness check",
@@ -12893,8 +14683,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/PrinciplesReset"
                 }
               }
             },
@@ -12950,7 +14739,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/PrinciplesRefusal"
                 }
               }
             },
@@ -13107,10 +14896,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentSuggestion"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13148,7 +14943,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13196,20 +15000,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
-                }
-              }
-            },
             "description" : "No such suggestion in your world"
           },
           "409" : {
@@ -13254,20 +15060,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
-                }
-              }
-            },
             "description" : "No such suggestion in your world"
           },
           "409" : {
@@ -13313,20 +15121,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/SuggestionResponse"
-                }
-              }
-            },
             "description" : "No such suggestion in your world"
           },
           "409" : {
@@ -13366,10 +15176,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentView"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13407,20 +15223,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AgentView"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AgentView"
-                }
-              }
-            },
             "description" : "No agent of that name in your world"
           }
         },
@@ -13639,7 +15457,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Slots"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13685,7 +15512,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Slots"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13740,7 +15576,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Slots"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13787,20 +15632,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/DutyCheck"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/DutyCheck"
-                }
-              }
-            },
             "description" : "No signed agent of that name holds such a duty"
           }
         },
@@ -13838,10 +15685,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentProposal"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -13888,20 +15741,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
-                }
-              }
-            },
             "description" : "No such proposal of this agent's"
           },
           "409" : {
@@ -13954,20 +15809,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
-                }
-              }
-            },
             "description" : "No such proposal of this agent's"
           },
           "409" : {
@@ -14013,20 +15870,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AgentReflectionProposalResponse"
-                }
-              }
-            },
             "description" : "No such agent in your world"
           },
           "409" : {
@@ -14082,20 +15941,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Retired"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/Retired"
-                }
-              }
-            },
             "description" : "No such agent in your world"
           }
         },
@@ -14142,10 +16003,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentRun"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -14191,20 +16058,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RunDetail"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/RunDetail"
-                }
-              }
-            },
             "description" : "No such run of this agent's in your world"
           }
         },
@@ -14240,20 +16109,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/StageResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/StageResponse"
-                }
-              }
-            },
             "description" : "No declared agent of that name in your world"
           },
           "409" : {
@@ -14309,20 +16180,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/StageResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/StageResponse"
-                }
-              }
-            },
             "description" : "No such agent, or no such routine on it"
           },
           "409" : {
@@ -14368,7 +16241,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Upcoming"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -14416,7 +16298,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/UpcomingResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -14474,7 +16365,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/UpcomingResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -14640,26 +16540,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentVersionView"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentVersionView"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
             "description" : "No declared agent of that name in your world"
           }
         },
@@ -14702,7 +16598,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AccountRefusal"
                 }
               }
             },
@@ -15048,20 +16944,13 @@
         } ],
         "responses" : {
           "302" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "Redirect to the provider consent screen, or to the chat view when no client app is configured and the caller accepts HTML"
           },
           "404" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/OAuth2ProviderNotFound"
                 }
               }
             },
@@ -15071,7 +16960,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/OAuth2ClientNotConfigured"
                 }
               }
             },
@@ -15117,7 +17006,10 @@
                 }
               }
             },
-            "description" : "HTML page reporting success or a provider-side failure"
+            "description" : "HTML page reporting a provider-side failure or a failed token exchange"
+          },
+          "302" : {
+            "description" : "Authorized: back to the chat view, which reads ?authorized=<provider>"
           },
           "400" : {
             "content" : {
@@ -15127,7 +17019,7 @@
                 }
               }
             },
-            "description" : "Missing code or state, or a state this instance never issued"
+            "description" : "Missing code or state, a state this instance never issued, or a flow whose user or provider is gone. The body is HTML text"
           },
           "410" : {
             "content" : {
@@ -15137,7 +17029,7 @@
                 }
               }
             },
-            "description" : "The consent screen sat too long and the flow expired"
+            "description" : "The consent screen sat too long and the flow expired. The body is an HTML page"
           }
         },
         "summary" : "OAuth2 callback — exchanges code for tokens",
@@ -15160,8 +17052,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/OAuth2ProviderDisconnected"
                 }
               }
             },
@@ -15195,8 +17086,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/OAuth2AccountDisconnected"
                 }
               }
             },
@@ -15312,6 +17202,16 @@
               }
             },
             "description" : "days is negative. The reason is carried in the body's error field, alongside an empty events list"
+          },
+          "502" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/EventsResponse"
+                }
+              }
+            },
+            "description" : "The calendar providers could not be read. The reason is carried in the body's error field, alongside an empty events list"
           }
         },
         "summary" : "Calendar events across all connected accounts in a time window",
@@ -15350,10 +17250,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15405,8 +17302,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AttachmentAccepted"
                 }
               }
             },
@@ -15416,8 +17312,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AttachmentRefusal"
                 }
               }
             },
@@ -15427,8 +17322,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AttachmentRefusal"
                 }
               }
             },
@@ -15463,8 +17357,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AttachmentAnswerOutcome"
                 }
               }
             },
@@ -15474,8 +17367,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AttachmentRefusal"
                 }
               }
             },
@@ -15548,10 +17440,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15561,10 +17450,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15607,10 +17493,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15640,7 +17523,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15697,10 +17580,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15710,10 +17590,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15773,7 +17650,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatErrorRefusal"
                 }
               }
             },
@@ -15801,8 +17678,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatProcessKilled"
                 }
               }
             },
@@ -15812,8 +17688,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15843,7 +17718,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15904,16 +17779,6 @@
             "description" : "Session summaries"
           },
           "400" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/SessionSummaryResponse"
-                  },
-                  "type" : "array"
-                }
-              }
-            },
             "description" : "No such kind of session"
           }
         },
@@ -15938,8 +17803,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatSessionDeleted"
                 }
               }
             },
@@ -15949,8 +17813,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -15980,7 +17843,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -16038,7 +17901,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatStatusRefusal"
                 }
               }
             },
@@ -16177,8 +18040,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LlmSettings"
                 }
               }
             },
@@ -16199,6 +18061,7 @@
               }
             }
           },
+          "description" : "The chat model settings to apply. A field the body omits keeps its current value",
           "required" : true
         },
         "responses" : {
@@ -16206,12 +18069,21 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatConfigUpdated"
                 }
               }
             },
             "description" : "Chat config updated"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorldRefusal"
+                }
+              }
+            },
+            "description" : "Unsupported reasoning effort"
           }
         },
         "summary" : "Update chat config",
@@ -16230,6 +18102,7 @@
               }
             }
           },
+          "description" : "The chat model to pin, with no reasoning effort: that is set through PUT /config/chat",
           "required" : true
         },
         "responses" : {
@@ -16237,8 +18110,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ChatModelUpdated"
                 }
               }
             },
@@ -16345,6 +18217,7 @@
         "description" : "Maps a role (e.g. code_best) to a model for this world, with an optional reasoning effort every call naming the role runs at (none, minimal, low, medium, high, xhigh; `none` turns a thinking model's reasoning off). The effort changes only when the body names reasoningEffort: a value sets it, an empty string clears it, omitting it keeps it. Send a body with model, role and effort all blank to clear the override (inherit the deployment default).",
         "operationId" : "updateLlmRole",
         "parameters" : [ {
+          "description" : "The role to override, such as code_best — the name realms resolve a model by",
           "in" : "path",
           "name" : "roleId",
           "required" : true,
@@ -16360,6 +18233,7 @@
               }
             }
           },
+          "description" : "The model, role and reasoning effort the role resolves to. All blank clears the override",
           "required" : true
         },
         "responses" : {
@@ -16367,8 +18241,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LlmRoleUpdated"
                 }
               }
             },
@@ -16398,8 +18271,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldLlmSettings"
                 }
               }
             },
@@ -16415,6 +18287,7 @@
         "description" : "Sets model, temperature, and optional reasoning effort for one of: chat, actionCompilerLlm, memoryLlm, apiExplorerLlm, codingLlm, fallbackCodingLlm, rankerLlm, plannerLlm, lensLlm. A JSON null counts as omitted for every field; a blank model or role still names that field. The effort changes only when the body names reasoningEffort: a value sets it, an empty string clears it, and omitting it keeps it. A body whose only named field is reasoningEffort changes just the effort; any other body, even {}, replaces model, role, and temperature, so {} returns them to the deployment default. Nothing reads the actionCompilerLlm, memoryLlm, or apiExplorerLlm setting at runtime, so any reasoningEffort for them, even an empty string, is rejected with 400.",
         "operationId" : "updateLlmConfig",
         "parameters" : [ {
+          "description" : "Which purpose to configure: one of the nine the operation description lists",
           "in" : "path",
           "name" : "purpose",
           "required" : true,
@@ -16430,6 +18303,7 @@
               }
             }
           },
+          "description" : "The settings to apply to that purpose. A body naming only reasoningEffort changes just the effort",
           "required" : true
         },
         "responses" : {
@@ -16437,8 +18311,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LlmPurposeUpdated"
                 }
               }
             },
@@ -16546,8 +18419,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ModelCatalog"
                 }
               }
             },
@@ -16868,7 +18740,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AccountRefusal"
                 }
               }
             },
@@ -16978,10 +18850,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerStatusRefusal"
                 }
               }
             },
@@ -17024,10 +18893,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerStatusRefusal"
                 }
               }
             },
@@ -17070,10 +18936,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerErrorResponse"
                 }
               }
             },
@@ -17083,10 +18946,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerErrorResponse"
                 }
               }
             },
@@ -17160,10 +19020,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerStatusRefusal"
                 }
               }
             },
@@ -17273,8 +19130,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmDirectoryBrowse"
                 }
               }
             },
@@ -17284,8 +19140,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmDirectoryUnavailable"
                 }
               }
             },
@@ -17328,10 +19183,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DirectoryInstallRefusal"
                 }
               }
             },
@@ -17422,13 +19274,6 @@
             "description" : "The cached discovery"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/DiscoveryResult"
-                }
-              }
-            },
             "description" : "No cached discovery with that name"
           }
         },
@@ -17517,10 +19362,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DiscoveryInstallRefusal"
                 }
               }
             },
@@ -17562,10 +19404,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentMissing"
                 }
               }
             },
@@ -17583,8 +19422,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentListing"
                 }
               }
             },
@@ -17628,9 +19466,9 @@
                 }
               }
             },
-            "description" : "Blank question"
+            "description" : "Blank question. The usual body, empty, with the reason under filters.error"
           },
-          "503" : {
+          "404" : {
             "content" : {
               "application/json" : {
                 "schema" : {
@@ -17638,7 +19476,7 @@
                 }
               }
             },
-            "description" : "The agentic documents source is not available in this deployment"
+            "description" : "The uri scope names no document in this world. The usual body, empty, with the reason under filters.error"
           }
         },
         "summary" : "Ask a question of your documents",
@@ -17984,7 +19822,7 @@
                 }
               }
             },
-            "description" : "No document at that URI in the caller's world"
+            "description" : "No document at that URI in the caller's world: the same shape, with status `not_found` and no tags"
           }
         },
         "summary" : "Replace a document's tags",
@@ -18010,19 +19848,27 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentIngested"
                 }
               }
             },
             "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentEmbeddingsUnavailable"
+                }
+              }
+            },
+            "description" : "No embedding model is set, so nothing could be searched: the reason names the command that sets one"
+          },
           "500" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentRefusal"
                 }
               }
             },
@@ -18076,12 +19922,21 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentIngested"
                 }
               }
             },
             "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentEmbeddingsUnavailable"
+                }
+              }
+            },
+            "description" : "No embedding model is set, so nothing could be searched: the reason names the command that sets one"
           }
         },
         "summary" : "Upload and ingest a file",
@@ -18107,19 +19962,27 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentIngested"
                 }
               }
             },
             "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentEmbeddingsUnavailable"
+                }
+              }
+            },
+            "description" : "No embedding model is set, so nothing could be searched: the reason names the command that sets one"
+          },
           "500" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DocumentRefusal"
                 }
               }
             },
@@ -18201,6 +20064,16 @@
               }
             },
             "description" : "days or maxPerAccount is not positive. The reason is carried in the body's error field, alongside an empty threads list"
+          },
+          "502" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ThreadsResponse"
+                }
+              }
+            },
+            "description" : "The email providers could not be read. The reason is carried in the body's error field, alongside an empty threads list"
           }
         },
         "summary" : "Recent email threads across all connected accounts",
@@ -18216,8 +20089,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/EmbeddingModelState"
                 }
               }
             },
@@ -18255,17 +20127,21 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/EmbeddingChangeRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/EmbeddingChangeFailed"
+                  } ]
                 }
               }
             },
-            "description" : "No such model, or it could not be reached"
+            "description" : "No model named, or no such model here — just the reason; or the change failed and was rolled back — the reason and the state now in force"
           },
           "409" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/EmbeddingChangeRefusal"
                 }
               }
             },
@@ -18294,7 +20170,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/HaltResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -18321,7 +20206,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/HaltResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -18359,20 +20253,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/HaltResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/HaltResponse"
-                }
-              }
-            },
             "description" : "No world"
           }
         },
@@ -18428,8 +20324,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerAdoptionResult"
                 }
               }
             },
@@ -18439,8 +20334,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HandlerStatusRefusal"
                 }
               }
             },
@@ -18655,27 +20549,20 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
             "description" : "Not permitted — the proposal targets another world"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such pending proposal"
           },
           "422" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
@@ -18714,27 +20601,20 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
             "description" : "Not permitted — the proposal targets another world"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "No such pending proposal"
           },
           "422" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
@@ -18772,20 +20652,13 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ImageRefusal"
                 }
               }
             },
-            "description" : "Not an image file"
+            "description" : "Not an image file, or a path outside the images directory"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "Image not found"
           }
         },
@@ -20219,7 +22092,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LensRefusal"
                 }
               }
             },
@@ -20255,7 +22128,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LensRefusal"
                 }
               }
             },
@@ -20321,17 +22194,28 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Not authenticated"
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
           },
           "404" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
                 }
               }
             },
@@ -20360,17 +22244,28 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Not authenticated"
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
           },
           "404" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
                 }
               }
             },
@@ -20456,7 +22351,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LensRefusal"
                 }
               }
             },
@@ -20549,7 +22444,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LensRefusal"
                 }
               }
             },
@@ -20559,7 +22454,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/LensRefusal"
                 }
               }
             },
@@ -20615,27 +22510,49 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Arguments do not match the lens's declared parameters, or the body has a field other than args/idempotencyKey"
+            "description" : "Arguments do not match the lens's declared parameters, or the body has a field other than args/idempotencyKey; a body that will not parse answers an ApiError"
           },
           "401" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Not authenticated"
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
           },
           "404" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
                 }
               }
             },
@@ -20665,12 +22582,21 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RememberedFact"
                 }
               }
             },
-            "description" : "OK"
+            "description" : "The fact stored, or the existing one it duplicates"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RememberRefusal"
+                }
+              }
+            },
+            "description" : "The text is blank or longer than the limit"
           }
         },
         "summary" : "Remember a fact",
@@ -20713,8 +22639,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NextStepList"
                 }
               }
             },
@@ -20759,8 +22684,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/NextStepList"
                 }
               }
             },
@@ -21007,13 +22931,6 @@
         } ],
         "responses" : {
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/OnboardingStatusResponse"
-                }
-              }
-            },
             "description" : "No onboarding job of that id: either it never existed, or it finished over an hour ago and the next status call cleaned it up"
           }
         },
@@ -21137,7 +23054,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/AccountRefusal"
                 }
               }
             },
@@ -21212,7 +23129,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/PreferencesView"
+                  "$ref" : "#/components/schemas/DispatchedError"
                 }
               }
             },
@@ -21292,11 +23209,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "items" : {
-                    "additionalProperties" : { },
-                    "type" : "object"
-                  },
-                  "type" : "array"
+                  "$ref" : "#/components/schemas/DispatchedError"
                 }
               }
             },
@@ -21337,36 +23250,31 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
-            "description" : "Neither repo nor path was given: an install is either a git spec to clone or a directory to load where it is"
+            "description" : "Neither repo nor path was given, or the path is not a mounted realm directory"
           },
           "409" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/RealmRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/RealmNeedsConfirmation"
+                  } ]
                 }
               }
             },
-            "description" : "Realm already exists"
+            "description" : "Realm already exists, or the realm is experimental and needs `confirmed: true`; `status` says which"
           },
           "500" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
@@ -21386,8 +23294,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmGaps"
                 }
               }
             },
@@ -21407,8 +23314,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmsRefreshed"
                 }
               }
             },
@@ -21428,8 +23334,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmUpdateResults"
                 }
               }
             },
@@ -21449,8 +23354,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmUpdateStates"
                 }
               }
             },
@@ -21488,8 +23392,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRemoved"
                 }
               }
             },
@@ -21499,8 +23402,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
@@ -21510,8 +23412,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
@@ -21547,14 +23448,6 @@
             "description" : "The icon"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "format" : "byte",
-                  "type" : "string"
-                }
-              }
-            },
             "description" : "No icon"
           }
         },
@@ -21591,16 +23484,9 @@
           },
           "404" : {
             "content" : {
-              "*/*" : {
-                "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/RealmProblemResponse"
-                  },
-                  "type" : "array"
-                }
-              }
+              "text/html" : { }
             },
-            "description" : "No installed realm has that name"
+            "description" : "No installed realm has that name. Raised as a status, so it answers the not-found page"
           }
         },
         "summary" : "A realm's problems",
@@ -21638,10 +23524,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
@@ -21651,10 +23534,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmRefusal"
                 }
               }
             },
@@ -21684,7 +23564,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Verification"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -21716,10 +23605,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "items" : {
-                    "$ref" : "#/components/schemas/AgentRequest"
-                  },
-                  "type" : "array"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -21757,20 +23652,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/AgentRequest"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/AgentRequest"
-                }
-              }
-            },
             "description" : "No such request in your world"
           }
         },
@@ -21816,20 +23713,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/DecisionResponse"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/DecisionResponse"
-                }
-              }
-            },
             "description" : "No such request in your world"
           },
           "409" : {
@@ -22036,7 +23935,7 @@
                 }
               }
             },
-            "description" : "Blank source"
+            "description" : "Blank source. The body is a batch response that rejects every event, with the reason on its one receipt"
           }
         },
         "summary" : "Ingest a batch of sensor events for the authenticated user",
@@ -22146,8 +24045,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SignalBackfillReport"
                 }
               }
             },
@@ -22157,8 +24055,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SignalBackfillRefusal"
                 }
               }
             },
@@ -22168,8 +24065,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SignalBackfillRefusal"
                 }
               }
             },
@@ -22223,20 +24119,13 @@
         } ],
         "responses" : {
           "302" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "Redirect to the external URL"
           },
           "404" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/SourceLinkRefusal"
                 }
               }
             },
@@ -22294,13 +24183,6 @@
             "description" : "The theme stylesheet"
           },
           "404" : {
-            "content" : {
-              "text/css" : {
-                "schema" : {
-                  "type" : "string"
-                }
-              }
-            },
             "description" : "Unknown theme"
           }
         },
@@ -22325,22 +24207,13 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/ThemeApplied"
                 }
               }
             },
             "description" : "Theme applied"
           },
           "404" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
-                }
-              }
-            },
             "description" : "Unknown theme"
           }
         },
@@ -22366,7 +24239,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ThreadList"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -22403,7 +24285,16 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/Thread"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
@@ -22440,20 +24331,22 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ThreadView"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ThreadView"
-                }
-              }
-            },
             "description" : "No thread of yours with that id"
           }
         },
@@ -22495,33 +24388,28 @@
             "description" : "The message as posted"
           },
           "400" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ThreadMessage"
-                }
-              }
-            },
             "description" : "Nothing to post"
           },
           "401" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ThreadMessage"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
             "description" : "No authenticated principal"
           },
           "404" : {
-            "content" : {
-              "application/json" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/ThreadMessage"
-                }
-              }
-            },
             "description" : "No thread of yours with that id"
           }
         },
@@ -22812,27 +24700,49 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Arguments do not match the view's declared parameters, or the body has a field other than args/idempotencyKey"
+            "description" : "Arguments do not match the view's declared parameters, or the body has a field other than args/idempotencyKey; a body that will not parse answers an ApiError"
           },
           "401" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
                 }
               }
             },
-            "description" : "Not authenticated"
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
           },
           "404" : {
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
                 }
               }
             },
@@ -22859,13 +24769,6 @@
             "description" : "The credential and the settings it is for"
           },
           "409" : {
-            "content" : {
-              "*/*" : {
-                "schema" : {
-                  "$ref" : "#/components/schemas/VoiceSessionView"
-                }
-              }
-            },
             "description" : "This world has no Deepgram key — voice is not set up"
           }
         },
@@ -23125,7 +25028,7 @@
             "content" : {
               "application/json" : {
                 "schema" : {
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
                 }
               }
             },
@@ -23615,8 +25518,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldOverview"
                 }
               }
             },
@@ -23825,8 +25727,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldDocumentContent"
                 }
               }
             },
@@ -24130,8 +26031,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldProvisioningStatus"
                 }
               }
             },
@@ -24282,8 +26182,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : { },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/WorldToolCatalog"
                 }
               }
             },
@@ -24518,7 +26417,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36551"
+    "url" : "http://localhost:46191"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
