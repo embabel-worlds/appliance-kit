@@ -209,6 +209,59 @@ export interface ViewsServices {
    * has been, and Cancel finds the run through `kg.runs`.
    */
   subscribeProgress?(onEvent: (event: VcEvent) => void, signal: AbortSignal): void
+  /**
+   * The world's LENSES — judgments composed in code over several queries — run here beside the
+   * views. Given, the window has a Lenses mode; omitted (an older host), it shows views only.
+   */
+  lenses?: LensServices
+}
+
+/** One declared parameter of a lens, as `GET /lenses` lists it. */
+export interface LensParamSpec {
+  name: string
+  /** Advisory: STRING, INT, DATE, DURATION or BOOLEAN. */
+  type?: string
+  label?: string
+  default?: unknown
+  required?: boolean
+}
+
+/** A lens the user can run, as `GET /lenses` lists it. */
+export interface LensSummary {
+  id: string
+  name: string
+  /** Absent from appliances older than the lens runner. */
+  description?: string
+  params?: LensParamSpec[]
+}
+
+/**
+ * What running a lens answers — the headless envelope of `POST /lenses/{id}/invoke`, the same one
+ * MCP's `lens_open` and an app's `embabel.lenses.invoke` get. `status` is the lifecycle; `outcome`
+ * says why the result is what it is, so EMPTY (nothing there) is never read as SOURCE_UNAVAILABLE.
+ */
+export interface LensEnvelope {
+  executionId: string
+  operationId: string
+  status: 'SUCCEEDED' | 'FAILED' | 'RUNNING' | 'WAITING_INPUT' | 'CANCELLED' | string
+  outcome: string
+  outputType?: string | null
+  data?: unknown
+  warnings?: Array<{ code: string; message: string }>
+  error?: { code: string; message: string } | null
+  metrics?: { durationMs?: number; externalCalls?: number }
+}
+
+export interface LensServices {
+  list(): Promise<Outcome<LensSummary[]>>
+  /**
+   * Start a run. The host may answer a RUNNING envelope rather than wait for a slow lens (the
+   * appliance's `waitSeconds`); its `executionId` is then the run handle [run] polls.
+   */
+  invoke(id: string, args: Record<string, unknown>): Promise<Outcome<LensEnvelope>>
+  run(runId: string): Promise<Outcome<LensEnvelope>>
+  /** Stop a RUNNING run. Optional: without it the surface offers no Cancel. */
+  kill?(runId: string): Promise<Outcome<LensEnvelope>>
 }
 
 export interface HandlerDraft {
@@ -218,10 +271,19 @@ export interface HandlerDraft {
 
 export type SavedViewsDestination = 'open' | 'run' | 'results' | 'schema' | 'watch'
 
+export type LensDestination = 'open' | 'run'
+
 export interface SavedViewsHost {
   selectedView(): string | null
   subscribeSelection(listener: () => void): () => void
   navigateToView?(name: string | null, destination: SavedViewsDestination, replace?: boolean): void
+  /**
+   * The lens the URL names (`<id>`, `<id>/run`, `<id>/run?since=…`), `''` for the Lenses list with
+   * none chosen, or null when the URL is not on lenses. Optional, like [navigateToLens]: a host
+   * without them keeps the lens mode out of the URL.
+   */
+  selectedLens?(): string | null
+  navigateToLens?(id: string | null, destination: LensDestination, replace?: boolean): void
   onOpenInStudio(cypher: string): void
   onCreateHandler(draft: HandlerDraft): void
 }

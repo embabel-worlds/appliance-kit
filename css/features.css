@@ -716,6 +716,29 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 
 :where(.kit-feature) .viewnav-filter { flex: none; padding: 10px; border-bottom: 1px solid var(--rule); }
 
+/* Views | Lenses: which of the world's saved answers the list shows. Above the filter, which it scopes. */
+:where(.kit-feature) .viewmode { display: flex; flex: none; gap: 4px; padding: 10px 10px 0; }
+
+/* With no list beside it (the listing failed, is loading, or is empty) the switch keeps the list's width. */
+:where(.kit-feature).viewspage:not(.viewspage-selected) > .viewmode { max-width: 300px; padding: 0 0 12px; }
+
+:where(.kit-feature) .viewmode-tab {
+  flex: 1; min-height: 34px; padding: 6px 10px; border: 1px solid var(--rule); border-radius: var(--radius);
+  background: transparent; color: var(--mid); cursor: pointer;
+}
+
+:where(.kit-feature) .viewmode-tab.active {
+  border-color: var(--signal); background: color-mix(in srgb, var(--signal) 14%, transparent); color: var(--ink);
+}
+
+:where(.kit-feature) .viewmode-tab:focus-visible { box-shadow: inset 0 0 0 2px var(--ink); outline: none; }
+
+/* A lens's typed payload, as it came: the pane is the scroller, so the block is not a second one. */
+:where(.kit-feature) .lensdata {
+  margin: 0; padding: 12px 14px; font: 12px/1.5 var(--mono); color: var(--ink);
+  white-space: pre-wrap; overflow-wrap: anywhere;
+}
+
 :where(.kit-feature) .viewnav-filter input { width: 100%; box-sizing: border-box; }
 
 :where(.kit-feature) .viewnav-none { margin: 14px; }

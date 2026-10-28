@@ -6,7 +6,7 @@ import { ok, type Outcome } from '../../src/client/outcome.ts'
 import type { KgView } from '../../src/client/kg.ts'
 import type { VcEvent } from '../../src/vc/events.ts'
 import { SavedViewsSurface } from '../../src/react/features/views/SavedViewsSurface.tsx'
-import type { SavedViewsDestination, ViewsServices } from '../../src/react/features/contracts.ts'
+import type { LensDestination, LensEnvelope, LensServices, LensSummary, SavedViewsDestination, ViewsServices } from '../../src/react/features/contracts.ts'
 
 /*
  * The Views window with fixed data, for looking at: `node scripts/fixture.mjs views`. The host box is
@@ -65,7 +65,55 @@ function runSlowly(): Promise<Outcome<any>> {
   })
 }
 
-let route: string | null = 'open_invoices_by_customer'
+/*
+ * Lenses, one per outcome worth looking at: a typed payload, rows, a real empty, a failure, and one
+ * that answers RUNNING and settles on the third poll. `#lenses/<id>` (or `/run`) in the fixture's
+ * URL opens the window on it.
+ */
+const lenses: LensSummary[] = [
+  {
+    id: 'briefing', name: 'Daily Briefing', description: 'What changed since you last looked, in three items.',
+    params: [{ name: 'since', type: 'DATE', label: 'Brief since' }, { name: 'lookbackDays', type: 'INT', label: 'Days to look back', default: 7 }],
+  },
+  {
+    id: 'deal-triage', name: 'Deal triage', description: 'Open deals judged at risk, strategic or standard.',
+    params: [{ name: 'verdict', type: 'STRING', default: 'at_risk' }, { name: 'includeClosed', type: 'BOOLEAN', default: false }],
+  },
+  { id: 'quiet-week', name: 'Quiet week', description: 'Meetings nobody has prepared for.', params: [] },
+  { id: 'vendor-health', name: 'Vendor health', description: 'Suppliers whose invoices bounced.', params: [] },
+  { id: 'slow-triage', name: 'Slow triage', description: 'A lens that runs in the background until it settles.', params: [] },
+]
+const envelope = (id: string, rest: Partial<LensEnvelope>): LensEnvelope => ({
+  executionId: `exec_${id}`, operationId: id, status: 'SUCCEEDED', outcome: 'OK', warnings: [], error: null,
+  metrics: { durationMs: 1840, externalCalls: 3 }, ...rest,
+})
+let polls = 0
+const lensServices: LensServices = {
+  list: async () => ok(lenses),
+  invoke: async (id, args) => {
+    if (id === 'briefing') return ok(envelope(id, { outputType: 'briefing', data: {
+      kind: 'briefing', since: args['since'] ?? '2026-10-21', items: [
+        { title: 'Acme Freight paid the September invoice', why: 'It was the oldest open item.' },
+        { title: 'Two meetings tomorrow have no agenda', why: 'Both are with customers owing over $10k.' },
+        { title: 'Kestrel Aero renewal is due in 9 days', why: 'Nobody has replied to their last email.' },
+      ] } }))
+    if (id === 'deal-triage') return ok(envelope(id, { outputType: 'entities', data: names.slice(0, 9).map((customer, i) => ({
+      id: `deal-${i}`, name: `${customer} renewal`, labels: ['Deal'], verdict: ['at_risk', 'strategic', 'standard'][i % 3], value: 12000 + i * 3100,
+    })) }))
+    if (id === 'quiet-week') return ok(envelope(id, { outcome: 'EMPTY', outputType: 'entities', data: [], metrics: { durationMs: 220, externalCalls: 0 } }))
+    if (id === 'vendor-health') return ok(envelope(id, { status: 'FAILED', outcome: 'SOURCE_UNAVAILABLE', error: { code: 'SERVICE_UNAVAILABLE', message: 'A data source this lens needs could not be reached. Try again shortly.' } }))
+    polls = 0
+    return ok(envelope(id, { executionId: 'run-slow', status: 'RUNNING', outcome: 'PENDING' }))
+  },
+  run: async (runId) => ++polls < 3
+    ? ok(envelope('slow-triage', { executionId: runId, status: 'RUNNING', outcome: 'PENDING' }))
+    : ok(envelope('slow-triage', { executionId: runId, outputType: 'entities', data: [{ id: 'd1', name: 'Fathom Marine renewal', verdict: 'at_risk' }] })),
+  kill: async (runId) => ok(envelope('slow-triage', { executionId: runId, status: 'CANCELLED', outcome: 'FAILED', error: { code: 'CANCELLED', message: 'killed by owner' } })),
+}
+
+const hash = decodeURIComponent(location.hash.replace(/^#/, ''))
+let route: string | null = hash.startsWith('lenses') ? null : 'open_invoices_by_customer'
+let lensRoute: string | null = hash.startsWith('lenses') ? hash.slice('lenses'.length).replace(/^\//, '') : null
 const listeners = new Set<() => void>()
 const services: ViewsServices = {
   kg: {
@@ -88,11 +136,14 @@ const services: ViewsServices = {
     list: async () => ok([]), create: async () => ok({} as any), delete: async () => ok(undefined), run: async () => ok(undefined),
     runs: async () => ok([]), changes: async () => ok([]), deliveries: async () => ok([]),
   },
+  lenses: lensServices,
 }
 const host = {
   selectedView: () => route,
   subscribeSelection: (listener: () => void) => { listeners.add(listener); return () => { listeners.delete(listener) } },
-  navigateToView: (name: string | null, destination: SavedViewsDestination) => { route = name ? `${name}${destination === 'open' ? '' : `/${destination}`}` : null },
+  navigateToView: (name: string | null, destination: SavedViewsDestination) => { lensRoute = null; route = name ? `${name}${destination === 'open' ? '' : `/${destination}`}` : '' },
+  selectedLens: () => lensRoute,
+  navigateToLens: (id: string | null, destination: LensDestination) => { route = null; lensRoute = id ? `${id}${destination === 'open' ? '' : `/${destination}`}` : '' },
   onOpenInStudio() {},
   onCreateHandler() {},
 }
