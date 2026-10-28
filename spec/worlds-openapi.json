@@ -18891,6 +18891,7 @@
               }
             }
           },
+          "description" : "The user's turn: `message` is echoed to every stream the caller has open and then sent to the assistant. The answer is not in the response; it arrives on the SSE stream, which must already be open or the request is refused with 409. A message sent while a turn is still running is answered by a side session rather than queued behind it",
           "required" : true
         },
         "responses" : {
@@ -19071,6 +19072,7 @@
         "description" : "Executes a world slash command by sending it as a chat message. The response is delivered via the SSE stream. An SSE stream must be open before running commands.",
         "operationId" : "runCommand",
         "parameters" : [ {
+          "description" : "Name of one of the world's slash commands, without the leading slash, matched case-insensitively; 404 when the world has no command by that name",
           "in" : "path",
           "name" : "command",
           "required" : true,
@@ -19085,7 +19087,8 @@
                 "$ref" : "#/components/schemas/CommandRunRequest"
               }
             }
-          }
+          },
+          "description" : "Optional. `argument` is the text that follows the command, which is sent as the chat message `/<command> <argument>`; a body left out, or an `argument` that is null or blank, runs the bare `/<command>`. Its output arrives on the SSE stream, which must already be open or the request is refused with 409"
         },
         "responses" : {
           "202" : {
@@ -19138,6 +19141,7 @@
               }
             }
           },
+          "description" : "The judgement on a reply already received: `text` is the reply being judged and must not be blank, and `verdict` is `up` or `down`, case-insensitive; anything else is refused with 400. It is recorded as chat feedback from the caller in their world, and needs no open session or stream",
           "required" : true
         },
         "responses" : {
@@ -19204,6 +19208,7 @@
         "description" : "Uploads an image and optional caption text. The image is persisted to the world and sent to the assistant as a multimodal message. The response is delivered via the SSE stream.",
         "operationId" : "sendImage",
         "parameters" : [ {
+          "description" : "Text sent with the image as the user's words about it, and shown as their turn on every open stream. Omitted, the image goes to the assistant alone and the turn is shown as `[image: <filename>]`",
           "in" : "query",
           "name" : "caption",
           "required" : false,
@@ -19217,6 +19222,7 @@
               "schema" : {
                 "properties" : {
                   "image" : {
+                    "description" : "The image, as a multipart file part. The part's content type is the image format, `image/jpeg` when it carries none, and must be one the model accepts; an empty, unsupported or over-20 MB (20971520 bytes) image is refused with 400. The part's filename is kept in the name it is saved under in the world, `image.jpg` when absent",
                     "format" : "binary",
                     "type" : "string"
                   }
@@ -19298,6 +19304,7 @@
               }
             }
           },
+          "description" : "What to look for among the caller's memories. `query` is required and must be a string; missing or any other JSON type is refused with 400. `topK` caps how many come back, default 20, clamped to 1..30; `minConfidence` is the lowest similarity score returned, default 0.5, clamped to 0..1. Only ACTIVE memories in the caller's current context are searched",
           "required" : true
         },
         "responses" : {
@@ -19331,6 +19338,7 @@
         "description" : "Kills a running agent process by ID. Use GET /status to find the process ID. This stops any running actions including Docker sandbox processes.",
         "operationId" : "killProcess",
         "parameters" : [ {
+          "description" : "Id of the agent process to kill, as reported in `processId` by GET /api/v1/chat/status or GET /api/v1/chat/processes; 404 when no process has it",
           "in" : "path",
           "name" : "processId",
           "required" : true,
@@ -19526,6 +19534,7 @@
         "description" : "Opens a Server-Sent Events stream for receiving chat responses, background events, and progress updates. Creates a headless chat session if no session exists for this user and no sessionId is given. Pass sessionId to open (or switch to) one of the user's persisted sessions — see GET /chat/sessions for the list. Multiple clients can connect simultaneously and all will receive events.",
         "operationId" : "stream",
         "parameters" : [ {
+          "description" : "Id of one of the caller's persisted sessions to open, or switch to from the one attached, as listed in `sessionId` by GET /api/v1/chat/sessions. Omitted, the session already attached is reused, or a new one is created when there is none. An id that is unknown or not the caller's attaches nothing: the stream still opens, and says so with a `session-error` event rather than an HTTP error",
           "in" : "query",
           "name" : "sessionId",
           "required" : false,
@@ -28244,7 +28253,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42915"
+    "url" : "http://localhost:33489"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
