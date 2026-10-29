@@ -3178,6 +3178,64 @@
         "required" : [ "authorizeUrl", "configured", "displayName", "providerName" ],
         "type" : "object"
       },
+      "ConsolePreferenceEntry" : {
+        "description" : "One console setting and when it was set",
+        "properties" : {
+          "at" : {
+            "description" : "When the change was made, epoch milliseconds. A write older than the stored entry is ignored; a time ahead of the server's clock is taken as now",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "value" : {
+            "description" : "The setting's value as the console wrote it, any JSON; null removes the setting"
+          }
+        },
+        "required" : [ "at" ],
+        "type" : "object"
+      },
+      "ConsolePreferences" : {
+        "description" : "The acting user's console preferences in their active world: theme, wallpaper, window layout, dock pins and the like, keyed by setting",
+        "properties" : {
+          "entries" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ConsolePreferenceEntry"
+            },
+            "description" : "Each setting by key. An entry whose value is null was removed, and is kept so an older write cannot bring it back",
+            "type" : "object"
+          },
+          "schema" : {
+            "description" : "Format of this document; 1",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "updatedAt" : {
+            "description" : "When a write last changed something, by the server's clock; null when nothing has been stored",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "Increases by one on every write that changed something; 0 when nothing has been stored",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "entries", "schema", "version" ],
+        "type" : "object"
+      },
+      "ConsolePreferencesChange" : {
+        "description" : "Settings to change, each with the time it was changed; settings not named are left as they are",
+        "properties" : {
+          "entries" : {
+            "additionalProperties" : {
+              "$ref" : "#/components/schemas/ConsolePreferenceEntry"
+            },
+            "description" : "The settings to change, by key. A key is 1-64 letters, digits, '.', '_' or '-', starting with a letter or digit",
+            "type" : "object"
+          }
+        },
+        "required" : [ "entries" ],
+        "type" : "object"
+      },
       "Context" : {
         "allOf" : [ {
           "$ref" : "#/components/schemas/SensorEvent"
@@ -24857,6 +24915,80 @@
         "tags" : [ "Profile" ]
       }
     },
+    "/api/v1/profile/console" : {
+      "get" : {
+        "operationId" : "consolePreferences",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsolePreferences"
+                }
+              }
+            },
+            "description" : "The stored preferences; version 0 and no entries when none are stored"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "This user's console preferences in their active world",
+        "tags" : [ "Profile" ]
+      },
+      "put" : {
+        "description" : "Merges entry by entry: each named setting replaces the stored one unless the stored one was set later (`at`), so the last change wins whichever browser sends it first. Settings not named are kept. Answers the whole document as stored afterwards, which is what a browser should now show.",
+        "operationId" : "changeConsolePreferences",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ConsolePreferencesChange"
+              }
+            }
+          },
+          "description" : "The settings to change in `entries`, each `{value, at}`: `value` is any JSON, null to remove the setting; `at` is when it was changed, epoch milliseconds",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConsolePreferences"
+                }
+              }
+            },
+            "description" : "The preferences as stored after the change"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchedError"
+                }
+              }
+            },
+            "description" : "A setting name that is not 1-64 letters, digits, '.', '_' or '-', or more than 64 settings"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          },
+          "413" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchedError"
+                }
+              }
+            },
+            "description" : "The preferences would be larger than 6 MiB; nothing was changed"
+          }
+        },
+        "summary" : "Change some of this user's console preferences",
+        "tags" : [ "Profile" ]
+      }
+    },
     "/api/v1/profile/display-name" : {
       "put" : {
         "operationId" : "setDisplayName",
@@ -28293,7 +28425,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:32995"
+    "url" : "http://localhost:45797"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
