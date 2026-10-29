@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.toRealm = exports.experimentalQuery = exports.categoriesQuery = exports.tagsQuery = exports.realmsQuery = exports.ranInBackground = exports.RealmCatalog = exports.WORLD_LIST_QUERIES = exports.WorldLists = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.toRealm = exports.experimentalQuery = exports.categoriesQuery = exports.tagsQuery = exports.realmsQuery = exports.ranInBackground = exports.RealmCatalog = exports.WORLD_LIST_QUERIES = exports.WorldLists = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.PreferenceSync = exports.ConsolePreferencesClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -30,6 +30,9 @@ Object.defineProperty(exports, "DEFAULT_INGEST_STALLED_AFTER_MS", { enumerable: 
 Object.defineProperty(exports, "followIngest", { enumerable: true, get: function () { return ingests_ts_1.followIngest; } });
 var hints_ts_1 = require("./hints.js");
 Object.defineProperty(exports, "HintsClient", { enumerable: true, get: function () { return hints_ts_1.HintsClient; } });
+var consolePreferences_ts_1 = require("./consolePreferences.js");
+Object.defineProperty(exports, "ConsolePreferencesClient", { enumerable: true, get: function () { return consolePreferences_ts_1.ConsolePreferencesClient; } });
+Object.defineProperty(exports, "PreferenceSync", { enumerable: true, get: function () { return consolePreferences_ts_1.PreferenceSync; } });
 var tours_ts_1 = require("./tours.js");
 Object.defineProperty(exports, "ToursClient", { enumerable: true, get: function () { return tours_ts_1.ToursClient; } });
 var citations_ts_1 = require("./citations.js");
@@ -74,6 +77,7 @@ const cron_ts_2 = require("./cron.js");
 const documents_ts_2 = require("./documents.js");
 const handlers_ts_2 = require("./handlers.js");
 const hints_ts_2 = require("./hints.js");
+const consolePreferences_ts_2 = require("./consolePreferences.js");
 const kg_ts_2 = require("./kg.js");
 const tours_ts_2 = require("./tours.js");
 const transport_ts_2 = require("./transport.js");
@@ -92,6 +96,7 @@ class ApplianceClient {
     handlers;
     documents;
     hints;
+    consolePreferences;
     tours;
     constructor(transport, options = {}) {
         this.transport = transport;
@@ -107,6 +112,7 @@ class ApplianceClient {
         this.handlers = new handlers_ts_2.HandlersClient(transport);
         this.documents = new documents_ts_2.DocumentsClient(transport, options.documents);
         this.hints = new hints_ts_2.HintsClient(transport);
+        this.consolePreferences = new consolePreferences_ts_2.ConsolePreferencesClient(transport);
         this.tours = new tours_ts_2.ToursClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */

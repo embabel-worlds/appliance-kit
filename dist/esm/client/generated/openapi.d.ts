@@ -64,7 +64,7 @@ export interface paths {
         get?: never;
         put?: never;
         /** List the user's handlers plus inactive realm-shipped handlers available to adopt */
-        post: operations["list_5"];
+        post: operations["list_6"];
         delete?: never;
         options?: never;
         head?: never;
@@ -218,7 +218,7 @@ export interface paths {
         put?: never;
         /**
          * Answer a natural-language question by generating and executing scoped Cypher
-         * @description `scope` names a declared scope (a focus) to answer WITHIN: generation sees only that scope's realms' schema, plus the always-on core. Not a captured query scope. Omitted, the whole world answers — the default, and the pre-scope behaviour.
+         * @description `scope` names a declared scope (a focus) to answer WITHIN: generation and view selection see only that scope's realms, plus the spine. Not a captured query scope. Omitted, the question's own words decide what is shown; the whole world never is.
          */
         post: operations["ask_1"];
         delete?: never;
@@ -270,7 +270,7 @@ export interface paths {
             cookie?: never;
         };
         /** List the registered node decorators and their tick, batch and staleness settings */
-        get: operations["list_9"];
+        get: operations["list_10"];
         put?: never;
         post?: never;
         delete?: never;
@@ -360,8 +360,8 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** The acting user's fills, newest first, with tick and live-call progress */
-        get: operations["list_4"];
+        /** The acting user's fills, newest first, with key coverage, tick and live-call progress */
+        get: operations["list_5"];
         put?: never;
         /** Start a slow, resumable fill of an expensive materialization */
         post: operations["start"];
@@ -549,7 +549,7 @@ export interface paths {
             cookie?: never;
         };
         /** List the acting user's live captured scopes, newest first */
-        get: operations["list_8"];
+        get: operations["list_9"];
         put?: never;
         post?: never;
         delete?: never;
@@ -712,6 +712,425 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/agents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the agents in your world
+         * @description Declared agents, realm-shipped agents, and existing routines gathered into the agent they belong to.
+         */
+        get: operations["listAgents"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One agent in your world */
+        get: operations["getAgent"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/a2a": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A2A JSON-RPC to one agent: message/send, tasks/get, tasks/cancel */
+        post: operations["a2aAgentRpc"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/a2a/.well-known/agent-card.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One agent's A2A card */
+        get: operations["a2aAgentCard"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/a2a/.well-known/agent.json": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One agent's A2A card */
+        get: operations["a2aAgentCard_1"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/accounts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The secrets an agent has its own value for, by name */
+        get: operations["listAgentAccounts"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/accounts/{secret}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Keep an agent's own value for a secret
+         * @description Sent instead of its sponsor's on an API where the agent's identity is own-account.
+         */
+        put: operations["setAgentAccount"];
+        post?: never;
+        /** Delete an agent's own value for a secret */
+        delete: operations["removeAgentAccount"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/duties/{duty}/check": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Check one of an agent's duties now
+         * @description Reads the duty's violations view, records upheld, lapsed or unknown, and runs its repair on each violation. Off duty, it runs observing.
+         */
+        post: operations["checkAgentDuty"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/proposals": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An agent's proposals, newest first */
+        get: operations["listAgentProposals"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/proposals/{id}/adopt": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Write a proposal into the world as the agent's next version, for its sponsor to sign
+         * @description Refused if the result would grant more than the signed version does.
+         */
+        post: operations["adoptAgentProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/proposals/{id}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Dismiss a proposal */
+        post: operations["dismissAgentProposal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/reflect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask an agent to propose a better version of itself from its own record
+         * @description Reads its runs, requests and duty checks for the last 30 days. Proposals change only wording, cadence and duties, never what it may do.
+         */
+        post: operations["reflectAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/retire": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Retire an agent: off duty for good, its keys revoked and its own credentials deleted
+         * @description Final. Its record of runs and receipts is kept.
+         */
+        post: operations["retireAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** An agent's runs, newest first */
+        get: operations["listAgentRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/runs/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One run, with its receipts */
+        get: operations["getAgentRun"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/sign": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Sign the agent as its next version
+         * @description Only its sponsor or an owner may sign. Refused when nothing has changed since the last signature.
+         */
+        post: operations["signAgent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/stage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an agent or one of its routines on the ladder
+         * @description Off never fires; observing runs with writes suppressed; on may write. Lowering is always allowed.
+         */
+        post: operations["setAgentStage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/upcoming": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * What an agent will do next
+         * @description Its scheduled duty checks and routines with when each fires, the requests its last checks say to expect, work in flight, and its recent counts.
+         */
+        get: operations["getAgentUpcoming"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/upcoming/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Run one of an agent's scheduled jobs now, outside its schedule */
+        post: operations["runAgentFiringNow"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/upcoming/skip": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Skip an agent's next scheduled firing, or postpone it */
+        post: operations["skipAgentFiring"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/v1/chat/completions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Talk to the world itself (model world) or an agent: the one named as the model, or the one whose base URL this is */
+        post: operations["openAiChatCompletions_1"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/v1/models": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One agent, as the only OpenAI model at its own base URL */
+        get: operations["openAiAgentModels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/agents/{name}/versions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Every signed version of an agent, newest first */
+        get: operations["agentVersions"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/hints": {
         parameters: {
             query?: never;
@@ -766,6 +1185,290 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/hints/schedule": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * When a tip is posted to the acting user's inbox
+         * @description `cron` is the six-field expression the schedule runs on, in the user's own zone; null when tips are off.
+         */
+        get: operations["schedule"];
+        /**
+         * Change when a tip is posted to the acting user's inbox
+         * @description Takes effect at once: the job is rescheduled before this returns. NEVER removes it.
+         */
+        put: operations["changeSchedule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/execute": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Execute verbatim Cypher through the virtual-cypher engine, synchronously */
+        post: operations["studioExecute"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/generate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Generate Cypher and an execution explanation for a question, without running it */
+        post: operations["studioGenerate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/kill/{runId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel an in-flight run by id (owner-guarded) */
+        post: operations["studioKill"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/refine": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Revise existing Cypher per an instruction, without running it */
+        post: operations["studioRefine"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/runs": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's in-flight virtual-cypher runs */
+        get: operations["studioRuns"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/schema": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's own graph schema — labels, properties, relationship triples */
+        get: operations["studioSchema"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/scopes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's live captured scopes, newest first */
+        get: operations["studioScopes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/scopes/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete one of the caller's captured scopes */
+        delete: operations["studioDeleteScope"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/scopes/{name}/pin": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Pin one of the caller's captured scopes */
+        post: operations["studioPinScope"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Validate Cypher against the schema without executing it */
+        post: operations["studioValidate"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/views": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** List the caller's saved views with their cache state */
+        get: operations["studioViews"];
+        put?: never;
+        /** Save a user-authored view (optionally parameterized) into the caller's world */
+        post: operations["studioSaveView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/views/{name}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Delete a user-authored view from the caller's world */
+        delete: operations["studioDeleteView"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/views/{name}/invocation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Return the runnable Cypher for a saved view invoked with the given arguments */
+        post: operations["studioViewInvocation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/views/{name}/refresh": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Force-recompute a materialised view's cache now, ignoring its TTL */
+        post: operations["studioRefreshView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/profile/console": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** This user's console preferences in their active world */
+        get: operations["consolePreferences"];
+        /**
+         * Change some of this user's console preferences
+         * @description Merges entry by entry: each named setting replaces the stored one unless the stored one was set later (`at`), so the last change wins whichever browser sends it first. Settings not named are kept. Answers the whole document as stored afterwards, which is what a browser should now show.
+         */
+        put: operations["changeConsolePreferences"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/tours": {
         parameters: {
             query?: never;
@@ -777,7 +1480,7 @@ export interface paths {
          * Every tour this world offers
          * @description Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.
          */
-        get: operations["list_6"];
+        get: operations["list_7"];
         put?: never;
         post?: never;
         delete?: never;
@@ -870,66 +1573,833 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        APIKeySecurityScheme: {
+            type: "APIKeySecurityScheme";
+        } & (Omit<components["schemas"]["SecurityScheme"], "type"> & {
+            in?: string;
+            name?: string;
+            type?: string;
+        });
+        AgentCapabilities: {
+            extensions?: components["schemas"]["AgentExtension"][];
+            pushNotifications?: boolean;
+            stateTransitionHistory?: boolean;
+            streaming?: boolean;
+        };
+        AgentCard: {
+            additionalInterfaces?: components["schemas"]["AgentInterface"][];
+            capabilities?: components["schemas"]["AgentCapabilities"];
+            defaultInputModes?: string[];
+            defaultOutputModes?: string[];
+            description?: string;
+            documentationUrl?: string;
+            iconUrl?: string;
+            name?: string;
+            preferredTransport?: string;
+            protocolVersion?: string;
+            provider?: components["schemas"]["AgentProvider"];
+            security?: {
+                [key: string]: string[];
+            }[];
+            securitySchemes?: {
+                [key: string]: components["schemas"]["APIKeySecurityScheme"] | components["schemas"]["HTTPAuthSecurityScheme"] | components["schemas"]["MutualTLSSecurityScheme"] | components["schemas"]["OAuth2SecurityScheme"] | components["schemas"]["OpenIdConnectSecurityScheme"];
+            };
+            signatures?: components["schemas"]["AgentCardSignature"][];
+            skills?: components["schemas"]["AgentSkill"][];
+            supportsAuthenticatedExtendedCard?: boolean;
+            url?: string;
+            version?: string;
+        };
+        AgentCardSignature: {
+            header?: {
+                [key: string]: unknown;
+            };
+            protected?: string;
+            signature?: string;
+        };
+        AgentExtension: {
+            description?: string;
+            params?: {
+                [key: string]: unknown;
+            };
+            required?: boolean;
+            uri?: string;
+        };
+        AgentInterface: {
+            transport?: string;
+            url?: string;
+        };
+        /** @description A better version of an agent, proposed by the agent from its own record, with the evidence for each change. Made by POST /agents/{name}/reflect, listed by GET /agents/{name}/proposals, settled by its adopt and dismiss endpoints */
+        AgentProposal: {
+            /** @description Name of the agent the proposal is for */
+            agent: string;
+            /** @description The proposed changes, already filtered to the targets a proposal may touch; may be empty when the record supported nothing */
+            changes: components["schemas"]["Change"][];
+            /**
+             * Format: date-time
+             * @description When the proposal was made, ISO-8601 instant
+             */
+            createdAt: string;
+            /**
+             * Format: date-time
+             * @description When it was adopted or dismissed, ISO-8601 instant; null while OPEN
+             */
+            decidedAt?: string;
+            /**
+             * Format: int32
+             * @description The agent's latest signed version when the proposal was made, which it improves on; null when the agent had never been signed
+             */
+            fromVersion?: number;
+            /** @description Proposal id, "pr_" followed by a UUID; the {id} of the adopt and dismiss endpoints */
+            id: string;
+            /** @description Id of the user whose world the agent belongs to; proposals are private to them */
+            ownerId: string;
+            /** @description Whether the proposal has passed a battery and a replay of the period; always false, since neither check exists yet */
+            proven: boolean;
+            /** @description The record the reflection read, as plain-text lines of counts over the period: runs by outcome, requests by status, hours to a decision, the commonest rejection reasons, and each duty's cadence */
+            record: string;
+            /** @description Why the last attempt to adopt it was refused, because the result would widen what the agent may do; null when no adoption has been refused */
+            refused?: string;
+            /**
+             * @description OPEN until adopted or dismissed; a refused adoption leaves it OPEN
+             * @enum {string}
+             */
+            status: "OPEN" | "ADOPTED" | "DISMISSED";
+            /** @description The model's one-sentence summary of what the proposal changes */
+            summary: string;
+        };
+        AgentProvider: {
+            organization?: string;
+            url?: string;
+        };
+        /** @description A proposal after reflecting, adopting or dismissing, or why that was refused; answered by the /agents/{name}/reflect and /agents/{name}/proposals/{id} endpoints */
+        AgentReflectionProposalResponse: {
+            /** @description The proposal after the change; null when it was refused */
+            proposal?: components["schemas"]["AgentProposal"];
+            /** @description Why the change was refused, in words; null when it was made */
+            refused?: string;
+        };
+        /** @description One run of an agent's work as the run ledger keeps it: a routine, a repair, a duty check, a conversation or a test, from start to end. Listed by GET /agents/{name}/runs and returned by GET /agents/{name}/runs/{id} */
+        AgentRun: {
+            /** @description Name of the agent holding the work; null for a routine no agent holds */
+            agent?: string;
+            /** @description SHA-256 hex digest of that signed version; null with agentVersion */
+            agentDigest?: string;
+            /**
+             * Format: int32
+             * @description The signed version number the run went as; null when no signed version governs the agent, or no agent holds the work
+             */
+            agentVersion?: number;
+            /** @description For a run that answers a colleague, the names of the agents that asked, in order; empty otherwise */
+            chain: string[];
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant the run ended; null while it is running
+             */
+            endedAt?: string;
+            /** @description Why it failed or timed out, up to 1,000 characters; for a duty check, why its state is unknown. Null otherwise */
+            error?: string;
+            /** @description The run's id, `run_` and a UUID: the {id} in GET /agents/{name}/runs/{id} */
+            id: string;
+            /**
+             * @description `ROUTINE`, `REPAIR` (a duty's repair run on one violation), `DUTY_CHECK`, `CONVERSATION` or `TEST`
+             * @enum {string}
+             */
+            kind: "ROUTINE" | "REPAIR" | "DUTY_CHECK" | "CONVERSATION" | "TEST";
+            /** @description For a duty check, source warnings that left its rows sound, such as a cost note from a realm's producer */
+            notes: string[];
+            /** @description True when the run only observed: its writes were refused and recorded as calls it would have made */
+            observing: boolean;
+            /**
+             * @description `RUNNING`, `DONE`, `FAILED`, `TIMED_OUT` (including a run the appliance lost track of, closed once 30 minutes old), or `SKIPPED` (a scheduled firing that did not run; output says why). A duty check that could not read the world is `FAILED`
+             * @enum {string}
+             */
+            outcome: "RUNNING" | "DONE" | "FAILED" | "TIMED_OUT" | "SKIPPED";
+            /** @description The last 4,000 characters it printed, the partial result when it timed out; for a skipped firing, why it did not run */
+            output: string;
+            /** @description Id of the user whose world the run belongs to */
+            ownerId: string;
+            /** @description The agent as a principal, `agent:<name>@<world>`, apart from the account in runAs; null for duty checks, skipped firings and work no agent holds */
+            principal?: string;
+            /**
+             * Format: int32
+             * @description For a duty check, how many violations it set out to repair; null for other runs
+             */
+            repairs?: number;
+            /** @description Ids of the approval requests it raised */
+            requests: string[];
+            /** @description Username of the account the run acted as */
+            runAs: string;
+            /** @description What its model calls cost, in US cents, keyed by model name */
+            spendByModel: {
+                [key: string]: number;
+            };
+            /**
+             * Format: double
+             * @description What its model calls cost in total, in US cents; 0 until the run ends
+             */
+            spendCents: number;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant the run started
+             */
+            startedAt: string;
+            /** @description What started it: `schedule`, `signal:<type>`, `repair:<duty>`, `message`, `test`, or `on-demand` */
+            trigger: string;
+            /**
+             * Format: int32
+             * @description For a duty check, the violations it found; null for other runs and for a check that could not read the world
+             */
+            violations?: number;
+            /** @description What ran: the routine's name, the duty's name for a duty check, or `conversation:<agent>` for a conversation */
+            work: string;
+        };
+        AgentSkill: {
+            description?: string;
+            examples?: string[];
+            id?: string;
+            inputModes?: string[];
+            name?: string;
+            outputModes?: string[];
+            security?: {
+                [key: string]: string[];
+            }[];
+            tags?: string[];
+        };
+        /** @description One signed version of an agent, without the routine bodies it carries; listed newest first by GET /agents/{name}/versions */
+        AgentVersionView: {
+            /** @description Hex SHA-256 of what was signed: the agent's definition, its routines, the views its duties name and its persona */
+            digest: string;
+            /** @description Names of the routines this version holds, including any duty's repair routine */
+            routines: string[];
+            /** @description When it was signed, ISO-8601 instant */
+            signedAt: string;
+            /** @description Username of the user who signed it */
+            signedBy: string;
+            /**
+             * Format: int32
+             * @description Version number, counting up from 1 with each signature
+             */
+            version: number;
+        };
+        /** @description An agent as GET /agents and GET /agents/{name} show it: its declaration resolved against the routines, signatures and stages this world holds. Existing routines no declared agent names appear gathered into one agent per realm, or one for the user */
+        AgentView: {
+            /** @description What it may do on its own, verb by verb, as declared and as the Gatekeeper enforces it; null when it declares none, which leaves every verb at act */
+            authority?: components["schemas"]["AuthoritySpec"];
+            /** @description The hard limits it runs within, as declared; null when it declares none */
+            budget?: components["schemas"]["BudgetSpec"];
+            /** @description The duties it keeps, each with what its latest check found */
+            duties: components["schemas"]["DutyView"][];
+            /** @description Whose account it calls each API with, keyed by API name: own-account or on-behalf-of. An API not named is called on its sponsor's behalf */
+            identity: {
+                [key: string]: "own-account" | "on-behalf-of";
+            };
+            /** @description The job in one sentence, as declared; for a gathered agent, a sentence saying where its routines came from */
+            job: string;
+            /** @description The agent's name, unique in this world. A gathered agent is named after its realm, or `personal` for your own routines; one that collides with a declared agent takes a `-routines` suffix */
+            name: string;
+            /** @description What must be fixed before it can go on duty, one phrase each ("a sponsor", "a job", a missing routine or sweep view, a signature, ...). Empty when nothing stands in the way */
+            needs: string[];
+            /** @description Usernames of its operators, as declared; empty for a realm-shipped or gathered agent */
+            operators: string[];
+            /** @description Where it was declared: "world", the name of the realm that ships it, or "migrated" for an agent gathered from existing routines */
+            origin: string;
+            /** @description Usernames of its owners: they may sign it, put it back on duty after a sponsor stands it down, and move a Gatekeeper rule from observe to enforce. Empty for a realm-shipped agent until the world declares some */
+            owners: string[];
+            /** @description Slug of the personality it speaks through; null when it declares none */
+            persona?: string;
+            /** @description Its scheduling priority and model fallbacks, as declared; null is business priority with no fallbacks */
+            qos?: components["schemas"]["QosSpec"];
+            /** @description The routines it holds, in declared order; a gathered agent's are sorted by name */
+            routines: components["schemas"]["RoutineView"][];
+            /** @description "Ask me about...": when people and other agents should come to it. Empty when not declared */
+            routing: string;
+            /** @description When the latest version was signed, as an ISO-8601 instant string; null when it has never been signed */
+            signedAt?: string;
+            /** @description Username of whoever signed the latest version; null when it has never been signed */
+            signedBy?: string;
+            /** @description Username of the person who answers for it: as declared, else as recorded when someone adopted it; null while nobody has, which keeps it off duty */
+            sponsor?: string;
+            /**
+             * @description The stage chosen for the agent: off, observing or on. A stage set through POST /agents/{name}/stage overrides the declared one; what actually fires is each routine's `firing`
+             * @enum {string}
+             */
+            stage: "off" | "observing" | "on";
+            /**
+             * @description Lifecycle state: draft, submitted, active, suspended or retired. Only an active agent goes on duty; retired is final
+             * @enum {string}
+             */
+            state: "draft" | "submitted" | "active" | "suspended" | "retired";
+            /** @description The cold materializations it keeps filled, as declared. Each one buys producer fetches and model judgements for as long as it runs, so this is what a sponsor signs for */
+            sweeps: components["schemas"]["SweepSpec"][];
+            /** @description What the world holds now that the signed version does not, one sentence per change. Dispatch runs the signed version, so none of these take effect until it is signed again */
+            unsignedChanges: string[];
+            /**
+             * Format: int32
+             * @description Its latest signed version; 0 for an agent never signed, or one gathered from routines
+             */
+            version: number;
+        };
+        /** @description An annotation statement to freeze into a plan, writing nothing; the body of POST /admin/kg/annotations/dry-run */
         AnnotateDryRunRequest: {
+            /** @description Values for the statement's $parameters, by name, resolved when the plan freezes; empty when absent */
             params: {
                 [key: string]: unknown;
             };
+            /** @description One Cypher annotation statement: a read prefix (MATCH, OPTIONAL MATCH, WITH), then WITH DISTINCT <target>[, <expr> AS <alias>] ORDER BY ... LIMIT n, then SET <target>.<property> = <literal | $parameter | alias>. The property must be one the world's annotatable declarations allow on the target's label */
             statement: string;
         };
-        DataContractBindingSpec: {
+        /** @description Marks a query result whose rows are not an answer: the original filter matched nothing, and what came back is a card of already-fetched facts about the pinned record. Carried as `answerBoundary`. */
+        AnswerBoundary: {
+            /**
+             * @description What the rows are instead of an answer. Only SUPPORTING_CONTEXT_ONLY exists.
+             * @enum {string}
+             */
+            kind: "SUPPORTING_CONTEXT_ONLY";
+            /** @description The question the rows do not answer: the asked question on `/ask`, `view:<name>` on a view run. Null on `/execute`, which has no question. */
+            unresolvedQuestion?: string;
+        };
+        /** @description A refusal with a machine-readable code and a plain-language message. ApiErrorAdvice answers it for a failed validation, a missing resource or a conflicting state, and some controllers answer it directly */
+        ApiError: {
+            /** @description Machine-readable key to branch on, such as validation_failed, unknown_field, not_found or conflict. Open: a surface may answer codes of its own */
+            code: string;
+            /** @description Extra context where there is some, such as the fields a body may carry; null otherwise */
+            detail?: string;
+            /** @description A plain-language explanation, written to be shown. Never carries an exception message */
+            message: string;
+        };
+        /** @description An agent's authority: for each verb that changes something, whether it may act, must ask a person first (request), or may never call it. Verbs that only read are never governed */
+        AuthoritySpec: {
+            /**
+             * @description Level for every effect not named in `verbs`: act (the default), request or never. An unrecognised level reads as request
+             * @enum {string}
+             */
+            default: "act" | "request" | "never";
+            /** @description Gatekeeper rules it only tries: authority, sensitive, egress or review. Each is evaluated and recorded on the run, but the call goes through */
+            observe: ("authority" | "sensitive" | "egress" | "review")[];
+            /** @description Namespaces its routines may reach. When set, a call to any API or MCP server not listed is refused, read or write; reading the world's graph and raising a request never are. Null reaches everything */
+            reach?: string[];
+            /** @description Whether an independent reviewer reads each write it may make on its own first, and may refuse it; a model call per write. False by default */
+            review: boolean;
+            /** @description Level by verb, named as the gateway names it (for example odoo_partnerMessagePost): act, request or never */
+            verbs: {
+                [key: string]: "act" | "request" | "never";
+            };
+        };
+        AuthorizationCodeOAuthFlow: {
+            authorizationUrl?: string;
+            refreshUrl?: string;
+            scopes?: {
+                [key: string]: string;
+            };
+            tokenUrl?: string;
+        };
+        /** @description An agent's hard limits. Each null limit is no limit. Reaching a per-day limit stands the agent down until somebody puts it back; per-run and per-hour limits refuse the run or the call and leave it on duty */
+        BudgetSpec: {
+            /**
+             * Format: int32
+             * @description Most of its runs that may be in progress at once
+             */
+            concurrentRuns?: number;
+            /** @description ISO-8601 date (yyyy-MM-dd), read in the user's zone, after which it stands down until re-signed with a later one. A date that does not parse stands it down too */
+            expiresOn?: string;
+            /**
+             * Format: int32
+             * @description Most requests for people to approve that one run may raise
+             */
+            requestsPerRun?: number;
+            /**
+             * Format: int32
+             * @description Most runs it may start in any rolling hour; skipped runs do not count
+             */
+            runsPerHour?: number;
+            /** @description Percent of each source's declared rate it may take, keyed by bucket (a producer's cost.bucket, else its name), with * for every bucket not named. Only sources that declare a rate are paced */
+            sourceShares: {
+                [key: string]: number;
+            };
+            /**
+             * Format: int32
+             * @description Most model spend across a day, in US cents
+             */
+            spendPerDayCents?: number;
+            /**
+             * Format: int32
+             * @description Most model spend one run may make, in US cents
+             */
+            spendPerRunCents?: number;
+            /**
+             * Format: int32
+             * @description Most writes it may make on its own in a day
+             */
+            writesPerDay?: number;
+        };
+        /** @description One proposed change to an agent: what it targets, the new value, and the reason and evidence for it */
+        Change: {
+            /** @description The duty to add when target is "add-duty"; null otherwise */
+            duty?: components["schemas"]["NewDuty"];
+            /** @description The counts from the record that support the change, as the model cited them */
+            evidence: string;
+            /** @description The current value, as the model stated it; not checked against the agent, and null when the model gave none */
+            from?: string;
+            /** @description What the change touches: "job", "routing", "persona", "duty:<name>:text", "duty:<name>:every" (an existing duty), or "add-duty" (with duty) */
+            target: string;
+            /** @description The new value: text for job, routing, persona and duty text, a six-field cron for a duty's cadence; ignored for add-duty */
+            to: string;
+            /** @description The model's reason for the change */
+            why: string;
+        };
+        /** @description An agent's answer in OpenAI's chat.completion shape, answered by the chat completions endpoints when stream is not true */
+        ChatCompletion: {
+            /** @description Exactly one choice, holding the agent's answer */
+            choices: components["schemas"]["Choice"][];
+            /**
+             * Format: int64
+             * @description When the turn started, in Unix epoch seconds
+             */
+            created: number;
+            /** @description What the turn did; present only when the request set embabel_evidence */
+            embabel?: components["schemas"]["Evidence"];
+            /** @description chatcmpl- followed by a random UUID, new for every completion */
             id: string;
-            /** @enum {string} */
-            mode: "observe" | "enforce";
+            /** @description Name of the agent that answered, or world */
+            model: string;
+            /** @description Always chat.completion */
             object: string;
+        };
+        /** @description An OpenAI chat completion request to an agent, sent to POST /openai/v1/chat/completions or /agents/{name}/v1/chat/completions. Fields OpenAI defines and this does not list (tools, top_p…) are ignored; the embabel_ fields are this server's own. */
+        ChatCompletionRequest: {
+            /** @description Conversation name the caller chooses: the same name, from any client, continues the same conversation with this agent. Absent or blank, the conversation is recognised from the user and how the history began. */
+            embabel_conversation?: string;
+            /** @description True adds the embabel evidence object to the response (on the final chunk when streaming); otherwise it is absent */
+            embabel_evidence?: boolean;
+            /** @description True refuses every effect the agent attempts this turn, even if it is on duty, and reports what it would have done */
+            embabel_observing?: boolean;
+            /** @description Realm names to narrow the conversation to, from among the agent's own; never adds one. Absent or empty keeps all of them. */
+            embabel_realms?: string[];
+            /** @description Reply length: terse asks for a sentence or two, full for a full answer, normal (or absent, or any other value) for neither. Case-insensitive. */
+            embabel_verbosity?: string;
+            /**
+             * Format: int32
+             * @description Reply length cap in tokens, preferred over max_tokens; capped at the agent's declared most, ignored when it declares none
+             */
+            max_completion_tokens?: number;
+            /**
+             * Format: int32
+             * @description Reply length cap in tokens, used when max_completion_tokens is absent; capped at the agent's declared most, ignored when it declares none
+             */
+            max_tokens?: number;
+            /** @description The conversation so far, oldest first, as OpenAI clients resend it each time. The newest user message is the turn answered; earlier user and assistant messages are context. At least one non-blank user message is required. */
+            messages: components["schemas"]["RequestMessage"][];
+            /** @description Name of the agent to talk to, as listed by GET /openai/v1/models, or world for the world itself; ignored on an agent's own base URL, where the path names the agent */
+            model?: string;
+            /** @description True answers as server-sent chat.completion.chunk events ending in [DONE]; the whole answer arrives as one content chunk. Absent or false answers one chat.completion. */
+            stream?: boolean;
+            /**
+             * Format: double
+             * @description Sampling temperature, clamped into the range the agent declares; ignored when the agent declares none
+             */
+            temperature?: number;
+            /** @description The client's own end-user id, when it sends one; part of how a conversation is recognised, so two of its users' chats stay apart */
+            user?: string;
+        };
+        /** @description One answer in a chat completion; there is only ever one */
+        Choice: {
+            /** @description Always stop */
+            finish_reason: string;
+            /**
+             * Format: int32
+             * @description Always 0
+             */
+            index: number;
+            /** @description The agent's answer */
+            message: components["schemas"]["Message"];
+        };
+        ClientCredentialsOAuthFlow: {
+            refreshUrl?: string;
+            scopes?: {
+                [key: string]: string;
+            };
+            tokenUrl?: string;
+        };
+        /** @description One console setting and when it was set */
+        ConsolePreferenceEntry: {
+            /**
+             * Format: int64
+             * @description When the change was made, epoch milliseconds. A write older than the stored entry is ignored; a time ahead of the server's clock is taken as now
+             */
+            at: number;
+            /** @description The setting's value as the console wrote it, any JSON; null removes the setting */
+            value?: unknown;
+        };
+        /** @description The acting user's console preferences in their active world: theme, wallpaper, window layout, dock pins and the like, keyed by setting */
+        ConsolePreferences: {
+            /** @description Each setting by key. An entry whose value is null was removed, and is kept so an older write cannot bring it back */
+            entries: {
+                [key: string]: components["schemas"]["ConsolePreferenceEntry"];
+            };
+            /**
+             * Format: int32
+             * @description Format of this document; 1
+             */
+            schema: number;
+            /**
+             * Format: date-time
+             * @description When a write last changed something, by the server's clock; null when nothing has been stored
+             */
+            updatedAt?: string;
+            /**
+             * Format: int64
+             * @description Increases by one on every write that changed something; 0 when nothing has been stored
+             */
+            version: number;
+        };
+        /** @description Settings to change, each with the time it was changed; settings not named are left as they are */
+        ConsolePreferencesChange: {
+            /** @description The settings to change, by key. A key is 1-64 letters, digits, '.', '_' or '-', starting with a letter or digit */
+            entries: {
+                [key: string]: components["schemas"]["ConsolePreferenceEntry"];
+            };
+        };
+        /** @description What the agent has done lately, summed over its record in the units a budget is set in */
+        Counts: {
+            /**
+             * Format: int32
+             * @description Requests it raised today for a person to approve, from the same midnight
+             */
+            requestsToday: number;
+            /**
+             * Format: int32
+             * @description Runs started in the last hour, skipped firings excluded, counted over its 500 most recent runs
+             */
+            runsLastHour: number;
+            /**
+             * Format: int32
+             * @description Changes it made today: receipts where a call acted, plus requests a person approved. Today starts at midnight in the user's time zone, UTC when they have none
+             */
+            writesToday: number;
+        };
+        /** @description A view's version-pinned reference to one object in an ODCS data contract the world holds: a view's `dataContract` */
+        DataContractBindingSpec: {
+            /** @description Id of the ODCS contract; must not be blank */
+            id: string;
+            /**
+             * @description `observe` (the default): rows are returned and the verdict reported beside them. `enforce`: rows are withheld when the verdict is `FAIL` or `UNKNOWN`, and the contract must be `active` or `deprecated` to run at all
+             * @enum {string}
+             */
+            mode: "observe" | "enforce";
+            /** @description The schema object in the contract the view's rows are checked against, by name or else physical name; must not be blank */
+            object: string;
+            /** @description The contract version pinned; must not be blank. Only the contract with exactly this id and version governs the view */
             version: string;
         };
+        /** @description One check made when a view's result was evaluated against its data contract */
         DataContractCheck: {
+            /** @description `schema`, `quality`, `freshness`, `status`, `binding` or `execution` */
             kind: string;
+            /** @description What it found, in words, naming rows and fields but never their values; null when there is nothing to say */
             message?: string;
+            /** @description The contract's own id for a quality or freshness rule, or an `embabel:` id for a check the runtime makes itself, such as `embabel:schema`, `embabel:binding` or `embabel:status` */
             ruleId: string;
+            /** @description `invocation` for the schema check, which covers this one result; null for every other check */
             scope?: string;
-            /** @enum {string} */
+            /**
+             * @description `PASS`, `WARN`, `FAIL`, or `UNKNOWN` when the check could not be made
+             * @enum {string}
+             */
             verdict: "PASS" | "WARN" | "FAIL" | "UNKNOWN";
         };
+        /** @description Evidence that one named view's result was checked against its pinned data contract: the verdict, each check, and whether the rows were withheld. Carried as `dataContract` on the result of a view bound to a contract */
         DataContractEvaluation: {
+            /** @description The ODCS apiVersion the contract declares, such as `v3.1.0`; `v3.1.0` when the view was refused before it ran */
             apiVersion: string;
+            /** @description False when the view could not run under its contract: the pinned contract or its object is missing, or its status forbids it. Then no rows are returned, whatever the mode */
             available: boolean;
             blocksRows: boolean;
+            /** @description ISO-8601 instant the result was checked */
             checkedAt: string;
+            /** @description Each check made, in the order it was made */
             checks: components["schemas"]["DataContractCheck"][];
+            /** @description Id of the governing contract, as the view's binding pins it */
             id: string;
-            /** @enum {string} */
+            /**
+             * @description `observe` or `enforce`, from the view's binding
+             * @enum {string}
+             */
             mode: "observe" | "enforce";
+            /** @description The contract object the rows were checked against, as the binding names it */
             object: string;
+            /** @description The contract's ODCS status, such as `active`, `deprecated` or `retired`; `unavailable` when the pinned contract is not in the world */
             status: string;
-            /** @enum {string} */
+            /**
+             * @description The worst of the checks: `FAIL` if any failed, else `UNKNOWN` if any could not be made, else `WARN` if any warned, else `PASS`
+             * @enum {string}
+             */
             verdict: "PASS" | "WARN" | "FAIL" | "UNKNOWN";
+            /** @description The pinned contract version */
             version: string;
         };
-        Fill: {
-            /** Format: int64 */
-            budgetPerTick: number;
-            cypher: string;
+        /** @description The body the servlet error dispatch answers for a status raised by an exception rather than written by the endpoint. Every failure except 404, which answers the not-found HTML page */
+        DispatchedError: {
+            /** @description The status's standard reason phrase, such as Bad Request or Forbidden */
+            error: string;
+            /** @description The request path that failed */
+            path: string;
+            /**
+             * Format: int32
+             * @description The HTTP status code, repeated from the status line
+             */
+            status: number;
+        };
+        /** @description What one check of an agent's duty found: whether the condition it keeps true holds, since when it has not, and what its repair did. Answered by POST /agents/{name}/duties/{duty}/check */
+        DutyCheck: {
+            /** @description Name of the agent that holds the duty */
+            agent: string;
+            /**
+             * Format: int32
+             * @description The agent's signed version number that governed the check; null when no signed version governs it
+             */
+            agentVersion?: number;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant the check ran
+             */
+            checkedAt: string;
+            /** @description Name of the duty checked, as the agent declares it */
+            duty: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant this lapse began: the first check that found violations, carried across later lapsed, neglected and unknown checks. Null when upheld, or unknown with no lapse before it
+             */
+            lapsedSince?: string;
+            /** @description Source warnings that left the rows sound, such as a cost note from a realm's producer */
+            notes: string[];
+            /** @description True when somebody asked for this check, as this endpoint does; false for a check on the duty's own schedule */
+            onDemand: boolean;
+            /** @description True when a model the duty's view relies on failed and the result stands on a second read with the agent's fallback models */
+            onFallbacks: boolean;
+            /** @description Why the state is unknown: the view errored or was not found, a source warned its rows may be wrong or short, or its models failed with no fallback that worked. Null for every other state */
+            reason?: string;
+            /**
+             * Format: int32
+             * @description How many of those repair runs failed or threw
+             */
+            repairFailures: number;
+            /**
+             * Format: int32
+             * @description Violating rows the repair routine was run on, at most 25 per check; 0 when the duty declares no repair or its routine does not exist
+             */
+            repaired: number;
+            /**
+             * @description `upheld` (the duty's view returned no rows), `lapsed` (it returned violations), `neglected` (lapsed, and during this lapse a request its repair raised was rejected and none approved), or `unknown` (the view could not be read cleanly; see reason)
+             * @enum {string}
+             */
+            state: "upheld" | "lapsed" | "neglected" | "unknown";
+            /**
+             * Format: int32
+             * @description Rows the duty's view returned, each one a violation; 0 when upheld or unknown
+             */
+            violations: number;
+            /** @description Tools the repair tried to call and was refused, each named once: what it would have changed had the check not run observing */
+            wouldHaveCalled: string[];
+        };
+        /** @description A duty on an agent's card (AgentView.duties): a condition the agent keeps true, with what its latest check and latest passing test run found */
+        DutyView: {
+            /**
+             * Format: date-time
+             * @description When the latest check ran, as an ISO-8601 instant; null when it has not been checked
+             */
+            checkedAt?: string;
+            /** @description Six-field cron cadence it is checked on; null when it is only checked on demand */
+            every?: string;
+            /** @description Name of the view or DERIVE label whose rows are the violations */
+            holds: string;
+            /**
+             * Format: date-time
+             * @description When the current lapse began, as an ISO-8601 instant; null when it is not lapsed or has not been checked
+             */
+            lapsedSince?: string;
+            /** @description The duty's name within its agent, as POST /agents/{name}/duties/{duty}/check takes it */
+            name: string;
+            /** @description Why the latest check could not tell, when its state is unknown; otherwise null */
+            reason?: string;
+            /**
+             * @description The stage it runs at (off, observing or on): its own declared stage, else the agent's
+             * @enum {string}
+             */
+            stage: "off" | "observing" | "on";
+            /**
+             * @description The latest check's state: upheld, lapsed, neglected or unknown; null when it has not been checked
+             * @enum {string}
+             */
+            state?: "upheld" | "lapsed" | "neglected" | "unknown";
+            /** @description The latest check in words: "upheld", "lapsed since ...", "neglected: ...", "unknown: <reason>", or "not checked yet" */
+            status: string;
+            /**
+             * Format: date-time
+             * @description When this duty last passed a test run, as an ISO-8601 instant; null when it never has
+             */
+            testedAt?: string;
+            /**
+             * Format: int32
+             * @description The signed agent version that test run checked; going on duty needs it to be the current one. Null when it was never tested
+             */
+            testedVersion?: number;
+            /** @description The condition in the sponsor's words: an Always or a Never */
+            text: string;
+            /** @description Zone the cadence is read in, as a zone ID such as Europe/London; null reads it in the user's own zone */
+            timezone?: string;
+            /**
+             * Format: int32
+             * @description How many violating rows the latest check found; 0 when it has not been checked
+             */
+            violations: number;
+        };
+        /** @description An OpenAI-shaped error body, answered by the OpenAI-compatible endpoints when they refuse a request */
+        ErrorBody: {
+            /** @description The refusal */
+            error: components["schemas"]["ErrorDetail"];
+        };
+        /** @description Why an OpenAI-compatible request was refused */
+        ErrorDetail: {
+            /** @description model_not_found when no agent of that name may be talked to now, key_scope when the API key does not reach the agent or the world itself, invalid_request when there is no user message to answer or embabel_observing is asked of the world */
+            code: string;
+            /** @description Human-readable reason, e.g. why the agent may not be talked to now */
+            message: string;
+            /** @description Always invalid_request_error */
+            type: string;
+        };
+        /** @description What a chat completion turn did, sent as the embabel field only when the request set embabel_evidence */
+        Evidence: {
+            /** @description Id of the chat session the turn ran in */
+            conversation: string;
+            /** @description What the Gatekeeper refused the agent this turn, each as tool (why), e.g. observing, never or egress; empty when nothing was refused */
+            refused: string[];
+            /** @description Requests for a person's approval this turn's run raised, in any status; empty when it raised none */
+            requests: components["schemas"]["EvidenceRequest"][];
+            /** @description Id of the agent run the turn went as; every request it raised names it. Absent when the turn ran as no agent. */
+            run?: string;
+        };
+        /** @description A request for a person's approval raised during a chat completion turn */
+        EvidenceRequest: {
+            /** @description What would happen and why, in the business's words */
+            detail: string;
+            /** @description Request id, as the approvals surface knows it */
             id: string;
+            /** @description pending, approved, failed, rejected or expired */
+            status: string;
+            /** @description Gateway tool the request would call on approval, e.g. odoo_partnerMessagePost */
+            verb: string;
+        };
+        /** @description A duty whose last check found violations and that declares a repair: the next check will raise its requests again if nothing changes */
+        Expected: {
+            /** @description Name of the duty */
+            duty: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant of that check
+             */
+            lastCheckedAt?: string;
+            /**
+             * Format: int32
+             * @description Violations its last check found
+             */
+            violations: number;
+        };
+        /** @description A fill: a slow, resumable materialization of one query, re-run a budgeted chunk per tick until a pass buys nothing. What `/admin/kg/fills` starts and lists. */
+        Fill: {
+            /**
+             * Format: int64
+             * @description Units of paid work one tick may buy — a producer fetch group or a group of an inline model judgement, not HTTP requests or tokens. Clamped to 1–500; defaults to 60.
+             */
+            budgetPerTick: number;
+            /** @description The Cypher every tick re-runs, as it was submitted. */
+            cypher: string;
+            /** @description The fill's id, `fill_` plus 12 hex characters — what `DELETE /admin/kg/fills/{id}` takes. */
+            id: string;
+            /** @description A display name for the fill. Empty when none was given. */
             label: string;
+            /** @description How far the fill has got, as of its most recent tick. */
             progress: components["schemas"]["FillProgress"];
+            /** @description The routine the fill runs as, whose agent governs every chunk. Null for a fill an operator started outside any routine run. */
+            routine?: string;
+            /** @description The id of the user the fill belongs to and runs as. */
             userId: string;
+            /** @description Why this fill will keep polling rather than reach DONE — its producers' records do not outlive a sweep. Decided at start. Null when it can converge, or when the query could not be planned to say. */
+            warning?: string;
         };
+        /** @description A fill's progress: its state, its tick and paid-call counts, and how much of the sweep is answered. */
         FillProgress: {
-            /** Format: int64 */
+            /** @description Keys the producer caches answer, of the total the last pass enumerated. `keysTotal` is null where the query has no denominator; never derive a fraction then. */
+            coverage: components["schemas"]["KeyCoverage"];
+            /**
+             * Format: int64
+             * @description Epoch milliseconds at which the fill was started.
+             */
             createdAt: number;
+            /** @description Why the most recent tick failed or was refused. Null when it ran clean. An error leaves the fill RUNNING. */
             lastError?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Epoch milliseconds of the most recent tick, refused ones included. Null before the first.
+             */
             lastTickAt?: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Paid calls in the most recent tick alone, counted as `liveCallsTotal` counts them.
+             */
+            liveCallsLastTick: number;
+            /**
+             * Format: int64
+             * @description Paid calls across every tick: producer fetches, in-query model calls and semantic searches.
+             */
             liveCallsTotal: number;
+            /** @description RUNNING, DONE (a full pass needed no paid work) or CANCELLED. */
             state: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Chunks run so far. A chunk refused before it ran — a halt, a ceiling — does not count.
+             */
             ticks: number;
+            /** @enum {string} */
+            trend: "UNKNOWN" | "CONVERGING" | "NOT_CONVERGING";
         };
+        /** @description One of an agent's scheduled jobs, a duty check or a routine, with when it next fires */
+        Firing: {
+            /** @description The job's six-field cron expression, seconds first */
+            cron: string;
+            /** @description Name of the scheduler's job: the `job` to send to skip or run-now */
+            job: string;
+            /** @description `duty` or `routine` */
+            kind: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant of its next firing; null when the cron does not parse or its zone cannot be read
+             */
+            nextAt?: string;
+            /**
+             * Format: date-time
+             * @description When the skipped firing was postponed rather than dropped, the ISO-8601 instant it runs instead; null otherwise
+             */
+            postponedTo?: string;
+            /** @description True when a person has marked the next firing to be skipped */
+            skipped: boolean;
+            /** @description Name of the duty or routine the job runs */
+            work: string;
+            /** @description IANA zone id the cron is read in: the job's own when it declares one, else the user's (UTC when they have none) */
+            zone: string;
+        };
+        HTTPAuthSecurityScheme: {
+            type: "HTTPAuthSecurityScheme";
+        } & (Omit<components["schemas"]["SecurityScheme"], "type"> & {
+            bearerFormat?: string;
+            scheme?: string;
+            type?: string;
+        });
         /** @description A realm-shipped handler available to adopt, which this user has not enabled. */
         HandlerAvailable: {
+            /** @description The realm handler's name, to pass to set-enabled to adopt it. */
             name: string;
+            /** @description The signal type that fires it once adopted; '*' = none. */
             signalType: string;
         };
         /** @description A handler body to run observe-only, and what to run it against. */
@@ -940,6 +2410,7 @@ export interface components {
             };
             /** @description The signal type to sample a real recent event from. Null or '*' means a cron tick. */
             signalType?: string;
+            /** @description The TypeScript handler body to run. Nothing is saved, and the run applies no external effects. */
             source: string;
         };
         /** @description The outcome of an observe-only handler run: what it saw, what it logged, and how it ended. */
@@ -948,14 +2419,20 @@ export interface components {
             error?: string;
             /** @description False when the body threw; `error` then carries the message. */
             ok: boolean;
+            /** @description What the body RETURNED, when it returned something. A handler that ends with `return rows` and never logs is not silent — this is its result. Absent when the body returned nothing. */
+            output?: unknown;
+            /** @description The signal the run actually bound, which may differ from the one asked for. */
             ranAgainst: components["schemas"]["HandlerRanAgainst"];
             /** @description Everything the body logged. The brief tells a handler to log every effect, so this IS the feedback surface. */
             stdout: string;
         };
         /** @description Acknowledgement of an enable/disable, echoing the state now in force. */
         HandlerEnabledResponse: {
+            /** @description The firing state the request set, echoed back. */
             enabled: boolean;
+            /** @description The handler the request named. */
             name: string;
+            /** @description Always true. It does not confirm that a handler of that name exists. */
             ok: boolean;
         };
         /** @description A refusal carrying only a human-readable reason. */
@@ -967,6 +2444,7 @@ export interface components {
         HandlerGenerateRequest: {
             /** @description When present, `english` is a CHANGE to this source — the round-trip an editor's Refine drives. */
             current?: string;
+            /** @description What the handler should do, in English; with `current`, the change to make to that source. */
             english: string;
             /** @description Skills to bundle. They are handed to the writing model as references — prompt contribution AND tools — so a realm's documented idioms are followed rather than re-derived. */
             skills?: string[];
@@ -978,26 +2456,36 @@ export interface components {
              * @description 1, or 2 when the model was handed its own type errors to fix.
              */
             attempts: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Server-side time the generation took, attempts included, in milliseconds.
+             */
             durationMs: number;
+            /** @description Always true; `valid` carries the verdict. */
             ok: boolean;
+            /** @description The generated TypeScript handler body. Nothing is saved. */
             source: string;
+            /** @description Whether `source` passes the same tsc gate save enforces. */
             valid: boolean;
             /** @description The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`. */
             violations: string[];
         };
         /** @description The handlers this user has, and the realm-shipped ones they could adopt. */
         HandlerListResponse: {
+            /** @description Realm-shipped handlers that are not active for this user, to adopt. */
             available: components["schemas"]["HandlerAvailable"][];
+            /** @description Handlers authored in this user's world, sorted by name. Realm-shipped handlers are never listed here. */
             yours: components["schemas"]["HandlerListing"][];
         };
         /** @description A handler belonging to this user, with its triggers and whether it is live. */
         HandlerListing: {
             /** @description Whether it currently fires. A saved handler that is off changes nothing. */
             active: boolean;
+            /** @description When true it may apply external/write effects; when false it runs observe-only. */
             autonomous: boolean;
             /** @description Domain types it consumes; empty means reaction-only (dispatcher, never planner). */
             inputTypeNames: string[];
+            /** @description The handler's name, as open, save and the other operations take it. */
             name: string;
             /** @description Domain type it returns, or 'void'. */
             outputTypeName: string;
@@ -1010,36 +2498,48 @@ export interface components {
         };
         /** @description Whether the mutation landed, and what the server has to say about it. */
         HandlerMutationResponse: {
+            /** @description The server's own sentence about the outcome; on a failed save, the TypeScript errors. Show it rather than replace it. */
             message: string;
+            /** @description Whether the save or delete landed. A save that does not type-check is not persisted. */
             ok: boolean;
         };
         /** @description One handler's source and metadata, for round-tripping open → edit → save. */
         HandlerOpenResponse: {
+            /** @description When true it may apply external/write effects; when false it runs observe-only. */
             autonomous: boolean;
+            /** @description One line describing what it does; the name when it was saved without one. */
             description: string;
             /** @description Domain types it consumes; empty means reaction-only. */
             inputTypeNames: string[];
+            /** @description The name to send back to save, which updates this handler in place. */
             name: string;
             /** @description Domain type it returns, or 'void'. */
             outputTypeName: string;
+            /** @description The 6-field cron expression saved with the handler, or null. A per-user schedule set through set-schedule is not reflected here; list reports it. */
             schedule?: string;
+            /** @description `Signal.typeName` (or simple name) that fires it; '*' = none. */
             signalType: string;
             /** @description Skills bundled with it, round-tripped so an edit does not drop them. */
             skills: string[];
+            /** @description The TypeScript handler body, to edit and send back to save. */
             source: string;
         };
         /** @description The signal a dry run bound, as sampled — not as requested. */
         HandlerRanAgainst: {
+            /** @description Id of the signal bound: the sampled signal's id, a sample's `id` (else `sample`), or `cron` for a cron tick. */
             signalId: string;
+            /** @description Simple type name of the signal bound: the sampled signal's, or for a sample its `typeName` (else the requested type, else `SampleSignal`), or `CronTick` when nothing matching was on record. */
             signalType: string;
         };
         /** @description A handler to create or update, with its triggers. */
         HandlerSaveRequest: {
+            /** @description When true the handler may apply external/write effects; when false, the default, it runs observe-only. */
             autonomous?: boolean;
             /** @description One line describing what it does. Defaults to the name. */
             description?: string;
             /** @description Domain types this action consumes. Declaring them makes it planner-chainable rather than reaction-only. */
             inputTypeNames?: string[];
+            /** @description The handler's name. Saving under an existing name replaces that handler. */
             name: string;
             /** @description Domain type the body returns, bound on the blackboard so later actions chain on it. 'void' for a side-effecting action. */
             outputTypeName?: string;
@@ -1049,58 +2549,160 @@ export interface components {
             signalType?: string;
             /** @description Skills bundled with this agent, put in front of the model that writes and refines it. */
             skills?: string[];
+            /** @description The TypeScript handler body. Type-checked first: a body that does not compile is not saved. */
             source: string;
         };
         /** @description Acknowledgement of a schedule change, echoing the schedule now in force. */
         HandlerScheduleResponse: {
+            /** @description The handler the request named. */
             name: string;
+            /** @description Always true. It does not confirm that a handler of that name exists. */
             ok: boolean;
             /** @description The cron expression now in force, or null when the schedule was cleared. */
             schedule?: string;
         };
         /** @description A handler body to type-check without saving or running it. */
         HandlerValidateRequest: {
+            /** @description The TypeScript handler body to type-check. */
             source: string;
         };
         /** @description The tsc verdict on a handler body, without saving or running it. */
         HandlerValidateResponse: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Server-side time the type-check took, in milliseconds.
+             */
             durationMs: number;
+            /** @description Always true; `valid` carries the verdict. */
             ok: boolean;
+            /** @description Whether the body passes the tsc gate save enforces. */
             valid: boolean;
             /** @description The compiler's errors, in the SOURCE's own line coordinates. Empty when `valid`. */
             violations: string[];
         };
+        /** @description One tip for a UI to show, from the installation, the world's config or an installed realm. Returned by the `/hints` endpoints. */
         Hint: {
+            /** @description A one-click follow-up that fills the host surface's chat input. Null when the tip has none */
             action?: components["schemas"]["HintAction"];
+            /** @description The tip itself, as Markdown. Empty when its file gives none */
             body: string;
+            /** @description Grouping the tip belongs to; the stock set uses `hint`, `did-you-know` and `fun-fact`, and a file that names none gets `hint` */
             category: string;
+            /** @description Icon name as the hint file gives it, passed through uninterpreted. Null when the file gives none */
             icon?: string;
+            /** @description Identifier built from the hint file's name and the tip's position in it: stable while the file is unchanged, unique across files. What `GET /hints/random` takes in `exclude` */
             id: string;
+            /** @description Name of the realm that shipped the tip. Null for a tip from the installation or the world's own config */
+            realm?: string;
+            /** @description Which UI the tip is for: `me` (the chat surfaces), `console` (the worlds console) or `all` */
             surface: string;
+            /** @description Short heading for the tip. Empty when its file gives none */
             title: string;
         };
+        /** @description A hint's one-click follow-up: text placed in the host surface's chat input, ready to edit before sending. */
         HintAction: {
+            /** @description Text to put in the chat input, not sent automatically. Empty when the hint file gives none */
             chatInput: string;
+            /** @description Button text for the follow-up; `Do It` when the hint file gives none */
             label: string;
+        };
+        ImplicitOAuthFlow: {
+            authorizationUrl?: string;
+            refreshUrl?: string;
+            scopes?: {
+                [key: string]: string;
+            };
+        };
+        /** @description A run of the agent's still in progress */
+        InFlight: {
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant 30 minutes after it started; a run still open past it is closed as timed out
+             */
+            deadline: string;
+            /** @description Id of the run, as in GET /agents/{name}/runs/{id} */
+            runId: string;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant it started
+             */
+            startedAt: string;
+            /** @description The routine, duty or conversation it is running, as its run records it */
+            work: string;
+        };
+        /** @description The error object of a JSON-RPC response; the A2A card endpoints also answer a refusal with it as the whole body. */
+        JsonRpcError: {
+            /**
+             * Format: int32
+             * @description JSON-RPC or A2A error code: -32600 invalid request (also an agent that cannot be talked to now, or that this key may not reach), -32601 method not found, -32602 invalid params, -32603 internal error, -32001 task not found, -32002 task not cancelable, -32003 push notifications not supported, -32004 unsupported operation
+             */
+            code: number;
+            /** @description What went wrong, in words for a person to read */
+            message: string;
+        };
+        /** @description A JSON-RPC 2.0 call to one agent, the body of POST /agents/{name}/a2a. */
+        JsonRpcRequest: {
+            /** @description The caller's id for this call, echoed in the response; a string or a number */
+            id?: unknown;
+            /** @description JSON-RPC version; send `2.0`. The value is not checked */
+            jsonrpc: string;
+            /** @description The A2A method: `message/send`, `tasks/get` or `tasks/cancel`. Streaming and push-notification methods answer an unsupported-operation error, any other a method-not-found error */
+            method: string;
+            /** @description The method's params, as the A2A protocol defines them */
+            params?: {
+                [key: string]: unknown;
+            };
+        };
+        /** @description A JSON-RPC 2.0 response from POST /agents/{name}/a2a, carrying a result or an error, never both. */
+        JsonRpcResponse: {
+            /** @description On failure, the error; absent on success */
+            error?: components["schemas"]["JsonRpcError"];
+            /** @description The id of the call this answers, echoed as sent; null when the call carried none */
+            id?: unknown;
+            /** @description Always `2.0` */
+            jsonrpc: string;
+            /** @description On success, what the method returned: an A2A Message or Task. Absent on an error */
+            result?: unknown;
+        };
+        /** @description How much of one execution's key demand was resolved: keysResolved of keysTotal, where a null total means unknown, never zero. Carried as coverage on a fill's progress. */
+        KeyCoverage: {
+            /** Format: double */
+            fractionResolved?: number;
+            /**
+             * Format: int64
+             * @description Distinct key units, one per producer, key and period, answered in the execution from a cache tier or a successful fetch
+             */
+            keysResolved: number;
+            /**
+             * Format: int64
+             * @description Distinct key units the execution demanded; null when the sweep has no denominator (totality UNKNOWN), which never means zero
+             */
+            keysTotal?: number;
+            /** @enum {string} */
+            totality: "KNOWN" | "UNKNOWN";
         };
         /** @description One proposed property change, as it would be written. */
         KgAnnotationDiff: {
+            /** @description The value the write would set. Null means the write clears the property. */
             after?: unknown;
             /** @description The value before the write, or null when the property is new. */
             before?: unknown;
             /** @description The target's identity property value. Type depends on the label's identity property. */
             identity?: unknown;
+            /** @description The property the write sets; the plan's allowlisted property, the same on every diff. */
             property: string;
         };
         /** @description A frozen annotation plan: what WOULD be written, with nothing written yet. */
         KgAnnotationDryRunResponse: {
+            /** @description One proposed change per selected node, as it would be written. */
             diffs: components["schemas"]["KgAnnotationDiff"][];
             /** @description When the frozen plan lapses, ISO-8601. Echo it back verbatim. */
             expiresAt: string;
+            /** @description The node label the statement targets; annotation writes must be allowed on it in the world's annotatable declarations. */
             label: string;
             /** @description Pass this to /apply or /undo. Single-use and time-limited. */
             planId: string;
+            /** @description The allowlisted property the statement SETs on each selected node. */
             property: string;
             /**
              * Format: int32
@@ -1110,7 +2712,10 @@ export interface components {
         };
         /** @description The result of applying or undoing a frozen plan. */
         KgAnnotationOutcomeResponse: {
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Targets written: set to the planned value on apply, restored to their prior value on undo.
+             */
             applied: number;
             /**
              * Format: int32
@@ -1122,34 +2727,84 @@ export interface components {
              * @description Targets that could not be re-bound in scope: deleted, re-owned or re-labeled. Deliberately ONE bucket — separating them would leak whether another tenant's data exists.
              */
             disappearedOrUnauthorized: number;
+            /** @description The plan applied or undone, echoed from the path. */
             planId: string;
+            /** @description One committed post-image per target written. */
             postImages: components["schemas"]["KgAnnotationPostImage"][];
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Targets considered: the frozen plan's selection on apply, the plan's audited writes on undo. applied, conflicted and disappearedOrUnauthorized add up to it.
+             */
             selected: number;
         };
         /** @description One committed post-image, read back inside the write transaction. */
         KgAnnotationPostImage: {
             /** @description Audit record id for this individual write. */
             auditId: string;
+            /** @description The written node's identity property value. Type depends on the label's identity property. */
             identity?: unknown;
+            /** @description The property that was written. */
             property: string;
+            /** @description The property's value as committed, read back after the write; null when the write cleared it. */
             value?: unknown;
         };
         /** @description Acknowledgement that a parked run accepted the owner's choice. */
         KgAnswerAccepted: {
+            /** @description The choice exactly as the request sent it. */
             choice: string;
+            /** @description The run id from the path, echoed back. */
             runId: string;
             /** @description The state the run moved to as a result. */
             state: string;
         };
+        /** @description The owner's answer to a run parked awaiting input, sent to `/runs/{runId}/answer`. */
         KgAnswerRequest: {
+            /** @description One of the options the parked run's question offers — for a cost-gate question `proceed`, `narrow`, `background` or `cancel`. Matched trimmed and case-insensitively. */
             choice: string;
         };
+        /** @description What the models behind one knowledge-graph ask were shown: the schema groups the question resolved to, and the measured size of the generation and view-selection prompts. Carried as `exposure` on an `/ask` answer. */
+        KgAskExposure: {
+            /**
+             * Format: int32
+             * @description Characters in the Cypher-generation prompt. Absent when no query was generated.
+             */
+            generationPromptChars?: number;
+            /** @description The schema groups rendered in full for generation, and whose views view selection was offered. */
+            groups: string[];
+            /** @description Groups named to the generator by one index line only — no labels, properties or examples. */
+            indexed: string[];
+            /** @description Each named group -> the words that named it, tier first: name:, label:, weak: or keyword:. */
+            matched?: {
+                [key: string]: string[];
+            };
+            /** @description How the groups were chosen: WHOLE (nothing to narrow), SCOPE, QUESTION, UNRESOLVED or SELECTOR. */
+            resolvedBy: string;
+            /** @description True when the always-on core was cut to the spine anchors (the user, Person, Organization). */
+            spineOnly: boolean;
+            /**
+             * Format: int32
+             * @description Characters in the view-selection prompt. Absent when no view selection ran.
+             */
+            viewSelectPromptChars?: number;
+            /**
+             * Format: int32
+             * @description Saved views in the world.
+             */
+            viewsInWorld?: number;
+            /**
+             * Format: int32
+             * @description Saved views offered to view selection, of `viewsInWorld`.
+             */
+            viewsOffered?: number;
+        };
+        /** @description A natural-language question: the body of `/ask`, and of the studio's `/generate`. */
         KgAskRequest: {
+            /** @description The question in plain language. Cypher is written for it and, on `/ask`, run scoped to the acting user. */
             question: string;
         };
         /** @description A named scope: a declared realm set an ask can be narrowed to via `scope=`. */
         KgAskScopeInfo: {
+            /** @description What the scope is for, as its focus declares it. Empty when the declaration gives none. */
             description: string;
             /** @description The scope's name — the value `scope=` accepts. */
             name: string;
@@ -1168,12 +2823,14 @@ export interface components {
         };
         /** @description A rejected run answer, listing the choices this endpoint accepts. */
         KgBadChoiceResponse: {
+            /** @description Names the choice that was refused. */
             error: string;
             /** @description The accepted values for `choice`. */
             valid: string[];
         };
         /** @description The scope named realms that are not installed; the installed ones travel with the refusal. */
         KgBadRealmsResponse: {
+            /** @description Names the realms that are not installed. */
             error: string;
             /** @description The realm names actually installed in this world. */
             installed: string[];
@@ -1186,6 +2843,7 @@ export interface components {
             evidence: string;
             /** @description ODCS logical type, present only when a sample agreed unanimously. */
             logicalType?: string;
+            /** @description The column's name, as the view's RETURN aliases it. */
             name: string;
             /** @description What the sample SUGGESTS but does not prove, as ODCS extension keys. */
             suggestions: string[];
@@ -1208,10 +2866,12 @@ export interface components {
         };
         /** @description A refusal to draft a contract, naming what about the view made it impossible. */
         KgContractRefusal: {
+            /** @description Why no contract was drafted: no such view, a projection that cannot be read (`*`, a bare variable, an unaliased or duplicate column), or a write the world refused. */
             error: string;
         };
         /** @description A named scope to declare: a world-tier focus the ask surface can be narrowed to. */
         KgCreateScopeRequest: {
+            /** @description A line on what the scope is for, written into the focus declaration. Defaults to empty. */
             description: string;
             /** @description Slug, `[a-z0-9][a-z0-9-]*` — the value `scope=` will accept. No `+`: unencoded it decodes to a space in a query parameter. */
             name: string;
@@ -1225,14 +2885,24 @@ export interface components {
              * @description Stale nodes this tick picked up. 0 with an `error` means the decorator is unknown.
              */
             candidates: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Candidates decorated and stamped.
+             */
             decorated: number;
+            /** @description The decorator name from the path, echoed back, whether or not it is registered. */
             decorator: string;
             /** @description Why the tick could not complete, or null. Always present. */
             error?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Candidates whose decoration threw; they stay unstamped, so a later tick tries them again. Above 0 on a forced run answers 500.
+             */
             failed: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Candidates passed over without decorating: no node could be loaded, no single owning user could be resolved, or the tick was interrupted.
+             */
             skipped: number;
         };
         /** @description A registered node decorator and the cadence it runs on. */
@@ -1242,6 +2912,7 @@ export interface components {
              * @description Most candidates one tick will process.
              */
             batchSize: number;
+            /** @description The decorator's stable kebab-case identifier, used in the /admin/kg/decorate/{name} routes and as the prefix of its stamp property. */
             name: string;
             /** @description How stale a node must be before it is a candidate again, or `never`. */
             refreshAfter: string;
@@ -1254,63 +2925,117 @@ export interface components {
         };
         /** @description The registered node decorators. */
         KgDecoratorListResponse: {
+            /** @description Every registered decorator, in registration order. */
             decorators: components["schemas"]["KgDecoratorInfo"][];
         };
         /** @description A user-authored view was deleted. */
         KgDeleteViewResponse: {
+            /** @description The deleted view's name, as given in the path. */
             name: string;
             /** @description Always `deleted`. */
             status: string;
         };
+        /** @description One member of a derived label or relationship type, with the firing chain that concluded it */
         KgDerivation: {
+            /** @description The member node's element id, the key to join query rows to traces (RETURN `elementId(x)`). For a derived relationship, the two endpoints' element ids joined by a NUL character and `->` */
             elementId: string;
+            /** @description Derived property values as they settled at the fixpoint, by property name (the last write wins) */
             props: {
                 [key: string]: unknown;
             };
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Fixpoint round, counting from 1, in which this member was first concluded
+             */
             round: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Position, counting from 1, of the rule that first concluded this member
+             */
             rule: number;
+            /** @description Firings oldest first: each rule's first conclusion of this member, and every later firing that changed its values */
             trace: components["schemas"]["KgDerivedFiring"][];
         };
-        KgDeriveRequest: {
-            cypher: string;
-            derives: string;
+        /** @description A materialization demand in an ad-hoc rule set: facts fetched into the query before the rules run, as an installed rule set's `requires:` entry */
+        KgDeriveDemandWire: {
+            /** @description Why the rule set needs these facts; empty when omitted */
             description: string;
+            /** @description Read-only Cypher, MATCH clauses and one RETURN (`RETURN 1` is enough), run after the query has materialized its anchors to deepen what it fetched, e.g. `MATCH (r:NpmRelease)-[:HAS_DEPENDENCY*1..3]->(:NpmDependency) RETURN 1`. May reference the rule set's declared params */
+            materialize: string;
+        };
+        /** @description Body of POST /admin/kg/derive: a DERIVE rule set to evaluate for this one query, and the Cypher that reads what it derives. Nothing persists; the world's installed rule sets are evaluated alongside it. */
+        KgDeriveRequest: {
+            /** @description The Cypher query to run with the derived label or relationship type visible like any other */
+            cypher: string;
+            /** @description The label the rules derive, or the relationship type when the heads are relationship patterns: letters, digits and `_`, starting with a letter */
+            derives: string;
+            /** @description One-line description of the rule set; empty when omitted */
+            description: string;
+            /** @description Qualified name for the rule set, `realm/ruleset` style; validator messages and traces name it. Defaults to `adhoc/` followed by `derives`. An installed rule set of the same name is shadowed for this query */
             name?: string;
+            /** @description Bind variables the rule set declares, by name, in the view-param vocabulary (type, default, description); referenced as `$name` in rule bodies and demands. A param with no default must be given in params */
             paramSpecs: {
                 [key: string]: components["schemas"]["ViewParamSpec"];
             };
+            /** @description Invocation values: keys declared in paramSpecs bind the rule bodies, coerced to their declared types; the whole map also binds the query as ordinary params */
             params: {
                 [key: string]: unknown;
             };
+            /** @description Materialization demands run before the rules; an unsatisfiable one does not fail the query. Empty when omitted */
+            requires: components["schemas"]["KgDeriveDemandWire"][];
+            /** @description The rules: unordered clauses of one definition, at least one, all concluding `derives` and all of the same kind */
             rules: components["schemas"]["KgDeriveRuleWire"][];
         };
+        /** @description Answer of POST /admin/kg/derive: the query result, plus every rule set evaluated for it with its derivations */
         KgDeriveResponse: {
+            /** @description Each rule set evaluated for the query, the ad-hoc one and any installed ones it reached, with members, rounds and why traces */
             derived: components["schemas"]["KgDerivedLabel"][];
+            /** @description The Cypher query's result, run over the derived overlay */
             result: components["schemas"]["KgQueryResult"];
         };
+        /** @description One DERIVE rule in an ad-hoc rule set sent to POST /admin/kg/derive: what it concludes (the head) and when (the body) */
         KgDeriveRuleWire: {
+            /** @description The head: a Cypher node pattern, or a relationship pattern for a rule set deriving a relationship, whose variable names the body binding that becomes a member, whose label or type is the rule set's `derives`, and whose property map defines derived properties from body-bound expressions, e.g. `(e:Blocked {blockedStake: stake})` */
             derive: string;
+            /** @description The body: read-only Cypher that binds the head's variables and has no RETURN. It may match the derived label itself */
             from: string;
         };
+        /** @description One firing in a derived member's why trace: which rule concluded it, in which fixpoint round, with what property values */
         KgDerivedFiring: {
+            /** @description Derived property values this firing concluded, by property name; empty when the head declares none */
             props: {
                 [key: string]: unknown;
             };
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Fixpoint round the rule fired in, counting from 1
+             */
             round: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Position of the rule that fired in the rule set's rules, counting from 1
+             */
             rule: number;
         };
+        /** @description One rule set evaluated for the query: what it derived, how many rounds the fixpoint took, and each member's why trace */
         KgDerivedLabel: {
+            /** @description Derived members with their traces, in the order concluded, at most 500 */
             derivations: components["schemas"]["KgDerivation"][];
+            /** @description The label, or relationship type, the rule set derives */
             label: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Number of members derived, counted in full even when derivations is truncated
+             */
             members: number;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Fixpoint rounds run, including the final round that changed nothing
+             */
             rounds: number;
+            /** @description Qualified name of the rule set evaluated */
             ruleSet: string;
+            /** @description True when derivations was capped at 500; members and rounds still cover everything */
             truncated: boolean;
         };
         /** @description A refusal carrying only a human-readable reason. */
@@ -1318,6 +3043,7 @@ export interface components {
             /** @description What went wrong, in the terms the caller can act on. */
             error: string;
         };
+        /** @description Cypher to run through the virtual-cypher engine — the body of `/execute`, and of `/validate`, which reads only `cypher`. */
         KgExecuteRequest: {
             /** @description Arguments for `params`. A blank value means not supplied, so the default applies. */
             args?: {
@@ -1325,11 +3051,22 @@ export interface components {
             };
             /** @description Capture the result set as this named scope; reference it later as (x:`$name`). The statement must RETURN one labelled node variable. Synchronous mode only. */
             captureAs?: string;
+            /** @description The statement, run verbatim — or, when `params` is given, a view body whose `$name` references are substituted first. */
             cypher: string;
             /** @description Declared parameters for the cypher, as a view declares them. Each `$name` is substituted from `args` merged over its default, exactly as when a saved view runs. */
             params?: {
                 [key: string]: components["schemas"]["ViewParamSpec"];
             };
+        };
+        /** @description A cancelled fill: which one, and the state it is now in */
+        KgFillCancelled: {
+            /** @description The fill's id, echoed back unchanged */
+            id: string;
+            /**
+             * @description Always `CANCELLED`. Completed chunks stay cached and nothing is rolled back, so this says the fill stopped rather than that its work was undone
+             * @example CANCELLED
+             */
+            state: string;
         };
         /** @description How to draft an ODCS contract for a named view, and how far to go with it. */
         KgGenerateContractRequest: {
@@ -1346,7 +3083,9 @@ export interface components {
         };
         /** @description A drafted ODCS contract for a named view, in `draft` status and unreviewed. */
         KgGenerateContractResponse: {
+            /** @description One entry per column the view projects, in the order the draft lists them. */
             columns: components["schemas"]["KgContractColumn"][];
+            /** @description The contract's id: a name-based (version 5) UUID over the world and view, so regenerating for the same view yields the same id. */
             contractId: string;
             /** @description What was written and bound, and what an author still has to do. */
             disposition: components["schemas"]["KgContractDisposition"];
@@ -1354,10 +3093,19 @@ export interface components {
             mode: string;
             /** @description ODCS status of the generated document. Always `draft`. */
             status: string;
+            /** @description The contract's version: `0.1.0` for every generated draft, pre-1.0 because it is unreviewed. */
             version: string;
+            /** @description The name of the view the contract was drafted for. */
             view: string;
             /** @description The contract document. Review this before promoting anything. */
             yaml: string;
+        };
+        /** @description A question to write Cypher for, and whether a saved view that answers it may stand in. */
+        KgGenerateRequest: {
+            /** @description Consult the saved-view catalogue first (default true): a question a curated view already answers comes back as that view's invocation, with `view` set. False generates regardless. */
+            preferViews?: boolean;
+            /** @description The natural-language question to write Cypher for. */
+            question: string;
         };
         /** @description Generated cypher and what the engine will do with it, without running it. */
         KgGenerateResponse: {
@@ -1366,19 +3114,29 @@ export interface components {
              * @description How many generate-validate rounds it took.
              */
             attempts: number;
+            /** @description The Cypher written for the question — or, when `view` is set, that view's invocation. Nothing has been executed. */
             cypher: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Wall-clock milliseconds the call took, view matching or generation plus the explanation.
+             */
             durationMs: number;
             /** @description What the engine will do when this runs. Best-effort; never fails the call. */
             explain: string;
+            /** @description What the user typed, echoed back: the question, or for `/refine` the instruction. */
             question: string;
             /** @description Whether the final attempt passed the strict preflight. */
             valid: boolean;
+            /** @description Present when a saved view already answers the question: `cypher` is then that view's invocation, `attempts` is 0, and nothing was generated. Absent when the Cypher was written for this question. */
+            view?: components["schemas"]["KgViewMatch"];
+            /** @description What the strict preflight objected to in the final attempt, one entry per defect. */
             violations: string[];
         };
         /** @description A virtual-cypher run currently executing for the acting user. */
         KgInFlightRun: {
+            /** @description The Cypher statement being executed. */
             cypher: string;
+            /** @description The run's id — also the SSE queryId. Pass it to `/kill/{runId}`. */
             runId: string;
             /**
              * Format: int64
@@ -1386,7 +3144,9 @@ export interface components {
              */
             startedAt: number;
         };
+        /** @description Arguments for invoking a saved view, the body of `/views/{name}/invocation` and `/views/{name}/run`. */
         KgInvokeViewRequest: {
+            /** @description Values by declared parameter name, merged over the view's defaults; empty or absent runs it on its defaults. Keys sent beside `args` instead of inside it are refused with a 400 by `/run`. */
             args?: {
                 [key: string]: unknown;
             };
@@ -1395,13 +3155,18 @@ export interface components {
         KgKillResponse: {
             /** @description False when the run had already settled, or was never the caller's. */
             killed: boolean;
+            /** @description The run id from the path, echoed back. */
             runId: string;
         };
+        /** @description The legal values of a property, from `/schema/{label}/{property}/values`: the closed set, its size when too wide (`tooMany`), or not enumerable — branch on which. */
         KgPropertyValuesResponse: {
             /** @description False when the source cannot be asked at all — NOT the same as an empty set. */
             enumerable: boolean;
+            /** @description The node label from the path, echoed back. */
             label: string;
+            /** @description The property name from the path, echoed back. */
             property: string;
+            /** @description Why the domain cannot be enumerated — no such property, a credential-shaped one, a source that is unavailable or cannot be asked. Null unless `enumerable` is false. */
             reason?: string;
             /** @description Present when the domain is WIDER than max — its presence IS the signal. */
             tooMany?: components["schemas"]["KgValueOverflow"];
@@ -1410,6 +3175,8 @@ export interface components {
         };
         /** @description The outcome of a virtual-cypher query: rows, the cypher that produced them, and what it cost. */
         KgQueryResult: {
+            /** @description The rows are supporting context only, not a match for the original question. */
+            answerBoundary?: components["schemas"]["AnswerBoundary"];
             /** @description The actual calls as `producer(keys)`, in order — fan-out is visible here. */
             apiCallLog: string[];
             /**
@@ -1419,6 +3186,10 @@ export interface components {
             apiCalls: number;
             /** @description The scope this result set froze into — present only on a capturing execute. */
             capturedScope?: components["schemas"]["KgScopeInfo"];
+            /** @description Each column -> the expression that computed it, traced back through WITH and UNWIND, e.g. {"total": "sum(b.amount)"}; an unwound column reads "UNWIND <list>". Where the origin cannot be traced with certainty, the column's own RETURN expression is given unchanged. A column name is the query's label for a value, not evidence of what it is. */
+            columnSources?: {
+                [key: string]: string;
+            };
             /** @description The cypher that actually ran, after scope rewriting. */
             cypher: string;
             /** @description The pinned ODCS identity and invocation verdict, for a contracted named view only. */
@@ -1430,33 +3201,62 @@ export interface components {
             durationMs: number;
             /** @description Why the query failed, or null when it did not. */
             error?: string;
+            /** @description What the models behind an `/ask` answer were shown: resolved schema groups and prompt sizes. */
+            exposure?: components["schemas"]["KgAskExposure"];
+            /**
+             * Format: int32
+             * @description Source records fetched before query-side filtering, cache-served included. Absent when none.
+             */
+            fetchedRecords?: number;
             /** @description What to try instead. Accompanies an empty result only. */
             hint?: string;
             /** @description The actual LLM calls (kg-ask and agg-*), in order. */
             llmCallLog: string[];
             /**
              * Format: int32
-             * @description LLM calls: the generation plus any aggregate reductions.
+             * @description LLM calls: the generation plus any aggregate reductions. Reasoning only — a semantic anchor's embedding is on `semanticCalls`.
              */
             llmCalls: number;
+            /**
+             * Format: int32
+             * @description Graph nodes materialized from fetched records in this execution. Absent when none.
+             */
+            materializedNodes?: number;
             /** @description The question asked, echoed back. Present only for `/ask`. */
             question?: string;
-            /** @description Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, DISCONNECTED or INTERNAL_ERROR. Absent on a real answer, so a caller can tell 'cannot answer' from a genuine zero without reading the hint text. */
+            /** @description Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, FETCHED_NOT_MATCHED, PARTIAL_NOT_MATCHED, UNPUSHED_FILTER, DISCONNECTED or INTERNAL_ERROR. May accompany rows when a source failed, a read was refused, or a filter was not applied; absent on a clean answer, including a genuine zero. */
             reason?: string;
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description How many rows `rows` holds.
+             */
             rowCount: number;
+            /** @description One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data. */
             rows: {
                 [key: string]: unknown;
             }[];
+            /** @description Present only when `/execute` with `waitSeconds` gave up waiting: the run is still going (or parked), and this is how to follow it. Absent on every answer that finished in the call. */
             run?: components["schemas"]["KgRunRef"];
+            /** @description The actual searches as `producer: mode search on index (k=…)`, in order. */
+            semanticCallLog: string[];
+            /**
+             * Format: int32
+             * @description Relevance searches behind a semantic anchor: one embedding plus one similarity scan per anchor. The third call axis — a search of an index is neither a producer fetch nor a reduction, and a semantic query spends here and nowhere else.
+             */
+            semanticCalls: number;
+            /** @description Caveats on this result that do not make it an error — a producer that failed, rows that are partial or supporting context, an aggregate over mixed units. Absent when there are none. */
             warnings: string[];
         };
+        /** @description Cypher to revise and what to change about it — the body of `/refine`. */
         KgRefineRequest: {
+            /** @description The current Cypher, possibly hand-edited, that the revision starts from. */
             cypher: string;
+            /** @description What to change, in plain language. Echoed back as the response's `question`. */
             instruction: string;
         };
         /** @description Whether a materialised view's cache was recomputed. */
         KgRefreshViewResponse: {
+            /** @description The view's name, as given in the path. */
             name: string;
             /** @description False for a regular or unknown view — nothing was recomputed. */
             refreshed: boolean;
@@ -1468,7 +3268,10 @@ export interface components {
              * @description Relationships the projection attempted.
              */
             attempted: number;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Wall-clock time the reprojection took, in milliseconds, from resolving the user to the last edge persisted.
+             */
             durationMs: number;
             /**
              * Format: int32
@@ -1480,12 +3283,14 @@ export interface components {
              * @description Propositions read for this context.
              */
             propositions: number;
+            /** @description The user whose propositions were re-projected, echoed from the username parameter. */
             username: string;
         };
         /** @description The run was not awaiting input; its actual state travels with the refusal. */
         KgRunConflictResponse: {
             /** @description Why it is in that state, when anything was recorded. Null otherwise. */
             detail?: string;
+            /** @description Always `run is not awaiting input`; `state` says what the run is doing instead. */
             error: string;
             /** @description The run's real state: RUNNING, COMPLETED, KILLED, FAILED, CANCELLED or EXPIRED. */
             state: string;
@@ -1502,6 +3307,7 @@ export interface components {
             kill?: string;
             /** @description Where to poll for state and, once settled, the result. */
             poll: string;
+            /** @description The run's id, for `/runs/{runId}`, `/kill/{runId}` and `/runs/{runId}/answer`. */
             runId: string;
             /** @description RUNNING (materializing now) or WAITING_INPUT (parked on `choices`). */
             state: string;
@@ -1512,46 +3318,69 @@ export interface components {
             choices?: {
                 [key: string]: unknown;
             };
+            /** @description The Cypher the run executes, as submitted to `/execute` after any parameter substitution. */
             cypher: string;
             /** @description Why the run ended as it did, when anything was recorded. */
             detail?: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Epoch milliseconds at which the run settled. Absent while running or parked.
+             */
             endedAt?: number;
             /**
              * Format: int64
              * @description Epoch milliseconds at which a parked run lapses into EXPIRED.
              */
             expiresAt?: number;
+            /** @description The query result. Present only when `state` is COMPLETED. */
             result?: components["schemas"]["KgQueryResult"];
+            /** @description The run id from the path, echoed back. */
             runId: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Epoch milliseconds at which the run started.
+             */
             startedAt: number;
+            /** @description RUNNING, WAITING_INPUT (parked on `choices`), or one of the settled states COMPLETED, KILLED, FAILED, CANCELLED or EXPIRED. */
             state: string;
         };
         /** @description A view was refused: a bad name, an unrunnable body, or a name already taken. */
         KgSaveViewRejection: {
+            /** @description Why the view was refused. Always present. */
             error?: string;
+            /** @description The requested name, trimmed. Absent when the declaration itself was malformed — a reserved or uncoercible param, say — and refused before a save was attempted. */
             name?: string;
+            /** @description Always false. */
             ok: boolean;
             /** @description Preflight defects when the body names shapes the schema contradicts. */
             violations?: string[];
         };
+        /** @description A user-authored view to save into the acting user's world: the body of `POST /views`. */
         KgSaveViewRequest: {
+            /** @description The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted. */
             cypher: string;
+            /** @description One line on what the view answers, shown to the query generator beside the schema. Defaults to empty. */
             description?: string;
+            /** @description Cache the result and serve reads from the cache until `ttl` lapses. Defaults false: a regular view re-runs on every read. */
             materialized?: boolean;
+            /** @description A plain identifier — letters, digits and underscore, not starting with a digit — because a query uses it as a label. Trimmed before it is checked; a name a shipped view owns is refused. */
             name: string;
+            /** @description The node label the view's rows are, e.g. `Person`. A materialized view with one caches its member nodes; without one it keeps its rows as a snapshot. A regular view does not need it. */
             outputLabel?: string;
+            /** @description Bind variables the body references as `$name`, by name. A materialized view may declare none. */
             params?: {
                 [key: string]: components["schemas"]["ViewParamSpec"];
             };
+            /** @description Cache lifetime for a materialized view, e.g. `30m`, `2h`, `1d`. Absent means `1h`; ignored for a regular view. */
             ttl?: string;
         };
         /** @description A view was saved. */
         KgSaveViewResponse: {
+            /** @description The name the view was saved under — the requested name, trimmed. */
             name: string;
             /** @description Why the stored query differs from the one sent */
             note?: string;
+            /** @description Always true; a refusal answers 400 with a different body. */
             ok: boolean;
             /** @description The stored query, when promotion inlined captured scopes into it */
             savedCypher?: string;
@@ -1564,7 +3393,9 @@ export interface components {
             description?: string;
             /** @description True when every node carrying this label was inspected, so an absent property genuinely does not exist here. False means the sample was capped — evidence of what exists, and no evidence at all about what does not. */
             exhaustive: boolean;
+            /** @description The node label, as a MATCH pattern writes it. */
             label: string;
+            /** @description The properties seen on the sampled nodes. See `exhaustive` for what an absence means. */
             properties: components["schemas"]["KgSchemaProperty"][];
             /** @description The realm that declared this label's type. Null means core — the world's own types or the host's. */
             realm?: string;
@@ -1582,6 +3413,7 @@ export interface components {
             description?: string;
             /** @description True when the realm's type declares this property as the node's IDENTITY. Two columns denote the same thing only when both project the identity of the same label; matching names prove nothing, and a client that joins on them will relate records that are not related. Defaults false so an older client reading a newer appliance loses nothing, and so an undeclared property is never mistaken for a key. */
             identity: boolean;
+            /** @description The property key, as a query writes it after the dot. */
             name: string;
             /** @description True when the property was missing from a non-trivial fraction of the sample. */
             sparse: boolean;
@@ -1595,20 +3427,27 @@ export interface components {
              * @description Approximate occurrence count, for ranking.
              */
             count: number;
+            /** @description The label of the node the relationship starts from. */
             from: string;
+            /** @description The label of the node the relationship points to. */
             to: string;
+            /** @description The relationship type. */
             type: string;
         };
         /** @description Labels, their properties, and relationship triples reachable by the acting user. */
         KgSchemaResponse: {
+            /** @description Every label in the snapshot, virtual ones included. Empty only when there is no snapshot. */
             labels: components["schemas"]["KgSchemaLabel"][];
             /** @description When the snapshot was taken, ISO-8601. Absent when there is no snapshot. */
             refreshedAt?: string;
+            /** @description The (from, type, to) triples in the snapshot. Empty only when there is no snapshot. */
             relationships: components["schemas"]["KgSchemaRelationship"][];
         };
         /** @description The outcome of deleting a captured scope. */
         KgScopeDeleteResponse: {
+            /** @description True when a scope was dropped; false when the user had no live scope of that name, which is not an error. */
             deleted: boolean;
+            /** @description The scope name from the path, echoed back. */
             name: string;
         };
         /** @description A captured query scope: a frozen result set referenced in a later query as (x:`$name`). */
@@ -1622,6 +3461,7 @@ export interface components {
              * @description How many members the capture froze. Membership is frozen; values stay live.
              */
             members: number;
+            /** @description The name the scope was captured under, unique per user; a later query binds it as (x:`$name`). */
             name: string;
             /** @description The node label later references bind with. */
             outputLabel: string;
@@ -1630,22 +3470,26 @@ export interface components {
         };
         /** @description The acting user's live captured scopes, newest first. */
         KgScopeListResponse: {
+            /** @description The live scopes, newest first; an expired scope is absent. */
             scopes: components["schemas"]["KgScopeInfo"][];
         };
         /** @description The named scope does not exist in the acting user's world; the ones that do travel with the refusal. */
         KgUnknownScopeResponse: {
             /** @description The scope names this world declares (its focuses). */
             available: string[];
+            /** @description Names the scope that was not found. */
             error: string;
         };
         /** @description The result of validating cypher against the schema without executing it. */
         KgValidationResponse: {
             /** @description A single human-readable summary, or null when there is nothing to say. */
             message?: string;
+            /** @description True when the cypher passes the strict preflight — the same check strict execution applies. */
             ok: boolean;
             /** @description What the schema contradicts, one entry per defect. */
             violations: string[];
         };
+        /** @description A property's value domain that is wider than its declared `max`: how wide, and a sample of its shape. */
         KgValueOverflow: {
             /**
              * Format: int32
@@ -1664,16 +3508,310 @@ export interface components {
         KgViewInvocationResponse: {
             /** @description Run this through `/execute`, so a view uses the same engine as any other query. */
             cypher: string;
+            /** @description The view's name, as given in the path. */
             name: string;
         };
+        /** @description The saved view a question was routed to instead of generating Cypher. */
+        KgViewMatch: {
+            /** @description The arguments the selector bound from the question, by parameter name. */
+            args: {
+                [key: string]: unknown;
+            };
+            /** @description The saved view's name, as `GET /views` lists it. */
+            name: string;
+            /** @description The selector's one line on why this view. */
+            reason?: string;
+        };
+        /** @description The agent's answer in a chat completion */
+        Message: {
+            /** @description The agent's whole answer. When the turn raised requests still waiting for approval, it ends with a note listing each one, the run that raised it, and a link to decide it. */
+            content: string;
+            /** @description Always assistant */
+            role: string;
+        };
+        /** @description An agent, or the world itself, presented as an OpenAI model */
+        Model: {
+            /**
+             * Format: int64
+             * @description When the list was made, in Unix epoch seconds; not when the agent was created
+             */
+            created: number;
+            /** @description The agent's name, or world for the world itself; send it as model to talk to it */
+            id: string;
+            /** @description Always model */
+            object: string;
+            /** @description Always embabel */
+            owned_by: string;
+        };
+        /** @description The world itself and the agents the caller can talk to now, as OpenAI models; answered by GET /openai/v1/models and, holding just that agent, GET /agents/{name}/v1/models */
+        ModelList: {
+            /** @description On /openai/v1: world first, unless the caller's API key is an agent key, then the agents that may be talked to now and that the key, if scoped to some agents, reaches */
+            data: components["schemas"]["Model"][];
+            /** @description Always list */
+            object: string;
+        };
+        MutualTLSSecurityScheme: {
+            type: "MutualTLSSecurityScheme";
+        } & (Omit<components["schemas"]["SecurityScheme"], "type"> & {
+            type?: string;
+        });
+        /** @description A duty an add-duty change would give the agent */
+        NewDuty: {
+            /** @description Six-field cron the duty is checked on; null means checked on demand */
+            every?: string;
+            /** @description The view or DERIVE label whose rows are the duty's violations */
+            holds: string;
+            /** @description Name of the new duty; must not match one the agent already has */
+            name: string;
+            /** @description The duty's Always/Never rule, in words */
+            text: string;
+        };
+        OAuth2SecurityScheme: {
+            type: "OAuth2SecurityScheme";
+        } & (Omit<components["schemas"]["SecurityScheme"], "type"> & {
+            flows?: components["schemas"]["OAuthFlows"];
+            oauth2MetadataUrl?: string;
+            type?: string;
+        });
+        OAuthFlows: {
+            authorizationCode?: components["schemas"]["AuthorizationCodeOAuthFlow"];
+            clientCredentials?: components["schemas"]["ClientCredentialsOAuthFlow"];
+            implicit?: components["schemas"]["ImplicitOAuthFlow"];
+            password?: components["schemas"]["PasswordOAuthFlow"];
+        };
+        OpenIdConnectSecurityScheme: {
+            type: "OpenIdConnectSecurityScheme";
+        } & (Omit<components["schemas"]["SecurityScheme"], "type"> & {
+            openIdConnectUrl?: string;
+            type?: string;
+        });
+        PasswordOAuthFlow: {
+            refreshUrl?: string;
+            scopes?: {
+                [key: string]: string;
+            };
+            tokenUrl?: string;
+        };
+        /** @description An agent's quality of service: the priority its work is paced at, and the models it falls back to when one of its own fails mid-check */
+        QosSpec: {
+            /** @description Fallback model names keyed by LLM role. A check whose models and fallbacks all fail is held as unknown, never as upheld */
+            fallbacks: {
+                [key: string]: string;
+            };
+            /**
+             * @description interactive, business (the default) or background. Background work takes half of each source it declares no share for; a conversation is interactive whatever is declared
+             * @enum {string}
+             */
+            priority: "interactive" | "business" | "background";
+        };
+        /** @description One decision the Gatekeeper made about a call that would change something on a run's behalf (acted, held for a person, or refused), or a person's answer to such a request. Chained per owner by hash so an edit shows; returned with its run by GET /agents/{name}/runs/{id} */
+        Receipt: {
+            /** @description Name of the agent holding the work; null when no agent holds it */
+            agent?: string;
+            /**
+             * Format: int32
+             * @description The holding agent's governing signed version number when the decision was made; null when none governs it
+             */
+            agentVersion?: number;
+            /**
+             * Format: date-time
+             * @description ISO-8601 instant it was written, to the millisecond
+             */
+            at: string;
+            /** @description Username of the person who approved or rejected; null when the Gatekeeper decided */
+            decidedBy?: string;
+            /** @description `act` (let through), `request` (held for a person), `refused`, or a person's `approved` or `rejected` */
+            decision: string;
+            /** @description Business records the call's arguments name, as `field=value`: a field called `id`, `key`, `number`, `res_id` or `external_id`, or ending `Id`, `_id`, `Key`, `_key`, `Url` or `_url`. At most 20 */
+            entityKeys: string[];
+            /** @description SHA-256 hex over everything else this receipt says, as canonical JSON with keys sorted and times as ISO-8601 text */
+            hash: string;
+            /** @description The receipt's id, `rc_` and a UUID */
+            id: string;
+            /** @description SHA-256 hex of the call's input as sent, or of the empty string when it had none */
+            inputHash: string;
+            /** @description Id of the user whose chain the receipt belongs to */
+            ownerId: string;
+            /** @description The hash of the receipt before it in the owner's chain; empty for the first */
+            previousHash: string;
+            /** @description Why, in words, up to 500 characters; empty when none was given */
+            reason: string;
+            /** @description Id of the request it raised or answered; null for `act` and `refused` */
+            requestId?: string;
+            /** @description What decided: `authority`, `halted`, `egress`, `observing`, `never` or `review` for the Gatekeeper, `person` for a person's answer; `refused` when a refusal named no rule */
+            rule: string;
+            /** @description Id of the run the decision was made for; null for a person's answer to a request that names no run */
+            runId?: string;
+            /**
+             * Format: int64
+             * @description Position in the owner's chain, counting from 1
+             */
+            seq: number;
+            /** @description The verb called, as the gateway names it */
+            verb: string;
+            /** @description Name of the routine the call was made from */
+            work: string;
+        };
+        /** @description One message of an OpenAI chat request's history */
+        RequestMessage: {
+            /** @description A string, or a list of content parts of which only the {type: text, text} ones are read, joined by newlines; anything else reads as empty */
+            content?: unknown;
+            /** @description user or assistant; messages with any other role, such as system, are not read */
+            role: string;
+        };
+        /** @description Why an agent is being retired, sent to POST /agents/{name}/retire */
+        RetireRequest: {
+            /** @description The reason, recorded with the retirement after trimming; may be empty */
+            reason: string;
+        };
+        /** @description What retiring an agent took with it, as POST /agents/{name}/retire answers: the agent is off duty for good and its record is kept */
+        Retired: {
+            /** @description Name of the agent that was retired */
+            agent: string;
+            /**
+             * Format: int32
+             * @description How many of your API keys were revoked because they could talk to this agent, including keys scoped to other agents as well
+             */
+            keysRevoked: number;
+            /**
+             * Format: int32
+             * @description How many of the agent's own credential slots (its own-account secrets) were deleted from your wallet
+             */
+            slotsDeleted: number;
+        };
+        /** @description A routine on an agent's card (AgentView.routines): a TypeScript action or realm-scheduled function, with the stage chosen for it and the stage it actually fires at */
+        RoutineView: {
+            /** @description The action's own description; empty when the routine does not exist in this world */
+            description: string;
+            /**
+             * @description The stage dispatch actually honours for it (off, observing or on). Lower than `stage` when something the agent still needs holds it back; off for a missing routine
+             * @enum {string}
+             */
+            firing: "off" | "observing" | "on";
+            /** @description True when the agent names a routine that does not exist in this world */
+            missing: boolean;
+            /** @description The action's name, as the agent names it */
+            name: string;
+            /**
+             * @description The stage chosen for this routine (off, observing or on): a stored override, else its declared stage, else the agent's, before the agent's own standing is applied
+             * @enum {string}
+             */
+            stage: "off" | "observing" | "on";
+            /** @description What fires it, in words: "when <signal type> arrives", "on schedule <cron>", "on the realm's schedule <cron>", both joined by a comma, "no trigger", or "not found" for a missing routine */
+            trigger: string;
+        };
+        /** @description One run of an agent, with a receipt for every decision made on its behalf; answered by GET /agents/{name}/runs/{id} */
+        RunDetail: {
+            /** @description Receipts for the decisions the Gatekeeper made during the run, in the order they were made */
+            receipts: components["schemas"]["Receipt"][];
+            /** @description The run itself: what started it, its state, timing and output */
+            run: components["schemas"]["AgentRun"];
+        };
+        /** @description One of an agent's scheduled jobs to run now, outside its schedule; sent to POST /agents/{name}/upcoming/run */
+        RunNowRequest: {
+            /** @description Name of the scheduled job, as a firing's job in GET /agents/{name}/upcoming */
+            job: string;
+        };
+        /** @description The agent's own value for a secret, sent to PUT /agents/{name}/accounts/{secret} */
+        SecretValue: {
+            /** @description The secret value itself, kept as an API key and sent instead of the sponsor's on an own-account API; never returned */
+            value: string;
+        };
+        SecurityScheme: {
+            description?: string;
+            type: string;
+        };
+        /** @description A move on the stage ladder for an agent, or for one routine it holds; sent to POST /agents/{name}/stage */
+        SetStageRequest: {
+            /** @description Name of one routine the agent holds, to move only that routine; null or absent moves the agent as a whole */
+            routine?: string;
+            /**
+             * @description Stage to move to: off (never fires), observing (runs with writes suppressed) or on (may write). An unrecognised value reads as off
+             * @enum {string}
+             */
+            stage: "off" | "observing" | "on";
+        };
+        /** @description Skip the next scheduled firing of one of an agent's jobs, or postpone it; sent to POST /agents/{name}/upcoming/skip */
+        SkipRequest: {
+            /** @description Name of the scheduled job, as a firing's job in GET /agents/{name}/upcoming */
+            job: string;
+            /** @description Why, kept with the skip after trimming; may be empty */
+            reason: string;
+            /**
+             * Format: date-time
+             * @description When to run the skipped firing instead, ISO-8601 instant in the future; null or absent skips it outright
+             */
+            until?: string;
+        };
+        /** @description The secrets an agent keeps its own value for, by name only; answered by the /agents/{name}/accounts endpoints */
+        Slots: {
+            /** @description Name of the agent */
+            agent: string;
+            /** @description Names of the secrets the agent has its own value for, as the realm's keys declare them, sorted; the values are never returned */
+            secrets: string[];
+        };
+        /** @description The agent after a stage change or signature, or why the change was refused; answered by POST /agents/{name}/stage and POST /agents/{name}/sign */
+        StageResponse: {
+            /** @description The agent after the change; null when it was refused */
+            agent?: components["schemas"]["AgentView"];
+            /** @description Why the change was refused, in words; null when it was made */
+            refused?: string;
+        };
+        /** @description What to fill: the body of POST /admin/kg/fills */
         StartFillRequest: {
-            /** Format: int32 */
+            /**
+             * Format: int32
+             * @description Units of paid work one tick may buy: a producer fetch group or a group of an inline model judgement, not HTTP requests or tokens. Clamped to 1-500; defaults to 60 when absent
+             */
             budgetPerTick: number;
+            /** @description The Virtual Cypher query whose materialization the fill drives; every tick re-runs it. Blank is a 400 */
             cypher: string;
+            /** @description Display name for the fill, shown in its activity; empty when absent, and the fill id is shown instead */
             label: string;
+        };
+        /** @description A sweep: a cold materialization an agent keeps filled by running a saved view pass after pass, under a budget, until a pass buys nothing */
+        SweepSpec: {
+            /**
+             * Format: int32
+             * @description Most units of paid work (a producer fetch, or a group of an inline judgement) one pass may buy; null takes the host's default
+             */
+            budgetPerTick?: number;
+            /** @description The sweep's name within its agent; part of the fill's identity, so starting it twice is one fill */
+            name: string;
+            /** @description Name of a saved view of this world that takes no arguments: the query each pass runs */
+            view: string;
+        };
+        /** @description When a tip is posted to the acting user's inbox, as a frequency preset and an hour; the body of PUT /hints/schedule */
+        TipSchedule: {
+            /**
+             * @description How often a tip is posted; NEVER turns tips off. Defaults to WEEKDAYS when absent
+             * @enum {string}
+             */
+            frequency: "NEVER" | "DAILY" | "WEEKDAYS" | "WEEKLY";
+            /**
+             * Format: int32
+             * @description Hour of day, 0-23, in the user's own time zone. Defaults to 9 when absent; outside 0-23 is a 400
+             */
+            hour: number;
+        };
+        /** @description The acting user's tip schedule and the cron expression it runs on; answered by GET and PUT /hints/schedule */
+        TipScheduleView: {
+            /** @description Spring six-field cron expression the schedule runs on (second minute hour day month day-of-week), read in the user's own time zone; null when frequency is NEVER */
+            cron?: string;
+            /**
+             * @description How often a tip is posted to the inbox; NEVER means tips are off
+             * @enum {string}
+             */
+            frequency: "NEVER" | "DAILY" | "WEEKDAYS" | "WEEKLY";
+            /**
+             * Format: int32
+             * @description Hour of day (0-23) the tip is posted, in the user's own time zone
+             */
+            hour: number;
         };
         /** @description Whether a saved tour was removed */
         TourDeletedResponse: {
+            /** @description True when a tour this user saved was removed. False when the tour is not the caller's to remove — a realm's or the world's own — or no deletable tour has that id */
             deleted: boolean;
         };
         /** @description A tour file to store */
@@ -1683,6 +3821,7 @@ export interface components {
         };
         /** @description Every tour declared for a world */
         TourListResponse: {
+            /** @description The tours, shipped, realm-contributed and user-saved alike; on import, only the tours just stored */
             tours: components["schemas"]["TourSummary"][];
         };
         /** @description Why a tour was refused, in the server's own words */
@@ -1692,6 +3831,7 @@ export interface components {
         };
         /** @description The parameters a tour has collected so far, bound into the step's precondition */
         TourStepStatusRequest: {
+            /** @description Values the tour has collected so far, by name, bound as query parameters of the step's precondition */
             params: {
                 [key: string]: unknown;
             };
@@ -1700,11 +3840,15 @@ export interface components {
         TourStepStatusResponse: {
             /** @description Why, when the status is UNKNOWN — the query error in the author's words */
             detail?: string;
-            /** @enum {string} */
+            /**
+             * @description DONE when the step's precondition returned a row, or when its `when` condition returned none (the step does not apply here); TODO when it is not yet satisfied or has no precondition; UNKNOWN when its query could not be run or the tour or step does not exist, in which case the client should run the step anyway
+             * @enum {string}
+             */
             status: "DONE" | "TODO" | "UNKNOWN";
         };
         /** @description One step, as its file declared it — minus the precondition, which stays server-side */
         TourStepView: {
+            /** @description Everything the step's YAML declared except its `doneWhen` and `when` preconditions, carried through uninterpreted — the client owns that vocabulary */
             presentation: {
                 [key: string]: unknown;
             };
@@ -1725,34 +3869,75 @@ export interface components {
             };
             /** @description The realm that shipped it, or absent for a world's own and a user's own. Carried rather than derived from the id — a namespace prefix is not something a client can reliably strip. */
             source?: string;
+            /** @description The tour's steps in walking order; a step's position here is the `index` the status call takes */
             steps: components["schemas"]["TourStepView"][];
             /** @description Imported or recorded by this user, rather than shipped by a realm or the world */
             userSaved: boolean;
         };
+        /** @description What an agent will do next: its scheduled firings, the routines that wait for a signal, the requests its last duty checks say to expect, work in flight, and its recent counts. Answered by GET /agents/{name}/upcoming and after a skip or run-now */
+        Upcoming: {
+            /** @description Name of the agent, as asked */
+            agent: string;
+            /** @description What it has done lately, in the units a budget is set in */
+            counts: components["schemas"]["Counts"];
+            /** @description Duties whose next check is expected to raise requests again */
+            expected: components["schemas"]["Expected"][];
+            /** @description Its scheduled duty checks and routines, soonest first, those with no next time last. Only jobs the scheduler holds: a duty whose agent is off duty has none */
+            firings: components["schemas"]["Firing"][];
+            /** @description Its runs still in progress, from its 500 most recent */
+            inFlight: components["schemas"]["InFlight"][];
+            /** @description Names of the routines it holds that have no scheduled job: the ones that run when something happens rather than at a time */
+            onSignals: string[];
+        };
+        /** @description What an agent will do next after a skip or a run-now, or why the change was refused */
+        UpcomingResponse: {
+            /** @description Why the change was refused, in words; null when it was made */
+            refused?: string;
+            /** @description The agent's upcoming work after the change; null when it was refused */
+            upcoming?: components["schemas"]["Upcoming"];
+        };
+        /** @description A saved view visible to the acting user — world or realm tier — with its definition and, for a materialised view, its cache state. The items of `GET /views`. */
         ViewDebugInfo: {
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Nodes — or, for a row snapshot, rows — the cache holds. Null for a regular view, or a materialised one with nothing cached.
+             */
             cachedMembers?: number;
+            /** @description The view's Cypher body, trimmed, with any `$name` parameter references as declared. */
             cypher: string;
+            /** @description The ODCS contract the view is pinned to, and in which mode. Absent when it is not contracted. */
             dataContract?: components["schemas"]["DataContractBindingSpec"];
+            /** @description One line on what the view answers. Empty when it declares none. */
             description: string;
-            /** Format: int64 */
+            /**
+             * Format: int64
+             * @description Epoch milliseconds at which the cache expires; may already be past. Null for a regular view, or a materialised one with nothing cached.
+             */
             expiresAt?: number;
+            /** @description True when reads are served from a cache that is recomputed once `ttl` lapses. */
             materialized: boolean;
+            /** @description The view's name, which a query uses as a label and `/views/{name}` paths take. */
             name: string;
+            /** @description The node label the view's rows are. Null for a tabular view, and for a materialised view that keeps its rows as a snapshot. */
             outputLabel?: string;
+            /** @description Declared bind variables by name. Empty for an unparameterized view, and always for a materialised one. */
             params: {
                 [key: string]: components["schemas"]["ViewParamSpec"];
             };
+            /** @description The realm that shipped the view. Null for a view of the world's own. */
             source?: string;
+            /** @description Cache lifetime, e.g. `30m`, `2h`, `1d`. Null for a regular view. */
             ttl?: string;
         };
+        /** @description A declared bind variable of a saved view, referenced as $name in its Cypher and supplied per invocation, keyed by that name wherever a view's params are declared or listed */
         ViewParamSpec: {
             /** @description The fixed set of values this param accepts — rendered as a select, enforced at invocation. Absent = any value of the declared type. */
             choices?: unknown[];
-            /** @description Used when an invocation omits this param. Absent = required on invocation. */
+            /** @description Used when an invocation omits this param. Absent = required on invocation, unless required: false. */
             default?: unknown;
             /** @description What the argument means — rendered verbatim as the field's hint. */
             description?: string;
+            /** @description false lets an invocation omit a param that has no default; it is then bound to null. */
             required?: boolean;
             /**
              * @description The coercion applied to supplied values, and the form control a UI renders (int/number a number field, boolean a checkbox, date a date picker). float and double are aliases of number.
@@ -1773,6 +3958,7 @@ export interface operations {
     delete_1: {
         parameters: {
             query: {
+                /** @description Name of a handler the caller authored. A realm-shipped handler is refused (disable it instead) and an unknown name finds nothing; both answer 200 with `ok: false` */
                 name: string;
             };
             header?: never;
@@ -1808,6 +3994,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The TypeScript `source` to run and what to run it against. A `sample` is bound as the signal when given, its `typeName` and `id` keys naming it; otherwise the most recent signal of `signalType` in the caller's graph is used, and with `signalType` omitted, `*`, or no such signal in the graph the handler runs against a cron tick. Observe-only: nothing is saved and nothing external changes */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandlerDryRunRequest"];
@@ -1841,6 +4028,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description `english` describes the handler to write; when `current` is given, `english` is instead a change to make to that source. `skills` names skills handed to the writing model as references, prompt and tools both. Nothing is saved: the answer is the source with its tsc verdict */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandlerGenerateRequest"];
@@ -1867,7 +4055,7 @@ export interface operations {
             };
         };
     };
-    list_5: {
+    list_6: {
         parameters: {
             query?: never;
             header?: never;
@@ -1899,6 +4087,7 @@ export interface operations {
     open: {
         parameters: {
             query: {
+                /** @description Name of the handler, as `name` in the POST /admin/handlers/list response; an exact match against every handler in the caller's world, realm-shipped ones included. 400 when none has that name */
                 name: string;
             };
             header?: never;
@@ -1943,6 +4132,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The handler to create, or to replace when the caller's world already has one of that `name`; persisted only when `source` passes the tsc gate, else `ok: false` with the reason. `signalType` `*` (the default) means no signal trigger, `schedule` is an optional 6-field cron expression, `autonomous` marks a handler that writes, and `inputTypeNames` with `outputTypeName` make it planner-chainable. A blank `description` falls back to the name */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandlerSaveRequest"];
@@ -1972,7 +4162,9 @@ export interface operations {
     setEnabled_1: {
         parameters: {
             query: {
+                /** @description Name of the handler, as listed by POST /admin/handlers/list. Not checked against the world: an unknown name is recorded as an override all the same and reported as set */
                 name: string;
+                /** @description `true` adopts the handler so it fires, `false` stops it firing. Recorded as this user's override, keeping any per-user schedule, and the world is refreshed so schedules re-sync */
                 enabled: boolean;
             };
             header?: never;
@@ -2004,7 +4196,9 @@ export interface operations {
     setSchedule: {
         parameters: {
             query: {
+                /** @description Name of the handler to schedule, as listed by POST /admin/handlers/list. Not checked against the world: an unknown name is recorded and reported as set */
                 name: string;
+                /** @description Spring 6-field cron expression (seconds minutes hours day-of-month month day-of-week) recorded as this user's schedule for the handler; not validated here. Optional: omitted or blank clears the per-user schedule, keeping the handler's enabled state */
                 schedule?: string;
             };
             header?: never;
@@ -2040,6 +4234,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The TypeScript handler body in `source`, type-checked by the same tsc gate a save applies. Nothing is saved or run */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["HandlerValidateRequest"];
@@ -2069,12 +4264,14 @@ export interface operations {
     dryRun: {
         parameters: {
             query?: {
+                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The annotation statement to validate and select with, writing nothing: a read prefix, `WITH DISTINCT <target> ORDER BY … LIMIT n`, then exactly one `SET <target>.<property> = <value>` on a property the world declares annotatable. `params` binds the statement's `$name` parameters and may be omitted. 409 when the statement falls outside that grammar */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["AnnotateDryRunRequest"];
@@ -2122,10 +4319,12 @@ export interface operations {
     apply: {
         parameters: {
             query?: {
+                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The `planId` a dry-run returned. One-shot: a second apply, an unknown id, a plan past its `expiresAt` (300 seconds by default) or one frozen for another user or world is a 409 */
                 planId: string;
             };
             cookie?: never;
@@ -2173,10 +4372,12 @@ export interface operations {
     undo: {
         parameters: {
             query?: {
+                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The `planId` of an applied plan, looked up in the acting user's annotation audit journal for this world rather than the plan store, so it works after the plan is consumed or expired; 409 when nothing under it is left to undo */
                 planId: string;
             };
             cookie?: never;
@@ -2224,7 +4425,7 @@ export interface operations {
     ask_1: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
                 /** @description The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph. */
                 scope?: string;
@@ -2233,6 +4434,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The natural-language question, in `question`: Cypher is generated for it (within `scope` when one is given), run scoped to the acting user, and answered with the rows, the Cypher that produced them and what it cost */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgAskRequest"];
@@ -2248,8 +4450,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgQueryResult"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2271,7 +4482,7 @@ export interface operations {
     askScopes: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -2289,8 +4500,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgAskScopeInfo"][];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2303,13 +4523,14 @@ export interface operations {
     createAskScope: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The scope to declare: `name`, a slug matching `[a-z0-9][a-z0-9-]*` (otherwise a 400; a name already declared is a 409), an optional `description`, and `realms`, at least one and every one installed or a 400 naming the unknown ones. Written as a world-tier focus and the world refreshed, so `scope=<name>` is accepted at once */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgCreateScopeRequest"];
@@ -2334,8 +4555,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgBadRealmsResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2357,12 +4587,12 @@ export interface operations {
     deleteAskScope: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
             path: {
-                /** @description The view's name, as `GET /views` lists it. */
+                /** @description The world-tier scope to delete, by the name `GET /ask/scopes` lists it under. A realm-shipped scope is refused with 409 */
                 name: string;
             };
             cookie?: never;
@@ -2378,8 +4608,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgAskScopeInfo"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2407,7 +4646,7 @@ export interface operations {
             };
         };
     };
-    list_9: {
+    list_10: {
         parameters: {
             query?: never;
             header?: never;
@@ -2441,6 +4680,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The decorator's registered name, exact and case-sensitive, as listed by GET /admin/kg/decorate; an unknown name answers 404 with the reason in `error` */
                 name: string;
             };
             cookie?: never;
@@ -2465,7 +4705,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description Unknown decorator */
+            /** @description Unknown decorator: the report carries the reason in error, with no candidates */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2481,7 +4721,9 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
+                /** @description The decorator's registered name, exact and case-sensitive, as listed by GET /admin/kg/decorate; an unknown name answers 404 with the reason in `error` */
                 name: string;
+                /** @description The `id` of the graph node to decorate, run whether or not it is stale; 404 when no node has it. A node with no owning `userId` is refused when the decorator writes private artifacts and more than one user can see the node */
                 nodeId: string;
             };
             cookie?: never;
@@ -2506,7 +4748,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description Unknown decorator */
+            /** @description Unknown decorator: the report carries the reason in error, with no candidates */
             404: {
                 headers: {
                     [name: string]: unknown;
@@ -2515,7 +4757,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgDecorationReport"];
                 };
             };
-            /** @description Decoration failed */
+            /** @description Decoration failed: the report says how many nodes failed */
             500: {
                 headers: {
                     [name: string]: unknown;
@@ -2529,12 +4771,14 @@ export interface operations {
     derive: {
         parameters: {
             query?: {
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The rule set to evaluate for this one query, and the query that reads it: `cypher` (sees the derived label as an ordinary label), `derives` (the label the rules conclude), `rules` (each a `derive` head pattern and a RETURN-less Cypher `from` body), and optionally `name` (default `adhoc/<derives>`), `description`, `paramSpecs` (declared bind variables, referenced as `$name` in rule bodies), `params` (values for them; the whole map also binds the outer query) and `requires` (materialization demands run before the rules). Rule bodies are scoped to the acting user and nothing persists. An invalid rule set, a body label the world does not know, or a param that does not resolve answers 400 */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgDeriveRequest"];
@@ -2559,8 +4803,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2573,7 +4826,7 @@ export interface operations {
     execute: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
                 /** @description Return a run handle immediately instead of waiting, and allow the run to park awaiting input. */
                 background?: boolean;
@@ -2584,6 +4837,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400 */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgExecuteRequest"];
@@ -2608,8 +4862,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2619,9 +4882,10 @@ export interface operations {
             };
         };
     };
-    list_4: {
+    list_5: {
         parameters: {
             query?: {
+                /** @description Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
@@ -2653,25 +4917,36 @@ export interface operations {
     start: {
         parameters: {
             query?: {
+                /** @description Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The fill to start, owned by the acting user: `cypher` (required, 400 when blank) is the query the scheduler re-runs one chunk per tick until a pass makes no live call; `budgetPerTick` caps live producer calls per chunk, default 60, clamped to 1–500; `label` names the fill in progress and activity, and the fill's id stands in when it is blank */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["StartFillRequest"];
             };
         };
         responses: {
-            /** @description The fill, as started */
+            /** @description The fill, as started — carrying a warning when its producers cannot outlive the sweep, so it will poll rather than converge */
             200: {
                 headers: {
                     [name: string]: unknown;
                 };
                 content: {
                     "application/json": components["schemas"]["Fill"];
+                };
+            };
+            /** @description cypher is required: a fill needs the materialization it is filling */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
             /** @description No authenticated principal and no resolvable username */
@@ -2688,10 +4963,12 @@ export interface operations {
     cancel: {
         parameters: {
             query?: {
+                /** @description Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The fill's id (`fill_` plus 12 characters), as start or list returned it, matched only among the acting user's fills; an id that matches nothing is not refused and still answers `CANCELLED` */
                 id: string;
             };
             cookie?: never;
@@ -2704,9 +4981,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": {
-                        [key: string]: unknown;
-                    };
+                    "application/json": components["schemas"]["KgFillCancelled"];
                 };
             };
             /** @description No authenticated principal and no resolvable username */
@@ -2723,7 +4998,7 @@ export interface operations {
     generate: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
                 /** @description The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph. */
                 scope?: string;
@@ -2732,9 +5007,10 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The question, in `question`, and `preferViews` (default true): a question a saved view answers comes back as that view's invocation with `view` set, and no model is asked. The catalogue is skipped under `scope` or with `preferViews: false`, and Cypher is then generated and validated, never run */
         requestBody: {
             content: {
-                "application/json": components["schemas"]["KgAskRequest"];
+                "application/json": components["schemas"]["KgGenerateRequest"];
             };
         };
         responses: {
@@ -2747,8 +5023,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgGenerateResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2770,7 +5055,7 @@ export interface operations {
     kill: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -2791,8 +5076,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgKillResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2805,7 +5099,7 @@ export interface operations {
     refine: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
                 /** @description The ask scope to use, as `GET /ask/scopes` lists them. Omitted means the whole graph. */
                 scope?: string;
@@ -2814,6 +5108,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
+        /** @description The current, possibly hand-edited Cypher in `cypher` and what to change about it in `instruction`; the revision is written within `scope` when one is given, validated but never run, and the response's `question` echoes the instruction */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgRefineRequest"];
@@ -2829,8 +5124,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgGenerateResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2852,7 +5156,9 @@ export interface operations {
     reproject: {
         parameters: {
             query: {
+                /** @description Username whose stored propositions, in their current context, are re-projected; it selects the user regardless of who is calling. 400 when no user has it */
                 username: string;
+                /** @description Re-project only the first this-many propositions, to bound a smoke test; `0` (the default) or any non-positive value means all of them, up to 100,000 */
                 limit?: number;
             };
             header?: never;
@@ -2893,7 +5199,7 @@ export interface operations {
     runs_1: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -2911,8 +5217,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgInFlightRun"][];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2925,7 +5240,7 @@ export interface operations {
     run_7: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -2946,8 +5261,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgRunState"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -2969,7 +5293,7 @@ export interface operations {
     answer_1: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -2979,6 +5303,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description The owner's pick, in `choice`: one of the options the parked run's question offers — `proceed`, `narrow`, `background` or `cancel` for a cost-gate park, or the offered values for any other question — matched trimmed and case-insensitively; anything else is a 400 listing the accepted values. `proceed` and `background` resume the run; `narrow` and `cancel` settle it CANCELLED without running */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgAnswerRequest"];
@@ -3003,8 +5328,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgBadChoiceResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3035,7 +5369,7 @@ export interface operations {
     schema: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3053,8 +5387,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgSchemaResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3067,7 +5410,7 @@ export interface operations {
     propertyValues: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3090,8 +5433,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgPropertyValuesResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3101,9 +5453,10 @@ export interface operations {
             };
         };
     };
-    list_8: {
+    list_9: {
         parameters: {
             query?: {
+                /** @description Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
@@ -3135,10 +5488,12 @@ export interface operations {
     delete_4: {
         parameters: {
             query?: {
+                /** @description Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The scope's name as given in `captureAs` (the identifier referenced as `$name` in a query, without the `$`), among the acting user's scopes; a name that matches nothing answers `deleted: false`, not an error */
                 name: string;
             };
             cookie?: never;
@@ -3168,10 +5523,12 @@ export interface operations {
     pin: {
         parameters: {
             query?: {
+                /** @description Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The scope's name as given in `captureAs` (the identifier referenced as `$name` in a query, without the `$`), among the acting user's scopes; 404 when there is no such live scope, including one that has already expired */
                 name: string;
             };
             cookie?: never;
@@ -3210,13 +5567,14 @@ export interface operations {
     validate: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The Cypher to check, in `cypher`, against the acting user's schema with the same preflight strict execution runs; only `cypher` is read, so `params`/`args` are not substituted and `captureAs` is ignored */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgExecuteRequest"];
@@ -3232,8 +5590,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgValidationResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3246,7 +5613,7 @@ export interface operations {
     views_1: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3264,8 +5631,17 @@ export interface operations {
                     "application/json": components["schemas"]["ViewDebugInfo"][];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3278,13 +5654,14 @@ export interface operations {
     saveView: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description The view to store in the acting user's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400 */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgSaveViewRequest"];
@@ -3309,8 +5686,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgSaveViewRejection"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3323,7 +5709,7 @@ export interface operations {
     deleteView: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3344,8 +5730,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgDeleteViewResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3367,7 +5762,7 @@ export interface operations {
     generateViewContract: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3377,6 +5772,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description Optional; omitted is a declaration-only preview that reads no data and writes nothing. `sample` runs the view under a row cap (with `args` for a parameterized view) to infer types; `persist` writes the draft into the world; `bind` also pins the view to it in `observe` mode and needs `persist`. Each defaults to false */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["KgGenerateContractRequest"];
@@ -3401,8 +5797,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgContractRefusal"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3415,7 +5820,7 @@ export interface operations {
     viewInvocation: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3425,6 +5830,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty resolves it on the defaults. A missing required or uncoercible argument is a 400. Keys sent beside `args` rather than inside it are ignored here */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["KgInvokeViewRequest"];
@@ -3449,8 +5855,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3472,7 +5887,7 @@ export interface operations {
     refreshView: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3493,8 +5908,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgRefreshViewResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3507,7 +5931,7 @@ export interface operations {
     runView: {
         parameters: {
             query?: {
-                /** @description The user whose world to read. Ignored when the call is authenticated — the signed-in principal always wins — so it is for unauthenticated callers only. */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -3517,6 +5941,7 @@ export interface operations {
             };
             cookie?: never;
         };
+        /** @description Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty runs it on the defaults. A missing required or uncoercible argument is a 400, and so is any key sent beside `args` instead of inside it */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["KgInvokeViewRequest"];
@@ -3541,8 +5966,17 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -3558,6 +5992,1072 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
+            };
+        };
+    };
+    listAgents: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every agent in your world, with its stage and needs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentView"][];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    getAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name, as the list returns it */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentView"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No agent of that name in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    a2aAgentRpc: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description One JSON-RPC 2.0 call, its `id` echoed in the response. `message/send` takes a message whose text parts are joined into one turn, continuing the conversation when it names a `taskId` this agent holds (an unknown one is refused, not restarted); `tasks/get` and `tasks/cancel` take the task's `id` in `params`, and no task can be cancelled. Streaming and push-notification methods answer an error naming the alternative */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["JsonRpcRequest"];
+            };
+        };
+        responses: {
+            /** @description A JSON-RPC response: a Message, a Task, or an error */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcResponse"];
+                };
+            };
+            /** @description No API key or session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+            /** @description The key does not talk to this agent */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcResponse"];
+                };
+            };
+            /** @description No agent of that name may be talked to now */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcResponse"];
+                };
+            };
+        };
+    };
+    a2aAgentCard: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The card */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCard"];
+                };
+            };
+            /** @description No API key or session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+            /** @description The key does not talk to this agent */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+            /** @description No agent of that name may be talked to now */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+        };
+    };
+    a2aAgentCard_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The card */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentCard"];
+                };
+            };
+            /** @description No API key or session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+            /** @description The key does not talk to this agent */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+            /** @description No agent of that name may be talked to now */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["JsonRpcError"];
+                };
+            };
+        };
+    };
+    listAgentAccounts: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Their names; the values are never returned */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Slots"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    setAgentAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The secret's name, as the realm's key declares it */
+                secret: string;
+            };
+            cookie?: never;
+        };
+        /** @description `value` is the agent's own credential for this secret, kept as an API key in the caller's wallet and sent instead of the sponsor's; it replaces any value the agent already had, and is never returned */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SecretValue"];
+            };
+        };
+        responses: {
+            /** @description The secrets it now has its own value for */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Slots"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    removeAgentAccount: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The secret's name */
+                secret: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The secrets it still has its own value for */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Slots"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    checkAgentDuty: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The duty's name */
+                duty: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description What the check found */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DutyCheck"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No signed agent of that name holds such a duty */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAgentProposals: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Every proposal, open and settled */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentProposal"][];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    adoptAgentProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The proposal's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proposal, adopted; the agent now shows unsigned changes */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such proposal of this agent's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Refused: already settled, or it would widen what the agent may do */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+        };
+    };
+    dismissAgentProposal: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The proposal's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proposal, dismissed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such proposal of this agent's */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Refused: already settled */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+        };
+    };
+    reflectAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The proposal, with the record it read and the evidence for each change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such agent in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Refused: the world has no workhorse role, or the model did not answer */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentReflectionProposalResponse"];
+                };
+            };
+        };
+    };
+    retireAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description `reason`, optional, is recorded (trimmed) with the retirement for whoever reads the agent later; send `{}` to retire without one */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RetireRequest"];
+            };
+        };
+        responses: {
+            /** @description What was revoked */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Retired"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such agent in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    listAgentRuns: {
+        parameters: {
+            query?: {
+                /** @description How many, at most (default 50, at most 500) */
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Its runs: routines, repairs, duty checks and conversations */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentRun"][];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    getAgentRun: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+                /** @description The run's id */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The run and its receipts */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RunDetail"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such run of this agent's in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    signAgent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name, as the list returns it */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent, now running the new version */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No declared agent of that name in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Refused, with the reason */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageResponse"];
+                };
+            };
+        };
+    };
+    setAgentStage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name, as the list returns it */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description `stage` is `off`, `observing` or `on` (case-insensitive; any other value is read as `off`). With `routine`, the name of one routine the agent holds, only that routine moves (404 when it holds none of that name); without it, the whole agent does. Lowering is always allowed. 409 when anything above `off` is asked for while every agent is halted, when raising by a sponsor where only owners may or while the agent still needs something, and when the whole agent is raised to `on` before each duty has passed a test run of its signed version. Raising an agent nobody sponsors makes the caller its sponsor */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SetStageRequest"];
+            };
+        };
+        responses: {
+            /** @description The agent after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No such agent, or no such routine on it */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Refused, with the reason: what the agent still needs, or a sponsor raising what only owners may */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["StageResponse"];
+                };
+            };
+        };
+    };
+    getAgentUpcoming: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent's upcoming work */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Upcoming"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+        };
+    };
+    runAgentFiringNow: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description `job` names one of the agent's scheduled jobs, as `job` in its upcoming work; it is started now, outside its schedule, and the run appears on the agent's runs. 409 when the agent has no such job */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RunNowRequest"];
+            };
+        };
+        responses: {
+            /** @description The upcoming work; the run appears on the agent's runs */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description Refused: the agent has no such scheduled job */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingResponse"];
+                };
+            };
+        };
+    };
+    skipAgentFiring: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description `job` names one of the agent's scheduled jobs, as `job` in its upcoming work; its next firing is skipped. With `until`, an ISO-8601 instant that has not yet passed, the firing is postponed to then instead of dropped. `reason` is kept with the skip. 409 when the agent has no such job, the job has no next firing, that firing is already skipped, or `until` is not in the future */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["SkipRequest"];
+            };
+        };
+        responses: {
+            /** @description The upcoming work, with the firing marked skipped */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description Refused: no such job, nothing to skip, already skipped, or a time already past */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UpcomingResponse"];
+                };
+            };
+        };
+    };
+    openAiChatCompletions_1: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent, on its own base URL; there `model` is ignored */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description An OpenAI chat request. `model` names the agent on `/openai/v1`, or is `world` for the world itself, and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them, and for the world; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms (ignored for the world); `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts (a 400 for the world, which has no routine to observe); `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ChatCompletionRequest"];
+            };
+        };
+        responses: {
+            /** @description The world's or the agent's answer; with stream, server-sent chat.completion.chunk events and [DONE] */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ChatCompletion"];
+                };
+            };
+            /** @description No user message to answer, or embabel_observing asked of the world itself */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No API key or session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description This key does not reach that model: an agent outside its scope, or the world itself for any agent key, which needs a full key */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No agent of that name may be talked to now */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    openAiAgentModels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name, exactly as `id` in `GET /openai/v1/models`; an agent that does not exist, was never signed, is off or is halted is a 404, and one the calling API key is not scoped to is a 403 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The agent, as a model */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ModelList"];
+                };
+            };
+            /** @description No API key or session */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description This key does not talk to that agent — the agent exists, the key's scope does not reach it */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+            /** @description No agent of that name may be talked to now */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ErrorBody"];
+                };
+            };
+        };
+    };
+    agentVersions: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The agent's name, as the list returns it */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The versions; empty when it has never been signed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AgentVersionView"][];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ApiError"] | components["schemas"]["DispatchedError"];
+                    "text/plain": string;
+                };
+            };
+            /** @description No declared agent of that name in your world */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
@@ -3655,9 +7155,708 @@ export interface operations {
             };
         };
     };
-    list_6: {
+    schedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schedule in force */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TipScheduleView"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    changeSchedule: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The whole schedule, replacing the one stored in the signed-in user's world. `frequency` is `NEVER`, `DAILY`, `WEEKDAYS` (Monday to Friday) or `WEEKLY` (Mondays), default `WEEKDAYS`; `NEVER` removes the job. `hour` is the hour, 0-23 in the user's own zone, a tip is posted at, default 9. A field left out takes its default, not the stored value; the record of tips already posted is kept */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["TipSchedule"];
+            };
+        };
+        responses: {
+            /** @description The schedule now in force */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["TipScheduleView"];
+                };
+            };
+            /** @description Unknown frequency, or an hour outside 0-23 */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    studioExecute: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description The finished result */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgQueryResult"];
+                };
+            };
+            /** @description Bad params or args */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioGenerate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The natural-language question, in `question`. Cypher is written for it and validated against the caller's schema, regenerating on failure, but never run; saved views are not consulted first as they are on the admin `/admin/kg/generate` */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgAskRequest"];
+            };
+        };
+        responses: {
+            /** @description The generated cypher, its verdict, and what the engine will do */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgGenerateResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Generation failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioKill: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The run's id, as `GET /kg/studio/runs` lists it (the `queryId` its SSE stream carries); a run that has settled or is not the caller's answers `killed: false` */
+                runId: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether the kill landed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgKillResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioRefine: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The current, possibly hand-edited Cypher in `cypher` and what to change about it in `instruction`; the revision is validated but never run, and the response's `question` echoes the instruction */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgRefineRequest"];
+            };
+        };
+        responses: {
+            /** @description The revised cypher, its verdict, and what the engine will do */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgGenerateResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Refinement failed */
+            500: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioRuns: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The caller's in-flight runs, newest first */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgInFlightRun"][];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioSchema: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The schema snapshot; empty lists and no `refreshedAt` when none exists */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgSchemaResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioScopes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scopes; an expired scope is already absent */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeListResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioDeleteScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The captured scope's name, as given in `captureAs` and listed by `GET /kg/studio/scopes`; an unknown or expired name is not an error and answers `deleted: false` */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether anything was deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeDeleteResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioPinScope: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The captured scope's name, as listed by `GET /kg/studio/scopes`; pinning removes its expiry, and a name with no live scope behind it is a 404 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The scope as stored, now with no expiry */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgScopeInfo"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No such scope */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioValidate: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The Cypher to check, in `cypher`, preflighted against the caller's schema exactly as strict execution would; only `cypher` is read, so `params`/`args` are not substituted and `captureAs` is ignored */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgExecuteRequest"];
+            };
+        };
+        responses: {
+            /** @description The verdict; `message` is present even when null */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgValidationResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioViews: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Saved views across the world and realm tiers */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ViewDebugInfo"][];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioSaveView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The view to store in the caller's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a same-named view the caller saved is replaced, and a name a shipped view owns is a 400 */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgSaveViewRequest"];
+            };
+        };
+        responses: {
+            /** @description View saved */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgSaveViewResponse"];
+                };
+            };
+            /** @description Invalid view — bad name, unrunnable body, or the name is taken */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgSaveViewRejection"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioDeleteView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The name of a view the caller saved, as `GET /kg/studio/views` lists it; a shipped or realm view is not the caller's to remove and, like an unknown name, is a 404 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description View deleted */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgDeleteViewResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No saved view of that name */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioViewInvocation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The view's name, as `GET /kg/studio/views` lists it — a world or realm view, saved or shipped; no view of that name is a 404 */
+                name: string;
+            };
+            cookie?: never;
+        };
+        /** @description Optional. The view's arguments under `args` (name → value), merged over its declared defaults, coerced and substituted; omitted or empty runs on the defaults. A missing required or uncoercible argument is a 400. Keys sent beside `args` rather than inside it are ignored here */
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["KgInvokeViewRequest"];
+            };
+        };
+        responses: {
+            /** @description The runnable cypher for this invocation */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgViewInvocationResponse"];
+                };
+            };
+            /** @description Bad view arguments */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description Unknown view */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    studioRefreshView: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description The materialised view's name, as `GET /kg/studio/views` lists it; a regular or unknown view is not an error and answers `refreshed: false` */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Whether anything was recomputed */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgRefreshViewResponse"];
+                };
+            };
+            /** @description not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    consolePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The stored preferences; version 0 and no entries when none are stored */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsolePreferences"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    changeConsolePreferences: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description The settings to change in `entries`, each `{value, at}`: `value` is any JSON, null to remove the setting; `at` is when it was changed, epoch milliseconds */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ConsolePreferencesChange"];
+            };
+        };
+        responses: {
+            /** @description The preferences as stored after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["ConsolePreferences"];
+                };
+            };
+            /** @description A setting name that is not 1-64 letters, digits, '.', '_' or '-', or more than 64 settings */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DispatchedError"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The preferences would be larger than 6 MiB; nothing was changed */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "*/*": components["schemas"]["DispatchedError"];
+                };
+            };
+        };
+    };
+    list_7: {
         parameters: {
             query?: {
+                /** @description Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
@@ -3687,12 +7886,14 @@ export interface operations {
     import: {
         parameters: {
             query?: {
+                /** @description Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path?: never;
             cookie?: never;
         };
+        /** @description A tour file in `yaml`, in the format GET /tours/{id}/export returns and a realm ships; every tour in it is stored as the acting user's own. 409 when a realm or the world already owns a tour of that name, 400 when the file cannot be read */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["TourImportRequest"];
@@ -3729,10 +7930,12 @@ export interface operations {
     delete_3: {
         parameters: {
             query?: {
+                /** @description Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; only a tour this user saved is removed, and any other id, including an unknown one, answers `deleted: false` */
                 id: string;
             };
             cookie?: never;
@@ -3760,10 +7963,12 @@ export interface operations {
     export_1: {
         parameters: {
             query?: {
+                /** @description Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; 404 when the acting user's world has no such tour */
                 id: string;
             };
             cookie?: never;
@@ -3800,15 +8005,19 @@ export interface operations {
     stepStatus: {
         parameters: {
             query?: {
+                /** @description Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves */
                 username?: string;
             };
             header?: never;
             path: {
+                /** @description The tour's `id` as listed by GET /tours, or the `declaredId` its file gave it; an unknown tour answers `UNKNOWN` with the reason in `detail`, not a 404 */
                 id: string;
+                /** @description Zero-based position of the step within the tour; an index out of range answers `UNKNOWN` with the reason in `detail` */
                 index: number;
             };
             cookie?: never;
         };
+        /** @description The answers the tour has collected so far, as `params`, bound as query parameters into the step's `when` and `doneWhen` conditions; may be omitted, which binds nothing */
         requestBody?: {
             content: {
                 "application/json": components["schemas"]["TourStepStatusRequest"];

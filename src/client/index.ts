@@ -58,6 +58,8 @@ export type {
 } from './documents.ts'
 
 export { HintsClient } from './hints.ts'
+export { ConsolePreferencesClient, PreferenceSync } from './consolePreferences.ts'
+export type { ConsolePreferences, ConsolePreferenceEntry, PreferenceListener, PreferenceStorage, PreferenceSyncOptions, PreferenceValues, SyncProblem } from './consolePreferences.ts'
 export type { Hint, HintAction, HintSurface } from './hints.ts'
 
 export { ToursClient } from './tours.ts'
@@ -122,6 +124,7 @@ import { CronClient as CronClientImpl } from './cron.ts'
 import { DocumentsClient, type DocumentsClientOptions } from './documents.ts'
 import { HandlersClient } from './handlers.ts'
 import { HintsClient } from './hints.ts'
+import { ConsolePreferencesClient } from './consolePreferences.ts'
 import { KgClient } from './kg.ts'
 import { ToursClient } from './tours.ts'
 import { HttpTransport, type HttpTransportConfig, type Transport } from './transport.ts'
@@ -145,6 +148,7 @@ export class ApplianceClient {
   readonly handlers: HandlersClient
   readonly documents: DocumentsClient
   readonly hints: HintsClient
+  readonly consolePreferences: ConsolePreferencesClient
   readonly tours: ToursClient
 
   constructor(readonly transport: Transport, options: ApplianceClientOptions = {}) {
@@ -160,6 +164,7 @@ export class ApplianceClient {
     this.handlers = new HandlersClient(transport)
     this.documents = new DocumentsClient(transport, options.documents)
     this.hints = new HintsClient(transport)
+    this.consolePreferences = new ConsolePreferencesClient(transport)
     this.tours = new ToursClient(transport)
   }
 
