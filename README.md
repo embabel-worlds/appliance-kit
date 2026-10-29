@@ -34,6 +34,7 @@ These prefixes are guarded:
 | `/api/v1/admin/kg` | Query Studio — virtual Cypher |
 | `/api/v1/kg/studio` | The same virtual Cypher for a member without the admin role — the realm catalogue and world lists |
 | `/api/v1/admin/handlers` | Handler Studio — TypeScript event handlers |
+| `/api/v1/profile/console` | console preferences — `PreferenceSync` keeps a front end's theme, layout and dock in step with the appliance |
 
 To take a newer server: copy that file in, `npm run generate`, `npm run check`, and read the diff
 as a contract change. A surface outside those prefixes is not guarded and must not be typed here
@@ -62,7 +63,7 @@ apart from `apk add git`.
 
 | Import | What |
 | --- | --- |
-| `.` | the appliance REST client — transport-blind, no DOM. `client.kg` and `client.handlers` |
+| `.` | the appliance REST client — transport-blind, no DOM. `client.kg`, `client.handlers`, `client.consolePreferences` and `PreferenceSync` |
 | `./vc` | virtual-Cypher semantics: compose, schema reading, view params, live run events |
 | `./code-surface` | the editor surface |
 | `./studio-kit` | hints, formatting, status, copy |

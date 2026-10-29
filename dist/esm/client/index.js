@@ -12,6 +12,7 @@ export { KgClient, isBackgroundHandle } from "./kg.js";
 export { DEFAULT_INGEST_TIMEOUT_MS, DocumentsClient, newOperationId } from "./documents.js";
 export { DEFAULT_INGEST_POLL_MS, DEFAULT_INGEST_STALLED_AFTER_MS, followIngest } from "./ingests.js";
 export { HintsClient } from "./hints.js";
+export { ConsolePreferencesClient, PreferenceSync } from "./consolePreferences.js";
 export { ToursClient } from "./tours.js";
 export { classifySource } from "./citations.js";
 export { CronClient } from "./cron.js";
@@ -36,6 +37,7 @@ import { CronClient as CronClientImpl } from "./cron.js";
 import { DocumentsClient } from "./documents.js";
 import { HandlersClient } from "./handlers.js";
 import { HintsClient } from "./hints.js";
+import { ConsolePreferencesClient } from "./consolePreferences.js";
 import { KgClient } from "./kg.js";
 import { ToursClient } from "./tours.js";
 import { HttpTransport } from "./transport.js";
@@ -54,6 +56,7 @@ export class ApplianceClient {
     handlers;
     documents;
     hints;
+    consolePreferences;
     tours;
     constructor(transport, options = {}) {
         this.transport = transport;
@@ -69,6 +72,7 @@ export class ApplianceClient {
         this.handlers = new HandlersClient(transport);
         this.documents = new DocumentsClient(transport, options.documents);
         this.hints = new HintsClient(transport);
+        this.consolePreferences = new ConsolePreferencesClient(transport);
         this.tours = new ToursClient(transport);
     }
     /** The console's configuration: relative URLs, same origin, ambient credentials. */
