@@ -12091,14 +12091,14 @@
             "type" : "array"
           },
           "default" : {
-            "description" : "Used when an invocation omits this param. Absent = required on invocation."
+            "description" : "Used when an invocation omits this param. Absent = required on invocation, unless required: false."
           },
           "description" : {
             "description" : "What the argument means — rendered verbatim as the field's hint.",
             "type" : "string"
           },
           "required" : {
-            "description" : "Accepted so a param can be written back in the shape discovery prints it, and otherwise ignored: whether the param is required follows from default alone, required when default is absent",
+            "description" : "false lets an invocation omit a param that has no default; it is then bound to null.",
             "type" : "boolean"
           },
           "type" : {
@@ -28253,7 +28253,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40863"
+    "url" : "http://localhost:34393"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
