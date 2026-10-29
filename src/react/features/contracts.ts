@@ -497,6 +497,12 @@ export interface ApiKeysServices {
 export interface ApiKeysHost {
   /** The origin a caller will reach, for the usage example. Omitted, the example names a placeholder. */
   initialBaseUrl?: string
+  /**
+   * The base URL an OpenAI client is given for an agent key. Omitted, it is the door's own path under
+   * `initialBaseUrl` (`/api/v1/openai/v1`); a host that serves the door at a shorter address, as the
+   * Worlds console does at `/openai/v1`, names it here.
+   */
+  openAiBaseUrl?: string
   confirmRevoke(key: ApiKeySummary): Promise<boolean>
 }
 

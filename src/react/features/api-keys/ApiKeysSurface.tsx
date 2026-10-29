@@ -107,7 +107,7 @@ export function ApiKeysSurface({ services, host, frame = StudioFrame }: ApiKeysS
   ].join('\n')
   // An agent key goes into a chat client, which wants a base URL and a key and names the agent as the model.
   const agentExample = [
-    `Base URL: ${baseUrl}/api/v1/openai/v1`,
+    `Base URL: ${host.openAiBaseUrl?.trim().replace(/\/+$/, '') || `${baseUrl}/api/v1/openai/v1`}`,
     `API key:  emb_…`,
     `Model:    the agent's name, e.g. jonathon`,
   ].join('\n')

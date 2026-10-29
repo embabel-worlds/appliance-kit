@@ -2066,6 +2066,17 @@ describe('the public browser feature entry point', () => {
     assert.match(container.textContent, /laptop/)
   })
 
+  it("gives a chat client the door's own path, or the shorter address its host serves it at", async () => {
+    const services = { listKeys: async () => ok([]), mintKey: async () => refused('nope'), revokeKey: async () => refused('nope') }
+    const plain = await render(h(features.ApiKeysSurface, { services, host: { initialBaseUrl: 'https://world.example/', confirmRevoke: async () => true } }))
+    assert.match(plain.container.textContent, /Base URL: https:\/\/world\.example\/api\/v1\/openai\/v1/)
+    const short = await render(h(features.ApiKeysSurface, {
+      services, host: { initialBaseUrl: 'https://world.example', openAiBaseUrl: 'https://world.example/openai/v1/', confirmRevoke: async () => true },
+    }))
+    assert.match(short.container.textContent, /Base URL: https:\/\/world\.example\/openai\/v1(?!\/)/)
+    assert.doesNotMatch(short.container.textContent, /api\/v1\/openai/)
+  })
+
   it('says an appliance is too old for API keys instead of showing an empty list', async () => {
     const services = {
       listKeys: async () => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }),
