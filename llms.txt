@@ -24,6 +24,9 @@ like that:
 - Use desk's controls, listed in `../desk/llms.txt`: `Led` with the words beside it for state,
   `InfoTip` for explanation nobody needs on every visit, `Table`, `Toggle`, `Disclosure`.
 - Take data, types and vocabulary from the kit. Do not take its primitives.
+- Do not mount a kit surface (`AgentsSurface`, `HandlerStudioSurface` and the other `*Surface`s) as a
+  window, or as part of one. Draw the window with desk, from the kit's clients, types and words. A surface
+  is the kit's primitives assembled, so mounting one brings them all back.
 
 ## Do not use the kit's pills
 
