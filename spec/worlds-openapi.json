@@ -2432,7 +2432,7 @@
             "type" : "string"
           },
           "model" : {
-            "description" : "Name of the agent that answered",
+            "description" : "Name of the agent that answered, or world",
             "type" : "string"
           },
           "object" : {
@@ -2487,7 +2487,7 @@
             "type" : "array"
           },
           "model" : {
-            "description" : "Name of the agent to talk to, as listed by GET /openai/v1/models; ignored on an agent's own base URL, where the path names the agent",
+            "description" : "Name of the agent to talk to, as listed by GET /openai/v1/models, or world for the world itself; ignored on an agent's own base URL, where the path names the agent",
             "type" : "string"
           },
           "stream" : {
@@ -4960,7 +4960,7 @@
         "description" : "Why an OpenAI-compatible request was refused",
         "properties" : {
           "code" : {
-            "description" : "model_not_found when no agent of that name may be talked to now, key_scope when the API key does not reach the agent, invalid_request when there is no user message to answer",
+            "description" : "model_not_found when no agent of that name may be talked to now, key_scope when the API key does not reach the agent or the world itself, invalid_request when there is no user message to answer or embabel_observing is asked of the world",
             "type" : "string"
           },
           "message" : {
@@ -8576,7 +8576,7 @@
         "description" : "What to mint, the body of POST /api-keys",
         "properties" : {
           "agents" : {
-            "description" : "Absent or null mints a full key. A list mints an agent key that may talk only to these agents (`*` for any) and reaches nothing else; blank entries are dropped, and at least one must remain",
+            "description" : "Absent or null mints a full key. A list mints an agent key that may talk only to these agents (`*` for any) and reaches nothing else, not even the world itself (model world), which needs a full key; blank entries are dropped, and at least one must remain",
             "items" : {
               "type" : "string"
             },
@@ -8612,7 +8612,7 @@
         "type" : "object"
       },
       "Model" : {
-        "description" : "An agent, presented as an OpenAI model",
+        "description" : "An agent, or the world itself, presented as an OpenAI model",
         "properties" : {
           "created" : {
             "description" : "When the list was made, in Unix epoch seconds; not when the agent was created",
@@ -8620,7 +8620,7 @@
             "type" : "integer"
           },
           "id" : {
-            "description" : "The agent's name; send it as model to talk to it",
+            "description" : "The agent's name, or world for the world itself; send it as model to talk to it",
             "type" : "string"
           },
           "object" : {
@@ -8684,10 +8684,10 @@
         "type" : "object"
       },
       "ModelList" : {
-        "description" : "The agents the caller can talk to now, as OpenAI models; answered by GET /openai/v1/models and, holding just that agent, GET /agents/{name}/v1/models",
+        "description" : "The world itself and the agents the caller can talk to now, as OpenAI models; answered by GET /openai/v1/models and, holding just that agent, GET /agents/{name}/v1/models",
         "properties" : {
           "data" : {
-            "description" : "Agents that may be talked to now and that the caller's API key, if scoped to some agents, reaches",
+            "description" : "On /openai/v1: world first, unless the caller's API key is an agent key, then the agents that may be talked to now and that the key, if scoped to some agents, reaches",
             "items" : {
               "$ref" : "#/components/schemas/Model"
             },
@@ -10723,7 +10723,7 @@
             "type" : "string"
           },
           "heldWith" : {
-            "description" : "Username of the agent an agent's own session is held with; null for any other session",
+            "description" : "Username of the agent an agent's own session is held with; null for any other session, and for an OpenAI client's talk with the world itself",
             "type" : "string"
           },
           "kind" : {
@@ -18062,7 +18062,7 @@
               }
             }
           },
-          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1` and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms; `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts; `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
+          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1`, or is `world` for the world itself, and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them, and for the world; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms (ignored for the world); `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts (a 400 for the world, which has no routine to observe); `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
           "required" : true
         },
         "responses" : {
@@ -18074,7 +18074,17 @@
                 }
               }
             },
-            "description" : "The agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+            "description" : "The world's or the agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No user message to answer, or embabel_observing asked of the world itself"
           },
           "401" : {
             "content" : {
@@ -18085,6 +18095,16 @@
               }
             },
             "description" : "No API key or session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "This key does not reach that model: an agent outside its scope, or the world itself for any agent key, which needs a full key"
           },
           "404" : {
             "content" : {
@@ -18097,7 +18117,7 @@
             "description" : "No agent of that name may be talked to now"
           }
         },
-        "summary" : "Talk to an agent: the one named as the model, or the one whose base URL this is",
+        "summary" : "Talk to the world itself (model world) or an agent: the one named as the model, or the one whose base URL this is",
         "tags" : [ "OpenAI-compatible" ]
       }
     },
@@ -24730,7 +24750,7 @@
               }
             }
           },
-          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1` and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms; `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts; `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
+          "description" : "An OpenAI chat request. `model` names the agent on `/openai/v1`, or is `world` for the world itself, and is ignored on an agent's own base URL. `messages` is the history (string content, or the text parts of a part list) and needs at least one non-blank `user` message, or it is a 400. `stream: true` answers server-sent chunks, the whole answer arriving as one. `temperature` and `max_completion_tokens` (else `max_tokens`) are held to the agent's declared sampling bounds and ignored without them, and for the world; `user` keeps a client's end users' chats apart. Embabel extensions: `embabel_conversation`, a caller-chosen conversation id; `embabel_realms`, narrowing to some of the agent's realms (ignored for the world); `embabel_verbosity`, `terse`, `normal` or `full`; `embabel_observing`, refusing and reporting every effect the turn attempts (a 400 for the world, which has no routine to observe); `embabel_evidence`, adding an `embabel` block with the conversation, run, raised requests and refusals. Other fields, such as `tools`, are ignored",
           "required" : true
         },
         "responses" : {
@@ -24742,7 +24762,17 @@
                 }
               }
             },
-            "description" : "The agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+            "description" : "The world's or the agent's answer; with stream, server-sent chat.completion.chunk events and [DONE]"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "No user message to answer, or embabel_observing asked of the world itself"
           },
           "401" : {
             "content" : {
@@ -24753,6 +24783,16 @@
               }
             },
             "description" : "No API key or session"
+          },
+          "403" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ErrorBody"
+                }
+              }
+            },
+            "description" : "This key does not reach that model: an agent outside its scope, or the world itself for any agent key, which needs a full key"
           },
           "404" : {
             "content" : {
@@ -24765,7 +24805,7 @@
             "description" : "No agent of that name may be talked to now"
           }
         },
-        "summary" : "Talk to an agent: the one named as the model, or the one whose base URL this is",
+        "summary" : "Talk to the world itself (model world) or an agent: the one named as the model, or the one whose base URL this is",
         "tags" : [ "OpenAI-compatible" ]
       }
     },
@@ -24781,7 +24821,7 @@
                 }
               }
             },
-            "description" : "The agents, as models"
+            "description" : "world first, when the caller may talk to it, then the agents, as models"
           },
           "401" : {
             "content" : {
@@ -24794,7 +24834,7 @@
             "description" : "No API key or session"
           }
         },
-        "summary" : "The agents you can talk to now, as OpenAI models",
+        "summary" : "The world itself and the agents you can talk to now, as OpenAI models",
         "tags" : [ "OpenAI-compatible" ]
       }
     },
@@ -28253,7 +28293,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37803"
+    "url" : "http://localhost:37237"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
