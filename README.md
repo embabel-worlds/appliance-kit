@@ -110,6 +110,8 @@ In a host like that, desk decides how a screen looks and the kit supplies what i
   repo as `../desk/HIG.md`.
 - Use desk's controls: `Led` with the words beside it for state, `InfoTip` for explanation, `Table`,
   `Toggle`, `Disclosure`. desk's `llms.txt` lists them all.
+- Don't mount a kit `*Surface` as a window or part of one: draw it with desk from the kit's clients,
+  types and words. A surface is the kit's primitives assembled.
 - Take data, types and vocabulary from the kit (`firingOf`, the client, the feature services), and
   leave its primitives to the kit's own feature surfaces.
 
