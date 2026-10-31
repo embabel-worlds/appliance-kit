@@ -9487,7 +9487,7 @@
             "type" : "string"
           },
           "diagnostics" : {
-            "description" : "Steps left out of planning, and why. Absent when none were.",
+            "description" : "Steps left out of planning, and why; asked as a `question`, also the facts the goal writer was not offered because nothing describes them. Absent when none were.",
             "items" : {
               "type" : "string"
             },
@@ -28961,7 +28961,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36049"
+    "url" : "http://localhost:36663"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
