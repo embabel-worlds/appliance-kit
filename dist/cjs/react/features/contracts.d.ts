@@ -7,7 +7,7 @@ import type { AgentRun, RunDetail, Upcoming } from '../../client/agentRuns.ts';
 import type { AgentProposal } from '../../client/agentReflection.ts';
 import type { AgentSlots, Retired } from '../../client/agentAccounts.ts';
 import type { HandlerGenerated, HandlerMutationResult, HandlerSaveRequest, HandlersClient } from '../../client/handlers.ts';
-import type { ExecuteOptions, KgBackgroundHandle, KgClient, KgQueryResult } from '../../client/kg.ts';
+import type { ExecuteOptions, KgBackgroundHandle, KgClient, KgPlanAnswer, KgPlanInputs, KgQueryResult, KgSaveGoalViewRequest, KgSaveViewResult } from '../../client/kg.ts';
 import type { Agent, AgentStage, AgentVersion, DutyCheck, Halt } from '../../client/agents.ts';
 import type { AgentRequest } from '../../client/requests.ts';
 import type { CompiledSchedule } from '../../client/cron.ts';
@@ -592,5 +592,27 @@ export interface ThreadsSurfaceProps {
      * [ThreadsSurfaceProps.initialThread]: with no list there is nothing to choose from.
      */
     chrome?: 'full' | 'pane';
+}
+/**
+ * What the plan panel calls. `plan` and `runPlan` are `KgClient`'s; a host passes them through.
+ * `saveGoalView` is the CAPABILITY as well as the call: pass it only when the appliance stores goal
+ * views (`goalViewsSupported` over the views listing says so), and the panel offers no Save without it.
+ */
+export interface PlanServices {
+    plan(goal: string, inputs: KgPlanInputs): Promise<Outcome<KgPlanAnswer>>;
+    runPlan(goal: string, inputs: KgPlanInputs): Promise<Outcome<KgPlanAnswer>>;
+    saveGoalView?(spec: KgSaveGoalViewRequest): Promise<Outcome<KgSaveViewResult>>;
+}
+export interface PlanPanelProps {
+    services: PlanServices;
+    /** The goal as the author has it now, usually the editor's text. The panel re-plans when it settles. */
+    goal: string;
+    /** How long the goal must be still before it is planned. Defaults to the editor's validation pause. */
+    debounceMs?: number;
+    /**
+     * Put the compiled statement where the author can read and edit it — the host's editor. Omitted,
+     * Show compiled shows it in the panel.
+     */
+    onShowCompiled?(compiled: string): void;
 }
 //# sourceMappingURL=contracts.d.ts.map

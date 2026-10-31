@@ -7,7 +7,7 @@
  * load in either.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.ApplianceClient = exports.HandlersClient = exports.toRealm = exports.experimentalQuery = exports.categoriesQuery = exports.tagsQuery = exports.realmsQuery = exports.ranInBackground = exports.RealmCatalog = exports.WORLD_LIST_QUERIES = exports.WorldLists = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.PreferenceSync = exports.ConsolePreferencesClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
+exports.ApplianceClient = exports.HandlersClient = exports.toRealm = exports.experimentalQuery = exports.categoriesQuery = exports.tagsQuery = exports.realmsQuery = exports.ranInBackground = exports.RealmCatalog = exports.WORLD_LIST_QUERIES = exports.WorldLists = exports.AgentAccountsClient = exports.AgentReflectionClient = exports.AgentRunsClient = exports.AgentSuggestionsClient = exports.ThreadsClient = exports.RequestsClient = exports.AgentsClient = exports.CronClient = exports.classifySource = exports.ToursClient = exports.PreferenceSync = exports.ConsolePreferencesClient = exports.HintsClient = exports.followIngest = exports.DEFAULT_INGEST_STALLED_AFTER_MS = exports.DEFAULT_INGEST_POLL_MS = exports.newOperationId = exports.DocumentsClient = exports.DEFAULT_INGEST_TIMEOUT_MS = exports.isBackgroundHandle = exports.goalViewsSupported = exports.KgClient = exports.ok = exports.expect = exports.isOk = exports.createSseParser = exports.basicAuth = exports.HttpTransport = void 0;
 var transport_ts_1 = require("./transport.js");
 Object.defineProperty(exports, "HttpTransport", { enumerable: true, get: function () { return transport_ts_1.HttpTransport; } });
 Object.defineProperty(exports, "basicAuth", { enumerable: true, get: function () { return transport_ts_1.basicAuth; } });
@@ -19,6 +19,7 @@ Object.defineProperty(exports, "expect", { enumerable: true, get: function () { 
 Object.defineProperty(exports, "ok", { enumerable: true, get: function () { return outcome_ts_1.ok; } });
 var kg_ts_1 = require("./kg.js");
 Object.defineProperty(exports, "KgClient", { enumerable: true, get: function () { return kg_ts_1.KgClient; } });
+Object.defineProperty(exports, "goalViewsSupported", { enumerable: true, get: function () { return kg_ts_1.goalViewsSupported; } });
 Object.defineProperty(exports, "isBackgroundHandle", { enumerable: true, get: function () { return kg_ts_1.isBackgroundHandle; } });
 var documents_ts_1 = require("./documents.js");
 Object.defineProperty(exports, "DEFAULT_INGEST_TIMEOUT_MS", { enumerable: true, get: function () { return documents_ts_1.DEFAULT_INGEST_TIMEOUT_MS; } });
