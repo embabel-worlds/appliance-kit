@@ -105,6 +105,11 @@ function Outcome({ answer }) {
             return (_jsxs("div", { className: "planunreachable", children: [(answer.missing ?? []).map((fact) => (_jsxs(Status, { tone: "caution", children: ["Nothing produces ", _jsx(Fact, { fact: fact }), "."] }, fact))), answer.detail && _jsx("div", { className: "hint", children: answer.detail })] }));
         case 'tie':
             return (_jsxs("div", { className: "plantie", children: [_jsxs(Status, { tone: "caution", children: [(answer.plans ?? []).length, " plans reach this at the same cost. Make the goal more specific to choose between them."] }), _jsx("ul", { children: (answer.plans ?? []).map((plan) => _jsx("li", { children: plan.join(' → ') }, plan.join('>'))) })] }));
+        /* The two English-mode answers. The panel sends a goal, so these arrive only from a host that asks a question. */
+        case 'needsInput':
+            return (_jsxs(Status, { tone: "caution", children: ["This needs ", answer.needsInput?.type === 'text' ? 'some text' : `a ${answer.needsInput?.type}`, " as input: ", answer.needsInput?.why] }));
+        case 'declined':
+            return (_jsxs("div", { className: "planunreachable", children: [answer.reason && _jsx(Status, { tone: "caution", children: answer.reason }), (answer.missing ?? []).map((fact) => (_jsxs(Status, { tone: "caution", children: ["Nothing produces ", _jsx(Fact, { fact: fact }), "."] }, fact)))] }));
         default:
             return (_jsx("div", { className: "planrefused", children: (answer.reasons ?? []).map((reason) => _jsx(Status, { tone: "error", children: reason }, reason)) }));
     }
@@ -114,6 +119,8 @@ const HEADLINE = {
     unreachable: 'Not reachable',
     tie: 'Tied',
     refused: 'Cannot plan this as written',
+    needsInput: 'Needs an input',
+    declined: 'Declined',
 };
 export function PlanPanel({ services, goal, debounceMs = DEFAULT_DEBOUNCE_MS, onShowCompiled }) {
     const [answer, setAnswer] = useState(null);

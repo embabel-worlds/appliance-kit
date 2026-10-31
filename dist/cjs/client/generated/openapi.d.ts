@@ -433,7 +433,7 @@ export interface paths {
         put?: never;
         /**
          * Plan a goal over the acting user's views and rules, without running anything
-         * @description Introspects, plans, compiles and quotes. No step runs, no model is called and no source is read, so it is safe to call as the goal is typed. Unreachable goals, ties and refusals are 200 answers, not errors.
+         * @description Introspects, plans, compiles and quotes. No step runs, no model is called and no source is read, so it is safe to call as the goal is typed — except that a `question` costs the one model call that writes its goal. Unreachable goals, ties and refusals are 200 answers, not errors.
          */
         post: operations["planGoal"];
         delete?: never;
@@ -3205,14 +3205,16 @@ export interface components {
             /** @description The text itself, or the entity's key. */
             value: string;
         };
-        /** @description A goal to plan over the acting user's views and rules, and the typed inputs it starts from. */
+        /** @description A goal (or an English question to write one from) to plan over the acting user's views and rules, and the typed inputs it starts from. Exactly one of `goal` and `question`. */
         KgPlanRequest: {
             /** @description The final Cypher query to answer, read-only, written over the facts wanted (projected labels, derived or judged relationships) as if they existed. Not the steps: the planner chooses those. */
-            goal: string;
+            goal?: string;
             /** @description Typed inputs by name. Absent means none. Name an input after the parameter it is for when more than one could take it. */
             inputs?: {
                 [key: string]: components["schemas"]["KgPlanInput"];
             };
+            /** @description The same, in plain English, instead of `goal`: the appliance writes the goal, which costs one model call. A studio planning as the author types sends `goal`. */
+            question?: string;
         };
         /** @description The legal values of a property, from `/schema/{label}/{property}/values`: the closed set, its size when too wide (`tooMany`), or not enumerable — branch on which. */
         KgPropertyValuesResponse: {
@@ -3648,7 +3650,7 @@ export interface components {
             };
             tokenUrl?: string;
         };
-        /** @description What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. */
+        /** @description What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing). */
         PlanAnswer: {
             /** @description `planned`: the one Cypher statement the steps and the goal compile to. What a run executes. */
             compiled?: string;
@@ -3663,21 +3665,29 @@ export interface components {
             diagnostics?: string[];
             /** @description A run of a `planned` answer only, and only when the run failed: the engine's error. */
             error?: string;
+            /** @description English mode only: the goal written from the question — absent from `refused`, and from `declined` when none was written. */
+            goal?: string;
             /** @description `planned`: where each supplied input was bound. */
             inputs?: components["schemas"]["PlanAnswerBinding"][];
-            /** @description `unreachable`: the facts no step on offer produces. */
+            /** @description `unreachable`, or `declined` when that is the reason: the facts no step on offer produces. */
             missing?: string[];
+            /** @description `needsInput`: the input the goal needs and nobody supplied, and why. */
+            needsInput?: components["schemas"]["PlanAnswerNeed"];
             /**
              * @description Which answer this is.
              * @enum {string}
              */
-            outcome: "planned" | "unreachable" | "tie" | "refused";
+            outcome: "planned" | "unreachable" | "tie" | "refused" | "needsInput" | "declined";
             /** @description `tie`: the rival plans, each the names of its steps in order. Make the goal more specific to choose. */
             plans?: string[][];
+            /** @description English mode only: the question asked, echoed. */
+            question?: string;
             /** @description `planned`: the engine's quote for the compiled statement, made without running it. */
             quote?: components["schemas"]["PlanAnswerQuote"];
             /** @description `planned`: the facts the goal itself reads, as `node:Label`, `edge:From-TYPE->To` or `input:text`. */
             reads?: string[];
+            /** @description `declined`: why no goal this world can reach answers the question. */
+            reason?: string;
             /** @description `refused`: what to change for the request to plan — an untypable goal, an input that binds ambiguously, a plan that does not compile. */
             reasons?: string[];
             /** @description A run of a `planned` answer only: the rows the compiled statement returned, unchanged. */
@@ -3688,6 +3698,8 @@ export interface components {
             steps?: components["schemas"]["PlanAnswerStep"][];
             /** @description A run of a `planned` answer only: the engine's warnings. PROJECTION_* means a projection was declined or incomplete. */
             warnings?: string[];
+            /** @description English mode, with a goal: true when the goal reads only what the world holds, so no projection was needed. */
+            worldOnly?: boolean;
         };
         /** @description An input the caller supplied, and the step parameter it was bound to. */
         PlanAnswerBinding: {
@@ -3695,6 +3707,13 @@ export interface components {
             input: string;
             /** @description The parameter it binds: a step's `$name`, or the goal's. */
             parameter: string;
+        };
+        /** @description The input an English question's goal needs and nobody supplied: `text`, or the spine label an identity names, and why. */
+        PlanAnswerNeed: {
+            /** @description `text`, or the spine label of the identity needed. */
+            type: string;
+            /** @description Why it is needed, said to the person. */
+            why: string;
         };
         /** @description The engine's quote for a compiled plan, made by reading the graph only: no source is fetched and no model is asked. */
         PlanAnswerQuote: {
@@ -5254,7 +5273,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description `goal`, the final Cypher query to answer, and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgPlanRequest"];
@@ -5270,7 +5289,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlanAnswer"];
                 };
             };
-            /** @description The goal is blank */
+            /** @description Neither or both of `goal` and `question` were given */
             400: {
                 headers: {
                     [name: string]: unknown;
@@ -5309,7 +5328,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description `goal`, the final Cypher query to answer, and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgPlanRequest"];
@@ -5325,7 +5344,7 @@ export interface operations {
                     "application/json": components["schemas"]["PlanAnswer"];
                 };
             };
-            /** @description The goal is blank */
+            /** @description Neither or both of `goal` and `question` were given */
             400: {
                 headers: {
                     [name: string]: unknown;
