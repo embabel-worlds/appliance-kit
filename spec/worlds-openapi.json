@@ -7852,11 +7852,15 @@
         "description" : "A user-authored view to save into the acting user's world: the body of `POST /views`.",
         "properties" : {
           "cypher" : {
-            "description" : "The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted.",
+            "description" : "The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted. Omitted for a goal view, which declares `goal` instead.",
             "type" : "string"
           },
           "description" : {
             "description" : "One line on what the view answers, shown to the query generator beside the schema. Defaults to empty.",
+            "type" : "string"
+          },
+          "goal" : {
+            "description" : "A GOAL view, in place of `cypher`: the final read query, written over the facts it needs as if they existed. The server plans it over the world's views and rules, compiles it and pins the result, which is what the view runs (`savedCypher`); `params` are the plan's inputs, typed by how the steps read them. A goal that does not plan — unreachable, a tie between two plans, refused — is a 400 naming why.",
             "type" : "string"
           },
           "materialized" : {
@@ -7883,7 +7887,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "cypher", "name" ],
+        "required" : [ "name" ],
         "type" : "object"
       },
       "KgSaveViewResponse" : {
@@ -12397,6 +12401,14 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "goal" : {
+            "description" : "A goal view's goal: the final query its plan answers. `cypher` is then the statement the goal compiled to, which is what runs. Null for a view declared by its Cypher; always serialized, so its presence says this server supports goal views.",
+            "type" : "string"
+          },
+          "goalStatus" : {
+            "description" : "Whether a goal view's pinned plan stands: `pinned`, `not compiled`, or `stale: <what moved>`. A view that is not pinned refuses to run until it is replanned. Absent for a view declared by its Cypher.",
+            "type" : "string"
+          },
           "materialized" : {
             "description" : "True when reads are served from a cache that is recomputed once `ttl` lapses.",
             "type" : "boolean"
@@ -12425,7 +12437,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "cypher", "description", "materialized", "name", "params" ],
+        "required" : [ "cypher", "description", "goal", "materialized", "name", "params" ],
         "type" : "object"
       },
       "ViewParamSpec" : {
@@ -16341,7 +16353,7 @@
               }
             }
           },
-          "description" : "The view to store in the acting user's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400",
+          "description" : "The view to store in the acting user's world: `name`, `cypher` (or `goal`, for a goal view) and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400",
           "required" : true
         },
         "responses" : {
@@ -16671,6 +16683,72 @@
           }
         },
         "summary" : "Force-recompute a materialised view's cache now, ignoring its TTL",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/views/{name}/replan" : {
+      "post" : {
+        "operationId" : "replanView",
+        "parameters" : [ {
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The goal view's name, as `GET /views` lists it.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewResponse"
+                }
+              }
+            },
+            "description" : "The goal was planned and its compiled statement pinned; `savedCypher` is that statement"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewRejection"
+                }
+              }
+            },
+            "description" : "Not a goal view, an unknown view, or a goal that no longer plans — unreachable, a tie, or refused"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
+          }
+        },
+        "summary" : "Replan a goal view over the world's current steps and pin the compiled statement",
         "tags" : [ "Virtual Cypher" ]
       }
     },
@@ -28883,7 +28961,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:33625"
+    "url" : "http://localhost:46229"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
