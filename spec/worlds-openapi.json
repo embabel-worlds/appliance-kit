@@ -14423,7 +14423,7 @@
       "post" : {
         "operationId" : "dryRun",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14461,7 +14461,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -14471,7 +14471,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -14492,7 +14492,7 @@
       "post" : {
         "operationId" : "apply",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14527,7 +14527,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -14537,7 +14537,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -14558,7 +14558,7 @@
       "post" : {
         "operationId" : "undo",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -14593,7 +14593,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -14603,7 +14603,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -24411,7 +24411,7 @@
       "get" : {
         "operationId" : "list",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24429,6 +24429,26 @@
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "List saved lenses",
@@ -24437,7 +24457,7 @@
       "put" : {
         "operationId" : "create",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24466,6 +24486,26 @@
               }
             },
             "description" : "Blank name or script"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Create or update a saved lens",
@@ -24476,7 +24516,7 @@
       "post" : {
         "operationId" : "briefing",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24495,6 +24535,26 @@
           "description" : "Optional window for the brief. `since` and `asOf` are ISO-8601 dates or instants, `lookbackDays` a whole number of days; every field is optional and an omitted one is not passed to the lens, so with none (or no body) the configured briefing strategy's window applies. Reading the brief this way does not move the daily brief's cursor"
         },
         "responses" : {
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -24514,7 +24574,7 @@
       "post" : {
         "operationId" : "chat",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24543,6 +24603,26 @@
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Ask a question grounded in a lens's focused entities",
@@ -24653,7 +24733,7 @@
       "post" : {
         "operationId" : "present",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24689,6 +24769,26 @@
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "Return a saved lens's presented content",
@@ -24699,7 +24799,7 @@
       "post" : {
         "operationId" : "run_2",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24726,6 +24826,26 @@
           "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults; omit the body or `args` to run on the defaults alone. A required parameter left unset fails the request"
         },
         "responses" : {
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -24745,7 +24865,7 @@
       "post" : {
         "operationId" : "views",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24781,6 +24901,26 @@
               }
             },
             "description" : "OK"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
           }
         },
         "summary" : "List the views available for a saved lens",
@@ -24791,7 +24931,7 @@
       "post" : {
         "operationId" : "renderView",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (an unauthenticated dev or test call); an authenticated caller always acts as themselves and this is ignored. 401 when no user resolves",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -24826,6 +24966,26 @@
           "description" : "Optional. `args` supplies values for the lens's declared parameters, overlaid on their declared defaults. The opened result is cached per lens and `args`, so the view listing and each view render share one retrieval only when they send the same `args`; a required parameter left unset fails the request"
         },
         "responses" : {
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
+          },
           "404" : {
             "content" : {
               "application/json" : {
@@ -28961,7 +29121,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36663"
+    "url" : "http://localhost:42741"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
