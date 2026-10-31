@@ -14,4 +14,5 @@ export { Prose } from "./prose/Prose.js";
 export { ThreadsSurface } from "./threads/ThreadsSurface.js";
 export { MentionMenu } from "./threads/MentionMenu.js";
 export { activeMention, applyMention, matching } from "./threads/mentions.js";
+export { PlanPanel, factLabel, costClass } from "./plan/PlanPanel.js";
 //# sourceMappingURL=index.js.map

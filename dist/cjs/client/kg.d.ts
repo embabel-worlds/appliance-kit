@@ -22,6 +22,16 @@ export type KgPropertyValues = Schemas['KgPropertyValuesResponse'];
 export type KgScopeInfo = Schemas['KgScopeInfo'];
 export type KgScopeList = Schemas['KgScopeListResponse'];
 export type KgScopeDeleteResult = Schemas['KgScopeDeleteResponse'];
+export type KgPlanAnswer = Schemas['PlanAnswer'];
+export type KgPlanStep = Schemas['PlanAnswerStep'];
+export type KgPlanInput = Schemas['KgPlanInput'];
+/** A plan's inputs by name: `{notes: {type: 'text', value: '…'}}`, or a spine label and one entity's key. */
+export type KgPlanInputs = Record<string, KgPlanInput>;
+export interface KgSaveGoalViewRequest {
+    name: string;
+    goal: string;
+    description?: string;
+}
 /** The owner's answer to a run that parked awaiting input. */
 export type KgRunChoice = 'proceed' | 'narrow' | 'background' | 'cancel';
 /**
@@ -61,6 +71,12 @@ export interface ExecuteOptions {
 }
 /** What {@link KgClient.userExecute} takes: everything but the background modes. */
 export type UserExecuteOptions = Omit<ExecuteOptions, 'background' | 'waitSeconds'>;
+/**
+ * Whether this appliance stores goal views. A server that knows the `goal` field lists it on every
+ * view, `null` where a view has a Cypher body, so its presence on the listing is the fact; nothing here
+ * infers it from a version. An empty listing says nothing either way, and is read as "not yet".
+ */
+export declare function goalViewsSupported(views: KgView[]): boolean;
 export declare class KgClient {
     private readonly transport;
     constructor(transport: Transport);
@@ -144,6 +160,22 @@ export declare class KgClient {
      * view actually does and adjust it. Neither is a shortcut for the other.
      */
     runView(name: string, args?: Record<string, unknown>): Promise<Outcome<KgQueryResult>>;
+    /**
+     * Plan a goal over the acting user's views and rules WITHOUT running anything: the steps, the one
+     * compiled statement and its quote — or why there is no plan (`unreachable`, `tie`, `refused`, each
+     * a 200). Safe to call as the goal is typed; the appliance's route for it cannot execute.
+     */
+    plan(goal: string, inputs?: KgPlanInputs): Promise<Outcome<KgPlanAnswer>>;
+    /**
+     * Plan a goal and run what it compiles to, as the acting user. A separate route from {@link plan}
+     * on purpose: running is an act a person chooses, never a side effect of typing.
+     */
+    runPlan(goal: string, inputs?: KgPlanInputs): Promise<Outcome<KgPlanAnswer>>;
+    /**
+     * Save a goal as a named view. Only on an appliance that stores goal views — check with
+     * {@link goalViewsSupported} — since an older one refuses a body without `cypher`.
+     */
+    saveGoalView(spec: KgSaveGoalViewRequest): Promise<Outcome<KgSaveViewResult>>;
     /** Force-recompute a materialised view's cache now, ignoring its TTL. */
     refreshView(name: string): Promise<Outcome<KgRefreshViewResult>>;
 }

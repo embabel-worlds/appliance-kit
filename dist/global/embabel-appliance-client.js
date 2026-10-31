@@ -51,6 +51,7 @@ var EmbabelApplianceClient = (() => {
     expect: () => expect,
     experimentalQuery: () => experimentalQuery,
     followIngest: () => followIngest,
+    goalViewsSupported: () => goalViewsSupported,
     isBackgroundHandle: () => isBackgroundHandle,
     isOk: () => isOk,
     newOperationId: () => newOperationId,
@@ -216,11 +217,16 @@ var EmbabelApplianceClient = (() => {
   var USER_KG = "/api/v1/kg/studio";
   var TIMEOUTS = {
     execute: 18e4,
+    /* A dry run introspects, plans and quotes; it reads the graph for the quote and calls nothing else. */
+    plan: 3e4,
     generate: 12e4,
     saveView: 6e4
   };
   function isBackgroundHandle(outcome) {
     return "runId" in outcome && outcome.runId !== void 0;
+  }
+  function goalViewsSupported(views) {
+    return views.some((view) => Object.prototype.hasOwnProperty.call(view, "goal"));
   }
   var executeBody = (cypher, options) => {
     const body = { cypher };
@@ -401,6 +407,43 @@ var EmbabelApplianceClient = (() => {
         path: `${KG}/views/${encodeURIComponent(name)}/run`,
         body: { args },
         timeoutMs: TIMEOUTS.execute
+      });
+    }
+    /**
+     * Plan a goal over the acting user's views and rules WITHOUT running anything: the steps, the one
+     * compiled statement and its quote — or why there is no plan (`unreachable`, `tie`, `refused`, each
+     * a 200). Safe to call as the goal is typed; the appliance's route for it cannot execute.
+     */
+    plan(goal, inputs = {}) {
+      return this.transport.send({
+        method: "POST",
+        path: `${KG}/plan`,
+        body: { goal, inputs },
+        timeoutMs: TIMEOUTS.plan
+      });
+    }
+    /**
+     * Plan a goal and run what it compiles to, as the acting user. A separate route from {@link plan}
+     * on purpose: running is an act a person chooses, never a side effect of typing.
+     */
+    runPlan(goal, inputs = {}) {
+      return this.transport.send({
+        method: "POST",
+        path: `${KG}/plan/run`,
+        body: { goal, inputs },
+        timeoutMs: TIMEOUTS.execute
+      });
+    }
+    /**
+     * Save a goal as a named view. Only on an appliance that stores goal views — check with
+     * {@link goalViewsSupported} — since an older one refuses a body without `cypher`.
+     */
+    saveGoalView(spec) {
+      return this.transport.send({
+        method: "POST",
+        path: `${KG}/views`,
+        body: spec,
+        timeoutMs: TIMEOUTS.saveView
       });
     }
     /** Force-recompute a materialised view's cache now, ignoring its TTL. */

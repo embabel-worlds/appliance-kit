@@ -38,6 +38,24 @@ export type KgPropertyValues = Schemas['KgPropertyValuesResponse']
 export type KgScopeInfo = Schemas['KgScopeInfo']
 export type KgScopeList = Schemas['KgScopeListResponse']
 export type KgScopeDeleteResult = Schemas['KgScopeDeleteResponse']
+export type KgPlanAnswer = Schemas['PlanAnswer']
+export type KgPlanStep = Schemas['PlanAnswerStep']
+export type KgPlanInput = Schemas['KgPlanInput']
+
+/** A plan's inputs by name: `{notes: {type: 'text', value: '…'}}`, or a spine label and one entity's key. */
+export type KgPlanInputs = Record<string, KgPlanInput>
+
+/*
+ * A view whose body is a GOAL rather than Cypher (embabel/me#3380, step 2): the appliance plans it,
+ * writes the compiled query back, and runs that. Hand-typed because the guarded surface this file is
+ * generated from does not carry the field yet; when it does, this becomes an alias of
+ * `KgSaveViewRequest` like every other type here.
+ */
+export interface KgSaveGoalViewRequest {
+  name: string
+  goal: string
+  description?: string
+}
 
 /** The owner's answer to a run that parked awaiting input. */
 export type KgRunChoice = 'proceed' | 'narrow' | 'background' | 'cancel'
@@ -57,6 +75,8 @@ const USER_KG = '/api/v1/kg/studio'
  */
 const TIMEOUTS = {
   execute: 180_000,
+  /* A dry run introspects, plans and quotes; it reads the graph for the quote and calls nothing else. */
+  plan: 30_000,
   generate: 120_000,
   saveView: 60_000,
 } as const
@@ -104,6 +124,15 @@ export interface ExecuteOptions {
 
 /** What {@link KgClient.userExecute} takes: everything but the background modes. */
 export type UserExecuteOptions = Omit<ExecuteOptions, 'background' | 'waitSeconds'>
+
+/**
+ * Whether this appliance stores goal views. A server that knows the `goal` field lists it on every
+ * view, `null` where a view has a Cypher body, so its presence on the listing is the fact; nothing here
+ * infers it from a version. An empty listing says nothing either way, and is read as "not yet".
+ */
+export function goalViewsSupported(views: KgView[]): boolean {
+  return views.some((view) => Object.prototype.hasOwnProperty.call(view, 'goal'))
+}
 
 const executeBody = (cypher: string, options: UserExecuteOptions): Record<string, unknown> => {
   const body: Record<string, unknown> = { cypher }
@@ -303,6 +332,46 @@ export class KgClient {
       path: `${KG}/views/${encodeURIComponent(name)}/run`,
       body: { args },
       timeoutMs: TIMEOUTS.execute,
+    })
+  }
+
+  /**
+   * Plan a goal over the acting user's views and rules WITHOUT running anything: the steps, the one
+   * compiled statement and its quote — or why there is no plan (`unreachable`, `tie`, `refused`, each
+   * a 200). Safe to call as the goal is typed; the appliance's route for it cannot execute.
+   */
+  plan(goal: string, inputs: KgPlanInputs = {}): Promise<Outcome<KgPlanAnswer>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${KG}/plan`,
+      body: { goal, inputs },
+      timeoutMs: TIMEOUTS.plan,
+    })
+  }
+
+  /**
+   * Plan a goal and run what it compiles to, as the acting user. A separate route from {@link plan}
+   * on purpose: running is an act a person chooses, never a side effect of typing.
+   */
+  runPlan(goal: string, inputs: KgPlanInputs = {}): Promise<Outcome<KgPlanAnswer>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${KG}/plan/run`,
+      body: { goal, inputs },
+      timeoutMs: TIMEOUTS.execute,
+    })
+  }
+
+  /**
+   * Save a goal as a named view. Only on an appliance that stores goal views — check with
+   * {@link goalViewsSupported} — since an older one refuses a body without `cypher`.
+   */
+  saveGoalView(spec: KgSaveGoalViewRequest): Promise<Outcome<KgSaveViewResult>> {
+    return this.transport.send({
+      method: 'POST',
+      path: `${KG}/views`,
+      body: spec,
+      timeoutMs: TIMEOUTS.saveView,
     })
   }
 
