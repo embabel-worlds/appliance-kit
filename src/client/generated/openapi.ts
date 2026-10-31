@@ -423,6 +423,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/kg/plan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plan a goal over the acting user's views and rules, without running anything
+         * @description Introspects, plans, compiles and quotes. No step runs, no model is called and no source is read, so it is safe to call as the goal is typed. Unreachable goals, ties and refusals are 200 answers, not errors.
+         */
+        post: operations["planGoal"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/admin/kg/plan/run": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Plan a goal and run the compiled statement as the acting user
+         * @description Plans exactly as `/plan` does and, when the outcome is `planned`, executes the compiled statement through the same path views and queries take, adding its rows and warnings. Any other outcome comes back unchanged and nothing runs.
+         */
+        post: operations["runGoalPlan"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kg/refine": {
         parameters: {
             query?: never;
@@ -3159,6 +3199,22 @@ export interface components {
             /** @description The run id from the path, echoed back. */
             runId: string;
         };
+        /** @description One input to a plan: text a view reads with `ai.fromText`, or one entity of a spine label by its key. */
+        KgPlanInput: {
+            /** @description `text`, or the name of a spine label of this world, e.g. `CustomerAccount`. */
+            type: string;
+            /** @description The text itself, or the entity's key. */
+            value: string;
+        };
+        /** @description A goal to plan over the acting user's views and rules, and the typed inputs it starts from. */
+        KgPlanRequest: {
+            /** @description The final Cypher query to answer, read-only, written over the facts wanted (projected labels, derived or judged relationships) as if they existed. Not the steps: the planner chooses those. */
+            goal: string;
+            /** @description Typed inputs by name. Absent means none. Name an input after the parameter it is for when more than one could take it. */
+            inputs?: {
+                [key: string]: components["schemas"]["KgPlanInput"];
+            };
+        };
         /** @description The legal values of a property, from `/schema/{label}/{property}/values`: the closed set, its size when too wide (`tooMany`), or not enumerable — branch on which. */
         KgPropertyValuesResponse: {
             /** @description False when the source cannot be asked at all — NOT the same as an empty set. */
@@ -3592,6 +3648,98 @@ export interface components {
                 [key: string]: string;
             };
             tokenUrl?: string;
+        };
+        /** @description What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. */
+        PlanAnswer: {
+            /** @description `planned`: the one Cypher statement the steps and the goal compile to. What a run executes. */
+            compiled?: string;
+            /**
+             * Format: double
+             * @description `tie`: the cost the rival plans share, in the planner's 0..1 units.
+             */
+            cost?: number;
+            /** @description `unreachable`: the planner's own account of why the goal cannot be reached. */
+            detail?: string;
+            /** @description Steps left out of planning, and why. Absent when none were. */
+            diagnostics?: string[];
+            /** @description A run of a `planned` answer only, and only when the run failed: the engine's error. */
+            error?: string;
+            /** @description `planned`: where each supplied input was bound. */
+            inputs?: components["schemas"]["PlanAnswerBinding"][];
+            /** @description `unreachable`: the facts no step on offer produces. */
+            missing?: string[];
+            /**
+             * @description Which answer this is.
+             * @enum {string}
+             */
+            outcome: "planned" | "unreachable" | "tie" | "refused";
+            /** @description `tie`: the rival plans, each the names of its steps in order. Make the goal more specific to choose. */
+            plans?: string[][];
+            /** @description `planned`: the engine's quote for the compiled statement, made without running it. */
+            quote?: components["schemas"]["PlanAnswerQuote"];
+            /** @description `planned`: the facts the goal itself reads, as `node:Label`, `edge:From-TYPE->To` or `input:text`. */
+            reads?: string[];
+            /** @description `refused`: what to change for the request to plan — an untypable goal, an input that binds ambiguously, a plan that does not compile. */
+            reasons?: string[];
+            /** @description A run of a `planned` answer only: the rows the compiled statement returned, unchanged. */
+            rows?: {
+                [key: string]: unknown;
+            }[];
+            /** @description `planned`: the chosen steps, in the order they run. */
+            steps?: components["schemas"]["PlanAnswerStep"][];
+            /** @description A run of a `planned` answer only: the engine's warnings. PROJECTION_* means a projection was declined or incomplete. */
+            warnings?: string[];
+        };
+        /** @description An input the caller supplied, and the step parameter it was bound to. */
+        PlanAnswerBinding: {
+            /** @description The input's name, as the caller sent it. */
+            input: string;
+            /** @description The parameter it binds: a step's `$name`, or the goal's. */
+            parameter: string;
+        };
+        /** @description The engine's quote for a compiled plan, made by reading the graph only: no source is fetched and no model is asked. */
+        PlanAnswerQuote: {
+            /**
+             * Format: int32
+             * @description The estimated calls to outside APIs. Null when the statement could not be quoted.
+             */
+            apiCalls?: number;
+            /**
+             * Format: int32
+             * @description The fewest model calls the run will make. Null when the statement could not be quoted.
+             */
+            modelCalls?: number;
+            /** @description The quote rendered as text, or why there is none. */
+            plan: string;
+            /** @description What this quote does not price, by step — `ai.fromText` calls, which the cost gate prices when the plan runs. */
+            unpriced: string[];
+            /** @description Why the cost gate would refuse this run, or null when it would not (or the statement could not be quoted). */
+            wouldRefuse?: string;
+        };
+        /** @description One step of a plan, as shown before anything runs: the view or rule, what it adds and needs, what it reaches beyond the stored graph, and its cost. */
+        PlanAnswerStep: {
+            /** @description The facts the step makes, as `node:Label` or `edge:From-TYPE->To`. */
+            adds: string[];
+            /**
+             * Format: double
+             * @description The step's cost in the planner's 0..1 units. The plan chosen is the one whose costs sum least.
+             */
+            cost: number;
+            /** @description The saved view or DERIVE rule set this step is. */
+            from: string;
+            /**
+             * @description `view`, which the compiled statement calls, or `rule`, which the engine fires when its conclusion is read.
+             * @enum {string}
+             */
+            kind: "view" | "rule";
+            /** @description What the step goes beyond the stored graph for: `api`, `model`, both, or empty for a stored read. Read off the step itself, not from its cost, which comes from a pluggable heuristic. */
+            reaches: string[];
+            /** @description The realm that shipped the step. Null for the world's own. */
+            realm?: string;
+            /** @description The facts and inputs the step needs before it can run. */
+            requires: string[];
+            /** @description Whether the compiled statement calls this step. False for a rule. */
+            runs: boolean;
         };
         /** @description An agent's quality of service: the priority its work is paced at, and the models it falls back to when one of its own fails mid-check */
         QosSpec: {
@@ -5075,6 +5223,116 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KgKillResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    planGoal: {
+        parameters: {
+            query?: {
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `goal`, the final Cypher query to answer, and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description The plan, or why there is none: `outcome` says which */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAnswer"];
+                };
+            };
+            /** @description The goal is blank */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    runGoalPlan: {
+        parameters: {
+            query?: {
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
+                username?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `goal`, the final Cypher query to answer, and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["KgPlanRequest"];
+            };
+        };
+        responses: {
+            /** @description The plan with the run's rows and warnings, or why there is none */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PlanAnswer"];
+                };
+            };
+            /** @description The goal is blank */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
             /** @description No authenticated principal */

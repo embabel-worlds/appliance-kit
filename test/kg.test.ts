@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { KgClient, isBackgroundHandle } from '../src/client/kg.ts'
+import { KgClient, goalViewsSupported, isBackgroundHandle, type KgView } from '../src/client/kg.ts'
 import { ok, type Outcome } from '../src/client/outcome.ts'
 import type { RequestSpec, Transport } from '../src/client/transport.ts'
 
@@ -274,5 +274,42 @@ describe('KgClient captured scopes', () => {
     const { kg, transport } = client()
     await kg.deleteScope('a b')
     assert.equal(transport.last.path, '/api/v1/admin/kg/scopes/a%20b')
+  })
+})
+
+describe('KgClient planning', () => {
+  const inputs = { notes: { type: 'text', value: 'Jane says exports fail.' } }
+
+  it('plans on its own route, which cannot run anything', async () => {
+    const { kg, transport } = client()
+    await kg.plan('MATCH (i:Issue) RETURN i', inputs)
+    assert.deepEqual(transport.last, {
+      method: 'POST',
+      path: '/api/v1/admin/kg/plan',
+      body: { goal: 'MATCH (i:Issue) RETURN i', inputs },
+      timeoutMs: 30_000,
+    })
+  })
+
+  it('runs a plan on a separate route, with the execution budget', async () => {
+    const { kg, transport } = client()
+    await kg.runPlan('MATCH (i:Issue) RETURN i')
+    assert.equal(transport.last.path, '/api/v1/admin/kg/plan/run')
+    assert.deepEqual(transport.last.body, { goal: 'MATCH (i:Issue) RETURN i', inputs: {} })
+    assert.equal(transport.last.timeoutMs, 180_000)
+  })
+
+  it('saves a goal view through the views endpoint, with the goal and no cypher', async () => {
+    const { kg, transport } = client()
+    await kg.saveGoalView({ name: 'UntrackedIssues', goal: 'MATCH (i:Issue) RETURN i' })
+    assert.equal(transport.last.path, '/api/v1/admin/kg/views')
+    assert.deepEqual(transport.last.body, { name: 'UntrackedIssues', goal: 'MATCH (i:Issue) RETURN i' })
+  })
+
+  it('reads goal views as supported only when the listing carries the field', () => {
+    const view = { name: 'v', description: '', materialized: false, cypher: 'MATCH (n) RETURN n' } as KgView
+    assert.equal(goalViewsSupported([]), false, 'an empty listing says nothing, and is read as not yet')
+    assert.equal(goalViewsSupported([view]), false)
+    assert.equal(goalViewsSupported([{ ...view, goal: null } as KgView]), true, 'a null goal is still the field')
   })
 })

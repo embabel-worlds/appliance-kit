@@ -1855,3 +1855,21 @@ li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); 
 :where(.kit-feature) .agent-reflection { margin-top: 16px; }
 :where(.kit-feature) .proposal { display: grid; gap: 6px; border-left: 2px solid var(--rule); padding-left: 10px; margin-top: 8px; }
 :where(.kit-feature) .proposal-changes { margin: 0; padding-left: 18px; display: grid; gap: 4px; }
+
+/* The plan panel: a goal's facts, its chain of steps and what each costs, beside the editor. */
+:where(.kit-feature).plan, :where(.kit-feature) .plan { display: grid; gap: 8px; }
+:where(.kit-feature) .plan h3 { margin: 6px 0 2px; font-size: 12.5px; color: var(--heading); }
+:where(.kit-feature) .planhead { display: flex; gap: 8px; align-items: baseline; }
+:where(.kit-feature) .planreads ul, :where(.kit-feature) .plantie ul, :where(.kit-feature) .plandiagnostics ul { margin: 0; padding-left: 18px; display: grid; gap: 2px; }
+:where(.kit-feature) .planfact { font-family: var(--mono); font-size: 0.9em; background: var(--code-bg); padding: 0 4px; border-radius: 3px; margin-right: 4px; }
+:where(.kit-feature) .planfrom { color: var(--faint); }
+:where(.kit-feature) .planchain { margin: 0; padding-left: 20px; display: grid; gap: 6px; }
+:where(.kit-feature) .planstep-head { display: flex; gap: 6px; align-items: baseline; flex-wrap: wrap; }
+:where(.kit-feature) .planstep-facts { font-size: 0.9em; color: var(--faint); }
+:where(.kit-feature) .plantag { font-size: 11px; border: 1px solid var(--rule); border-radius: 999px; padding: 0 6px; }
+:where(.kit-feature) .plancost-ai, :where(.kit-feature) .plancost-apiai { border-color: var(--caution); color: var(--caution); }
+:where(.kit-feature) .plancompiled { white-space: pre-wrap; font-family: var(--mono); background: var(--code-bg); padding: 6px; margin: 0; max-height: 20em; overflow: auto; }
+:where(.kit-feature) .planinputs, :where(.kit-feature) .plansave { display: grid; gap: 6px; }
+:where(.kit-feature) .planinput { align-items: flex-start; gap: 6px; }
+:where(.kit-feature) .planinput textarea { flex: 1; min-height: 4em; font: inherit; }
+:where(.kit-feature) .planactions { gap: 6px; flex-wrap: wrap; }

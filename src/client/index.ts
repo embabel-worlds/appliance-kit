@@ -15,7 +15,7 @@ export type { SseEvent, SseParser } from './sse.ts'
 export { isOk, expect, ok } from './outcome.ts'
 export type { Outcome, Ok, Failure, FailureKind } from './outcome.ts'
 
-export { KgClient, isBackgroundHandle } from './kg.ts'
+export { KgClient, goalViewsSupported, isBackgroundHandle } from './kg.ts'
 export type {
   ExecuteOptions,
   UserExecuteOptions,
@@ -25,11 +25,16 @@ export type {
   KgGenerated,
   KgInFlightRun,
   KgKillResult,
+  KgPlanAnswer,
+  KgPlanInput,
+  KgPlanInputs,
+  KgPlanStep,
   KgPropertyValues,
   KgQueryResult,
   KgRefreshViewResult,
   KgRunChoice,
   KgRunState,
+  KgSaveGoalViewRequest,
   KgSaveViewRequest,
   KgSaveViewResult,
   KgSchema,

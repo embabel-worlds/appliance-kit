@@ -2883,3 +2883,147 @@ describe('lenses in the Views window', () => {
     assert.equal(container.querySelectorAll('.viewspage-sidebar .viewsibling').length, 3)
   })
 })
+
+describe('PlanPanel', () => {
+  const GOAL = 'MATCH (who:Attendee)-[:RAISED]->(i:Issue) WHERE NOT EXISTS { (i)-[:TRACKED_BY]->() } RETURN i.summary'
+  const planned = {
+    outcome: 'planned',
+    reads: ['edge:Attendee-RAISED->Issue', 'edge:Issue-TRACKED_BY->SupportCase', 'node:Issue'],
+    steps: [
+      { from: 'ProjectNotes', kind: 'view', realm: null, adds: ['edge:Attendee-RAISED->Issue', 'node:Issue'], requires: ['input:text'], reaches: ['model'], runs: true, cost: 0.75 },
+      { from: 'LinkTrackedIssues', kind: 'view', realm: 'account-health', adds: ['edge:Issue-TRACKED_BY->SupportCase'], requires: ['node:Issue'], reaches: [], runs: true, cost: 0.05 },
+    ],
+    compiled: 'CALL { … } MATCH (who:Attendee)-[:RAISED]->(i:Issue) RETURN i.summary',
+    inputs: [{ input: 'notes', parameter: 'notes' }],
+    quote: { modelCalls: 2, apiCalls: 0, wouldRefuse: null, plan: '…', unpriced: ['ProjectNotes: its ai.fromText calls are not in this quote'] },
+  }
+
+  function planServices(answer, extra = {}) {
+    const calls = { plan: [], runPlan: [], saveGoalView: [] }
+    const services = {
+      plan: async (goal, inputs) => { calls.plan.push({ goal, inputs }); return typeof answer === 'function' ? answer(goal) : ok(answer) },
+      runPlan: async (goal, inputs) => { calls.runPlan.push({ goal, inputs }); return ok({ ...planned, rows: [{ summary: 'Exports fail' }], warnings: [] }) },
+      ...extra,
+    }
+    return { services, calls }
+  }
+
+  const panel = (services, goal = GOAL) => h(features.PlanPanel, { services, goal, debounceMs: 0 })
+
+  it('shows what the goal reads and who makes it, the chain with each step\'s cost class, and runs nothing', async () => {
+    const { services, calls } = planServices(planned)
+    const { container, root } = await render(panel(services))
+    await flush()
+    assert.equal(container.firstElementChild.classList.contains('kit-feature-plan'), true)
+    assert.match(container.textContent, /Planned/)
+    assert.match(container.textContent, /\(Issue\)-\[:TRACKED_BY\]->\(SupportCase\) ← LinkTrackedIssues/)
+    assert.match(container.textContent, /\(Attendee\)-\[:RAISED\]->\(Issue\) ← ProjectNotes/)
+    const steps = [...container.querySelectorAll('.planstep')]
+    assert.deepEqual(steps.map((step) => step.querySelector('strong').textContent), ['ProjectNotes', 'LinkTrackedIssues'])
+    assert.match(steps[0].textContent, /AI/)
+    assert.match(steps[1].textContent, /stored/)
+    assert.match(steps[1].textContent, /from account-health/)
+    assert.match(container.textContent, /~2 model call\(s\)/)
+
+    await act(async () => button(container, 'Show compiled').click())
+    assert.equal(container.querySelector('.plancompiled').textContent, planned.compiled)
+
+    // Typing re-plans after the pause, and still nothing runs.
+    await act(async () => root.render(panel(services, GOAL + ' LIMIT 5')))
+    await flush()
+    assert.deepEqual(calls.plan.map((c) => c.goal), [GOAL, GOAL + ' LIMIT 5'])
+    assert.deepEqual(calls.runPlan, [])
+  })
+
+  it('names the fact nothing produces for an unreachable goal', async () => {
+    const { services } = planServices({ outcome: 'unreachable', missing: ['edge:Issue-TRACKED_BY->SupportCase'], detail: 'no step makes it' })
+    const { container } = await render(panel(services))
+    await flush()
+    assert.match(container.textContent, /Not reachable/)
+    assert.match(container.textContent, /Nothing produces \(Issue\)-\[:TRACKED_BY\]->\(SupportCase\)\./)
+    assert.match(container.textContent, /no step makes it/)
+    assert.equal(button(container, 'Show compiled').disabled, true)
+  })
+
+  it('says a goal over stored data needs no step', async () => {
+    const { services } = planServices({ ...planned, reads: [], steps: [], compiled: 'MATCH (a:CustomerAccount) RETURN a.name' })
+    const { container } = await render(panel(services, 'MATCH (a:CustomerAccount) RETURN a.name'))
+    await flush()
+    assert.match(container.textContent, /no step is needed/)
+    assert.equal(container.querySelector('.planchain'), null)
+  })
+
+  it('names the rivals of a tie', async () => {
+    const { services } = planServices({ outcome: 'tie', plans: [['ProjectNotes', 'LinkByTitle'], ['ProjectNotes', 'LinkTrackedIssues']], cost: 0.8 })
+    const { container } = await render(panel(services))
+    await flush()
+    assert.match(container.textContent, /2 plans reach this at the same cost/)
+    assert.match(container.textContent, /ProjectNotes → LinkByTitle/)
+    assert.match(container.textContent, /ProjectNotes → LinkTrackedIssues/)
+  })
+
+  it('says why a refused goal cannot be planned', async () => {
+    const { services } = planServices({ outcome: 'refused', reasons: ['the goal reads $since, and no input of that name supplies it'], diagnostics: ['Other: unusable here'] })
+    const { container } = await render(panel(services))
+    await flush()
+    assert.match(container.textContent, /Cannot plan this as written/)
+    assert.match(container.textContent, /no input of that name supplies it/)
+    assert.match(container.querySelector('.plandiagnostics').textContent, /1 step\(s\) left out/)
+  })
+
+  it('runs only on the click, with the inputs typed, and shows the rows', async () => {
+    const { services, calls } = planServices(planned)
+    const { container } = await render(panel(services))
+    await flush()
+    await act(async () => button(container, 'Run with input…').click())
+    await act(async () => button(container, 'Add input').click())
+    await act(async () => setInput(container.querySelector('input[aria-label="Input name"]'), 'notes'))
+    const value = container.querySelector('textarea[aria-label="Input value"]')
+    await act(async () => {
+      Object.getOwnPropertyDescriptor(dom.window.HTMLTextAreaElement.prototype, 'value').set.call(value, 'Jane says exports fail.')
+      value.dispatchEvent(new Event('input', { bubbles: true }))
+    })
+    await flush()
+    assert.deepEqual(calls.runPlan, [], 'filling in an input re-plans; it does not run')
+    assert.deepEqual(calls.plan.at(-1).inputs, { notes: { type: 'text', value: 'Jane says exports fail.' } })
+
+    await act(async () => container.querySelector('.planinputs .btn.primary').click())
+    await flush()
+    assert.deepEqual(calls.runPlan, [{ goal: GOAL, inputs: { notes: { type: 'text', value: 'Jane says exports fail.' } } }])
+    assert.match(container.querySelector('.planrun').textContent, /Exports fail/)
+  })
+
+  it('offers Save as goal view only when the appliance stores goal views', async () => {
+    const without = planServices(planned)
+    const first = await render(panel(without.services))
+    await flush()
+    assert.equal(button(first.container, 'Save as goal view'), undefined)
+
+    const saved = []
+    const capable = planServices(planned, {
+      saveGoalView: async (spec) => { saved.push(spec); return ok({ ok: true, name: spec.name, savedCypher: '' }) },
+    })
+    const { container } = await render(panel(capable.services))
+    await flush()
+    await act(async () => button(container, 'Save as goal view').click())
+    await act(async () => {
+      setInput(container.querySelector('input[aria-label="View name"]'), 'UntrackedIssues')
+      setInput(container.querySelector('input[aria-label="View description"]'), 'Issues raised that no case tracks')
+    })
+    await act(async () => button(container.querySelector('.plansave'), 'Save').click())
+    await flush()
+    assert.deepEqual(saved, [{ name: 'UntrackedIssues', goal: GOAL, description: 'Issues raised that no case tracks' }])
+    assert.match(container.textContent, /Saved as UntrackedIssues\./)
+  })
+
+  it('says once that an appliance predates planning, and stops asking', async () => {
+    const { services, calls } = planServices(() => ({ ok: false, kind: 'unsupported', status: 404, message: 'no such route' }))
+    const { container, root } = await render(panel(services))
+    await flush()
+    assert.match(container.textContent, /older than this feature/)
+    await act(async () => root.render(panel(services, GOAL + ' LIMIT 1')))
+    await flush()
+    assert.equal(calls.plan.length, 1)
+    assert.match(container.textContent, /older than this feature/)
+  })
+})
