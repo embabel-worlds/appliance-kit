@@ -172,6 +172,22 @@ function Outcome({ answer }: { answer: KgPlanAnswer }) {
           </ul>
         </div>
       )
+    /* The two English-mode answers. The panel sends a goal, so these arrive only from a host that asks a question. */
+    case 'needsInput':
+      return (
+        <Status tone="caution">
+          This needs {answer.needsInput?.type === 'text' ? 'some text' : `a ${answer.needsInput?.type}`} as input: {answer.needsInput?.why}
+        </Status>
+      )
+    case 'declined':
+      return (
+        <div className="planunreachable">
+          {answer.reason && <Status tone="caution">{answer.reason}</Status>}
+          {(answer.missing ?? []).map((fact) => (
+            <Status key={fact} tone="caution">Nothing produces <Fact fact={fact} />.</Status>
+          ))}
+        </div>
+      )
     default:
       return (
         <div className="planrefused">
@@ -186,6 +202,8 @@ const HEADLINE: Record<string, string> = {
   unreachable: 'Not reachable',
   tie: 'Tied',
   refused: 'Cannot plan this as written',
+  needsInput: 'Needs an input',
+  declined: 'Declined',
 }
 
 export function PlanPanel({ services, goal, debounceMs = DEFAULT_DEBOUNCE_MS, onShowCompiled }: PlanPanelProps) {

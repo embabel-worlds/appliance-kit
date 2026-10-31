@@ -2953,6 +2953,17 @@ describe('PlanPanel', () => {
     assert.equal(container.querySelector('.planchain'), null)
   })
 
+  it('shows the English-mode answers a host asking a question can get', async () => {
+    const needs = await render(panel(planServices({ outcome: 'needsInput', question: 'q', goal: GOAL, needsInput: { type: 'text', why: 'paste the meeting notes' } }).services))
+    await flush()
+    assert.match(needs.container.textContent, /Needs an input/)
+    assert.match(needs.container.textContent, /some text as input: paste the meeting notes/)
+    const declined = await render(panel(planServices({ outcome: 'declined', question: 'q', reason: 'nothing links an issue to a case', missing: ['edge:Issue-TRACKED_BY->SupportCase'] }).services))
+    await flush()
+    assert.match(declined.container.textContent, /nothing links an issue to a case/)
+    assert.match(declined.container.textContent, /Nothing produces \(Issue\)-\[:TRACKED_BY\]->\(SupportCase\)/)
+  })
+
   it('names the rivals of a tie', async () => {
     const { services } = planServices({ outcome: 'tie', plans: [['ProjectNotes', 'LinkByTitle'], ['ProjectNotes', 'LinkTrackedIssues']], cost: 0.8 })
     const { container } = await render(panel(services))
