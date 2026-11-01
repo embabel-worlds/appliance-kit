@@ -9643,7 +9643,7 @@
             "type" : "integer"
           },
           "modelCalls" : {
-            "description" : "The fewest model calls the run will make. Null when the statement could not be quoted.",
+            "description" : "The fewest model calls the run will make, `ai.fromText` extractions included. Null when the statement could not be quoted.",
             "format" : "int32",
             "type" : "integer"
           },
@@ -9652,7 +9652,7 @@
             "type" : "string"
           },
           "unpriced" : {
-            "description" : "What this quote does not price, by step — `ai.fromText` calls, which the cost gate prices when the plan runs.",
+            "description" : "What this quote does not price, by step — a text step's `ai.fromText` calls when the statement could not be quoted; the cost gate prices them when the plan runs.",
             "items" : {
               "type" : "string"
             },
@@ -29177,7 +29177,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41667"
+    "url" : "http://localhost:36461"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
