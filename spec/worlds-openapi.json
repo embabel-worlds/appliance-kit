@@ -7469,14 +7469,14 @@
         "type" : "object"
       },
       "KgPlanInput" : {
-        "description" : "One input to a plan: text a view reads with `ai.fromText`, or one entity of a spine label by its key.",
+        "description" : "One input to a plan: text a view reads with `ai.fromText`, one entity of a spine label by its key, or a plain value for the parameter it is named after.",
         "properties" : {
           "type" : {
-            "description" : "`text`, or the name of a spine label of this world, e.g. `CustomerAccount`.",
+            "description" : "`text`, the name of a spine label of this world, e.g. `CustomerAccount`, or `value`.",
             "type" : "string"
           },
           "value" : {
-            "description" : "The text itself, or the entity's key.",
+            "description" : "The text itself, the entity's key, or the value, coerced to the type the parameter declares.",
             "type" : "string"
           }
         },
@@ -9663,8 +9663,13 @@
             "format" : "int32",
             "type" : "integer"
           },
+          "goalModelCalls" : {
+            "description" : "Asked as a `question`: the model calls made writing the goal — usually one, more when a goal was refused and written again. Zero for a goal the caller wrote, and for a goal reused from an explain of the same question and inputs moments before.",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "modelCalls" : {
-            "description" : "The fewest model calls the run will make, `ai.fromText` extractions included. Null when the statement could not be quoted.",
+            "description" : "The fewest model calls the run will make, `ai.fromText` extractions included, plus `goalModelCalls`. Null when the statement could not be quoted.",
             "format" : "int32",
             "type" : "integer"
           },
@@ -9684,7 +9689,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "plan", "unpriced" ],
+        "required" : [ "goalModelCalls", "plan", "unpriced" ],
         "type" : "object"
       },
       "PlanAnswerRival" : {
@@ -15582,7 +15587,7 @@
               }
             }
           },
-          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, or `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`.",
+          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine, or `{\"limit\": {\"type\": \"value\", \"value\": \"10\"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`.",
           "required" : true
         },
         "responses" : {
@@ -15652,7 +15657,7 @@
               }
             }
           },
-          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, or `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`.",
+          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine, or `{\"limit\": {\"type\": \"value\", \"value\": \"10\"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`.",
           "required" : true
         },
         "responses" : {
@@ -29198,7 +29203,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36855"
+    "url" : "http://localhost:37855"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
