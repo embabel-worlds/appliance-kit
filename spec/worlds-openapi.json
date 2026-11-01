@@ -9471,7 +9471,7 @@
         "type" : "object"
       },
       "PlanAnswer" : {
-        "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing).",
+        "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost, rivals, toBreak) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing).",
         "properties" : {
           "compiled" : {
             "description" : "`planned`: the one Cypher statement the steps and the goal compile to. What a run executes.",
@@ -9525,7 +9525,7 @@
             "type" : "string"
           },
           "plans" : {
-            "description" : "`tie`: the rival plans, each the names of its steps in order. Make the goal more specific to choose.",
+            "description" : "`tie`: the rival plans, each the names of its steps in order. `rivals` says how they differ, `toBreak` how to choose.",
             "items" : {
               "items" : {
                 "type" : "string"
@@ -9560,6 +9560,13 @@
             },
             "type" : "array"
           },
+          "rivals" : {
+            "description" : "`tie`: each rival plan, in the order of `plans`, with its steps and what only it makes, needs and consults.",
+            "items" : {
+              "$ref" : "#/components/schemas/PlanAnswerRival"
+            },
+            "type" : "array"
+          },
           "rows" : {
             "description" : "A run of a `planned` answer only: the rows the compiled statement returned, unchanged.",
             "items" : {
@@ -9572,6 +9579,13 @@
             "description" : "`planned`: the chosen steps, in the order they run.",
             "items" : {
               "$ref" : "#/components/schemas/PlanAnswerStep"
+            },
+            "type" : "array"
+          },
+          "toBreak" : {
+            "description" : "`tie`: what would choose one plan — a fact to read in the goal, an input to leave out — or, when nothing a caller sends can, that the world's steps have to change.",
+            "items" : {
+              "type" : "string"
             },
             "type" : "array"
           },
@@ -9650,6 +9664,48 @@
           }
         },
         "required" : [ "plan", "unpriced" ],
+        "type" : "object"
+      },
+      "PlanAnswerRival" : {
+        "description" : "One rival plan of a tie: its steps, and what it has that the other plan does not.",
+        "properties" : {
+          "addsOnly" : {
+            "description" : "Facts only this plan makes. A goal that reads one is reached only through this plan.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "consultsOnly" : {
+            "description" : "What only this plan consults beyond the stored graph: `api:<label or type>` or `model:<call or label>`.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "own" : {
+            "description" : "The plan's steps the other plan does not use: what makes it a rival.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "requiresOnly" : {
+            "description" : "Facts and inputs only this plan needs. Leaving such an input out leaves only the other plan.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "steps" : {
+            "description" : "The plan's steps, in the order they would run, each as a planned step is shown.",
+            "items" : {
+              "$ref" : "#/components/schemas/PlanAnswerStep"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "addsOnly", "consultsOnly", "own", "requiresOnly", "steps" ],
         "type" : "object"
       },
       "PlanAnswerStep" : {
@@ -29121,7 +29177,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42271"
+    "url" : "http://localhost:34317"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
