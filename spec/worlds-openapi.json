@@ -9471,7 +9471,7 @@
         "type" : "object"
       },
       "PlanAnswer" : {
-        "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost, rivals, toBreak) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing).",
+        "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail, nearest), `tie` (plans, cost, rivals, toBreak), `refused` (reasons) or `needsInput` (needsInput, missing). None is an error: each is the answer. A run adds rows and warnings to a `planned` answer, or is `failed` (the plan's fields, warnings and error, no rows) when the engine answered with an error. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `declined` (reason, missing).",
         "properties" : {
           "compiled" : {
             "description" : "`planned`: the one Cypher statement the steps and the goal compile to. What a run executes.",
@@ -9494,11 +9494,11 @@
             "type" : "array"
           },
           "error" : {
-            "description" : "A run of a `planned` answer only, and only when the run failed: the engine's error.",
+            "description" : "`failed` only: the engine's error, which is why the run has no rows.",
             "type" : "string"
           },
           "goal" : {
-            "description" : "English mode only: the goal written from the question — absent from `refused`, and from `declined` when none was written.",
+            "description" : "English mode only: the goal written from the question — absent from `refused`, and from `declined` or `needsInput` when none was written.",
             "type" : "string"
           },
           "inputs" : {
@@ -9509,19 +9509,29 @@
             "type" : "array"
           },
           "missing" : {
-            "description" : "`unreachable`, or `declined` when that is the reason: the facts no step on offer produces.",
+            "description" : "`unreachable`, or `declined` when that is the reason: the facts no step on offer produces, or the names nothing in the world has (`node:Label`, `relationship:TYPE`, `property:Label.name`). `needsInput` on a goal: every input fact lacking.",
             "items" : {
               "type" : "string"
             },
             "type" : "array"
           },
+          "nearest" : {
+            "additionalProperties" : {
+              "items" : {
+                "type" : "string"
+              },
+              "type" : "array"
+            },
+            "description" : "`unreachable`: for each missing fact, up to five facts the world's views and rules CAN make, nearest first — same labels, then words of its name or description, then spelling. What the goal could read instead, from the vocabulary `plan` with no goal and no question lists in full. Absent when none are near.",
+            "type" : "object"
+          },
           "needsInput" : {
             "$ref" : "#/components/schemas/PlanAnswerNeed",
-            "description" : "`needsInput`: the input the goal needs and nobody supplied, and why."
+            "description" : "`needsInput`: the input the goal needs and nobody supplied, the parameter it binds, who reads it, and why."
           },
           "outcome" : {
             "description" : "Which answer this is.",
-            "enum" : [ "planned", "unreachable", "tie", "refused", "needsInput", "declined" ],
+            "enum" : [ "planned", "unreachable", "tie", "refused", "needsInput", "declined", "failed" ],
             "type" : "string"
           },
           "plans" : {
@@ -9554,7 +9564,7 @@
             "type" : "string"
           },
           "reasons" : {
-            "description" : "`refused`: what to change for the request to plan — an untypable goal, an input that binds ambiguously, a plan that does not compile.",
+            "description" : "`refused`: what to change for the request to plan — an untypable goal, a goal that writes, an input that binds ambiguously, a plan that does not compile.",
             "items" : {
               "type" : "string"
             },
@@ -9568,7 +9578,7 @@
             "type" : "array"
           },
           "rows" : {
-            "description" : "A run of a `planned` answer only: the rows the compiled statement returned, unchanged.",
+            "description" : "A run of a `planned` answer only: the rows the compiled statement returned, unchanged. Absent from `failed`.",
             "items" : {
               "additionalProperties" : { },
               "type" : "object"
@@ -9590,7 +9600,7 @@
             "type" : "array"
           },
           "warnings" : {
-            "description" : "A run of a `planned` answer only: the engine's warnings. PROJECTION_* means a projection was declined or incomplete.",
+            "description" : "A run only, `planned` or `failed`: the engine's warnings. PROJECTION_* means a projection was declined or incomplete.",
             "items" : {
               "type" : "string"
             },
@@ -9620,8 +9630,19 @@
         "type" : "object"
       },
       "PlanAnswerNeed" : {
-        "description" : "The input an English question's goal needs and nobody supplied: `text`, or the spine label an identity names, and why.",
+        "description" : "The input a goal needs and nobody supplied: `text`, or the spine label an identity names, the parameter it binds, who reads it, and why.",
         "properties" : {
+          "parameter" : {
+            "description" : "The `$name` the input binds when supplied; null when none is known or more than one could take it.",
+            "type" : "string"
+          },
+          "readBy" : {
+            "description" : "The views — or `the goal` — that read the input; empty when none is known.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "type" : {
             "description" : "`text`, or the spine label of the identity needed.",
             "type" : "string"
@@ -9631,7 +9652,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "type", "why" ],
+        "required" : [ "readBy", "type", "why" ],
         "type" : "object"
       },
       "PlanAnswerQuote" : {
@@ -29177,7 +29198,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36461"
+    "url" : "http://localhost:35013"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
