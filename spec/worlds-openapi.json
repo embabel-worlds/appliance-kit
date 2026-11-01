@@ -8790,7 +8790,7 @@
             "type" : "string"
           },
           "provider" : {
-            "description" : "Provider of the model, as the framework's model list names it (e.g. \"LM Studio\", \"OpenAI\"); null when there is no model or it is not in that list",
+            "description" : "Provider of the model, as the service serving it names it (e.g. \"LM Studio\", \"OpenAI\"); null when there is no model",
             "type" : "string"
           },
           "purpose" : {
@@ -20400,7 +20400,7 @@
                 }
               }
             },
-            "description" : "Unsupported reasoning effort"
+            "description" : "Unsupported reasoning effort, or a model this deployment cannot serve; the message names the models it can"
           }
         },
         "summary" : "Update chat config",
@@ -20441,7 +20441,7 @@
                 }
               }
             },
-            "description" : "The body names a reasoning effort"
+            "description" : "The body names a reasoning effort, or a model this deployment cannot serve"
           }
         },
         "summary" : "Set the model chat uses",
@@ -20573,7 +20573,7 @@
                 }
               }
             },
-            "description" : "Unsupported reasoning effort"
+            "description" : "Unsupported reasoning effort, or a model this deployment cannot serve; the message names the models it can"
           }
         },
         "summary" : "Set or clear an LLM role override",
@@ -20643,7 +20643,7 @@
                 }
               }
             },
-            "description" : "Unknown purpose, unsupported reasoning effort, or reasoning effort on a purpose that does not use it"
+            "description" : "Unknown purpose, unsupported reasoning effort, reasoning effort on a purpose that does not use it, or a model this deployment cannot serve"
           }
         },
         "summary" : "Update LLM config for a purpose",
@@ -29177,7 +29177,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34317"
+    "url" : "http://localhost:41667"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
