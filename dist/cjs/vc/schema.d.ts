@@ -29,6 +29,8 @@ export interface SchemaRelationship {
     type: string;
     to: string;
     count?: number;
+    /** What the edge is for, verbatim from the declaration of the join that brings it — for hover. */
+    description?: string;
 }
 export interface GraphSchema {
     refreshedAt?: string;
@@ -39,6 +41,12 @@ export interface GraphSchema {
 export declare function aliasMap(cypher: string): Record<string, string>;
 /** The property names recorded for a label, or none if the schema has not seen it. */
 export declare function propertiesOf(schema: GraphSchema | null | undefined, label: string): string[];
+/**
+ * The properties recorded for a label WITH what the schema says of each — type and declared
+ * description — for a completion that shows what a name means, not just the name. None if the
+ * schema has not seen the label.
+ */
+export declare function propertyDetails(schema: GraphSchema | null | undefined, label: string): SchemaProperty[];
 export declare function labelNames(schema: GraphSchema | null | undefined): string[];
 /**
  * Labels that may OPEN a pattern — what the FIRST `(x:` of a MATCH offers. The engine rejects a bare
@@ -94,4 +102,64 @@ export declare function propertyMapContext(before: string, aliases: Record<strin
     label: string | null;
     used: string[];
 } | null;
+/**
+ * The label a person's own anchor carries: the caller, bound by their sign-in, which a pattern
+ * writes `(me:AssistantUser)` with no id. The engine's name for it, as the composer writes it.
+ */
+export declare const USER_ANCHOR = "AssistantUser";
+/** One way into a reach-only label: an edge from (`out`) or to (`in`) a label that may open a pattern. */
+export interface LabelDoor {
+    anchor: string;
+    type: string;
+    direction: 'out' | 'in';
+    /** What the edge is for, when its declaration says. */
+    description?: string;
+}
+/**
+ * The doors into [label] — empty for a label that may open a pattern itself (or that the schema
+ * does not know), since it needs none. The user anchor's doors come first: it needs no pinning, so
+ * it is the way in a person can always write.
+ */
+export declare function labelDoors(schema: GraphSchema | null | undefined, label: string): LabelDoor[];
+/**
+ * [door] written as a pattern a person can type: `(me:AssistantUser)-[:HAS_CONFIG]->(r:ConfigRun)`.
+ * [variable] is the reach-only node's; the anchor's is `me` for the user anchor (it IS you) and its
+ * initial otherwise, never the same as [variable]. An empty [variable] stays empty — `(:ConfigRun)`.
+ */
+export declare function anchoredPattern(door: LabelDoor, label: string, variable?: string): string;
+/**
+ * What a label means, for completion and hover: its declared definition, then — for a reach-only
+ * label — how it is reached. Empty when the schema has nothing to say.
+ */
+export declare function labelDoc(schema: GraphSchema | null | undefined, label: string): string;
+/** A property's type and description, as one line for completion and hover: `string — When it ran…`. */
+export declare function propertyDoc(property: SchemaProperty): string;
+/**
+ * A property's description when it says something. An appliance before embabel/me#3525 described an
+ * undocumented property by its own name — `runId` as "runId" — which reads as documentation and is
+ * none, so it is dropped rather than shown.
+ */
+export declare function propertyDescription(property: SchemaProperty): string;
+/**
+ * What a relationship type means. With both ends known, that edge's own declaration; otherwise the
+ * ends it joins, and its description when every triple of that type shares one.
+ */
+export declare function relationshipDoc(schema: GraphSchema | null | undefined, type: string, from?: string | null, to?: string | null): string;
+/** What the editor shows on hovering a token: a title line and the text under it. */
+export interface TokenDoc {
+    title: string;
+    text: string;
+    /** The label, when the token named one — for a title that also says where it comes from. */
+    label?: SchemaLabel;
+}
+/**
+ * The documentation for the token under the cursor, or null when it names nothing the schema
+ * knows. [word] is the token as the cypher mode cuts it (`r:ConfigRun` is one atom, `:HAS_CONFIG`
+ * another), [lineBefore] the line's text before the token, and [cypher] the whole query, which is
+ * where aliases are declared.
+ *
+ * In order: a relationship type (the token sits inside `[…]`), a label or an alias of one, then a
+ * property after `alias.`. One function, so every editor that hovers answers the same way.
+ */
+export declare function tokenDoc(schema: GraphSchema | null | undefined, word: string, lineBefore: string, cypher: string): TokenDoc | null;
 //# sourceMappingURL=schema.d.ts.map

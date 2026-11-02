@@ -26,7 +26,7 @@ import { ArrowClockwise, Question } from '@phosphor-icons/react';
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { isBackgroundHandle, } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
-import { completeQuery, aliasMap, anchorLabels, declaredParams, rowColumns, rowsToCsv, rowsToMarkdown, scopeReference, } from "../../../vc/index.js";
+import { completeQuery, tokenDoc, anchorLabels, declaredParams, rowColumns, rowsToCsv, rowsToMarkdown, scopeReference, } from "../../../vc/index.js";
 import * as Vc from "../../../vc/index.js";
 import { CYPHER_KEYWORDS, createCypherHint, createDefinitionTooltip, definitionTitle, formatDuration } from "../../../studio-kit/index.js";
 import { CodeMirror, useEditor } from "../studio/editor.js";
@@ -232,24 +232,13 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
                 return;
             hovered = word;
             const box = { left: start.left, right: end.right, top: start.top, bottom: start.bottom };
-            const labels = (schemaBox.current?.labels ?? []);
-            const text = cm.getValue();
-            // The cypher mode tokenizes `e:Electorate` as ONE atom, so the label is what follows the
-            // colon. A bare alias (`e` in `e.division`) resolves through the query's own alias map, so
-            // hovering it answers for its label too.
-            const name = word.includes(':') ? word.slice(word.lastIndexOf(':') + 1) : word;
-            const resolved = labels.some((l) => l.label === name) ? name : aliasMap(text)[name];
-            const label = labels.find((l) => l.label === resolved);
-            if (label) {
-                return definitions.show(box, definitionTitle(label), label.description ?? '');
-            }
-            // `e.marginPct` → the PROPERTY's declared description: the alias before the dot names the
-            // label, the token names the property.
-            const owner = cm.getLine(pos.line).slice(0, token.start).match(/(\w+)\.$/);
-            const ownerLabel = owner ? labels.find((l) => l.label === aliasMap(text)[owner[1] ?? '']) : undefined;
-            const prop = ownerLabel?.properties?.find((pr) => pr.name === word && pr.description);
-            if (prop && ownerLabel) {
-                return definitions.show(box, `${ownerLabel.label}.${prop.name}`, prop.description ?? '');
+            // What the token names — a relationship inside `[…]`, a label or an alias of one, a property
+            // after `alias.` — and what the schema says of it, decided once in vc so every editor that
+            // hovers answers alike: a label's definition and how it is reached, a property's type and
+            // description, an edge's declared purpose.
+            const doc = tokenDoc(schemaBox.current, word, cm.getLine(pos.line).slice(0, token.start), cm.getValue());
+            if (doc && (doc.text || doc.label)) {
+                return definitions.show(box, doc.label ? definitionTitle(doc.label) : doc.title, doc.text);
             }
             definitions.hide();
         };

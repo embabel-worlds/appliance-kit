@@ -20,10 +20,52 @@ export interface VcSemantics {
         label: string | null;
         used: string[];
     } | null;
+    propertyDetails?(schema: unknown, label: string): Array<{
+        name: string;
+        type: string;
+        description?: string;
+    }>;
+    propertyDoc?(property: {
+        name: string;
+        type: string;
+        description?: string;
+    }): string;
+    labelDoc?(schema: unknown, label: string): string;
+    relationshipDoc?(schema: unknown, type: string, from?: string | null, to?: string | null): string;
+    labelDoors?(schema: unknown, label: string): Array<{
+        anchor: string;
+        type: string;
+        direction: 'out' | 'in';
+    }>;
+    anchoredPattern?(door: {
+        anchor: string;
+        type: string;
+        direction: 'out' | 'in';
+    }, label: string, variable?: string): string;
+    labelNames?(schema: unknown): string[];
+}
+/** One completion with what it means: the name, the text it inserts, and a line of documentation. */
+export interface CompletionItem {
+    /** What the list shows, and what it sorts by. */
+    label: string;
+    /** What picking it inserts — the label itself, or a whole anchored pattern. */
+    text: string;
+    /** A short tag beside the name: a property's type, or what kind of thing it is. */
+    detail?: string;
+    /** What it means, from the schema: a declared description, and how a reach-only label is reached. */
+    doc?: string;
+    /**
+     * How many characters before the cursor the insertion replaces, when that is more than the
+     * stem: an anchored form replaces the `r:Con` it grew from, not just `Con`.
+     */
+    replaceLength?: number;
 }
 export interface FragmentCompletion {
+    /** The names, as before — what a caller that only inserts text needs. */
     list: string[];
     stemLength: number;
+    /** The same offers with what each means, plus anchored forms a bare name cannot express. */
+    items?: CompletionItem[];
 }
 /**
  * Schema-aware completions for a Cypher FRAGMENT — the text before the cursor,
@@ -57,7 +99,13 @@ export interface CypherHintOptions {
 export declare function createCypherHint(CodeMirror: {
     Pos(line: number, ch: number): unknown;
 }, vc: VcSemantics, options: CypherHintOptions): (editor: EditorLike) => {
-    list: string[];
+    list: (string | {
+        render: (element: HTMLElement) => void;
+        from?: unknown;
+        text: string;
+        displayText: string;
+        className: string;
+    })[];
     from: unknown;
     to: unknown;
 } | null;
@@ -82,7 +130,13 @@ export declare function createSessionCypherHint(CodeMirror: {
 }, vc: VcSemantics, options: CypherHintOptions & {
     bindings(): HintBinding[];
 }): (editor: EditorLike) => {
-    list: string[];
+    list: (string | {
+        render: (element: HTMLElement) => void;
+        from?: unknown;
+        text: string;
+        displayText: string;
+        className: string;
+    })[];
     from: unknown;
     to: unknown;
 } | null;

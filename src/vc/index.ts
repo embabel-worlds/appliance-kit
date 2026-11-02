@@ -13,8 +13,11 @@ export type { TargetId, TargetSpec, Mode, AnchorId, Anchor } from './targets.ts'
 export { compose, TIPS } from './compose.ts'
 export type { ComposeSpec, AiSteering } from './compose.ts'
 
-export { aliasMap, propertiesOf, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext, nodeContext, propertyMapContext } from './schema.ts'
-export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, EdgeDirection } from './schema.ts'
+export {
+  aliasMap, propertiesOf, propertyDetails, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext,
+  nodeContext, propertyMapContext, USER_ANCHOR, labelDoors, anchoredPattern, labelDoc, propertyDoc, propertyDescription, relationshipDoc, tokenDoc,
+} from './schema.ts'
+export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, EdgeDirection, LabelDoor, TokenDoc } from './schema.ts'
 
 export { declaredParams, RESERVED_PARAMS } from './params.ts'
 

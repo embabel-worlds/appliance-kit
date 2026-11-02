@@ -8,7 +8,7 @@
  */
 export { TARGETS, VIA_VALUES, AI_KEYS, esc } from "./targets.js";
 export { compose, TIPS } from "./compose.js";
-export { aliasMap, propertiesOf, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext, nodeContext, propertyMapContext } from "./schema.js";
+export { aliasMap, propertiesOf, propertyDetails, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext, nodeContext, propertyMapContext, USER_ANCHOR, labelDoors, anchoredPattern, labelDoc, propertyDoc, propertyDescription, relationshipDoc, tokenDoc, } from "./schema.js";
 export { declaredParams, RESERVED_PARAMS } from "./params.js";
 export { rowColumns, rowsToMarkdown, rowsToCsv } from "./rows.js";
 export { describeVcEvent, isTerminal, isFailure } from "./events.js";

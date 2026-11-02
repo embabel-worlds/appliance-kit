@@ -49,15 +49,19 @@ describe('the editor hint', () => {
   })
   const hint = createCypherHint(CodeMirrorish, vc, { schema: () => schema, keywords: ['MATCH', 'WHERE'] })
 
+  /* A row is a plain word or, where the schema documents it, an object CodeMirror lists by `displayText`. */
+  const names = (list: Array<string | { displayText: string }>) => list.map((x) => (typeof x === 'string' ? x : x.displayText))
+
   it('every offered list is alphabetical', () => {
     const result = hint(editorAt('MATCH (x:'))
     assert.ok(result)
-    assert.deepEqual(result!.list, [...result!.list].sort((a, b) => a.localeCompare(b)))
+    const shown = names(result!.list)
+    assert.deepEqual(shown, [...shown].sort((a, b) => a.localeCompare(b)))
   })
 
   it("the engine's own vocabularies win their positions", () => {
-    assert.deepEqual(hint(editorAt("MATCH ()-[r:RELEVANT_TO {via:'"))!.list, [...vc.VIA_VALUES].sort((a, b) => a.localeCompare(b)))
-    assert.ok(hint(editorAt('{ai:{'))!.list.every((k: string) => (vc.AI_KEYS as readonly string[]).includes(k)))
+    assert.deepEqual(names(hint(editorAt("MATCH ()-[r:RELEVANT_TO {via:'"))!.list), [...vc.VIA_VALUES].sort((a, b) => a.localeCompare(b)))
+    assert.ok(names(hint(editorAt('{ai:{'))!.list).every((k: string) => (vc.AI_KEYS as readonly string[]).includes(k)))
   })
 
   it('bare words pool keywords with labels', () => {
