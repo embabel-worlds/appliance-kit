@@ -1938,7 +1938,7 @@
         "type" : "object"
       },
       "BoltAbout" : {
-        "description" : "The Bolt server: the ports Neo4j drivers and tools connect to.",
+        "description" : "The Bolt server: the ports Bolt drivers and tools connect to.",
         "properties" : {
           "endpoints" : {
             "description" : "Each port that is listening, Virtual Cypher first",
@@ -1952,7 +1952,7 @@
         "type" : "object"
       },
       "BoltEndpointAbout" : {
-        "description" : "One Bolt port, as a Neo4j driver or Neo4j Browser dials it.",
+        "description" : "One Bolt port, as a Bolt driver or graph browser dials it.",
         "properties" : {
           "address" : {
             "description" : "The address the server advertises for this port, host:port",
@@ -12886,6 +12886,18 @@
         "description" : "A provider's URL-registration handshake. THIS SHAPE IS THE PROVIDER'S, not this API's: Zoom requires exactly these two fields and no status, so it must not be made to resemble the other receipts.",
         "required" : [ "encryptedToken", "plainToken" ]
       },
+      "WelcomeConfig" : {
+        "description" : "What a surface opens the first time each person arrives in this world. Part of GET /config",
+        "properties" : {
+          "open" : {
+            "description" : "next-steps (the What next panel), tour:<id> (start the tour whose file declares that id), chat, or none. Stored as written and interpreted by the client, which treats a value it does not know as next-steps",
+            "example" : "next-steps",
+            "type" : "string"
+          }
+        },
+        "required" : [ "open" ],
+        "type" : "object"
+      },
       "WorldChanged" : {
         "description" : "A world was created or switched to. The same three keys either way; `status` says which happened",
         "properties" : {
@@ -12996,6 +13008,10 @@
           "webFetch" : {
             "$ref" : "#/components/schemas/WebFetchConfig",
             "description" : "Fetch and crawl tool strategies; null inherits the server defaults"
+          },
+          "welcome" : {
+            "$ref" : "#/components/schemas/WelcomeConfig",
+            "description" : "What a surface opens the first time each person arrives in this world; null leaves it to the client, which opens next steps"
           }
         },
         "required" : [ "activePersonality", "filesTrustedRoots", "llmRoles", "version" ],
@@ -29208,7 +29224,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:35227"
+    "url" : "http://localhost:35339"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
