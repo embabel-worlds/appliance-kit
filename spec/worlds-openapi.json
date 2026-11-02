@@ -33,6 +33,11 @@
             },
             "type" : "array"
           },
+          "release" : {
+            "description" : "stable, beta, nightly, canary, or the exact version or sha-<commit> pinned; null when unset",
+            "example" : "beta",
+            "type" : "string"
+          },
           "sql" : {
             "$ref" : "#/components/schemas/SqlAbout",
             "description" : "The SQL door, when it is on and listening; absent otherwise"
@@ -13516,7 +13521,7 @@
     },
     "/api/v1/about" : {
       "get" : {
-        "description" : "The server's commit, the versions of its libraries, and the Bolt ports and SQL door that are listening.",
+        "description" : "The server's commit, its libraries' versions, the release it follows, and the listening Bolt ports and SQL door.",
         "operationId" : "about",
         "responses" : {
           "200" : {
@@ -13527,7 +13532,7 @@
                 }
               }
             },
-            "description" : "Components, server first, and Bolt and SQL when they are on"
+            "description" : "Components, server first, the release, and Bolt and SQL when they are on"
           }
         },
         "summary" : "Component versions, Bolt endpoints and the SQL door",
@@ -29203,7 +29208,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45649"
+    "url" : "http://localhost:44019"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
