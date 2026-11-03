@@ -1,6 +1,10 @@
 export declare const INTERNAL_PROPERTIES: ReadonlySet<string>;
-/** Whether [key] is bookkeeping rather than an entity's data. See INTERNAL_PROPERTIES. */
-export declare function isInternalProperty(key: string): boolean;
+export declare const LABEL_INTERNAL_PROPERTIES: Readonly<Record<string, ReadonlySet<string>>>;
+/**
+ * Whether [key] is bookkeeping rather than an entity's data, on an entity carrying [labels]. See
+ * INTERNAL_PROPERTIES and LABEL_INTERNAL_PROPERTIES; with no labels only the global rule applies.
+ */
+export declare function isInternalProperty(key: string, labels?: readonly string[]): boolean;
 /** A node or relationship as the studio returns it: it carries an element id or labels. */
 export declare function isEntity(value: unknown): value is Record<string, unknown>;
 /** An entity's own properties, without the bookkeeping. */
@@ -24,7 +28,7 @@ export interface RowGraphNode {
     labels: string[];
     /** What to write on it: a name-like property when it has one, else its first label. */
     caption: string;
-    /** Its properties, without the bookkeeping (INTERNAL_PROPERTIES). */
+    /** Its properties, without the bookkeeping (INTERNAL_PROPERTIES, LABEL_INTERNAL_PROPERTIES). */
     properties: Record<string, unknown>;
     /** Only named as a relationship's end; the rows did not return it. */
     placeholder: boolean;
