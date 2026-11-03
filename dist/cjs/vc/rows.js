@@ -6,10 +6,10 @@
  * results table renders with, so what you copy is what you saw. Values follow
  * the table too — null paints empty, objects paint as JSON, everything else as
  * its string, and a node or relationship as its own properties (see
- * INTERNAL_PROPERTIES).
+ * INTERNAL_PROPERTIES and LABEL_INTERNAL_PROPERTIES).
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.INTERNAL_PROPERTIES = void 0;
+exports.LABEL_INTERNAL_PROPERTIES = exports.INTERNAL_PROPERTIES = void 0;
 exports.isInternalProperty = isInternalProperty;
 exports.isEntity = isEntity;
 exports.entityProperties = entityProperties;
@@ -37,9 +37,35 @@ exports.rowGraph = rowGraph;
 exports.INTERNAL_PROPERTIES = new Set([
     'userId', 'worldId', 'workspaceId', 'visibleTo', 'extractedBy',
 ]);
-/** Whether [key] is bookkeeping rather than an entity's data. See INTERNAL_PROPERTIES. */
-function isInternalProperty(key) {
-    return key.startsWith('__') || exports.INTERNAL_PROPERTIES.has(key);
+/*
+ * PROPERTIES THAT ARE BOOKKEEPING ONLY ON NODES OF ONE LABEL — the same rule as INTERNAL_PROPERTIES,
+ * for keys that are real data elsewhere and so cannot be hidden on every node.
+ *
+ * `AssistantUser` is the signed-in person's own node, and most of what it carries is the account's
+ * configuration: where its world lives on the host and what it is called, which context is current,
+ * whether greetings and hints are on. The list is the server's, not a guess — the MCP surface's
+ * sanitizer strips these same keys from a whole AssistantUser node before a model sees it (its
+ * "AssistantUser internal config" group, with `currentContextName` and `contextId` from its tenancy
+ * group). `id` is added here: on this label it is the account key that every node's `userId` stamp
+ * repeats, already hidden above. On most other nodes `id` and `username` are the data (`hobby:tennis`),
+ * which is why this is keyed by label rather than added to the global list.
+ *
+ * A node matches when ANY of its labels is listed: AssistantUser also carries Person and User, and
+ * a node that is the account is the account whatever else it is.
+ */
+exports.LABEL_INTERNAL_PROPERTIES = {
+    AssistantUser: new Set([
+        'id', 'username', 'worldBase', 'worldName', 'workspaceBase', 'workspaceName',
+        'currentContextName', 'contextId', 'greetingEnabled', 'hintsEnabled',
+    ]),
+};
+/**
+ * Whether [key] is bookkeeping rather than an entity's data, on an entity carrying [labels]. See
+ * INTERNAL_PROPERTIES and LABEL_INTERNAL_PROPERTIES; with no labels only the global rule applies.
+ */
+function isInternalProperty(key, labels = []) {
+    return key.startsWith('__') || exports.INTERNAL_PROPERTIES.has(key)
+        || labels.some((label) => exports.LABEL_INTERNAL_PROPERTIES[label]?.has(key) ?? false);
 }
 /** A node or relationship as the studio returns it: it carries an element id or labels. */
 function isEntity(value) {
@@ -48,7 +74,10 @@ function isEntity(value) {
 }
 /** An entity's own properties, without the bookkeeping. */
 function entityProperties(value) {
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)));
+    const labels = Array.isArray(value['__labels'])
+        ? value['__labels'].filter((l) => typeof l === 'string')
+        : [];
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key, labels)));
 }
 /**
  * A value as the table shows it: every entity in it — a cell, a list, a path, a map holding one —

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { INTERNAL_PROPERTIES, isInternalProperty, rowColumns, rowGraph, rowsToCsv, rowsToMarkdown, shownValue } from '../src/vc/index.ts'
+import { INTERNAL_PROPERTIES, LABEL_INTERNAL_PROPERTIES, isInternalProperty, rowColumns, rowGraph, rowsToCsv, rowsToMarkdown, shownValue } from '../src/vc/index.ts'
 
 /*
  * WHAT YOU COPY IS WHAT YOU SAW: columns in first-seen order (the table's own
@@ -118,6 +118,30 @@ describe('an entity\'s properties, as shown', () => {
     assert.deepEqual(shownValue({ p: [extracted] }), { p: [{ sourceSpan: 'Ada Lovelace', name: 'Ada Lovelace' }] })
     assert.doesNotMatch(rowsToCsv([{ p: extracted }]), /demo_assistant|vc_extraction|__elementId/)
     assert.match(rowsToMarkdown([{ p: extracted }]), /"sourceSpan":"Ada Lovelace"/)
+  })
+
+  /* The signed-in user's node, as the studio returned it on a fresh appliance. */
+  const account = {
+    id: 'demo', username: 'demo', displayName: 'Demo User', email: 'demo@example.com',
+    worldBase: '/data/worlds', worldName: 'default', currentContextName: 'personal',
+    greetingEnabled: false, hintsEnabled: true, timeZone: 'UTC', userId: 'demo',
+    __labels: ['Entity', 'User', 'AssistantUser', 'SimpleStoredUser', 'Person'], __elementId: '4:e:9',
+  }
+
+  it('the signed-in user\'s node hides its account configuration, on that label only', () => {
+    assert.deepEqual(rowGraph([{ u: account }]).nodes[0]!.properties,
+      { displayName: 'Demo User', email: 'demo@example.com', timeZone: 'UTC' })
+    assert.deepEqual(shownValue({ u: account }), { u: { displayName: 'Demo User', email: 'demo@example.com', timeZone: 'UTC' } })
+    assert.equal(isInternalProperty('worldBase', ['Person', 'AssistantUser']), true)
+    assert.equal(isInternalProperty('id', ['Person', 'AssistantUser']), true)
+    assert.ok(LABEL_INTERNAL_PROPERTIES['AssistantUser']!.has('hintsEnabled'))
+  })
+
+  it('id and username are data on every other node', () => {
+    const hobby = { id: 'hobby:tennis', username: 'ace', name: 'Tennis', __labels: ['Hobby'], __elementId: '4:e:2' }
+    assert.deepEqual(rowGraph([{ h: hobby }]).nodes[0]!.properties, { id: 'hobby:tennis', username: 'ace', name: 'Tennis' })
+    assert.equal(isInternalProperty('id'), false)
+    assert.equal(isInternalProperty('username', ['Person']), false)
   })
 
   it('a column somebody projected by name is their question, and is shown', () => {

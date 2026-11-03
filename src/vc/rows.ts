@@ -5,7 +5,7 @@
  * results table renders with, so what you copy is what you saw. Values follow
  * the table too — null paints empty, objects paint as JSON, everything else as
  * its string, and a node or relationship as its own properties (see
- * INTERNAL_PROPERTIES).
+ * INTERNAL_PROPERTIES and LABEL_INTERNAL_PROPERTIES).
  */
 
 /*
@@ -28,9 +28,36 @@ export const INTERNAL_PROPERTIES: ReadonlySet<string> = new Set([
   'userId', 'worldId', 'workspaceId', 'visibleTo', 'extractedBy',
 ])
 
-/** Whether [key] is bookkeeping rather than an entity's data. See INTERNAL_PROPERTIES. */
-export function isInternalProperty(key: string): boolean {
+/*
+ * PROPERTIES THAT ARE BOOKKEEPING ONLY ON NODES OF ONE LABEL — the same rule as INTERNAL_PROPERTIES,
+ * for keys that are real data elsewhere and so cannot be hidden on every node.
+ *
+ * `AssistantUser` is the signed-in person's own node, and most of what it carries is the account's
+ * configuration: where its world lives on the host and what it is called, which context is current,
+ * whether greetings and hints are on. The list is the server's, not a guess — the MCP surface's
+ * sanitizer strips these same keys from a whole AssistantUser node before a model sees it (its
+ * "AssistantUser internal config" group, with `currentContextName` and `contextId` from its tenancy
+ * group). `id` is added here: on this label it is the account key that every node's `userId` stamp
+ * repeats, already hidden above. On most other nodes `id` and `username` are the data (`hobby:tennis`),
+ * which is why this is keyed by label rather than added to the global list.
+ *
+ * A node matches when ANY of its labels is listed: AssistantUser also carries Person and User, and
+ * a node that is the account is the account whatever else it is.
+ */
+export const LABEL_INTERNAL_PROPERTIES: Readonly<Record<string, ReadonlySet<string>>> = {
+  AssistantUser: new Set([
+    'id', 'username', 'worldBase', 'worldName', 'workspaceBase', 'workspaceName',
+    'currentContextName', 'contextId', 'greetingEnabled', 'hintsEnabled',
+  ]),
+}
+
+/**
+ * Whether [key] is bookkeeping rather than an entity's data, on an entity carrying [labels]. See
+ * INTERNAL_PROPERTIES and LABEL_INTERNAL_PROPERTIES; with no labels only the global rule applies.
+ */
+export function isInternalProperty(key: string, labels: readonly string[] = []): boolean {
   return key.startsWith('__') || INTERNAL_PROPERTIES.has(key)
+    || labels.some((label) => LABEL_INTERNAL_PROPERTIES[label]?.has(key) ?? false)
 }
 
 /** A node or relationship as the studio returns it: it carries an element id or labels. */
@@ -41,7 +68,10 @@ export function isEntity(value: unknown): value is Record<string, unknown> {
 
 /** An entity's own properties, without the bookkeeping. */
 export function entityProperties(value: Record<string, unknown>): Record<string, unknown> {
-  return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)))
+  const labels = Array.isArray(value['__labels'])
+    ? (value['__labels'] as unknown[]).filter((l): l is string => typeof l === 'string')
+    : []
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key, labels)))
 }
 
 /**
@@ -116,7 +146,7 @@ export interface RowGraphNode {
   labels: string[]
   /** What to write on it: a name-like property when it has one, else its first label. */
   caption: string
-  /** Its properties, without the bookkeeping (INTERNAL_PROPERTIES). */
+  /** Its properties, without the bookkeeping (INTERNAL_PROPERTIES, LABEL_INTERNAL_PROPERTIES). */
   properties: Record<string, unknown>
   /** Only named as a relationship's end; the rows did not return it. */
   placeholder: boolean

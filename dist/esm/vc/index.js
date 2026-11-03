@@ -10,7 +10,7 @@ export { TARGETS, VIA_VALUES, AI_KEYS, esc } from "./targets.js";
 export { compose, TIPS } from "./compose.js";
 export { aliasMap, propertiesOf, propertyDetails, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext, nodeContext, propertyMapContext, USER_ANCHOR, labelDoors, anchoredPattern, labelDoc, propertyDoc, propertyDescription, relationshipDoc, tokenDoc, } from "./schema.js";
 export { declaredParams, RESERVED_PARAMS } from "./params.js";
-export { rowColumns, rowsToMarkdown, rowsToCsv, rowGraph, INTERNAL_PROPERTIES, isInternalProperty, isEntity, entityProperties, shownValue, } from "./rows.js";
+export { rowColumns, rowsToMarkdown, rowsToCsv, rowGraph, INTERNAL_PROPERTIES, LABEL_INTERNAL_PROPERTIES, isInternalProperty, isEntity, entityProperties, shownValue, } from "./rows.js";
 export { describeVcEvent, isTerminal, isFailure } from "./events.js";
 export { SCOPE_NAME, scopeLabel, scopeReference, referencedScopeNames } from "./scopes.js";
 export { PEEK_LIMIT, completeQuery, pipelineText, planLine } from "./session.js";

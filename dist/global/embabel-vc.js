@@ -23,6 +23,7 @@ var EmbabelVc = (() => {
   __export(index_exports, {
     AI_KEYS: () => AI_KEYS,
     INTERNAL_PROPERTIES: () => INTERNAL_PROPERTIES,
+    LABEL_INTERNAL_PROPERTIES: () => LABEL_INTERNAL_PROPERTIES,
     PEEK_LIMIT: () => PEEK_LIMIT,
     RESERVED_PARAMS: () => RESERVED_PARAMS,
     SCOPE_NAME: () => SCOPE_NAME,
@@ -419,14 +420,29 @@ ${reach}` : reach;
     "visibleTo",
     "extractedBy"
   ]);
-  function isInternalProperty(key) {
-    return key.startsWith("__") || INTERNAL_PROPERTIES.has(key);
+  var LABEL_INTERNAL_PROPERTIES = {
+    AssistantUser: /* @__PURE__ */ new Set([
+      "id",
+      "username",
+      "worldBase",
+      "worldName",
+      "workspaceBase",
+      "workspaceName",
+      "currentContextName",
+      "contextId",
+      "greetingEnabled",
+      "hintsEnabled"
+    ])
+  };
+  function isInternalProperty(key, labels = []) {
+    return key.startsWith("__") || INTERNAL_PROPERTIES.has(key) || labels.some((label) => LABEL_INTERNAL_PROPERTIES[label]?.has(key) ?? false);
   }
   function isEntity(value) {
     return value != null && typeof value === "object" && !Array.isArray(value) && ("__elementId" in value || Array.isArray(value["__labels"]));
   }
   function entityProperties(value) {
-    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)));
+    const labels = Array.isArray(value["__labels"]) ? value["__labels"].filter((l) => typeof l === "string") : [];
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key, labels)));
   }
   function shownValue(value) {
     if (Array.isArray(value)) return value.map(shownValue);
