@@ -7634,7 +7634,7 @@
             "type" : "integer"
           },
           "rows" : {
-            "description" : "One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data.",
+            "description" : "One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data. From a synchronous `/execute`, a node is its properties plus `__type`, `__labels` and `__elementId`; a relationship its properties plus `__type` (the relationship type), `__elementId`, `__startElementId` and `__endElementId` (the `__elementId`s of the nodes it joins); a path its nodes and relationships in traversal order. Elsewhere a node carries `__type` and `__labels` and a relationship its properties alone.",
             "items" : {
               "additionalProperties" : { },
               "type" : "object"
@@ -7922,7 +7922,7 @@
         "description" : "A node label and its sampled property shape.",
         "properties" : {
           "anchor" : {
-            "description" : "True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. Defaults true so an older client reading a newer appliance loses nothing.",
+            "description" : "True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. How such a label IS reached is in `relationships`: an edge to it from a label whose `anchor` is true — `(me:AssistantUser)-[:HAS_CONFIG]->(r:ConfigRun)` for the config catalog, where `AssistantUser` is the caller, bound by their sign-in. Defaults true so an older client reading a newer appliance loses nothing.",
             "type" : "boolean"
           },
           "description" : {
@@ -7981,7 +7981,7 @@
             "type" : "boolean"
           },
           "type" : {
-            "description" : "Inferred type tag: string, long, datetime, list<string>, any, …",
+            "description" : "Type tag: string, long, double, boolean, datetime, list<string>, any, … — inferred from sampled values, or, where no value has been sampled, the type the property's declaration states. `any` means neither says.",
             "type" : "string"
           }
         },
@@ -7995,6 +7995,10 @@
             "description" : "Approximate occurrence count, for ranking.",
             "format" : "int64",
             "type" : "integer"
+          },
+          "description" : {
+            "description" : "What this edge is for, verbatim from the declaration of the join that brings it — for an editor to show on hover. Null where the declaration documents nothing, and for an edge that is only observed.",
+            "type" : "string"
           },
           "from" : {
             "description" : "The label of the node the relationship starts from.",
@@ -29224,7 +29228,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40587"
+    "url" : "http://localhost:44791"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
