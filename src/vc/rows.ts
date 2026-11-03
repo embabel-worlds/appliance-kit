@@ -4,8 +4,58 @@
  * Column order is the union of keys in first-seen row order: the SAME rule the
  * results table renders with, so what you copy is what you saw. Values follow
  * the table too — null paints empty, objects paint as JSON, everything else as
- * its string.
+ * its string, and a node or relationship as its own properties (see
+ * INTERNAL_PROPERTIES).
  */
+
+/*
+ * PROPERTIES THAT ARE THE APPLIANCE'S BOOKKEEPING, NOT THE ENTITY'S DATA — hidden wherever the kit
+ * shows a node's or relationship's properties: the graph view's panel, a results table's entity
+ * cell, and what Copy writes from one.
+ *
+ * `userId`, `worldId`, `workspaceId` and `visibleTo` are the tenancy stamps the scope rewriter
+ * filters on; every node a person can see carries their own, so they say nothing about the node.
+ * `extractedBy` names the model role that produced an extracted node, which is how the appliance
+ * traces it, not what the text said. A key starting `__` describes the entity rather than holding
+ * its data: `__elementId`, `__labels`, `__type`, a relationship's ends.
+ *
+ * A list here because the studio schema does not mark them: its properties say name, type,
+ * description and identity, nothing about who reads them. When it does, this should read that
+ * marking instead. Only entities are filtered — a column somebody projected by name
+ * (`RETURN n.userId AS owner`) is their question, and is shown. The Raw view shows everything.
+ */
+export const INTERNAL_PROPERTIES: ReadonlySet<string> = new Set([
+  'userId', 'worldId', 'workspaceId', 'visibleTo', 'extractedBy',
+])
+
+/** Whether [key] is bookkeeping rather than an entity's data. See INTERNAL_PROPERTIES. */
+export function isInternalProperty(key: string): boolean {
+  return key.startsWith('__') || INTERNAL_PROPERTIES.has(key)
+}
+
+/** A node or relationship as the studio returns it: it carries an element id or labels. */
+export function isEntity(value: unknown): value is Record<string, unknown> {
+  return value != null && typeof value === 'object' && !Array.isArray(value)
+    && ('__elementId' in value || Array.isArray((value as Record<string, unknown>)['__labels']))
+}
+
+/** An entity's own properties, without the bookkeeping. */
+export function entityProperties(value: Record<string, unknown>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)))
+}
+
+/**
+ * A value as the table shows it: every entity in it — a cell, a list, a path, a map holding one —
+ * reduced to its own properties. Anything else is returned as it came.
+ */
+export function shownValue(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(shownValue)
+  if (isEntity(value)) return entityProperties(value)
+  if (value != null && typeof value === 'object') {
+    return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, shownValue(inner)]))
+  }
+  return value
+}
 
 export function rowColumns(rows: Array<Record<string, unknown>>): string[] {
   const columns: string[] = []
@@ -14,7 +64,7 @@ export function rowColumns(rows: Array<Record<string, unknown>>): string[] {
 }
 
 const cell = (value: unknown): string =>
-  value == null ? '' : typeof value === 'object' ? JSON.stringify(value) : String(value)
+  value == null ? '' : typeof value === 'object' ? JSON.stringify(shownValue(value)) : String(value)
 
 /**
  * A GitHub-flavoured Markdown table. Pipes are escaped; newlines flatten to a
@@ -66,7 +116,7 @@ export interface RowGraphNode {
   labels: string[]
   /** What to write on it: a name-like property when it has one, else its first label. */
   caption: string
-  /** Its properties, without the `__` keys that describe the entity rather than hold its data. */
+  /** Its properties, without the bookkeeping (INTERNAL_PROPERTIES). */
   properties: Record<string, unknown>
   /** Only named as a relationship's end; the rows did not return it. */
   placeholder: boolean
@@ -100,8 +150,7 @@ const isRelationship = (value: Entity): boolean =>
   && typeof value['__startElementId'] === 'string'
   && typeof value['__endElementId'] === 'string'
 
-const ownProperties = (value: Entity): Record<string, unknown> =>
-  Object.fromEntries(Object.entries(value).filter(([key]) => !key.startsWith('__')))
+const ownProperties = (value: Entity): Record<string, unknown> => entityProperties(value)
 
 function caption(labels: string[], properties: Record<string, unknown>): string {
   for (const key of CAPTION_KEYS) {

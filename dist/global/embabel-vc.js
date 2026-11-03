@@ -22,6 +22,7 @@ var EmbabelVc = (() => {
   var index_exports = {};
   __export(index_exports, {
     AI_KEYS: () => AI_KEYS,
+    INTERNAL_PROPERTIES: () => INTERNAL_PROPERTIES,
     PEEK_LIMIT: () => PEEK_LIMIT,
     RESERVED_PARAMS: () => RESERVED_PARAMS,
     SCOPE_NAME: () => SCOPE_NAME,
@@ -38,8 +39,11 @@ var EmbabelVc = (() => {
     declaredParams: () => declaredParams,
     describeVcEvent: () => describeVcEvent,
     edgeContext: () => edgeContext,
+    entityProperties: () => entityProperties,
     esc: () => esc,
+    isEntity: () => isEntity,
     isFailure: () => isFailure,
+    isInternalProperty: () => isInternalProperty,
     isTerminal: () => isTerminal,
     labelDoc: () => labelDoc,
     labelDoors: () => labelDoors,
@@ -62,6 +66,7 @@ var EmbabelVc = (() => {
     rowsToMarkdown: () => rowsToMarkdown,
     scopeLabel: () => scopeLabel,
     scopeReference: () => scopeReference,
+    shownValue: () => shownValue,
     tokenDoc: () => tokenDoc
   });
 
@@ -407,12 +412,36 @@ ${reach}` : reach;
   }
 
   // src/vc/rows.ts
+  var INTERNAL_PROPERTIES = /* @__PURE__ */ new Set([
+    "userId",
+    "worldId",
+    "workspaceId",
+    "visibleTo",
+    "extractedBy"
+  ]);
+  function isInternalProperty(key) {
+    return key.startsWith("__") || INTERNAL_PROPERTIES.has(key);
+  }
+  function isEntity(value) {
+    return value != null && typeof value === "object" && !Array.isArray(value) && ("__elementId" in value || Array.isArray(value["__labels"]));
+  }
+  function entityProperties(value) {
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)));
+  }
+  function shownValue(value) {
+    if (Array.isArray(value)) return value.map(shownValue);
+    if (isEntity(value)) return entityProperties(value);
+    if (value != null && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, shownValue(inner)]));
+    }
+    return value;
+  }
   function rowColumns(rows) {
     const columns = [];
     for (const row of rows) for (const key of Object.keys(row)) if (!columns.includes(key)) columns.push(key);
     return columns;
   }
-  var cell = (value) => value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  var cell = (value) => value == null ? "" : typeof value === "object" ? JSON.stringify(shownValue(value)) : String(value);
   function rowsToMarkdown(rows) {
     const columns = rowColumns(rows);
     if (!columns.length) return "";
@@ -436,7 +465,7 @@ ${reach}` : reach;
   var isRecord = (value) => value != null && typeof value === "object" && !Array.isArray(value);
   var isNode = (value) => typeof value["__elementId"] === "string" && Array.isArray(value["__labels"]);
   var isRelationship = (value) => typeof value["__elementId"] === "string" && typeof value["__startElementId"] === "string" && typeof value["__endElementId"] === "string";
-  var ownProperties = (value) => Object.fromEntries(Object.entries(value).filter(([key]) => !key.startsWith("__")));
+  var ownProperties = (value) => entityProperties(value);
   function caption(labels, properties) {
     for (const key of CAPTION_KEYS) {
       const value = properties[key];

@@ -506,6 +506,10 @@ li.CodeMirror-hint-active.kit-hint .kit-hint-doc { white-space: pre-wrap; }
   font-family: var(--mono); line-height: 1.45;
 }
 
+/* A node's label above its properties: the table no longer shows `__labels`, and a node still
+   says what kind of thing it is. */
+:where(.kit-feature) .cell-entity-label { display: block; font-family: var(--mono); font-size: 11px; color: var(--signal-ink); }
+
 :where(.kit-feature) .results-table th {
   font-family: var(--mono); font-size: 10.5px; font-weight: 500; position: sticky; top: 0;
   background: var(--field-bg); text-transform: uppercase; letter-spacing: 0.08em; color: var(--mid);

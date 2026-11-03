@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { rowColumns, rowGraph, rowsToCsv, rowsToMarkdown } from '../src/vc/index.ts'
+import { INTERNAL_PROPERTIES, isInternalProperty, rowColumns, rowGraph, rowsToCsv, rowsToMarkdown, shownValue } from '../src/vc/index.ts'
 
 /*
  * WHAT YOU COPY IS WHAT YOU SAW: columns in first-seen order (the table's own
@@ -86,5 +86,42 @@ describe('result rows, drawn', () => {
   it('captions a node with no name-like property by its first label', () => {
     const graph = rowGraph([{ n: { __labels: ['Thing', 'Other'], __elementId: '4:e:9', size: 3 } }])
     assert.equal(graph.nodes[0]!.caption, 'Thing')
+  })
+})
+
+/*
+ * BOOKKEEPING IS NOT DATA: an entity's tenancy stamps, its extractor and its `__` keys are hidden
+ * wherever its properties are shown, and everything else is kept. The node below is what a live
+ * appliance answered for `ai.fromText`.
+ */
+describe('an entity\'s properties, as shown', () => {
+  const extracted = {
+    userId: 'demo_assistant', worldId: 'demo_assistant', workspaceId: 'w', visibleTo: ['demo'],
+    sourceSpan: 'Ada Lovelace', extractedBy: 'vc_extraction:ByRoleModelSelectionCriteria(role=vc_extraction)',
+    name: 'Ada Lovelace', __type: 'Pioneer', __labels: ['Pioneer'], __elementId: '4:e:1',
+  }
+
+  it('names the hidden fields in one list, and treats any __ key as bookkeeping', () => {
+    assert.deepEqual([...INTERNAL_PROPERTIES].sort(), ['extractedBy', 'userId', 'visibleTo', 'workspaceId', 'worldId'])
+    assert.equal(isInternalProperty('__anything'), true)
+    assert.equal(isInternalProperty('name'), false)
+    assert.equal(isInternalProperty('sourceSpan'), false)
+  })
+
+  it('the graph panel shows the node\'s own properties and its label', () => {
+    const node = rowGraph([{ p: extracted }]).nodes[0]!
+    assert.deepEqual(node.properties, { sourceSpan: 'Ada Lovelace', name: 'Ada Lovelace' })
+    assert.deepEqual(node.labels, ['Pioneer'])
+  })
+
+  it('a table cell and what Copy writes hide the same fields, inside lists and paths too', () => {
+    assert.deepEqual(shownValue({ p: [extracted] }), { p: [{ sourceSpan: 'Ada Lovelace', name: 'Ada Lovelace' }] })
+    assert.doesNotMatch(rowsToCsv([{ p: extracted }]), /demo_assistant|vc_extraction|__elementId/)
+    assert.match(rowsToMarkdown([{ p: extracted }]), /"sourceSpan":"Ada Lovelace"/)
+  })
+
+  it('a column somebody projected by name is their question, and is shown', () => {
+    assert.deepEqual(shownValue({ userId: 'u1', name: 'x' }), { userId: 'u1', name: 'x' })
+    assert.match(rowsToCsv([{ owner: 'demo_assistant' }]), /demo_assistant/)
   })
 })

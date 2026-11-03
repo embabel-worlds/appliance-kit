@@ -5,7 +5,7 @@ export type { ComposeSpec, AiSteering } from './compose.ts';
 export { aliasMap, propertiesOf, propertyDetails, labelNames, anchorLabels, relationshipTypes, relationshipTypesFor, connectedLabels, edgeContext, nodeContext, propertyMapContext, USER_ANCHOR, labelDoors, anchoredPattern, labelDoc, propertyDoc, propertyDescription, relationshipDoc, tokenDoc, } from './schema.ts';
 export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, EdgeDirection, LabelDoor, TokenDoc } from './schema.ts';
 export { declaredParams, RESERVED_PARAMS } from './params.ts';
-export { rowColumns, rowsToMarkdown, rowsToCsv, rowGraph } from './rows.ts';
+export { rowColumns, rowsToMarkdown, rowsToCsv, rowGraph, INTERNAL_PROPERTIES, isInternalProperty, isEntity, entityProperties, shownValue, } from './rows.ts';
 export type { RowGraph, RowGraphNode, RowGraphEdge } from './rows.ts';
 export { describeVcEvent, isTerminal, isFailure } from './events.ts';
 export type { VcEvent, VcEventBase, VcNodesMaterialized, VcProducerError, VcProducerFetch, VcProducerNote, VcProducerProgress, VcQueryCompleted, VcQueryRejected, VcRetrievalStep, VcStageStarted, VcQueryStarted, } from './events.ts';

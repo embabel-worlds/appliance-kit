@@ -220,7 +220,7 @@ describe('the public browser feature entry point', () => {
         execute: async (cypher, options) => {
           calls.execute.push([cypher, options])
           return ok({ rowCount: 1, rows: [{
-            p: { name: 'Ada', __labels: ['Pioneer'], __elementId: '4:e:1' },
+            p: { name: 'Ada', sourceSpan: 'Ada', userId: 'u1', worldId: 'u1', extractedBy: 'vc_extraction', __labels: ['Pioneer'], __elementId: '4:e:1' },
             w: { __type: 'WORKED_ON', __elementId: '5:e:3', __startElementId: '4:e:1', __endElementId: '4:e:2' },
             m: { name: 'Engine', __labels: ['Machine'], __elementId: '4:e:2' },
           }] })
@@ -261,6 +261,15 @@ describe('the public browser feature entry point', () => {
     assert.equal(svg.querySelectorAll('.resultgraph-node').length, 2)
     assert.equal(svg.querySelectorAll('.resultgraph-edge').length, 1)
     assert.match(svg.querySelector('.resultgraph-edge').textContent, /WORKED_ON/)
+    await act(async () => svg.querySelector('.resultgraph-node').dispatchEvent(new MouseEvent('click', { bubbles: true })))
+    const detail = rendered.container.querySelector('.resultgraph-detail')
+    assert.equal(detail.querySelector('strong').textContent, ':Pioneer', 'the label shows as before')
+    assert.deepEqual([...detail.querySelectorAll('.resultgraph-prop')].map((k) => k.textContent), ['name', 'sourceSpan'],
+      'the panel shows the node\'s data, not its tenancy or extractor')
+    await act(async () => [...rendered.container.querySelectorAll('.viewtab')].find((t) => t.textContent === 'Table').click())
+    const cellText = rendered.container.querySelector('.results-table td').textContent
+    assert.match(cellText, /^:Pioneer/)
+    assert.doesNotMatch(cellText, /userId|worldId|extractedBy|__elementId/, 'the table hides the same fields')
   })
 
   it('records a dismissal with the appliance, and Examples brings them back', async () => {
