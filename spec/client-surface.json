@@ -371,7 +371,7 @@
       "post" : {
         "operationId" : "dryRun",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -409,7 +409,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -419,7 +419,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -440,7 +440,7 @@
       "post" : {
         "operationId" : "apply",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -475,7 +475,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -485,7 +485,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -506,7 +506,7 @@
       "post" : {
         "operationId" : "undo",
         "parameters" : [ {
-          "description" : "Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user",
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
           "in" : "query",
           "name" : "username",
           "required" : false,
@@ -541,7 +541,7 @@
                 }
               }
             },
-            "description" : "No authenticated principal and no resolvable username"
+            "description" : "No authenticated principal"
           },
           "403" : {
             "content" : {
@@ -551,7 +551,7 @@
                 }
               }
             },
-            "description" : "Annotation writes disabled by feature flag"
+            "description" : "Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal"
           },
           "409" : {
             "content" : {
@@ -1102,7 +1102,7 @@
               }
             }
           },
-          "description" : "The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400",
+          "description" : "The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples",
           "required" : true
         },
         "responses" : {
@@ -1453,7 +1453,7 @@
               }
             }
           },
-          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, or `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`.",
+          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine, or `{\"limit\": {\"type\": \"value\", \"value\": \"10\"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`.",
           "required" : true
         },
         "responses" : {
@@ -1523,7 +1523,7 @@
               }
             }
           },
-          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, or `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`.",
+          "description" : "Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{\"notes\": {\"type\": \"text\", \"value\": \"...\"}}` for text a view reads with ai.fromText, `{\"account\": {\"type\": \"CustomerAccount\", \"value\": \"acme.com\"}}` for one entity of a spine, or `{\"limit\": {\"type\": \"value\", \"value\": \"10\"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`.",
           "required" : true
         },
         "responses" : {
@@ -2301,7 +2301,7 @@
               }
             }
           },
-          "description" : "The view to store in the acting user's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400",
+          "description" : "The view to store in the acting user's world: `name`, `cypher` (or `goal`, for a goal view) and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400",
           "required" : true
         },
         "responses" : {
@@ -2631,6 +2631,72 @@
           }
         },
         "summary" : "Force-recompute a materialised view's cache now, ignoring its TTL",
+        "tags" : [ "Virtual Cypher" ]
+      }
+    },
+    "/api/v1/admin/kg/views/{name}/replan" : {
+      "post" : {
+        "operationId" : "replanView",
+        "parameters" : [ {
+          "description" : "Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403.",
+          "in" : "query",
+          "name" : "username",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The goal view's name, as `GET /views` lists it.",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewResponse"
+                }
+              }
+            },
+            "description" : "The goal was planned and its compiled statement pinned; `savedCypher` is that statement"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgSaveViewRejection"
+                }
+              }
+            },
+            "description" : "Not a goal view, an unknown view, or a goal that no longer plans — unreachable, a tie, or refused"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "No authenticated principal"
+          },
+          "403" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/KgErrorResponse"
+                }
+              }
+            },
+            "description" : "`username` names someone other than the signed-in principal"
+          }
+        },
+        "summary" : "Replan a goal view over the world's current steps and pin the compiled statement",
         "tags" : [ "Virtual Cypher" ]
       }
     },
@@ -4334,6 +4400,63 @@
         "tags" : [ "Hints" ]
       }
     },
+    "/api/v1/kg/studio/examples" : {
+      "get" : {
+        "description" : "The examples this world ships — default-world's, the world's own and each installed realm's — and whether to show them over an empty editor. `show` is false once the person has dismissed them, saved a view of their own, or written `threshold` distinct queries of their own in Query Studio; `hiddenBecause` says which. Every example is returned either way, for a client that shows them on request.",
+        "operationId" : "queryExamples",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueryExamplesResponse"
+                }
+              }
+            },
+            "description" : "The examples and the verdict on offering them"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "Query Studio's starter queries, and whether to offer them",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/examples/dismissed" : {
+      "put" : {
+        "description" : "Recorded once for the person, in their world, so another browser or another day does not bring the examples back. `dismissed: false` forgets the dismissal, and a reached query count with it; a saved view still hides them. Answers the examples and the new verdict.",
+        "operationId" : "dismissQueryExamples",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QueryExamplesDismissRequest"
+              }
+            }
+          },
+          "description" : "`dismissed: true` to stop offering the examples unasked; `false` to offer them again",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueryExamplesResponse"
+                }
+              }
+            },
+            "description" : "The examples and the verdict after the change"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "Stop offering the examples to this person, or offer them again",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
     "/api/v1/kg/studio/execute" : {
       "post" : {
         "operationId" : "studioExecute",
@@ -4345,7 +4468,7 @@
               }
             }
           },
-          "description" : "The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`",
+          "description" : "The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples",
           "required" : true
         },
         "responses" : {
@@ -8095,6 +8218,11 @@
           },
           "description" : "Declared parameters for the cypher, as a view declares them. Each `$name` is substituted from `args` merged over its default, exactly as when a saved view runs.",
           "type" : "object"
+        },
+        "surface" : {
+          "description" : "Where the statement was written, recorded in the query log: `studio` for a query written in Query Studio's editor. Omitted, it is logged as `query`. Any other value is a 400.",
+          "enum" : [ "studio" ],
+          "type" : "string"
         }
       },
       "required" : [ "cypher" ],
@@ -8287,14 +8415,14 @@
       "type" : "object"
     },
     "KgPlanInput" : {
-      "description" : "One input to a plan: text a view reads with `ai.fromText`, or one entity of a spine label by its key.",
+      "description" : "One input to a plan: text a view reads with `ai.fromText`, one entity of a spine label by its key, or a plain value for the parameter it is named after.",
       "properties" : {
         "type" : {
-          "description" : "`text`, or the name of a spine label of this world, e.g. `CustomerAccount`.",
+          "description" : "`text`, the name of a spine label of this world, e.g. `CustomerAccount`, or `value`.",
           "type" : "string"
         },
         "value" : {
-          "description" : "The text itself, or the entity's key.",
+          "description" : "The text itself, the entity's key, or the value, coerced to the type the parameter declares.",
           "type" : "string"
         }
       },
@@ -8447,7 +8575,7 @@
           "type" : "integer"
         },
         "rows" : {
-          "description" : "One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data.",
+          "description" : "One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data. From a synchronous `/execute`, a node is its properties plus `__type`, `__labels` and `__elementId`; a relationship its properties plus `__type` (the relationship type), `__elementId`, `__startElementId` and `__endElementId` (the `__elementId`s of the nodes it joins); a path its nodes and relationships in traversal order. Elsewhere a node carries `__type` and `__labels` and a relationship its properties alone.",
           "items" : {
             "additionalProperties" : { },
             "type" : "object"
@@ -8670,11 +8798,15 @@
       "description" : "A user-authored view to save into the acting user's world: the body of `POST /views`.",
       "properties" : {
         "cypher" : {
-          "description" : "The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted.",
+          "description" : "The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted. Omitted for a goal view, which declares `goal` instead.",
           "type" : "string"
         },
         "description" : {
           "description" : "One line on what the view answers, shown to the query generator beside the schema. Defaults to empty.",
+          "type" : "string"
+        },
+        "goal" : {
+          "description" : "A GOAL view, in place of `cypher`: the final read query, written over the facts it needs as if they existed. The server plans it over the world's views and rules, compiles it and pins the result, which is what the view runs (`savedCypher`); `params` are the plan's inputs, typed by how the steps read them. A goal that does not plan — unreachable, a tie between two plans, refused — is a 400 naming why.",
           "type" : "string"
         },
         "materialized" : {
@@ -8701,7 +8833,7 @@
           "type" : "string"
         }
       },
-      "required" : [ "cypher", "name" ],
+      "required" : [ "name" ],
       "type" : "object"
     },
     "KgSaveViewResponse" : {
@@ -8731,7 +8863,7 @@
       "description" : "A node label and its sampled property shape.",
       "properties" : {
         "anchor" : {
-          "description" : "True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. Defaults true so an older client reading a newer appliance loses nothing.",
+          "description" : "True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. How such a label IS reached is in `relationships`: an edge to it from a label whose `anchor` is true — `(me:AssistantUser)-[:HAS_CONFIG]->(r:ConfigRun)` for the config catalog, where `AssistantUser` is the caller, bound by their sign-in. Defaults true so an older client reading a newer appliance loses nothing.",
           "type" : "boolean"
         },
         "description" : {
@@ -8790,7 +8922,7 @@
           "type" : "boolean"
         },
         "type" : {
-          "description" : "Inferred type tag: string, long, datetime, list<string>, any, …",
+          "description" : "Type tag: string, long, double, boolean, datetime, list<string>, any, … — inferred from sampled values, or, where no value has been sampled, the type the property's declaration states. `any` means neither says.",
           "type" : "string"
         }
       },
@@ -8804,6 +8936,10 @@
           "description" : "Approximate occurrence count, for ranking.",
           "format" : "int64",
           "type" : "integer"
+        },
+        "description" : {
+          "description" : "What this edge is for, verbatim from the declaration of the join that brings it — for an editor to show on hover. Null where the declaration documents nothing, and for an edge that is only observed.",
+          "type" : "string"
         },
         "from" : {
           "description" : "The label of the node the relationship starts from.",
@@ -9166,7 +9302,7 @@
       "type" : "object"
     },
     "PlanAnswer" : {
-      "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing).",
+      "description" : "What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail, nearest), `tie` (plans, cost, rivals, toBreak), `refused` (reasons) or `needsInput` (needsInput, missing). None is an error: each is the answer. A run adds rows and warnings to a `planned` answer, or is `failed` (the plan's fields, warnings and error, no rows) when the engine answered with an error. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `declined` (reason, missing).",
       "properties" : {
         "compiled" : {
           "description" : "`planned`: the one Cypher statement the steps and the goal compile to. What a run executes.",
@@ -9182,18 +9318,18 @@
           "type" : "string"
         },
         "diagnostics" : {
-          "description" : "Steps left out of planning, and why. Absent when none were.",
+          "description" : "Steps left out of planning, and why; asked as a `question`, also the facts the goal writer was not offered because nothing describes them. Absent when none were.",
           "items" : {
             "type" : "string"
           },
           "type" : "array"
         },
         "error" : {
-          "description" : "A run of a `planned` answer only, and only when the run failed: the engine's error.",
+          "description" : "`failed` only: the engine's error, which is why the run has no rows.",
           "type" : "string"
         },
         "goal" : {
-          "description" : "English mode only: the goal written from the question — absent from `refused`, and from `declined` when none was written.",
+          "description" : "English mode only: the goal written from the question — absent from `refused`, and from `declined` or `needsInput` when none was written.",
           "type" : "string"
         },
         "inputs" : {
@@ -9204,23 +9340,33 @@
           "type" : "array"
         },
         "missing" : {
-          "description" : "`unreachable`, or `declined` when that is the reason: the facts no step on offer produces.",
+          "description" : "`unreachable`, or `declined` when that is the reason: the facts no step on offer produces, or the names nothing in the world has (`node:Label`, `relationship:TYPE`, `property:Label.name`). `needsInput` on a goal: every input fact lacking.",
           "items" : {
             "type" : "string"
           },
           "type" : "array"
         },
+        "nearest" : {
+          "additionalProperties" : {
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "description" : "`unreachable`: for each missing fact, up to five facts the world's views and rules CAN make, nearest first — same labels, then words of its name or description, then spelling. What the goal could read instead, from the vocabulary `plan` with no goal and no question lists in full. Absent when none are near.",
+          "type" : "object"
+        },
         "needsInput" : {
           "$ref" : "#/components/schemas/PlanAnswerNeed",
-          "description" : "`needsInput`: the input the goal needs and nobody supplied, and why."
+          "description" : "`needsInput`: the input the goal needs and nobody supplied, the parameter it binds, who reads it, and why."
         },
         "outcome" : {
           "description" : "Which answer this is.",
-          "enum" : [ "planned", "unreachable", "tie", "refused", "needsInput", "declined" ],
+          "enum" : [ "planned", "unreachable", "tie", "refused", "needsInput", "declined", "failed" ],
           "type" : "string"
         },
         "plans" : {
-          "description" : "`tie`: the rival plans, each the names of its steps in order. Make the goal more specific to choose.",
+          "description" : "`tie`: the rival plans, each the names of its steps in order. `rivals` says how they differ, `toBreak` how to choose.",
           "items" : {
             "items" : {
               "type" : "string"
@@ -9249,14 +9395,21 @@
           "type" : "string"
         },
         "reasons" : {
-          "description" : "`refused`: what to change for the request to plan — an untypable goal, an input that binds ambiguously, a plan that does not compile.",
+          "description" : "`refused`: what to change for the request to plan — an untypable goal, a goal that writes, an input that binds ambiguously, a plan that does not compile.",
           "items" : {
             "type" : "string"
           },
           "type" : "array"
         },
+        "rivals" : {
+          "description" : "`tie`: each rival plan, in the order of `plans`, with its steps and what only it makes, needs and consults.",
+          "items" : {
+            "$ref" : "#/components/schemas/PlanAnswerRival"
+          },
+          "type" : "array"
+        },
         "rows" : {
-          "description" : "A run of a `planned` answer only: the rows the compiled statement returned, unchanged.",
+          "description" : "A run of a `planned` answer only: the rows the compiled statement returned, unchanged. Absent from `failed`.",
           "items" : {
             "additionalProperties" : { },
             "type" : "object"
@@ -9270,8 +9423,15 @@
           },
           "type" : "array"
         },
+        "toBreak" : {
+          "description" : "`tie`: what would choose one plan — a fact to read in the goal, an input to leave out — or, when nothing a caller sends can, that the world's steps have to change.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
         "warnings" : {
-          "description" : "A run of a `planned` answer only: the engine's warnings. PROJECTION_* means a projection was declined or incomplete.",
+          "description" : "A run only, `planned` or `failed`: the engine's warnings. PROJECTION_* means a projection was declined or incomplete.",
           "items" : {
             "type" : "string"
           },
@@ -9301,8 +9461,19 @@
       "type" : "object"
     },
     "PlanAnswerNeed" : {
-      "description" : "The input an English question's goal needs and nobody supplied: `text`, or the spine label an identity names, and why.",
+      "description" : "The input a goal needs and nobody supplied: `text`, or the spine label an identity names, the parameter it binds, who reads it, and why.",
       "properties" : {
+        "parameter" : {
+          "description" : "The `$name` the input binds when supplied; null when none is known or more than one could take it.",
+          "type" : "string"
+        },
+        "readBy" : {
+          "description" : "The views — or `the goal` — that read the input; empty when none is known.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
         "type" : {
           "description" : "`text`, or the spine label of the identity needed.",
           "type" : "string"
@@ -9312,7 +9483,7 @@
           "type" : "string"
         }
       },
-      "required" : [ "type", "why" ],
+      "required" : [ "readBy", "type", "why" ],
       "type" : "object"
     },
     "PlanAnswerQuote" : {
@@ -9323,8 +9494,13 @@
           "format" : "int32",
           "type" : "integer"
         },
+        "goalModelCalls" : {
+          "description" : "Asked as a `question`: the model calls made writing the goal — usually one, more when a goal was refused and written again. Zero for a goal the caller wrote, and for a goal reused from an explain of the same question and inputs moments before.",
+          "format" : "int32",
+          "type" : "integer"
+        },
         "modelCalls" : {
-          "description" : "The fewest model calls the run will make. Null when the statement could not be quoted.",
+          "description" : "The fewest model calls the run will make, `ai.fromText` extractions included, plus `goalModelCalls`. Null when the statement could not be quoted.",
           "format" : "int32",
           "type" : "integer"
         },
@@ -9333,7 +9509,7 @@
           "type" : "string"
         },
         "unpriced" : {
-          "description" : "What this quote does not price, by step — `ai.fromText` calls, which the cost gate prices when the plan runs.",
+          "description" : "What this quote does not price, by step — a text step's `ai.fromText` calls when the statement could not be quoted; the cost gate prices them when the plan runs.",
           "items" : {
             "type" : "string"
           },
@@ -9344,7 +9520,49 @@
           "type" : "string"
         }
       },
-      "required" : [ "plan", "unpriced" ],
+      "required" : [ "goalModelCalls", "plan", "unpriced" ],
+      "type" : "object"
+    },
+    "PlanAnswerRival" : {
+      "description" : "One rival plan of a tie: its steps, and what it has that the other plan does not.",
+      "properties" : {
+        "addsOnly" : {
+          "description" : "Facts only this plan makes. A goal that reads one is reached only through this plan.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "consultsOnly" : {
+          "description" : "What only this plan consults beyond the stored graph: `api:<label or type>` or `model:<call or label>`.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "own" : {
+          "description" : "The plan's steps the other plan does not use: what makes it a rival.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "requiresOnly" : {
+          "description" : "Facts and inputs only this plan needs. Leaving such an input out leaves only the other plan.",
+          "items" : {
+            "type" : "string"
+          },
+          "type" : "array"
+        },
+        "steps" : {
+          "description" : "The plan's steps, in the order they would run, each as a planned step is shown.",
+          "items" : {
+            "$ref" : "#/components/schemas/PlanAnswerStep"
+          },
+          "type" : "array"
+        }
+      },
+      "required" : [ "addsOnly", "consultsOnly", "own", "requiresOnly", "steps" ],
       "type" : "object"
     },
     "PlanAnswerStep" : {
@@ -9414,6 +9632,82 @@
         }
       },
       "required" : [ "fallbacks", "priority" ],
+      "type" : "object"
+    },
+    "QueryExampleView" : {
+      "description" : "One starter query",
+      "properties" : {
+        "cypher" : {
+          "description" : "The query, to put in the editor and run exactly as written",
+          "type" : "string"
+        },
+        "description" : {
+          "description" : "One line: what running it demonstrates",
+          "type" : "string"
+        },
+        "id" : {
+          "description" : "Unique within this world: the file it came from, then the id the file gave it",
+          "type" : "string"
+        },
+        "kind" : {
+          "description" : "`ai` when the query asks a model to read, judge or label as it runs, so running it costs model calls; `plain` for Cypher over what the world holds",
+          "enum" : [ "ai", "plain" ],
+          "type" : "string"
+        },
+        "source" : {
+          "description" : "The realm that shipped it; absent for default-world's and the world's own",
+          "type" : "string"
+        },
+        "title" : {
+          "description" : "The card's heading",
+          "type" : "string"
+        }
+      },
+      "required" : [ "cypher", "description", "id", "kind", "title" ],
+      "type" : "object"
+    },
+    "QueryExamplesDismissRequest" : {
+      "description" : "Whether to stop offering the examples",
+      "properties" : {
+        "dismissed" : {
+          "description" : "true to stop offering the examples unasked; false to offer them again",
+          "type" : "boolean"
+        }
+      },
+      "required" : [ "dismissed" ],
+      "type" : "object"
+    },
+    "QueryExamplesResponse" : {
+      "description" : "Query Studio's starter queries, and whether to offer them to the signed-in person",
+      "properties" : {
+        "examples" : {
+          "description" : "Every example this world offers, in the order its files declare them: default-world's, the world's own, then each installed realm's",
+          "items" : {
+            "$ref" : "#/components/schemas/QueryExampleView"
+          },
+          "type" : "array"
+        },
+        "hiddenBecause" : {
+          "description" : "Why they are not offered: DISMISSED, SAVED_VIEW (the person has saved a view of their own) or EXPERIENCED (they have written `threshold` queries of their own in Query Studio); absent while they are offered",
+          "enum" : [ "DISMISSED", "SAVED_VIEW", "EXPERIENCED" ],
+          "type" : "string"
+        },
+        "show" : {
+          "description" : "Whether to show the examples over an empty editor without being asked",
+          "type" : "boolean"
+        },
+        "studioQueries" : {
+          "description" : "Distinct queries of their own the person has written in Query Studio, as far as the query log still holds; 0 when the verdict did not need counting",
+          "format" : "int32",
+          "type" : "integer"
+        },
+        "threshold" : {
+          "description" : "How many distinct queries of their own retire the examples",
+          "format" : "int32",
+          "type" : "integer"
+        }
+      },
+      "required" : [ "examples", "show", "studioQueries", "threshold" ],
       "type" : "object"
     },
     "Receipt" : {
@@ -9993,6 +10287,14 @@
           "format" : "int64",
           "type" : "integer"
         },
+        "goal" : {
+          "description" : "A goal view's goal: the final query its plan answers. `cypher` is then the statement the goal compiled to, which is what runs. Null for a view declared by its Cypher; always serialized, so its presence says this server supports goal views.",
+          "type" : "string"
+        },
+        "goalStatus" : {
+          "description" : "Whether a goal view's pinned plan stands: `pinned`, `not compiled`, or `stale: <what moved>`. A view that is not pinned refuses to run until it is replanned. Absent for a view declared by its Cypher.",
+          "type" : "string"
+        },
         "materialized" : {
           "description" : "True when reads are served from a cache that is recomputed once `ttl` lapses.",
           "type" : "boolean"
@@ -10021,7 +10323,7 @@
           "type" : "string"
         }
       },
-      "required" : [ "cypher", "description", "materialized", "name", "params" ],
+      "required" : [ "cypher", "description", "goal", "materialized", "name", "params" ],
       "type" : "object"
     },
     "ViewParamSpec" : {

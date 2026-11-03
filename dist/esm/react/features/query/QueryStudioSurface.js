@@ -22,17 +22,19 @@ import { jsx as _jsx, jsxs as _jsxs, Fragment as _Fragment } from "react/jsx-run
  * there can never disagree; and the per-user scope is applied server-side, so an edited query can
  * be wrong but not unsafe.
  */
-import { ArrowClockwise, Question } from '@phosphor-icons/react';
-import { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react';
+import { ArrowClockwise, Lightbulb, Question } from '@phosphor-icons/react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { isBackgroundHandle, } from "../../../client/kg.js";
 import { isOk } from "../../../client/outcome.js";
-import { completeQuery, tokenDoc, anchorLabels, declaredParams, rowColumns, rowsToCsv, rowsToMarkdown, scopeReference, } from "../../../vc/index.js";
+import { completeQuery, tokenDoc, anchorLabels, declaredParams, rowColumns, rowGraph, rowsToCsv, rowsToMarkdown, scopeReference, } from "../../../vc/index.js";
 import * as Vc from "../../../vc/index.js";
 import { CYPHER_KEYWORDS, createCypherHint, createDefinitionTooltip, definitionTitle, formatDuration } from "../../../studio-kit/index.js";
 import { CodeMirror, useEditor } from "../studio/editor.js";
 import { useRunProgress } from "../studio/progress.js";
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage, isAbsent } from "../studio/chrome.js";
 import { SessionPane } from "./SessionPane.js";
+import { QueryExampleCards } from "./QueryExamples.js";
+import { ResultGraph } from "./ResultGraph.js";
 import { QueryRuntimeProvider, useQueryRuntime } from "./runtime.js";
 /*
  * The hint is registered against the CodeMirror SINGLETON, so it must happen exactly once for the
@@ -125,6 +127,25 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
     const [scopesVersion, setScopesVersion] = useState(0);
     const [fillsVersion, setFillsVersion] = useState(0);
+    /*
+     * THE STARTER QUERIES, and whether to offer them (QueryExamples.tsx). `undefined` until the
+     * appliance has answered, so the starter query below waits for the answer rather than landing
+     * under the cards; `null` when there are none, or this appliance or host cannot say.
+     *
+     * `auto` follows the appliance's verdict and only over an empty editor; `open` is the Examples
+     * button asking for them; `closed` is somebody closing them, for the rest of this visit.
+     */
+    const [examples, setExamples] = useState(undefined);
+    /*
+     * WHETHER RUNS MAY SAY WHERE THEY WERE WRITTEN. `surface: 'studio'` is how the appliance counts
+     * the queries somebody writes here, and an appliance from before it refuses the field with a 400
+     * — every run would fail. The examples endpoint arrived in the same release, so its answer is
+     * the evidence; until it has answered, runs go out without the field.
+     */
+    const attributeRuns = useRef(false);
+    const attribution = () => (attributeRuns.current ? { surface: 'studio' } : {});
+    const [examplesMode, setExamplesMode] = useState('auto');
+    const [editorEmpty, setEditorEmpty] = useState(true);
     /* What the engine is doing while we wait. The appliance has published this trace all along; not
      * reading it is why a slow run looked identical to a wedged one. */
     const progress = useRunProgress(services.subscribeProgress);
@@ -292,6 +313,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     }, [validateNow]);
     editRef.current = () => {
         reportCypher.current?.(handle.getText());
+        setEditorEmpty(!handle.getText().trim());
         scheduleValidation();
     };
     // ── running ─────────────────────────────────────────────────────────────────────────────────
@@ -321,7 +343,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         setResult(null);
         setRan(false);
         setRunStatus({ tone: null, text: 'Running — relevance joins fetch live, give it a moment…' });
-        const outcome = await services.kg.execute(cypher);
+        /* Attributed to the studio, so the appliance can count the queries somebody has written here —
+         * the count that retires the starter examples once they no longer need them. */
+        const outcome = await services.kg.execute(cypher, attribution());
         if (!active.current || generation !== runGeneration.current)
             return;
         setRunning(false);
@@ -392,8 +416,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         setRows(rows);
         setResult(result);
         setRan(true);
-        // The rows are the answer; the trace was the wait. Go back to the answer.
-        setView('table');
+        // The rows are the answer; the trace was the wait. Go back to the answer — drawn, when the rows
+        // join nodes by relationships, because a table of JSON cells hides exactly that.
+        setView(rowGraph(rows).edges.length > 0 ? 'graph' : 'table');
         setHistory((entries) => {
             const next = [{ cypher, rows: rowCount, at: new Date().toISOString() },
                 ...entries.filter((e) => e.cypher !== cypher)].slice(0, HISTORY_MAX);
@@ -461,6 +486,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     }, [progress.runId]);
     const land = useCallback((cypher) => {
         validatedCypher.current = null;
+        setEditorEmpty(!cypher.trim());
         handle.setText(cypher);
         reportCypher.current?.(cypher);
         scheduleValidation();
@@ -490,12 +516,51 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
      * created asynchronously, so this waits for it rather than firing into nothing. */
     const initialized = useRef(false);
     useEffect(() => {
-        if (!handle.editor || initialized.current)
+        if (!handle.editor || initialized.current || examples === undefined)
             return;
         initialized.current = true;
+        // The cards are the starter when the appliance offers them; a query under them would hide them.
+        if (examples?.show)
+            return;
         if (initialCypher && handedOver == null && !handle.getText().trim())
             land(initialCypher);
-    }, [handedOver, handle, initialCypher, land]);
+    }, [examples, handedOver, handle, initialCypher, land]);
+    useEffect(() => {
+        if (!services.kg.examples)
+            return setExamples(null);
+        let live = true;
+        void services.kg.examples().then((outcome) => {
+            if (!live)
+                return;
+            attributeRuns.current = isOk(outcome);
+            // An appliance that predates examples, or a host that cannot reach them, offers none.
+            setExamples(isOk(outcome) && outcome.value.examples.length > 0 ? outcome.value : null);
+        });
+        return () => { live = false; };
+    }, [services]);
+    /* Click to run: the query and its answer arrive together. Validated first, as Run requires, so a
+     * card can never run what the Run button would have refused. */
+    const runExample = useCallback(async (example) => {
+        setExamplesMode('auto');
+        land(example.cypher);
+        if (validateTimer.current)
+            clearTimeout(validateTimer.current);
+        await validateNow();
+        if (!active.current)
+            return;
+        if (validatedCypher.current === completeQuery(handle.getText()).cypher)
+            await run();
+        else
+            setShowViolations(true);
+    }, [handle, land, run, validateNow]);
+    const dismissExamples = useCallback(async () => {
+        setExamplesMode('closed');
+        const outcome = await services.kg.setExamplesDismissed?.(true);
+        if (outcome && isOk(outcome))
+            setExamples(outcome.value.examples.length > 0 ? outcome.value : null);
+    }, [services]);
+    const examplesShown = !!examples
+        && (examplesMode === 'open' || (examplesMode === 'auto' && examples.show && editorEmpty));
     const landed = useRef(null);
     useEffect(() => {
         if (!handedOver || !handle.editor)
@@ -568,15 +633,19 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         };
     }, [pane]);
     const columns = rowColumns(rows);
+    const graph = useMemo(() => rowGraph(rows), [rows]);
+    const views = graph.nodes.length > 0 ? ['table', 'graph', 'raw', 'stats', 'trace'] : ['table', 'raw', 'stats', 'trace'];
     return (_jsxs("div", { className: "kit-feature kit-feature-query studio", children: [_jsxs("div", { className: "studio-side", children: [_jsx(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), _jsx(ScopesPanel, { version: scopesVersion, onInsert: land }), _jsx(FillsPanel, { version: fillsVersion })] }), _jsxs("div", { className: "studio-tabbed", children: [_jsx("nav", { className: "studiotabs", "aria-label": "Query Studio sections", ref: paneNavRef, children: ['query', 'results', 'session'].map((p) => (_jsx("button", { "data-studio-pane": p, "aria-current": pane === p ? 'page' : undefined, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => showPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), _jsxs("div", { className: "studio-sections", ref: sectionsRef, children: [_jsxs("section", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, "data-studio-pane": "query", ref: (node) => { sectionRefs.current.query = node ?? undefined; }, children: [_jsx(Ask, { onLand: land, current: () => handle.getText() }), _jsxs("details", { className: "queryhistory", ref: historyRef, children: [_jsxs("summary", { className: "queryhistory-title", children: ["History ", _jsx("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? _jsx("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : (_jsx("div", { className: "historylist", children: history.map((entry) => {
                                                     const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                                     return (_jsxs("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [_jsx("span", { className: "history-cypher", children: firstLine }), _jsx("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                                 }) }))] }), _jsxs(StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
                                             ? (_jsxs("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
-                                            : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [_jsxs("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [_jsxs("div", { className: "editor-toolbar", children: [_jsx(CopyButton, { label: "Copy", text: handle.getText() }), _jsx("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), _jsx("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                            || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "\u2318" }), " + ", _jsx("kbd", { children: "Enter" }), " on Mac or ", _jsx("kbd", { children: "Ctrl" }), " + ", _jsx("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', _jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && _jsx(Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), _jsx("section", { className: "studio-pane", "data-studio-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                            : _jsx(Status, { tone: validity.tone, children: validity.text }), children: [examples && examplesShown && (_jsx(QueryExampleCards, { examples: examples.examples, requested: examplesMode === 'open', onRun: (example) => void runExample(example), onClose: () => setExamplesMode('closed'), onDismiss: services.kg.setExamplesDismissed && examples.show ? () => void dismissExamples() : undefined })), _jsxs("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [_jsxs("div", { className: "editor-toolbar", children: [_jsx(CopyButton, { label: "Copy", text: handle.getText() }), _jsx("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), _jsx("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && (_jsx("div", { className: "verdict", children: validity.violations.map((v, i) => _jsx("div", { className: "violation", children: v }, i)) })), _jsxs("div", { className: "row studio-actions", children: [_jsx("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
+                                                            || validatedCypher.current !== completeQuery(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && (_jsx("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), _jsx(SaveView, { current: () => handle.getText() }), _jsx(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), _jsx(StartFill, { current: () => completeQuery(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), examples && (_jsxs("button", { className: "btn ghost tiny query-examples-toggle", "aria-pressed": examplesShown, title: "Example queries, each showing one thing the query language can do", onClick: () => setExamplesMode(examplesShown ? 'closed' : 'open'), children: [_jsx(Lightbulb, { size: 14, weight: "bold", "aria-hidden": "true" }), "Examples"] })), _jsxs("details", { className: "editor-help", children: [_jsxs("summary", { className: "btn ghost tiny", children: [_jsx(Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), _jsxs("p", { className: "editor-help-copy", children: [_jsx("kbd", { children: "\u2318" }), " + ", _jsx("kbd", { children: "Enter" }), " on Mac or ", _jsx("kbd", { children: "Ctrl" }), " + ", _jsx("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', _jsx("kbd", { children: "Control" }), " + ", _jsx("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && _jsx(Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), _jsx("section", { className: "studio-pane", "data-studio-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: _jsxs(StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && (_jsx("span", { className: "viewtabs", role: "tablist", children: views.map((v) => (_jsx("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
                                             rows.length === 0 ? _jsx("p", { className: "hint", children: "No rows." }) :
-                                                _jsx(RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                                _jsx(RowTable, { rows: rows, columns: columns })), view === 'graph' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
+                                            graph.nodes.length === 0 ? _jsx("p", { className: "hint", children: "These rows hold no nodes to draw. The table has them." }) :
+                                                _jsx(ResultGraph, { graph: graph })), view === 'raw' && (!ran ? _jsx("p", { className: "hint", children: "Nothing run yet." }) :
                                             _jsx("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && _jsx(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && (_jsxs("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => (_jsx("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && (_jsx("p", { className: "hint", children: progress.live
                                                         ? 'Waiting for the engine to report…'
                                                         : 'No trace is available for queries without virtual labels.' }))] })), _jsxs("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && (_jsxs(_Fragment, { children: [_jsx(CopyButton, { label: "Copy as Markdown", text: rowsToMarkdown(rows) }), _jsx(CopyButton, { label: "Copy as CSV", text: rowsToCsv(rows) })] })), _jsx(Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), _jsx("section", { className: "studio-pane studio-pane-session", "data-studio-pane": "session", ref: (node) => { sectionRefs.current.session = node ?? undefined; }, children: _jsx(SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); showPane('query'); } }) })] })] })] }));

@@ -1057,6 +1057,100 @@ li.CodeMirror-hint-active.kit-hint .kit-hint-doc { white-space: pre-wrap; }
 
 :where(.kit-feature) .stats .callline { font-family: var(--mono); font-size: 11px; color: var(--mid); line-height: 1.5; }
 
+/* ── starter queries ─────────────────────────────────────────────────────────
+ * Cards over the empty editor, each one capability of the query language. A grid of short
+ * buttons, not a list of queries: the card says what it shows, and the query is what clicking
+ * puts in the editor. AI cards carry the signal colour because they cost model calls.
+ */
+
+:where(.kit-feature) .query-examples { margin: 0 0 10px; display: flex; flex-direction: column; gap: 8px; }
+
+:where(.kit-feature) .query-examples-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+:where(.kit-feature) .query-examples-title { font-size: 12px; color: var(--mid); }
+
+:where(.kit-feature) .query-examples-grid {
+  display: grid; gap: 8px; grid-template-columns: repeat(auto-fill, minmax(min(100%, 220px), 1fr));
+}
+
+:where(.kit-feature) .query-example {
+  display: flex; flex-direction: column; gap: 4px; min-width: 0; text-align: left; cursor: pointer;
+  padding: 10px 12px; border: 1px solid var(--hairline); border-radius: var(--radius-panel);
+  background: var(--inset-bg); color: var(--ink); font-family: var(--sans);
+  transition: border-color 0.15s, background 0.15s;
+}
+
+:where(.kit-feature) .query-example:hover,
+:where(.kit-feature) .query-example:focus-visible { border-color: var(--signal-edge); background: var(--signal-quiet); }
+
+:where(.kit-feature) .query-example-top { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+
+:where(.kit-feature) .query-example-top strong { font-size: 13px; line-height: 1.3; }
+
+:where(.kit-feature) .query-example-kind { display: inline-flex; align-items: center; gap: 3px; flex: none; }
+
+:where(.kit-feature) .query-example-kind.is-ai { color: var(--signal-ink); border-color: var(--signal-edge); }
+
+:where(.kit-feature) .query-example-line { font-size: 12px; line-height: 1.4; color: var(--mid); }
+
+:where(.kit-feature) .query-example-source { font-size: 11px; color: var(--faint); }
+
+:where(.kit-feature) .query-examples-toggle { margin-left: auto; }
+
+:where(.kit-feature) .query-examples-toggle + .editor-help { margin-left: 0; }
+
+/* ── the graph view ──────────────────────────────────────────────────────────
+ * Nodes coloured by their first label from the theme's own inks, so a theme change recolours the
+ * drawing with everything else. A placeholder — an end the rows named but did not return — is an
+ * empty dashed ring, so it never reads as a node the query found.
+ */
+
+:where(.kit-feature) .resultgraph { display: flex; flex-direction: column; gap: 6px; }
+
+:where(.kit-feature) .resultgraph-canvas {
+  width: 100%; height: min(52vh, 460px); display: block;
+  border: 1px solid var(--hairline); border-radius: var(--radius-panel); background: var(--inset-bg);
+}
+
+:where(.kit-feature) .resultgraph-edge path { fill: none; stroke: var(--mid); stroke-width: 1.4; }
+
+:where(.kit-feature) .resultgraph-arrowhead { fill: var(--mid); }
+
+:where(.kit-feature) .resultgraph-edge text,
+:where(.kit-feature) .resultgraph-node text { font-family: var(--mono); font-size: 10px; fill: var(--mid); paint-order: stroke; stroke: var(--paper); stroke-width: 3px; }
+
+:where(.kit-feature) .resultgraph-node text { font-family: var(--sans); font-size: 11px; fill: var(--ink); }
+
+:where(.kit-feature) .resultgraph-node { cursor: pointer; }
+
+:where(.kit-feature) .resultgraph-node circle { stroke-width: 2; stroke: var(--paper); }
+
+:where(.kit-feature) .resultgraph-node.k0 circle { fill: var(--signal); }
+
+:where(.kit-feature) .resultgraph-node.k1 circle { fill: var(--lit); }
+
+:where(.kit-feature) .resultgraph-node.k2 circle { fill: var(--caution); }
+
+:where(.kit-feature) .resultgraph-node.k3 circle { fill: var(--signal-ink); }
+
+:where(.kit-feature) .resultgraph-node.k4 circle { fill: var(--alert); }
+
+:where(.kit-feature) .resultgraph-node.k5 circle { fill: var(--mid); }
+
+:where(.kit-feature) .resultgraph-node.is-placeholder circle { fill: none; stroke: var(--faint); stroke-dasharray: 3 3; }
+
+:where(.kit-feature) .resultgraph-node.is-selected circle { stroke: var(--ink); stroke-width: 3; }
+
+:where(.kit-feature) .resultgraph-detail { font-size: 12px; }
+
+:where(.kit-feature) .resultgraph-props {
+  display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 2px 12px; margin: 6px 0 0;
+}
+
+:where(.kit-feature) .resultgraph-prop { color: var(--faint); font-family: var(--mono); }
+
+:where(.kit-feature) .resultgraph-value { color: var(--ink); overflow-wrap: anywhere; }
+
 /* ── coding agents ───────────────────────────────────────────────────────────
  * A ladder: each rung is a thing that must be true, with a lamp read from the
  * appliance rather than asserted. Me's shape, because it is the same climb.

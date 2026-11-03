@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { describe, it } from 'node:test'
-import { rowColumns, rowsToCsv, rowsToMarkdown } from '../src/vc/index.ts'
+import { rowColumns, rowGraph, rowsToCsv, rowsToMarkdown } from '../src/vc/index.ts'
 
 /*
  * WHAT YOU COPY IS WHAT YOU SAW: columns in first-seen order (the table's own
@@ -38,5 +38,53 @@ describe('result rows, serialized', () => {
   it('serializes nothing from nothing', () => {
     assert.equal(rowsToMarkdown([]), '')
     assert.equal(rowsToCsv([]), '')
+  })
+})
+
+/*
+ * WHAT THE GRAPH VIEW DRAWS: every entity in every cell, once. The shapes are the studio execute's
+ * own (embabel/me#3528) — the fromText row below is what a live appliance answered.
+ */
+describe('result rows, drawn', () => {
+  const ada = { name: 'Ada Lovelace', __type: 'Pioneer', __labels: ['Pioneer'], __elementId: '4:e:1' }
+  const engine = { name: 'Analytical Engine', __type: 'Machine', __labels: ['Machine'], __elementId: '4:e:2' }
+  const worked = { __type: 'WORKED_ON', __elementId: '5:e:3', __startElementId: '4:e:1', __endElementId: '4:e:2' }
+
+  it('reads nodes and relationships out of a row, captioned by name, without the __ keys', () => {
+    const graph = rowGraph([{ p: ada, w: worked, m: engine }])
+    assert.deepEqual(graph.nodes.map((n) => [n.id, n.caption, n.labels, n.placeholder]), [
+      ['4:e:1', 'Ada Lovelace', ['Pioneer'], false],
+      ['4:e:2', 'Analytical Engine', ['Machine'], false],
+    ])
+    assert.deepEqual(graph.nodes[0]!.properties, { name: 'Ada Lovelace' })
+    assert.deepEqual(graph.edges, [{ id: '5:e:3', type: 'WORKED_ON', source: '4:e:1', target: '4:e:2', properties: {} }])
+  })
+
+  it('keeps each entity once, however many rows return it', () => {
+    const graph = rowGraph([{ p: ada, m: engine }, { p: ada, m: engine }, { p: ada }])
+    assert.equal(graph.nodes.length, 2)
+  })
+
+  it('walks lists, paths and nested maps', () => {
+    const graph = rowGraph([{ path: [ada, worked, engine], extra: { holder: { inner: [ada] } }, n: 3 }])
+    assert.deepEqual(graph.nodes.map((n) => n.id), ['4:e:1', '4:e:2'])
+    assert.equal(graph.edges.length, 1)
+  })
+
+  it('adds a marked placeholder for an end the rows did not return, replaced if a later cell holds it', () => {
+    const alone = rowGraph([{ w: worked }])
+    assert.deepEqual(alone.nodes.map((n) => [n.id, n.placeholder]), [['4:e:1', true], ['4:e:2', true]])
+    const later = rowGraph([{ w: worked }, { p: ada }])
+    assert.deepEqual(later.nodes.map((n) => [n.id, n.placeholder]), [['4:e:1', false], ['4:e:2', true]])
+  })
+
+  it('finds nothing in plain values — the graph view then stays hidden', () => {
+    const graph = rowGraph([{ hobby: 'Chess', where: 'indoors' }, { tags: ['a', 'b'], meta: { n: 1 } }])
+    assert.deepEqual(graph, { nodes: [], edges: [] })
+  })
+
+  it('captions a node with no name-like property by its first label', () => {
+    const graph = rowGraph([{ n: { __labels: ['Thing', 'Other'], __elementId: '4:e:9', size: 3 } }])
+    assert.equal(graph.nodes[0]!.caption, 'Thing')
   })
 })

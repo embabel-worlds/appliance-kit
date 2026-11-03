@@ -392,6 +392,9 @@ export interface QueryStudioServices {
   kg: Pick<KgClient,
     | 'runs' | 'schema' | 'validate' | 'execute' | 'kill' | 'generate' | 'refine'
     | 'saveView' | 'scopes' | 'pinScope' | 'deleteScope'>
+    /* The starter examples. Optional: a host without them shows no cards and lands `initialCypher`
+     * as it always has. */
+    & Partial<Pick<KgClient, 'examples' | 'setExamplesDismissed'>>
   fills: FillServices
   subscribeProgress(onEvent: (event: VcEvent) => void, signal: AbortSignal): void
 }

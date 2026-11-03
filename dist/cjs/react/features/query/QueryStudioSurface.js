@@ -70,6 +70,8 @@ const editor_ts_1 = require("../studio/editor.js");
 const progress_ts_1 = require("../studio/progress.js");
 const chrome_tsx_1 = require("../studio/chrome.js");
 const SessionPane_tsx_1 = require("./SessionPane.js");
+const QueryExamples_tsx_1 = require("./QueryExamples.js");
+const ResultGraph_tsx_1 = require("./ResultGraph.js");
 const runtime_tsx_1 = require("./runtime.js");
 /*
  * The hint is registered against the CodeMirror SINGLETON, so it must happen exactly once for the
@@ -162,6 +164,25 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
     const [scopesVersion, setScopesVersion] = (0, react_2.useState)(0);
     const [fillsVersion, setFillsVersion] = (0, react_2.useState)(0);
+    /*
+     * THE STARTER QUERIES, and whether to offer them (QueryExamples.tsx). `undefined` until the
+     * appliance has answered, so the starter query below waits for the answer rather than landing
+     * under the cards; `null` when there are none, or this appliance or host cannot say.
+     *
+     * `auto` follows the appliance's verdict and only over an empty editor; `open` is the Examples
+     * button asking for them; `closed` is somebody closing them, for the rest of this visit.
+     */
+    const [examples, setExamples] = (0, react_2.useState)(undefined);
+    /*
+     * WHETHER RUNS MAY SAY WHERE THEY WERE WRITTEN. `surface: 'studio'` is how the appliance counts
+     * the queries somebody writes here, and an appliance from before it refuses the field with a 400
+     * — every run would fail. The examples endpoint arrived in the same release, so its answer is
+     * the evidence; until it has answered, runs go out without the field.
+     */
+    const attributeRuns = (0, react_2.useRef)(false);
+    const attribution = () => (attributeRuns.current ? { surface: 'studio' } : {});
+    const [examplesMode, setExamplesMode] = (0, react_2.useState)('auto');
+    const [editorEmpty, setEditorEmpty] = (0, react_2.useState)(true);
     /* What the engine is doing while we wait. The appliance has published this trace all along; not
      * reading it is why a slow run looked identical to a wedged one. */
     const progress = (0, progress_ts_1.useRunProgress)(services.subscribeProgress);
@@ -329,6 +350,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     }, [validateNow]);
     editRef.current = () => {
         reportCypher.current?.(handle.getText());
+        setEditorEmpty(!handle.getText().trim());
         scheduleValidation();
     };
     // ── running ─────────────────────────────────────────────────────────────────────────────────
@@ -358,7 +380,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         setResult(null);
         setRan(false);
         setRunStatus({ tone: null, text: 'Running — relevance joins fetch live, give it a moment…' });
-        const outcome = await services.kg.execute(cypher);
+        /* Attributed to the studio, so the appliance can count the queries somebody has written here —
+         * the count that retires the starter examples once they no longer need them. */
+        const outcome = await services.kg.execute(cypher, attribution());
         if (!active.current || generation !== runGeneration.current)
             return;
         setRunning(false);
@@ -429,8 +453,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         setRows(rows);
         setResult(result);
         setRan(true);
-        // The rows are the answer; the trace was the wait. Go back to the answer.
-        setView('table');
+        // The rows are the answer; the trace was the wait. Go back to the answer — drawn, when the rows
+        // join nodes by relationships, because a table of JSON cells hides exactly that.
+        setView((0, index_ts_1.rowGraph)(rows).edges.length > 0 ? 'graph' : 'table');
         setHistory((entries) => {
             const next = [{ cypher, rows: rowCount, at: new Date().toISOString() },
                 ...entries.filter((e) => e.cypher !== cypher)].slice(0, HISTORY_MAX);
@@ -498,6 +523,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     }, [progress.runId]);
     const land = (0, react_2.useCallback)((cypher) => {
         validatedCypher.current = null;
+        setEditorEmpty(!cypher.trim());
         handle.setText(cypher);
         reportCypher.current?.(cypher);
         scheduleValidation();
@@ -527,12 +553,51 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
      * created asynchronously, so this waits for it rather than firing into nothing. */
     const initialized = (0, react_2.useRef)(false);
     (0, react_2.useEffect)(() => {
-        if (!handle.editor || initialized.current)
+        if (!handle.editor || initialized.current || examples === undefined)
             return;
         initialized.current = true;
+        // The cards are the starter when the appliance offers them; a query under them would hide them.
+        if (examples?.show)
+            return;
         if (initialCypher && handedOver == null && !handle.getText().trim())
             land(initialCypher);
-    }, [handedOver, handle, initialCypher, land]);
+    }, [examples, handedOver, handle, initialCypher, land]);
+    (0, react_2.useEffect)(() => {
+        if (!services.kg.examples)
+            return setExamples(null);
+        let live = true;
+        void services.kg.examples().then((outcome) => {
+            if (!live)
+                return;
+            attributeRuns.current = (0, outcome_ts_1.isOk)(outcome);
+            // An appliance that predates examples, or a host that cannot reach them, offers none.
+            setExamples((0, outcome_ts_1.isOk)(outcome) && outcome.value.examples.length > 0 ? outcome.value : null);
+        });
+        return () => { live = false; };
+    }, [services]);
+    /* Click to run: the query and its answer arrive together. Validated first, as Run requires, so a
+     * card can never run what the Run button would have refused. */
+    const runExample = (0, react_2.useCallback)(async (example) => {
+        setExamplesMode('auto');
+        land(example.cypher);
+        if (validateTimer.current)
+            clearTimeout(validateTimer.current);
+        await validateNow();
+        if (!active.current)
+            return;
+        if (validatedCypher.current === (0, index_ts_1.completeQuery)(handle.getText()).cypher)
+            await run();
+        else
+            setShowViolations(true);
+    }, [handle, land, run, validateNow]);
+    const dismissExamples = (0, react_2.useCallback)(async () => {
+        setExamplesMode('closed');
+        const outcome = await services.kg.setExamplesDismissed?.(true);
+        if (outcome && (0, outcome_ts_1.isOk)(outcome))
+            setExamples(outcome.value.examples.length > 0 ? outcome.value : null);
+    }, [services]);
+    const examplesShown = !!examples
+        && (examplesMode === 'open' || (examplesMode === 'auto' && examples.show && editorEmpty));
     const landed = (0, react_2.useRef)(null);
     (0, react_2.useEffect)(() => {
         if (!handedOver || !handle.editor)
@@ -605,15 +670,19 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         };
     }, [pane]);
     const columns = (0, index_ts_1.rowColumns)(rows);
+    const graph = (0, react_2.useMemo)(() => (0, index_ts_1.rowGraph)(rows), [rows]);
+    const views = graph.nodes.length > 0 ? ['table', 'graph', 'raw', 'stats', 'trace'] : ['table', 'raw', 'stats', 'trace'];
     return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-query studio", children: [(0, jsx_runtime_1.jsxs)("div", { className: "studio-side", children: [(0, jsx_runtime_1.jsx)(SchemaPanel, { schema: schema, onInsert: land, onReload: () => void loadSchema() }), (0, jsx_runtime_1.jsx)(ScopesPanel, { version: scopesVersion, onInsert: land }), (0, jsx_runtime_1.jsx)(FillsPanel, { version: fillsVersion })] }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-tabbed", children: [(0, jsx_runtime_1.jsx)("nav", { className: "studiotabs", "aria-label": "Query Studio sections", ref: paneNavRef, children: ['query', 'results', 'session'].map((p) => ((0, jsx_runtime_1.jsx)("button", { "data-studio-pane": p, "aria-current": pane === p ? 'page' : undefined, className: `studiotab${pane === p ? ' is-on' : ''}`, onClick: () => showPane(p), children: p === 'query' ? 'Query' : p === 'session' ? 'Interactive' : progress.live ? 'Results ●' : 'Results' }, p))) }), (0, jsx_runtime_1.jsxs)("div", { className: "studio-sections", ref: sectionsRef, children: [(0, jsx_runtime_1.jsxs)("section", { className: `studio-pane studio-pane-query${editorExpanded ? ' is-editor-expanded' : ''}`, "data-studio-pane": "query", ref: (node) => { sectionRefs.current.query = node ?? undefined; }, children: [(0, jsx_runtime_1.jsx)(Ask, { onLand: land, current: () => handle.getText() }), (0, jsx_runtime_1.jsxs)("details", { className: "queryhistory", ref: historyRef, children: [(0, jsx_runtime_1.jsxs)("summary", { className: "queryhistory-title", children: ["History ", (0, jsx_runtime_1.jsx)("span", { className: "queryhistory-count", children: history.length })] }), history.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Run a query to keep it here for quick recall." }) : ((0, jsx_runtime_1.jsx)("div", { className: "historylist", children: history.map((entry) => {
                                                     const firstLine = entry.cypher.split('\n').find((l) => l.trim() && !l.trim().startsWith('//')) ?? entry.cypher;
                                                     return ((0, jsx_runtime_1.jsxs)("button", { className: "history-item", title: entry.cypher, onClick: () => recall(entry.cypher), children: [(0, jsx_runtime_1.jsx)("span", { className: "history-cypher", children: firstLine }), (0, jsx_runtime_1.jsx)("span", { className: "history-meta", children: entry.rows == null ? '· not run' : `· ${entry.rows} row(s)` })] }, entry.at));
                                                 }) }))] }), (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Query", aside: validity.violations.length > 0 && !showViolations
                                             ? ((0, jsx_runtime_1.jsxs)("button", { className: "status error as-link", onClick: () => setShowViolations(true), children: [validity.text, " \u2014 show"] }))
-                                            : (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [(0, jsx_runtime_1.jsxs)("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [(0, jsx_runtime_1.jsxs)("div", { className: "editor-toolbar", children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), (0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
-                                                            || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), (0, jsx_runtime_1.jsxs)("details", { className: "editor-help", children: [(0, jsx_runtime_1.jsxs)("summary", { className: "btn ghost tiny", children: [(0, jsx_runtime_1.jsx)(react_1.Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), (0, jsx_runtime_1.jsxs)("p", { className: "editor-help-copy", children: [(0, jsx_runtime_1.jsx)("kbd", { children: "\u2318" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on Mac or ", (0, jsx_runtime_1.jsx)("kbd", { children: "Ctrl" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', (0, jsx_runtime_1.jsx)("kbd", { children: "Control" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), (0, jsx_runtime_1.jsx)("section", { className: "studio-pane", "data-studio-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: ['table', 'raw', 'stats', 'trace'].map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
+                                            : (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: validity.tone, children: validity.text }), children: [examples && examplesShown && ((0, jsx_runtime_1.jsx)(QueryExamples_tsx_1.QueryExampleCards, { examples: examples.examples, requested: examplesMode === 'open', onRun: (example) => void runExample(example), onClose: () => setExamplesMode('closed'), onDismiss: services.kg.setExamplesDismissed && examples.show ? () => void dismissExamples() : undefined })), (0, jsx_runtime_1.jsxs)("div", { className: `editor-wrap${editorExpanded ? ' is-expanded' : ''}`, children: [(0, jsx_runtime_1.jsxs)("div", { className: "editor-toolbar", children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy", text: handle.getText() }), (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", "aria-expanded": editorExpanded, onClick: () => setEditorExpanded((expanded) => !expanded), children: editorExpanded ? 'Collapse editor' : 'Expand editor' })] }), (0, jsx_runtime_1.jsx)("div", { className: "editor-host", ref: editorRef })] }), showViolations && validity.violations.length > 0 && ((0, jsx_runtime_1.jsx)("div", { className: "verdict", children: validity.violations.map((v, i) => (0, jsx_runtime_1.jsx)("div", { className: "violation", children: v }, i)) })), (0, jsx_runtime_1.jsxs)("div", { className: "row studio-actions", children: [(0, jsx_runtime_1.jsx)("button", { className: "btn primary", disabled: running || validity.tone !== 'ok'
+                                                            || validatedCypher.current !== (0, index_ts_1.completeQuery)(handle.getText()).cypher, onClick: () => void run(), title: "Run query (Ctrl+Enter or \u2318+Enter)", children: running ? 'running…' : 'Run (⌘/Ctrl+Enter)' }), running && ((0, jsx_runtime_1.jsx)("button", { className: "btn ghost", onClick: () => void stop(), children: stopping ? 'stopping…' : 'Stop' })), (0, jsx_runtime_1.jsx)(SaveView, { current: () => handle.getText() }), (0, jsx_runtime_1.jsx)(CaptureScope, { current: () => handle.getText(), onCaptured: () => setScopesVersion((v) => v + 1) }), (0, jsx_runtime_1.jsx)(StartFill, { current: () => (0, index_ts_1.completeQuery)(handle.getText()).cypher, onStarted: () => setFillsVersion((v) => v + 1) }), examples && ((0, jsx_runtime_1.jsxs)("button", { className: "btn ghost tiny query-examples-toggle", "aria-pressed": examplesShown, title: "Example queries, each showing one thing the query language can do", onClick: () => setExamplesMode(examplesShown ? 'closed' : 'open'), children: [(0, jsx_runtime_1.jsx)(react_1.Lightbulb, { size: 14, weight: "bold", "aria-hidden": "true" }), "Examples"] })), (0, jsx_runtime_1.jsxs)("details", { className: "editor-help", children: [(0, jsx_runtime_1.jsxs)("summary", { className: "btn ghost tiny", children: [(0, jsx_runtime_1.jsx)(react_1.Question, { size: 14, weight: "bold", "aria-hidden": "true" }), "Help"] }), (0, jsx_runtime_1.jsxs)("p", { className: "editor-help-copy", children: [(0, jsx_runtime_1.jsx)("kbd", { children: "\u2318" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on Mac or ", (0, jsx_runtime_1.jsx)("kbd", { children: "Ctrl" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Enter" }), " on other keyboards runs the query.", ' ', (0, jsx_runtime_1.jsx)("kbd", { children: "Control" }), " + ", (0, jsx_runtime_1.jsx)("kbd", { children: "Space" }), " completes from the schema."] })] })] }), stopStatus.text && (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: stopStatus.tone, className: "query-stop-status", children: stopStatus.text })] })] }), (0, jsx_runtime_1.jsx)("section", { className: "studio-pane", "data-studio-pane": "results", ref: (node) => { sectionRefs.current.results = node ?? undefined; }, children: (0, jsx_runtime_1.jsxs)(chrome_tsx_1.StudioPanel, { title: "Results", aside: (ran || progress.lines.length > 0) && ((0, jsx_runtime_1.jsx)("span", { className: "viewtabs", role: "tablist", children: views.map((v) => ((0, jsx_runtime_1.jsx)("button", { role: "tab", "aria-selected": view === v, className: `viewtab${view === v ? ' is-on' : ''}`, onClick: () => setView(v), children: v === 'trace' && progress.live ? 'Trace ●' : v[0].toUpperCase() + v.slice(1) }, v))) })), children: [view === 'table' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                             rows.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "No rows." }) :
-                                                (0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: columns })), view === 'raw' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
+                                                (0, jsx_runtime_1.jsx)(chrome_tsx_1.RowTable, { rows: rows, columns: columns })), view === 'graph' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
+                                            graph.nodes.length === 0 ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "These rows hold no nodes to draw. The table has them." }) :
+                                                (0, jsx_runtime_1.jsx)(ResultGraph_tsx_1.ResultGraph, { graph: graph })), view === 'raw' && (!ran ? (0, jsx_runtime_1.jsx)("p", { className: "hint", children: "Nothing run yet." }) :
                                             (0, jsx_runtime_1.jsx)("pre", { className: "rawresult", children: JSON.stringify(result ?? rows, null, 2) })), view === 'stats' && (0, jsx_runtime_1.jsx)(ResultStats, { result: result, rowCount: rows.length, ran: ran }), view === 'trace' && ((0, jsx_runtime_1.jsxs)("div", { className: "progresslist", ref: progressRef, children: [progress.lines.map((line) => ((0, jsx_runtime_1.jsx)("div", { className: `progressline${line.failed ? ' failed' : ''}`, children: line.text }, line.key))), progress.lines.length === 0 && ((0, jsx_runtime_1.jsx)("p", { className: "hint", children: progress.live
                                                         ? 'Waiting for the engine to report…'
                                                         : 'No trace is available for queries without virtual labels.' }))] })), (0, jsx_runtime_1.jsxs)("div", { className: "row results-foot", children: [ran && rows.length > 0 && view === 'table' && ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as Markdown", text: (0, index_ts_1.rowsToMarkdown)(rows) }), (0, jsx_runtime_1.jsx)(chrome_tsx_1.CopyButton, { label: "Copy as CSV", text: (0, index_ts_1.rowsToCsv)(rows) })] })), (0, jsx_runtime_1.jsx)(chrome_tsx_1.Status, { tone: runStatus.tone, children: runStatus.text })] })] }) }), (0, jsx_runtime_1.jsx)("section", { className: "studio-pane studio-pane-session", "data-studio-pane": "session", ref: (node) => { sectionRefs.current.session = node ?? undefined; }, children: (0, jsx_runtime_1.jsx)(SessionPane_tsx_1.SessionPane, { onCaptured: () => setScopesVersion((v) => v + 1), onOpenInEditor: (cypher) => { land(cypher); showPane('query'); } }) })] })] })] }));

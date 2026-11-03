@@ -53,12 +53,31 @@ const executeBody = (cypher, options) => {
         body['params'] = options.params;
     if (options.args !== undefined)
         body['args'] = options.args;
+    if (options.surface !== undefined)
+        body['surface'] = options.surface;
     return body;
 };
 class KgClient {
     transport;
     constructor(transport) {
         this.transport = transport;
+    }
+    /**
+     * Query Studio's starter queries — default-world's, the world's own and each installed realm's —
+     * and whether to offer them to the signed-in person without being asked. `show` goes false once
+     * they dismiss them, save a view of their own, or write `threshold` queries of their own in the
+     * studio (`hiddenBecause` says which). The examples come back either way, for an Examples menu.
+     * Any signed-in user may ask, about themselves only.
+     */
+    examples() {
+        return this.transport.send({ method: 'GET', path: `${USER_KG}/examples` });
+    }
+    /**
+     * Stop offering the examples to this person (`true`), or offer them again (`false`). Recorded
+     * once for the person by the appliance, so another browser or another day does not undo it.
+     */
+    setExamplesDismissed(dismissed) {
+        return this.transport.send({ method: 'PUT', path: `${USER_KG}/examples/dismissed`, body: { dismissed } });
     }
     /**
      * The acting user's reachable schema — the SAME snapshot the preflight validates against, so

@@ -385,7 +385,7 @@ export interface InteractiveHost {
     session: FeatureState<InteractiveSessionState>;
 }
 export interface QueryStudioServices {
-    kg: Pick<KgClient, 'runs' | 'schema' | 'validate' | 'execute' | 'kill' | 'generate' | 'refine' | 'saveView' | 'scopes' | 'pinScope' | 'deleteScope'>;
+    kg: Pick<KgClient, 'runs' | 'schema' | 'validate' | 'execute' | 'kill' | 'generate' | 'refine' | 'saveView' | 'scopes' | 'pinScope' | 'deleteScope'> & Partial<Pick<KgClient, 'examples' | 'setExamplesDismissed'>>;
     fills: FillServices;
     subscribeProgress(onEvent: (event: VcEvent) => void, signal: AbortSignal): void;
 }

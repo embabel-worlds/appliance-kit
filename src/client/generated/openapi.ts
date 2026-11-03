@@ -736,6 +736,23 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/admin/kg/views/{name}/replan": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Replan a goal view over the world's current steps and pin the compiled statement */
+        post: operations["replanView"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/admin/kg/views/{name}/run": {
         parameters: {
             query?: never;
@@ -1243,6 +1260,46 @@ export interface paths {
          * @description Takes effect at once: the job is rescheduled before this returns. NEVER removes it.
          */
         put: operations["changeSchedule"];
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/examples": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Query Studio's starter queries, and whether to offer them
+         * @description The examples this world ships — default-world's, the world's own and each installed realm's — and whether to show them over an empty editor. `show` is false once the person has dismissed them, saved a view of their own, or written `threshold` distinct queries of their own in Query Studio; `hiddenBecause` says which. Every example is returned either way, for a client that shows them on request.
+         */
+        get: operations["queryExamples"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/kg/studio/examples/dismissed": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Stop offering the examples to this person, or offer them again
+         * @description Recorded once for the person, in their world, so another browser or another day does not bring the examples back. `dismissed: false` forgets the dismissal, and a reached query count with it; a saved view still hides them. Answers the examples and the new verdict.
+         */
+        put: operations["dismissQueryExamples"];
         post?: never;
         delete?: never;
         options?: never;
@@ -3098,6 +3155,11 @@ export interface components {
             params?: {
                 [key: string]: components["schemas"]["ViewParamSpec"];
             };
+            /**
+             * @description Where the statement was written, recorded in the query log: `studio` for a query written in Query Studio's editor. Omitted, it is logged as `query`. Any other value is a 400.
+             * @enum {string}
+             */
+            surface?: "studio";
         };
         /** @description A cancelled fill: which one, and the state it is now in */
         KgFillCancelled: {
@@ -3199,11 +3261,11 @@ export interface components {
             /** @description The run id from the path, echoed back. */
             runId: string;
         };
-        /** @description One input to a plan: text a view reads with `ai.fromText`, or one entity of a spine label by its key. */
+        /** @description One input to a plan: text a view reads with `ai.fromText`, one entity of a spine label by its key, or a plain value for the parameter it is named after. */
         KgPlanInput: {
-            /** @description `text`, or the name of a spine label of this world, e.g. `CustomerAccount`. */
+            /** @description `text`, the name of a spine label of this world, e.g. `CustomerAccount`, or `value`. */
             type: string;
-            /** @description The text itself, or the entity's key. */
+            /** @description The text itself, the entity's key, or the value, coerced to the type the parameter declares. */
             value: string;
         };
         /** @description A goal (or an English question to write one from) to plan over the acting user's views and rules, and the typed inputs it starts from. Exactly one of `goal` and `question`. */
@@ -3290,7 +3352,7 @@ export interface components {
              * @description How many rows `rows` holds.
              */
             rowCount: number;
-            /** @description One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data. */
+            /** @description One map per row, keyed by RETURN column. Empty and meaningless while `run` is present — the run has not finished, which is not the same as no data. From a synchronous `/execute`, a node is its properties plus `__type`, `__labels` and `__elementId`; a relationship its properties plus `__type` (the relationship type), `__elementId`, `__startElementId` and `__endElementId` (the `__elementId`s of the nodes it joins); a path its nodes and relationships in traversal order. Elsewhere a node carries `__type` and `__labels` and a relationship its properties alone. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -3416,10 +3478,12 @@ export interface components {
         };
         /** @description A user-authored view to save into the acting user's world: the body of `POST /views`. */
         KgSaveViewRequest: {
-            /** @description The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted. */
-            cypher: string;
+            /** @description The view's body. RETURN one node variable for a view that composes as a label, or a projection for a tabular view run directly. Must pass the schema preflight with declared defaults substituted. Omitted for a goal view, which declares `goal` instead. */
+            cypher?: string;
             /** @description One line on what the view answers, shown to the query generator beside the schema. Defaults to empty. */
             description?: string;
+            /** @description A GOAL view, in place of `cypher`: the final read query, written over the facts it needs as if they existed. The server plans it over the world's views and rules, compiles it and pins the result, which is what the view runs (`savedCypher`); `params` are the plan's inputs, typed by how the steps read them. A goal that does not plan — unreachable, a tie between two plans, refused — is a 400 naming why. */
+            goal?: string;
             /** @description Cache the result and serve reads from the cache until `ttl` lapses. Defaults false: a regular view re-runs on every read. */
             materialized?: boolean;
             /** @description A plain identifier — letters, digits and underscore, not starting with a digit — because a query uses it as a label. Trimmed before it is checked; a name a shipped view owns is refused. */
@@ -3446,7 +3510,7 @@ export interface components {
         };
         /** @description A node label and its sampled property shape. */
         KgSchemaLabel: {
-            /** @description True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. Defaults true so an older client reading a newer appliance loses nothing. */
+            /** @description True when this label may open a MATCH pattern bare — a real read, or a virtual population implicitly bound by user tenancy. False means it is reachable only by traversal from a bound anchor; an editor should not offer it at first position. How such a label IS reached is in `relationships`: an edge to it from a label whose `anchor` is true — `(me:AssistantUser)-[:HAS_CONFIG]->(r:ConfigRun)` for the config catalog, where `AssistantUser` is the caller, bound by their sign-in. Defaults true so an older client reading a newer appliance loses nothing. */
             anchor: boolean;
             /** @description The declared definition of the type this label names, verbatim from the realm's own registry — for an editor to show on hover. Null for core/introspected labels, which declare none. */
             description?: string;
@@ -3476,7 +3540,7 @@ export interface components {
             name: string;
             /** @description True when the property was missing from a non-trivial fraction of the sample. */
             sparse: boolean;
-            /** @description Inferred type tag: string, long, datetime, list<string>, any, … */
+            /** @description Type tag: string, long, double, boolean, datetime, list<string>, any, … — inferred from sampled values, or, where no value has been sampled, the type the property's declaration states. `any` means neither says. */
             type: string;
         };
         /** @description A (from, type, to) triple observed in the world subgraph. */
@@ -3486,6 +3550,8 @@ export interface components {
              * @description Approximate occurrence count, for ranking.
              */
             count: number;
+            /** @description What this edge is for, verbatim from the declaration of the join that brings it — for an editor to show on hover. Null where the declaration documents nothing, and for an edge that is only observed. */
+            description?: string;
             /** @description The label of the node the relationship starts from. */
             from: string;
             /** @description The label of the node the relationship points to. */
@@ -3651,7 +3717,7 @@ export interface components {
             };
             tokenUrl?: string;
         };
-        /** @description What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail), `tie` (plans, cost) or `refused` (reasons). None is an error: each is the answer. A run adds rows, warnings and error to a `planned` answer. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `needsInput` (needsInput) or `declined` (reason, missing). */
+        /** @description What planning a goal came to. `outcome` says which answer this is, and only that answer's fields are present: `planned` (reads, steps, compiled, inputs, quote), `unreachable` (missing, detail, nearest), `tie` (plans, cost, rivals, toBreak), `refused` (reasons) or `needsInput` (needsInput, missing). None is an error: each is the answer. A run adds rows and warnings to a `planned` answer, or is `failed` (the plan's fields, warnings and error, no rows) when the engine answered with an error. Asked as an English `question`, the answer also echoes the question and the `goal` written from it, and may be `declined` (reason, missing). */
         PlanAnswer: {
             /** @description `planned`: the one Cypher statement the steps and the goal compile to. What a run executes. */
             compiled?: string;
@@ -3662,24 +3728,28 @@ export interface components {
             cost?: number;
             /** @description `unreachable`: the planner's own account of why the goal cannot be reached. */
             detail?: string;
-            /** @description Steps left out of planning, and why. Absent when none were. */
+            /** @description Steps left out of planning, and why; asked as a `question`, also the facts the goal writer was not offered because nothing describes them. Absent when none were. */
             diagnostics?: string[];
-            /** @description A run of a `planned` answer only, and only when the run failed: the engine's error. */
+            /** @description `failed` only: the engine's error, which is why the run has no rows. */
             error?: string;
-            /** @description English mode only: the goal written from the question — absent from `refused`, and from `declined` when none was written. */
+            /** @description English mode only: the goal written from the question — absent from `refused`, and from `declined` or `needsInput` when none was written. */
             goal?: string;
             /** @description `planned`: where each supplied input was bound. */
             inputs?: components["schemas"]["PlanAnswerBinding"][];
-            /** @description `unreachable`, or `declined` when that is the reason: the facts no step on offer produces. */
+            /** @description `unreachable`, or `declined` when that is the reason: the facts no step on offer produces, or the names nothing in the world has (`node:Label`, `relationship:TYPE`, `property:Label.name`). `needsInput` on a goal: every input fact lacking. */
             missing?: string[];
-            /** @description `needsInput`: the input the goal needs and nobody supplied, and why. */
+            /** @description `unreachable`: for each missing fact, up to five facts the world's views and rules CAN make, nearest first — same labels, then words of its name or description, then spelling. What the goal could read instead, from the vocabulary `plan` with no goal and no question lists in full. Absent when none are near. */
+            nearest?: {
+                [key: string]: string[];
+            };
+            /** @description `needsInput`: the input the goal needs and nobody supplied, the parameter it binds, who reads it, and why. */
             needsInput?: components["schemas"]["PlanAnswerNeed"];
             /**
              * @description Which answer this is.
              * @enum {string}
              */
-            outcome: "planned" | "unreachable" | "tie" | "refused" | "needsInput" | "declined";
-            /** @description `tie`: the rival plans, each the names of its steps in order. Make the goal more specific to choose. */
+            outcome: "planned" | "unreachable" | "tie" | "refused" | "needsInput" | "declined" | "failed";
+            /** @description `tie`: the rival plans, each the names of its steps in order. `rivals` says how they differ, `toBreak` how to choose. */
             plans?: string[][];
             /** @description English mode only: the question asked, echoed. */
             question?: string;
@@ -3689,15 +3759,19 @@ export interface components {
             reads?: string[];
             /** @description `declined`: why no goal this world can reach answers the question. */
             reason?: string;
-            /** @description `refused`: what to change for the request to plan — an untypable goal, an input that binds ambiguously, a plan that does not compile. */
+            /** @description `refused`: what to change for the request to plan — an untypable goal, a goal that writes, an input that binds ambiguously, a plan that does not compile. */
             reasons?: string[];
-            /** @description A run of a `planned` answer only: the rows the compiled statement returned, unchanged. */
+            /** @description `tie`: each rival plan, in the order of `plans`, with its steps and what only it makes, needs and consults. */
+            rivals?: components["schemas"]["PlanAnswerRival"][];
+            /** @description A run of a `planned` answer only: the rows the compiled statement returned, unchanged. Absent from `failed`. */
             rows?: {
                 [key: string]: unknown;
             }[];
             /** @description `planned`: the chosen steps, in the order they run. */
             steps?: components["schemas"]["PlanAnswerStep"][];
-            /** @description A run of a `planned` answer only: the engine's warnings. PROJECTION_* means a projection was declined or incomplete. */
+            /** @description `tie`: what would choose one plan — a fact to read in the goal, an input to leave out — or, when nothing a caller sends can, that the world's steps have to change. */
+            toBreak?: string[];
+            /** @description A run only, `planned` or `failed`: the engine's warnings. PROJECTION_* means a projection was declined or incomplete. */
             warnings?: string[];
             /** @description English mode, with a goal: true when the goal reads only what the world holds, so no projection was needed. */
             worldOnly?: boolean;
@@ -3709,8 +3783,12 @@ export interface components {
             /** @description The parameter it binds: a step's `$name`, or the goal's. */
             parameter: string;
         };
-        /** @description The input an English question's goal needs and nobody supplied: `text`, or the spine label an identity names, and why. */
+        /** @description The input a goal needs and nobody supplied: `text`, or the spine label an identity names, the parameter it binds, who reads it, and why. */
         PlanAnswerNeed: {
+            /** @description The `$name` the input binds when supplied; null when none is known or more than one could take it. */
+            parameter?: string;
+            /** @description The views — or `the goal` — that read the input; empty when none is known. */
+            readBy: string[];
             /** @description `text`, or the spine label of the identity needed. */
             type: string;
             /** @description Why it is needed, said to the person. */
@@ -3725,15 +3803,33 @@ export interface components {
             apiCalls?: number;
             /**
              * Format: int32
-             * @description The fewest model calls the run will make. Null when the statement could not be quoted.
+             * @description Asked as a `question`: the model calls made writing the goal — usually one, more when a goal was refused and written again. Zero for a goal the caller wrote, and for a goal reused from an explain of the same question and inputs moments before.
+             */
+            goalModelCalls: number;
+            /**
+             * Format: int32
+             * @description The fewest model calls the run will make, `ai.fromText` extractions included, plus `goalModelCalls`. Null when the statement could not be quoted.
              */
             modelCalls?: number;
             /** @description The quote rendered as text, or why there is none. */
             plan: string;
-            /** @description What this quote does not price, by step — `ai.fromText` calls, which the cost gate prices when the plan runs. */
+            /** @description What this quote does not price, by step — a text step's `ai.fromText` calls when the statement could not be quoted; the cost gate prices them when the plan runs. */
             unpriced: string[];
             /** @description Why the cost gate would refuse this run, or null when it would not (or the statement could not be quoted). */
             wouldRefuse?: string;
+        };
+        /** @description One rival plan of a tie: its steps, and what it has that the other plan does not. */
+        PlanAnswerRival: {
+            /** @description Facts only this plan makes. A goal that reads one is reached only through this plan. */
+            addsOnly: string[];
+            /** @description What only this plan consults beyond the stored graph: `api:<label or type>` or `model:<call or label>`. */
+            consultsOnly: string[];
+            /** @description The plan's steps the other plan does not use: what makes it a rival. */
+            own: string[];
+            /** @description Facts and inputs only this plan needs. Leaving such an input out leaves only the other plan. */
+            requiresOnly: string[];
+            /** @description The plan's steps, in the order they would run, each as a planned step is shown. */
+            steps: components["schemas"]["PlanAnswerStep"][];
         };
         /** @description One step of a plan, as shown before anything runs: the view or rule, what it adds and needs, what it reaches beyond the stored graph, and its cost. */
         PlanAnswerStep: {
@@ -3771,6 +3867,51 @@ export interface components {
              * @enum {string}
              */
             priority: "interactive" | "business" | "background";
+        };
+        /** @description One starter query */
+        QueryExampleView: {
+            /** @description The query, to put in the editor and run exactly as written */
+            cypher: string;
+            /** @description One line: what running it demonstrates */
+            description: string;
+            /** @description Unique within this world: the file it came from, then the id the file gave it */
+            id: string;
+            /**
+             * @description `ai` when the query asks a model to read, judge or label as it runs, so running it costs model calls; `plain` for Cypher over what the world holds
+             * @enum {string}
+             */
+            kind: "ai" | "plain";
+            /** @description The realm that shipped it; absent for default-world's and the world's own */
+            source?: string;
+            /** @description The card's heading */
+            title: string;
+        };
+        /** @description Whether to stop offering the examples */
+        QueryExamplesDismissRequest: {
+            /** @description true to stop offering the examples unasked; false to offer them again */
+            dismissed: boolean;
+        };
+        /** @description Query Studio's starter queries, and whether to offer them to the signed-in person */
+        QueryExamplesResponse: {
+            /** @description Every example this world offers, in the order its files declare them: default-world's, the world's own, then each installed realm's */
+            examples: components["schemas"]["QueryExampleView"][];
+            /**
+             * @description Why they are not offered: DISMISSED, SAVED_VIEW (the person has saved a view of their own) or EXPERIENCED (they have written `threshold` queries of their own in Query Studio); absent while they are offered
+             * @enum {string}
+             */
+            hiddenBecause?: "DISMISSED" | "SAVED_VIEW" | "EXPERIENCED";
+            /** @description Whether to show the examples over an empty editor without being asked */
+            show: boolean;
+            /**
+             * Format: int32
+             * @description Distinct queries of their own the person has written in Query Studio, as far as the query log still holds; 0 when the verdict did not need counting
+             */
+            studioQueries: number;
+            /**
+             * Format: int32
+             * @description How many distinct queries of their own retire the examples
+             */
+            threshold: number;
         };
         /** @description One decision the Gatekeeper made about a call that would change something on a run's behalf (acted, held for a person, or refused), or a person's answer to such a request. Chained per owner by hash so an edit shows; returned with its run by GET /agents/{name}/runs/{id} */
         Receipt: {
@@ -4082,6 +4223,10 @@ export interface components {
              * @description Epoch milliseconds at which the cache expires; may already be past. Null for a regular view, or a materialised one with nothing cached.
              */
             expiresAt?: number;
+            /** @description A goal view's goal: the final query its plan answers. `cypher` is then the statement the goal compiled to, which is what runs. Null for a view declared by its Cypher; always serialized, so its presence says this server supports goal views. */
+            goal: string;
+            /** @description Whether a goal view's pinned plan stands: `pinned`, `not compiled`, or `stale: <what moved>`. A view that is not pinned refuses to run until it is replanned. Absent for a view declared by its Cypher. */
+            goalStatus?: string;
             /** @description True when reads are served from a cache that is recomputed once `ttl` lapses. */
             materialized: boolean;
             /** @description The view's name, which a query uses as a label and `/views/{name}` paths take. */
@@ -4432,7 +4577,7 @@ export interface operations {
     dryRun: {
         parameters: {
             query?: {
-                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -4455,7 +4600,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgAnnotationDryRunResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4464,7 +4609,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description Annotation writes disabled by feature flag */
+            /** @description Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4487,7 +4632,7 @@ export interface operations {
     apply: {
         parameters: {
             query?: {
-                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -4508,7 +4653,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgAnnotationOutcomeResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4517,7 +4662,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description Annotation writes disabled by feature flag */
+            /** @description Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -4540,7 +4685,7 @@ export interface operations {
     undo: {
         parameters: {
             query?: {
-                /** @description Username to act as, honoured only when the request has no authenticated principal (dev and test calls); an authenticated caller always acts as itself. 401 when neither resolves to a user */
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
                 username?: string;
             };
             header?: never;
@@ -4561,7 +4706,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgAnnotationOutcomeResponse"];
                 };
             };
-            /** @description No authenticated principal and no resolvable username */
+            /** @description No authenticated principal */
             401: {
                 headers: {
                     [name: string]: unknown;
@@ -4570,7 +4715,7 @@ export interface operations {
                     "application/json": components["schemas"]["KgErrorResponse"];
                 };
             };
-            /** @description Annotation writes disabled by feature flag */
+            /** @description Annotation writes disabled by feature flag, or `username` names someone other than the signed-in principal */
             403: {
                 headers: {
                     [name: string]: unknown;
@@ -5005,7 +5150,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400 */
+        /** @description The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgExecuteRequest"];
@@ -5274,7 +5419,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine, or `{"limit": {"type": "value", "value": "10"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgPlanRequest"];
@@ -5329,7 +5474,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, or `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine. An input of a type that is neither, or with a blank value, is answered as `refused`. */
+        /** @description Exactly one of `goal`, the final Cypher query to answer, or `question`, the same in plain English (one model call writes its goal); and optionally `inputs`, keyed by name: `{"notes": {"type": "text", "value": "..."}}` for text a view reads with ai.fromText, `{"account": {"type": "CustomerAccount", "value": "acme.com"}}` for one entity of a spine, or `{"limit": {"type": "value", "value": "10"}}` for the plain parameter it is named after. An input of any other type, or with a blank value, is answered as `refused`. */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgPlanRequest"];
@@ -5939,7 +6084,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The view to store in the acting user's world: `name`, `cypher` and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400 */
+        /** @description The view to store in the acting user's world: `name`, `cypher` (or `goal`, for a goal view) and an optional `description`. `params` declares the `$name` bind variables the body uses (an absent default makes the argument required on invocation); `materialized` caches the result for `ttl` (default `1h`) under `outputLabel`, or as a row snapshot when that is omitted, and cannot be combined with `params`. The body is preflighted with defaults substituted before it is stored; a body written against captured scopes is stored with them inlined, which `savedCypher` then shows. A same-named view the user saved is replaced; a name a shipped view owns is a 400 */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgSaveViewRequest"];
@@ -6184,6 +6329,59 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["KgRefreshViewResponse"];
+                };
+            };
+            /** @description No authenticated principal */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+            /** @description `username` names someone other than the signed-in principal */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgErrorResponse"];
+                };
+            };
+        };
+    };
+    replanView: {
+        parameters: {
+            query?: {
+                /** @description Optional, and never needed: the call always acts as the signed-in principal. Naming the principal changes nothing; naming anyone else is refused with 403. */
+                username?: string;
+            };
+            header?: never;
+            path: {
+                /** @description The goal view's name, as `GET /views` lists it. */
+                name: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The goal was planned and its compiled statement pinned; `savedCypher` is that statement */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgSaveViewResponse"];
+                };
+            };
+            /** @description Not a goal view, an unknown view, or a goal that no longer plans — unreachable, a tie, or refused */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KgSaveViewRejection"];
                 };
             };
             /** @description No authenticated principal */
@@ -7499,6 +7697,65 @@ export interface operations {
             };
         };
     };
+    queryExamples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The examples and the verdict on offering them */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryExamplesResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    dismissQueryExamples: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** @description `dismissed: true` to stop offering the examples unasked; `false` to offer them again */
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["QueryExamplesDismissRequest"];
+            };
+        };
+        responses: {
+            /** @description The examples and the verdict after the change */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["QueryExamplesResponse"];
+                };
+            };
+            /** @description Not authenticated */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
     studioExecute: {
         parameters: {
             query?: never;
@@ -7506,7 +7763,7 @@ export interface operations {
             path?: never;
             cookie?: never;
         };
-        /** @description The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes` */
+        /** @description The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples */
         requestBody: {
             content: {
                 "application/json": components["schemas"]["KgExecuteRequest"];

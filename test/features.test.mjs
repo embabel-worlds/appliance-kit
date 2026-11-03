@@ -199,6 +199,105 @@ describe('the public browser feature entry point', () => {
     assert.equal(cm.getValue(), 'RETURN 1')
   })
 
+  /*
+   * STARTER QUERIES. Offered over an empty editor while the appliance says this person still needs
+   * them; clicking one validates and runs it, attributed to the studio; dismissing is recorded by the
+   * appliance; Examples brings them back. A starter query never lands underneath them.
+   */
+  const examplesPayload = (show = true) => ({
+    show, threshold: 5, studioQueries: 0,
+    examples: [
+      { id: 'q_read', title: 'Read text into a graph', description: 'A model reads a sentence into nodes.', kind: 'ai', cypher: 'RETURN 1 AS read' },
+      { id: 'q_realms', title: 'Your realms', description: 'Realms are data too.', kind: 'plain', cypher: 'MATCH (r:Realm) RETURN r.name AS realm', source: 'esg' },
+    ],
+  })
+  function studioWithExamples({ show = true } = {}) {
+    const calls = { execute: [], dismissed: [], validate: [] }
+    const services = {
+      kg: {
+        schema: async () => ok({ labels: [], relationships: [] }), scopes: async () => ok({ scopes: [] }),
+        validate: async (cypher) => { calls.validate.push(cypher); return ok({ ok: true }) },
+        execute: async (cypher, options) => {
+          calls.execute.push([cypher, options])
+          return ok({ rowCount: 1, rows: [{
+            p: { name: 'Ada', __labels: ['Pioneer'], __elementId: '4:e:1' },
+            w: { __type: 'WORKED_ON', __elementId: '5:e:3', __startElementId: '4:e:1', __endElementId: '4:e:2' },
+            m: { name: 'Engine', __labels: ['Machine'], __elementId: '4:e:2' },
+          }] })
+        },
+        examples: async () => ok(examplesPayload(show)),
+        setExamplesDismissed: async (dismissed) => { calls.dismissed.push(dismissed); return ok({ ...examplesPayload(!dismissed), hiddenBecause: dismissed ? 'DISMISSED' : null }) },
+      },
+      fills: { list: async () => ok([]) }, subscribeProgress() {},
+    }
+    const host = { history: { read: () => [], write() {} }, interactive: { session: { read: () => null, write() {} } } }
+    return { calls, props: { services, host, handedOver: null, initialCypher: 'MATCH (n) RETURN n LIMIT 25' } }
+  }
+
+  it('offers the starter examples over an empty editor instead of landing a starter query under them', async () => {
+    const { props } = studioWithExamples()
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    const cards = [...rendered.container.querySelectorAll('.query-example')]
+    assert.deepEqual(cards.map((c) => c.querySelector('strong').textContent), ['Read text into a graph', 'Your realms'])
+    assert.match(cards[0].textContent, /A model reads a sentence into nodes\.\s*$|AI/, 'each card says what it shows')
+    assert.equal(cards[0].querySelector('.query-example-kind').textContent, 'AI')
+    assert.equal(cards[1].querySelector('.query-example-kind').textContent, 'Cypher')
+    assert.match(cards[1].textContent, /from esg/, 'a realm\'s example says which realm')
+    assert.equal(rendered.container.querySelector('.CodeMirror').CodeMirror.getValue(), '', 'no starter query under the cards')
+  })
+
+  it('runs a clicked example at once, attributed to the studio, and draws its graph', async () => {
+    const { props, calls } = studioWithExamples()
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    await act(async () => rendered.container.querySelector('.query-example').click())
+    await flush()
+    assert.equal(rendered.container.querySelector('.CodeMirror').CodeMirror.getValue(), 'RETURN 1 AS read')
+    assert.deepEqual(calls.validate.at(-1), 'RETURN 1 AS read', 'validated first, as Run requires')
+    assert.deepEqual(calls.execute, [['RETURN 1 AS read', { surface: 'studio' }]], 'an appliance that serves examples counts it')
+    assert.equal(rendered.container.querySelector('.query-examples'), null, 'the cards give way to the query')
+    const tab = [...rendered.container.querySelectorAll('.viewtab')].find((t) => t.textContent === 'Graph')
+    assert.equal(tab?.getAttribute('aria-selected'), 'true', 'a result that joins nodes opens on its drawing')
+    const svg = rendered.container.querySelector('.resultgraph-canvas')
+    assert.equal(svg.querySelectorAll('.resultgraph-node').length, 2)
+    assert.equal(svg.querySelectorAll('.resultgraph-edge').length, 1)
+    assert.match(svg.querySelector('.resultgraph-edge').textContent, /WORKED_ON/)
+  })
+
+  it('records a dismissal with the appliance, and Examples brings them back', async () => {
+    const { props, calls } = studioWithExamples()
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    await act(async () => button(rendered.container, "Don't show these again").click())
+    await flush()
+    assert.deepEqual(calls.dismissed, [true])
+    assert.equal(rendered.container.querySelector('.query-examples'), null)
+    await act(async () => button(rendered.container, 'Examples').click())
+    assert.equal(rendered.container.querySelectorAll('.query-example').length, 2, 'Examples shows them on request')
+    assert.equal(button(rendered.container, "Don't show these again"), undefined, 'asked for, they close rather than dismiss')
+    await act(async () => rendered.container.querySelector('[aria-label="Close examples"]').click())
+    assert.equal(rendered.container.querySelector('.query-examples'), null)
+  })
+
+  it('never names the studio surface to an appliance that predates it, which would refuse every run', async () => {
+    const { props, calls } = studioWithExamples()
+    props.services.kg.examples = async () => ({ ok: false, kind: 'unsupported', message: 'no such endpoint', status: 404 })
+    const rendered = await render(h(features.QueryStudioSurface, { ...props, handedOver: 'RETURN 1' }))
+    assert.equal(rendered.container.querySelector('.query-examples'), null, 'no examples, no cards')
+    assert.equal(button(rendered.container, 'Examples'), undefined)
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 800)) })
+    await act(async () => [...rendered.container.querySelectorAll('button')].find((b) => b.textContent.startsWith('Run (')).click())
+    await flush()
+    assert.deepEqual(calls.execute, [['RETURN 1', {}]])
+  })
+
+  it('lands the starter query for a person past the examples, and still offers them on request', async () => {
+    const { props } = studioWithExamples({ show: false })
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    assert.equal(rendered.container.querySelector('.query-examples'), null)
+    assert.equal(rendered.container.querySelector('.CodeMirror').CodeMirror.getValue(), 'MATCH (n) RETURN n LIMIT 25')
+    await act(async () => button(rendered.container, 'Examples').click())
+    assert.equal(rendered.container.querySelectorAll('.query-example').length, 2)
+  })
+
   it('lands a starter once and never lets a null handoff clobber later edits', async () => {
     const services = {
       kg: { schema: async () => ok({ labels: [], relationships: [] }), scopes: async () => ok({ scopes: [] }), validate: async () => ok({ ok: true }) },

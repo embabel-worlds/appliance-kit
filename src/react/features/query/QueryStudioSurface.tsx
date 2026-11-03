@@ -22,9 +22,11 @@
  * be wrong but not unsafe.
  */
 
-import { ArrowClockwise, Question } from '@phosphor-icons/react'
-import React, { useCallback, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { ArrowClockwise, Lightbulb, Question } from '@phosphor-icons/react'
+import React, { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import {
+  type KgQueryExample,
+  type KgQueryExamples,
   type KgQueryResult,
   type KgScopeInfo,
   isBackgroundHandle,
@@ -40,6 +42,7 @@ import {
   anchorLabels,
   declaredParams,
   rowColumns,
+  rowGraph,
   rowsToCsv,
   rowsToMarkdown,
   scopeReference,
@@ -51,6 +54,8 @@ import { CodeMirror, useEditor } from '../studio/editor.ts'
 import { useRunProgress } from '../studio/progress.ts'
 import { CopyButton, RowTable, Status, StudioPanel, failureMessage, isAbsent } from '../studio/chrome.tsx'
 import { SessionPane } from './SessionPane.tsx'
+import { QueryExampleCards } from './QueryExamples.tsx'
+import { ResultGraph } from './ResultGraph.tsx'
 import { QueryRuntimeProvider, useQueryRuntime } from './runtime.tsx'
 
 /*
@@ -72,8 +77,11 @@ function registerHint() {
   )
 }
 
-/** The Vaadin Cypher console's four views, and the same names, so one product has one vocabulary. */
-type ResultView = 'table' | 'raw' | 'stats' | 'trace'
+/**
+ * The Vaadin Cypher console's four views, and the same names, so one product has one vocabulary —
+ * plus Graph, offered only when the rows hold nodes to draw.
+ */
+type ResultView = 'table' | 'graph' | 'raw' | 'stats' | 'trace'
 
 /** The outer split, same names — plus Session, the REPL reading of the same engine. */
 type Pane = 'query' | 'results' | 'session'
@@ -163,6 +171,25 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   /* Bumped whenever a capture lands, so the Scopes rail re-reads without owning the execute path. */
   const [scopesVersion, setScopesVersion] = useState(0)
   const [fillsVersion, setFillsVersion] = useState(0)
+  /*
+   * THE STARTER QUERIES, and whether to offer them (QueryExamples.tsx). `undefined` until the
+   * appliance has answered, so the starter query below waits for the answer rather than landing
+   * under the cards; `null` when there are none, or this appliance or host cannot say.
+   *
+   * `auto` follows the appliance's verdict and only over an empty editor; `open` is the Examples
+   * button asking for them; `closed` is somebody closing them, for the rest of this visit.
+   */
+  const [examples, setExamples] = useState<KgQueryExamples | null | undefined>(undefined)
+  /*
+   * WHETHER RUNS MAY SAY WHERE THEY WERE WRITTEN. `surface: 'studio'` is how the appliance counts
+   * the queries somebody writes here, and an appliance from before it refuses the field with a 400
+   * — every run would fail. The examples endpoint arrived in the same release, so its answer is
+   * the evidence; until it has answered, runs go out without the field.
+   */
+  const attributeRuns = useRef(false)
+  const attribution = (): { surface?: 'studio' } => (attributeRuns.current ? { surface: 'studio' } : {})
+  const [examplesMode, setExamplesMode] = useState<'auto' | 'open' | 'closed'>('auto')
+  const [editorEmpty, setEditorEmpty] = useState(true)
   /* What the engine is doing while we wait. The appliance has published this trace all along; not
    * reading it is why a slow run looked identical to a wedged one. */
   const progress = useRunProgress(services.subscribeProgress)
@@ -331,6 +358,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   }, [validateNow])
   editRef.current = () => {
     reportCypher.current?.(handle.getText())
+    setEditorEmpty(!handle.getText().trim())
     scheduleValidation()
   }
 
@@ -360,7 +388,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     setResult(null)
     setRan(false)
     setRunStatus({ tone: null, text: 'Running — relevance joins fetch live, give it a moment…' })
-    const outcome = await services.kg.execute(cypher)
+    /* Attributed to the studio, so the appliance can count the queries somebody has written here —
+     * the count that retires the starter examples once they no longer need them. */
+    const outcome = await services.kg.execute(cypher, attribution())
     if (!active.current || generation !== runGeneration.current) return
     setRunning(false)
     setStopping(false)
@@ -426,8 +456,9 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     setRows(rows)
     setResult(result)
     setRan(true)
-    // The rows are the answer; the trace was the wait. Go back to the answer.
-    setView('table')
+    // The rows are the answer; the trace was the wait. Go back to the answer — drawn, when the rows
+    // join nodes by relationships, because a table of JSON cells hides exactly that.
+    setView(rowGraph(rows).edges.length > 0 ? 'graph' : 'table')
     setHistory((entries) => {
       const next = [{ cypher, rows: rowCount, at: new Date().toISOString() },
         ...entries.filter((e) => e.cypher !== cypher)].slice(0, HISTORY_MAX)
@@ -494,6 +525,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
 
   const land = useCallback((cypher: string) => {
     validatedCypher.current = null
+    setEditorEmpty(!cypher.trim())
     handle.setText(cypher)
     reportCypher.current?.(cypher)
     scheduleValidation()
@@ -524,10 +556,45 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
    * created asynchronously, so this waits for it rather than firing into nothing. */
   const initialized = useRef(false)
   useEffect(() => {
-    if (!handle.editor || initialized.current) return
+    if (!handle.editor || initialized.current || examples === undefined) return
     initialized.current = true
+    // The cards are the starter when the appliance offers them; a query under them would hide them.
+    if (examples?.show) return
     if (initialCypher && handedOver == null && !handle.getText().trim()) land(initialCypher)
-  }, [handedOver, handle, initialCypher, land])
+  }, [examples, handedOver, handle, initialCypher, land])
+
+  useEffect(() => {
+    if (!services.kg.examples) return setExamples(null)
+    let live = true
+    void services.kg.examples().then((outcome) => {
+      if (!live) return
+      attributeRuns.current = isOk(outcome)
+      // An appliance that predates examples, or a host that cannot reach them, offers none.
+      setExamples(isOk(outcome) && outcome.value.examples.length > 0 ? outcome.value : null)
+    })
+    return () => { live = false }
+  }, [services])
+
+  /* Click to run: the query and its answer arrive together. Validated first, as Run requires, so a
+   * card can never run what the Run button would have refused. */
+  const runExample = useCallback(async (example: KgQueryExample): Promise<void> => {
+    setExamplesMode('auto')
+    land(example.cypher)
+    if (validateTimer.current) clearTimeout(validateTimer.current)
+    await validateNow()
+    if (!active.current) return
+    if (validatedCypher.current === completeQuery(handle.getText()).cypher) await run()
+    else setShowViolations(true)
+  }, [handle, land, run, validateNow])
+
+  const dismissExamples = useCallback(async (): Promise<void> => {
+    setExamplesMode('closed')
+    const outcome = await services.kg.setExamplesDismissed?.(true)
+    if (outcome && isOk(outcome)) setExamples(outcome.value.examples.length > 0 ? outcome.value : null)
+  }, [services])
+
+  const examplesShown = !!examples
+    && (examplesMode === 'open' || (examplesMode === 'auto' && examples.show && editorEmpty))
 
   const landed = useRef<{ cypher: string; revision?: number } | null>(null)
   useEffect(() => {
@@ -599,6 +666,8 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   }, [pane])
 
   const columns = rowColumns(rows)
+  const graph = useMemo(() => rowGraph(rows), [rows])
+  const views: ResultView[] = graph.nodes.length > 0 ? ['table', 'graph', 'raw', 'stats', 'trace'] : ['table', 'raw', 'stats', 'trace']
 
   return (
     <div className="kit-feature kit-feature-query studio">
@@ -660,6 +729,15 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             )
             : <Status tone={validity.tone}>{validity.text}</Status>}
         >
+          {examples && examplesShown && (
+            <QueryExampleCards
+              examples={examples.examples}
+              requested={examplesMode === 'open'}
+              onRun={(example) => void runExample(example)}
+              onClose={() => setExamplesMode('closed')}
+              onDismiss={services.kg.setExamplesDismissed && examples.show ? () => void dismissExamples() : undefined}
+            />
+          )}
           <div className={`editor-wrap${editorExpanded ? ' is-expanded' : ''}`}>
             <div className="editor-toolbar">
               <CopyButton label="Copy" text={handle.getText()} />
@@ -699,6 +777,17 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             <SaveView current={() => handle.getText()} />
             <CaptureScope current={() => handle.getText()} onCaptured={() => setScopesVersion((v) => v + 1)} />
             <StartFill current={() => completeQuery(handle.getText()).cypher} onStarted={() => setFillsVersion((v) => v + 1)} />
+            {examples && (
+              <button
+                className="btn ghost tiny query-examples-toggle"
+                aria-pressed={examplesShown}
+                title="Example queries, each showing one thing the query language can do"
+                onClick={() => setExamplesMode(examplesShown ? 'closed' : 'open')}
+              >
+                <Lightbulb size={14} weight="bold" aria-hidden="true" />
+                Examples
+              </button>
+            )}
             <details className="editor-help">
               <summary className="btn ghost tiny">
                 <Question size={14} weight="bold" aria-hidden="true" />
@@ -722,7 +811,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
           aside={
             (ran || progress.lines.length > 0) && (
               <span className="viewtabs" role="tablist">
-                {(['table', 'raw', 'stats', 'trace'] as ResultView[]).map((v) => (
+                {views.map((v) => (
                   <button key={v} role="tab" aria-selected={view === v}
                           className={`viewtab${view === v ? ' is-on' : ''}`} onClick={() => setView(v)}>
                     {v === 'trace' && progress.live ? 'Trace ●' : v[0]!.toUpperCase() + v.slice(1)}
@@ -736,6 +825,11 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             !ran ? <p className="hint">Nothing run yet.</p> :
             rows.length === 0 ? <p className="hint">No rows.</p> :
             <RowTable rows={rows} columns={columns} />
+          )}
+          {view === 'graph' && (
+            !ran ? <p className="hint">Nothing run yet.</p> :
+            graph.nodes.length === 0 ? <p className="hint">These rows hold no nodes to draw. The table has them.</p> :
+            <ResultGraph graph={graph} />
           )}
           {/* Raw is the underlying JSON — the escape hatch for a shape the table flattens away. */}
           {view === 'raw' && (

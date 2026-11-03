@@ -57,6 +57,7 @@ var EmbabelVc = (() => {
     relationshipTypes: () => relationshipTypes,
     relationshipTypesFor: () => relationshipTypesFor,
     rowColumns: () => rowColumns,
+    rowGraph: () => rowGraph,
     rowsToCsv: () => rowsToCsv,
     rowsToMarkdown: () => rowsToMarkdown,
     scopeLabel: () => scopeLabel,
@@ -430,6 +431,57 @@ ${reach}` : reach;
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     return [columns, ...rows.map((row) => columns.map((column) => row[column]))].map((values) => values.map(csv).join(",")).join("\n");
+  }
+  var CAPTION_KEYS = ["name", "title", "displayName", "label", "subject", "key", "id", "code"];
+  var isRecord = (value) => value != null && typeof value === "object" && !Array.isArray(value);
+  var isNode = (value) => typeof value["__elementId"] === "string" && Array.isArray(value["__labels"]);
+  var isRelationship = (value) => typeof value["__elementId"] === "string" && typeof value["__startElementId"] === "string" && typeof value["__endElementId"] === "string";
+  var ownProperties = (value) => Object.fromEntries(Object.entries(value).filter(([key]) => !key.startsWith("__")));
+  function caption(labels, properties) {
+    for (const key of CAPTION_KEYS) {
+      const value = properties[key];
+      if (typeof value === "string" && value.trim()) return value;
+      if (typeof value === "number") return String(value);
+    }
+    return labels[0] ?? "node";
+  }
+  function rowGraph(rows) {
+    const nodes = /* @__PURE__ */ new Map();
+    const edges = /* @__PURE__ */ new Map();
+    const visit = (value) => {
+      if (Array.isArray(value)) return value.forEach(visit);
+      if (!isRecord(value)) return;
+      if (isNode(value)) {
+        const id = value["__elementId"];
+        const labels = value["__labels"].filter((l) => typeof l === "string");
+        const properties = ownProperties(value);
+        if (nodes.get(id)?.placeholder ?? true) {
+          nodes.set(id, { id, labels, caption: caption(labels, properties), properties, placeholder: false });
+        }
+        return;
+      }
+      if (isRelationship(value)) {
+        const id = value["__elementId"];
+        if (!edges.has(id)) {
+          edges.set(id, {
+            id,
+            type: typeof value["__type"] === "string" ? value["__type"] : "",
+            source: value["__startElementId"],
+            target: value["__endElementId"],
+            properties: ownProperties(value)
+          });
+        }
+        return;
+      }
+      Object.values(value).forEach(visit);
+    };
+    rows.forEach((row) => Object.values(row).forEach(visit));
+    for (const edge of edges.values()) {
+      for (const end of [edge.source, edge.target]) {
+        if (!nodes.has(end)) nodes.set(end, { id: end, labels: [], caption: "", properties: {}, placeholder: true });
+      }
+    }
+    return { nodes: [...nodes.values()], edges: [...edges.values()] };
   }
 
   // src/vc/events.ts
