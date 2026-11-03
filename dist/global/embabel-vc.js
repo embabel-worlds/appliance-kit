@@ -22,6 +22,7 @@ var EmbabelVc = (() => {
   var index_exports = {};
   __export(index_exports, {
     AI_KEYS: () => AI_KEYS,
+    INTERNAL_PROPERTIES: () => INTERNAL_PROPERTIES,
     PEEK_LIMIT: () => PEEK_LIMIT,
     RESERVED_PARAMS: () => RESERVED_PARAMS,
     SCOPE_NAME: () => SCOPE_NAME,
@@ -38,8 +39,11 @@ var EmbabelVc = (() => {
     declaredParams: () => declaredParams,
     describeVcEvent: () => describeVcEvent,
     edgeContext: () => edgeContext,
+    entityProperties: () => entityProperties,
     esc: () => esc,
+    isEntity: () => isEntity,
     isFailure: () => isFailure,
+    isInternalProperty: () => isInternalProperty,
     isTerminal: () => isTerminal,
     labelDoc: () => labelDoc,
     labelDoors: () => labelDoors,
@@ -57,10 +61,12 @@ var EmbabelVc = (() => {
     relationshipTypes: () => relationshipTypes,
     relationshipTypesFor: () => relationshipTypesFor,
     rowColumns: () => rowColumns,
+    rowGraph: () => rowGraph,
     rowsToCsv: () => rowsToCsv,
     rowsToMarkdown: () => rowsToMarkdown,
     scopeLabel: () => scopeLabel,
     scopeReference: () => scopeReference,
+    shownValue: () => shownValue,
     tokenDoc: () => tokenDoc
   });
 
@@ -406,12 +412,36 @@ ${reach}` : reach;
   }
 
   // src/vc/rows.ts
+  var INTERNAL_PROPERTIES = /* @__PURE__ */ new Set([
+    "userId",
+    "worldId",
+    "workspaceId",
+    "visibleTo",
+    "extractedBy"
+  ]);
+  function isInternalProperty(key) {
+    return key.startsWith("__") || INTERNAL_PROPERTIES.has(key);
+  }
+  function isEntity(value) {
+    return value != null && typeof value === "object" && !Array.isArray(value) && ("__elementId" in value || Array.isArray(value["__labels"]));
+  }
+  function entityProperties(value) {
+    return Object.fromEntries(Object.entries(value).filter(([key]) => !isInternalProperty(key)));
+  }
+  function shownValue(value) {
+    if (Array.isArray(value)) return value.map(shownValue);
+    if (isEntity(value)) return entityProperties(value);
+    if (value != null && typeof value === "object") {
+      return Object.fromEntries(Object.entries(value).map(([key, inner]) => [key, shownValue(inner)]));
+    }
+    return value;
+  }
   function rowColumns(rows) {
     const columns = [];
     for (const row of rows) for (const key of Object.keys(row)) if (!columns.includes(key)) columns.push(key);
     return columns;
   }
-  var cell = (value) => value == null ? "" : typeof value === "object" ? JSON.stringify(value) : String(value);
+  var cell = (value) => value == null ? "" : typeof value === "object" ? JSON.stringify(shownValue(value)) : String(value);
   function rowsToMarkdown(rows) {
     const columns = rowColumns(rows);
     if (!columns.length) return "";
@@ -430,6 +460,57 @@ ${reach}` : reach;
       return /[",\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     return [columns, ...rows.map((row) => columns.map((column) => row[column]))].map((values) => values.map(csv).join(",")).join("\n");
+  }
+  var CAPTION_KEYS = ["name", "title", "displayName", "label", "subject", "key", "id", "code"];
+  var isRecord = (value) => value != null && typeof value === "object" && !Array.isArray(value);
+  var isNode = (value) => typeof value["__elementId"] === "string" && Array.isArray(value["__labels"]);
+  var isRelationship = (value) => typeof value["__elementId"] === "string" && typeof value["__startElementId"] === "string" && typeof value["__endElementId"] === "string";
+  var ownProperties = (value) => entityProperties(value);
+  function caption(labels, properties) {
+    for (const key of CAPTION_KEYS) {
+      const value = properties[key];
+      if (typeof value === "string" && value.trim()) return value;
+      if (typeof value === "number") return String(value);
+    }
+    return labels[0] ?? "node";
+  }
+  function rowGraph(rows) {
+    const nodes = /* @__PURE__ */ new Map();
+    const edges = /* @__PURE__ */ new Map();
+    const visit = (value) => {
+      if (Array.isArray(value)) return value.forEach(visit);
+      if (!isRecord(value)) return;
+      if (isNode(value)) {
+        const id = value["__elementId"];
+        const labels = value["__labels"].filter((l) => typeof l === "string");
+        const properties = ownProperties(value);
+        if (nodes.get(id)?.placeholder ?? true) {
+          nodes.set(id, { id, labels, caption: caption(labels, properties), properties, placeholder: false });
+        }
+        return;
+      }
+      if (isRelationship(value)) {
+        const id = value["__elementId"];
+        if (!edges.has(id)) {
+          edges.set(id, {
+            id,
+            type: typeof value["__type"] === "string" ? value["__type"] : "",
+            source: value["__startElementId"],
+            target: value["__endElementId"],
+            properties: ownProperties(value)
+          });
+        }
+        return;
+      }
+      Object.values(value).forEach(visit);
+    };
+    rows.forEach((row) => Object.values(row).forEach(visit));
+    for (const edge of edges.values()) {
+      for (const end of [edge.source, edge.target]) {
+        if (!nodes.has(end)) nodes.set(end, { id: end, labels: [], caption: "", properties: {}, placeholder: true });
+      }
+    }
+    return { nodes: [...nodes.values()], edges: [...edges.values()] };
   }
 
   // src/vc/events.ts

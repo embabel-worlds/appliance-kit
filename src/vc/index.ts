@@ -21,7 +21,10 @@ export type { GraphSchema, SchemaLabel, SchemaProperty, SchemaRelationship, Edge
 
 export { declaredParams, RESERVED_PARAMS } from './params.ts'
 
-export { rowColumns, rowsToMarkdown, rowsToCsv } from './rows.ts'
+export {
+  rowColumns, rowsToMarkdown, rowsToCsv, rowGraph, INTERNAL_PROPERTIES, isInternalProperty, isEntity, entityProperties, shownValue,
+} from './rows.ts'
+export type { RowGraph, RowGraphNode, RowGraphEdge } from './rows.ts'
 
 export { describeVcEvent, isTerminal, isFailure } from './events.ts'
 export type {

@@ -17,6 +17,7 @@ const jsx_runtime_1 = require("react/jsx-runtime");
  * need different recovery instructions; a missing route alone does not establish the cause.
  */
 const react_1 = __importDefault(require("react"));
+const rows_ts_1 = require("../../../vc/rows.js");
 function Status({ tone, children, className = '' }) {
     return (0, jsx_runtime_1.jsx)("div", { className: `status${tone ? ` ${tone}` : ''}${className ? ` ${className}` : ''}`, role: tone === 'error' ? 'alert' : 'status', children: children });
 }
@@ -85,7 +86,7 @@ function CopyButton({ label, text, disabled }) {
 function RowTable({ rows, columns, limit = 200 }) {
     const shown = rows.slice(0, limit);
     return ((0, jsx_runtime_1.jsxs)("div", { className: "tablewrap", role: "region", "aria-label": "Results table", tabIndex: 0, children: [(0, jsx_runtime_1.jsxs)("table", { className: "results-table", children: [(0, jsx_runtime_1.jsx)("thead", { children: (0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => (0, jsx_runtime_1.jsx)("th", { children: c }, c)) }) }), (0, jsx_runtime_1.jsx)("tbody", { children: shown.map((row, i) => ((0, jsx_runtime_1.jsx)("tr", { children: columns.map((c) => ((0, jsx_runtime_1.jsx)("td", { "data-label": c, children: row[c] == null ? '' : typeof row[c] === 'object'
-                                    ? (0, jsx_runtime_1.jsx)("span", { className: "cell-object", children: JSON.stringify(row[c], null, 2) })
+                                    ? ((0, jsx_runtime_1.jsxs)(jsx_runtime_1.Fragment, { children: [(0, rows_ts_1.isEntity)(row[c]) && Array.isArray(row[c]['__labels']) && ((0, jsx_runtime_1.jsx)("span", { className: "cell-entity-label", children: row[c]['__labels'].map((l) => `:${l}`).join('') })), (0, jsx_runtime_1.jsx)("span", { className: "cell-object", children: JSON.stringify((0, rows_ts_1.shownValue)(row[c]), null, 2) })] }))
                                     : String(row[c]) }, c))) }, i))) })] }), rows.length > shown.length && ((0, jsx_runtime_1.jsxs)("div", { className: "hint", children: ["showing ", shown.length, " of ", rows.length, " \u2014 copy for the rest"] }))] }));
 }
 //# sourceMappingURL=chrome.js.map

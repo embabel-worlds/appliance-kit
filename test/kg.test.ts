@@ -61,6 +61,22 @@ describe('KgClient request shaping', () => {
     assert.deepEqual(transport.last.query, {})
   })
 
+  it('names the studio as where a statement was written, only when asked to', async () => {
+    const { kg, transport } = client()
+    await kg.execute('MATCH (n) RETURN n', { surface: 'studio' })
+    assert.deepEqual(transport.last.body, { cypher: 'MATCH (n) RETURN n', surface: 'studio' })
+    await kg.execute('MATCH (n) RETURN n')
+    assert.deepEqual(transport.last.body, { cypher: 'MATCH (n) RETURN n' })
+  })
+
+  it('reads the starter examples and records a dismissal on the signed-in user\'s own surface', async () => {
+    const { kg, transport } = client()
+    await kg.examples()
+    assert.deepEqual(transport.last, { method: 'GET', path: '/api/v1/kg/studio/examples' })
+    await kg.setExamplesDismissed(true)
+    assert.deepEqual(transport.last, { method: 'PUT', path: '/api/v1/kg/studio/examples/dismissed', body: { dismissed: true } })
+  })
+
   it('asks for a background run', async () => {
     const { kg, transport } = client()
     await kg.execute('MATCH (n) RETURN n', { background: true })

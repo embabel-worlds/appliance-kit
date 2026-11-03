@@ -30,6 +30,8 @@ export type {
   KgPlanInputs,
   KgPlanStep,
   KgPropertyValues,
+  KgQueryExample,
+  KgQueryExamples,
   KgQueryResult,
   KgRefreshViewResult,
   KgRunChoice,

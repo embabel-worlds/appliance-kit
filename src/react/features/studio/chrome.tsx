@@ -7,6 +7,7 @@
 
 import React from 'react'
 import type { Outcome } from '../../../client/outcome.ts'
+import { isEntity, shownValue } from '../../../vc/rows.ts'
 
 /** A status line's tone. Mirrors the kit CSS: `.status.ok`, `.status.error`, plain for neutral. */
 export type Tone = 'ok' | 'error' | 'caution' | null
@@ -123,7 +124,15 @@ export function RowTable({ rows, columns, limit = 200 }: {
               {columns.map((c) => (
                 <td key={c} data-label={c}>
                   {row[c] == null ? '' : typeof row[c] === 'object'
-                    ? <span className="cell-object">{JSON.stringify(row[c], null, 2)}</span>
+                    ? (
+                      <>
+                        {/* The label is what the stripped `__labels` said; a node still reads as one. */}
+                        {isEntity(row[c]) && Array.isArray(row[c]['__labels']) && (
+                          <span className="cell-entity-label">{(row[c]['__labels'] as string[]).map((l) => `:${l}`).join('')}</span>
+                        )}
+                        <span className="cell-object">{JSON.stringify(shownValue(row[c]), null, 2)}</span>
+                      </>
+                    )
                     : String(row[c])}
                 </td>
               ))}

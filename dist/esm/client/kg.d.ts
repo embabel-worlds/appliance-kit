@@ -11,7 +11,9 @@ export type KgRunState = Schemas['KgRunState'];
 export type KgInFlightRun = Schemas['KgInFlightRun'];
 export type KgKillResult = Schemas['KgKillResponse'];
 export type KgAnswerAccepted = Schemas['KgAnswerAccepted'];
-export type KgView = Schemas['ViewDebugInfo'];
+export type KgView = Omit<Schemas['ViewDebugInfo'], 'goal'> & {
+    goal?: string | null;
+};
 export type KgViewParamSpec = Schemas['ViewParamSpec'];
 export type KgSaveViewRequest = Schemas['KgSaveViewRequest'];
 export type KgSaveViewResult = Schemas['KgSaveViewResponse'];
@@ -25,6 +27,8 @@ export type KgScopeDeleteResult = Schemas['KgScopeDeleteResponse'];
 export type KgPlanAnswer = Schemas['PlanAnswer'];
 export type KgPlanStep = Schemas['PlanAnswerStep'];
 export type KgPlanInput = Schemas['KgPlanInput'];
+export type KgQueryExamples = Schemas['QueryExamplesResponse'];
+export type KgQueryExample = Schemas['QueryExampleView'];
 /** A plan's inputs by name: `{notes: {type: 'text', value: '…'}}`, or a spine label and one entity's key. */
 export type KgPlanInputs = Record<string, KgPlanInput>;
 export interface KgSaveGoalViewRequest {
@@ -68,6 +72,12 @@ export interface ExecuteOptions {
     params?: Record<string, KgViewParamSpec>;
     /** Arguments for `params`. A blank value means not supplied, so the default applies. */
     args?: Record<string, unknown>;
+    /**
+     * Where the statement was written, for the appliance's query log: `studio` for a query somebody
+     * wrote in Query Studio's editor. The log cannot tell those from the statements other callers run,
+     * and the count of them is what retires the studio's starter examples. Any other value is a 400.
+     */
+    surface?: 'studio';
 }
 /** What {@link KgClient.userExecute} takes: everything but the background modes. */
 export type UserExecuteOptions = Omit<ExecuteOptions, 'background' | 'waitSeconds'>;
@@ -80,6 +90,19 @@ export declare function goalViewsSupported(views: KgView[]): boolean;
 export declare class KgClient {
     private readonly transport;
     constructor(transport: Transport);
+    /**
+     * Query Studio's starter queries — default-world's, the world's own and each installed realm's —
+     * and whether to offer them to the signed-in person without being asked. `show` goes false once
+     * they dismiss them, save a view of their own, or write `threshold` queries of their own in the
+     * studio (`hiddenBecause` says which). The examples come back either way, for an Examples menu.
+     * Any signed-in user may ask, about themselves only.
+     */
+    examples(): Promise<Outcome<KgQueryExamples>>;
+    /**
+     * Stop offering the examples to this person (`true`), or offer them again (`false`). Recorded
+     * once for the person by the appliance, so another browser or another day does not undo it.
+     */
+    setExamplesDismissed(dismissed: boolean): Promise<Outcome<KgQueryExamples>>;
     /**
      * The acting user's reachable schema — the SAME snapshot the preflight validates against, so
      * what an editor offers for completion and what validation accepts can never disagree.
