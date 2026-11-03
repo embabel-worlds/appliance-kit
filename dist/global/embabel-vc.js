@@ -27,9 +27,11 @@ var EmbabelVc = (() => {
     SCOPE_NAME: () => SCOPE_NAME,
     TARGETS: () => TARGETS,
     TIPS: () => TIPS,
+    USER_ANCHOR: () => USER_ANCHOR,
     VIA_VALUES: () => VIA_VALUES,
     aliasMap: () => aliasMap,
     anchorLabels: () => anchorLabels,
+    anchoredPattern: () => anchoredPattern,
     completeQuery: () => completeQuery,
     compose: () => compose,
     connectedLabels: () => connectedLabels,
@@ -39,20 +41,27 @@ var EmbabelVc = (() => {
     esc: () => esc,
     isFailure: () => isFailure,
     isTerminal: () => isTerminal,
+    labelDoc: () => labelDoc,
+    labelDoors: () => labelDoors,
     labelNames: () => labelNames,
     nodeContext: () => nodeContext,
     pipelineText: () => pipelineText,
     planLine: () => planLine,
     propertiesOf: () => propertiesOf,
+    propertyDescription: () => propertyDescription,
+    propertyDetails: () => propertyDetails,
+    propertyDoc: () => propertyDoc,
     propertyMapContext: () => propertyMapContext,
     referencedScopeNames: () => referencedScopeNames,
+    relationshipDoc: () => relationshipDoc,
     relationshipTypes: () => relationshipTypes,
     relationshipTypesFor: () => relationshipTypesFor,
     rowColumns: () => rowColumns,
     rowsToCsv: () => rowsToCsv,
     rowsToMarkdown: () => rowsToMarkdown,
     scopeLabel: () => scopeLabel,
-    scopeReference: () => scopeReference
+    scopeReference: () => scopeReference,
+    tokenDoc: () => tokenDoc
   });
 
   // src/vc/targets.ts
@@ -227,7 +236,10 @@ var EmbabelVc = (() => {
     return map;
   }
   function propertiesOf(schema, label) {
-    return schema?.labels.find((l) => l.label === label)?.properties?.map((p) => p.name) ?? [];
+    return propertyDetails(schema, label).map((p) => p.name);
+  }
+  function propertyDetails(schema, label) {
+    return schema?.labels.find((l) => l.label === label)?.properties ?? [];
   }
   function labelNames(schema) {
     return schema?.labels.map((l) => l.label) ?? [];
@@ -298,6 +310,91 @@ var EmbabelVc = (() => {
     if (/:\s*$/.test(body)) return null;
     const label = m[2] ?? aliases[m[1] ?? ""] ?? null;
     return { label, used: [...body.matchAll(/(\w+)\s*:/g)].flatMap((k) => k[1] ? [k[1]] : []) };
+  }
+  var USER_ANCHOR = "AssistantUser";
+  function labelDoors(schema, label) {
+    const labels = schema?.labels ?? [];
+    const target = labels.find((l) => l.label === label);
+    if (!target || target.anchor !== false) return [];
+    const opens = new Set(labels.filter((l) => l.anchor !== false).map((l) => l.label));
+    const seen = /* @__PURE__ */ new Set();
+    const doors = [];
+    for (const r of schema?.relationships ?? []) {
+      const door = r.to === label && r.from !== label && opens.has(r.from) ? { anchor: r.from, type: r.type, direction: "out", description: r.description } : r.from === label && r.to !== label && opens.has(r.to) ? { anchor: r.to, type: r.type, direction: "in", description: r.description } : null;
+      const key = door && `${door.anchor}|${door.type}|${door.direction}`;
+      if (door && key && !seen.has(key)) {
+        seen.add(key);
+        doors.push(door);
+      }
+    }
+    const rank = (d) => d.anchor === USER_ANCHOR ? 0 : 1;
+    return doors.sort((a, b) => rank(a) - rank(b) || a.anchor.localeCompare(b.anchor) || a.type.localeCompare(b.type));
+  }
+  function anchoredPattern(door, label, variable = "") {
+    const preferred = door.anchor === USER_ANCHOR ? "me" : door.anchor.charAt(0).toLowerCase();
+    const anchorVar = preferred === variable ? `${preferred}2` : preferred;
+    const anchor = `(${anchorVar}:${door.anchor})`;
+    const node = `(${variable}:${label})`;
+    return door.direction === "out" ? `${anchor}-[:${door.type}]->${node}` : `${node}-[:${door.type}]->${anchor}`;
+  }
+  function labelDoc(schema, label) {
+    const described = schema?.labels.find((l) => l.label === label)?.description?.trim() ?? "";
+    const doors = labelDoors(schema, label);
+    if (!doors.length) return described;
+    const variable = label.charAt(0).toLowerCase();
+    const ways = doors.slice(0, 3).map((d) => anchoredPattern(d, label, variable));
+    const more = doors.length > 3 ? ` (and ${doors.length - 3} more)` : "";
+    const reach = `Reached only from an anchor \u2014 MATCH (${variable}:${label}) alone is refused. Write ${ways.join(" or ")}${more}.`;
+    return described ? `${described}
+
+${reach}` : reach;
+  }
+  function propertyDoc(property) {
+    const type = property.type && property.type !== "any" ? property.type : "";
+    return [type, propertyDescription(property)].filter(Boolean).join(" \u2014 ");
+  }
+  function propertyDescription(property) {
+    const described = property.description?.trim() ?? "";
+    return described.toLowerCase() === property.name.toLowerCase() ? "" : described;
+  }
+  function relationshipDoc(schema, type, from, to) {
+    const triples = (schema?.relationships ?? []).filter((r) => r.type === type);
+    if (!triples.length) return "";
+    const exact = triples.find((r) => r.from === from && r.to === to) ?? triples.find((r) => r.to === from && r.from === to);
+    if (exact) return [`(:${exact.from})-[:${type}]->(:${exact.to})`, exact.description?.trim()].filter(Boolean).join("\n");
+    const scoped = from ? triples.filter((r) => r.from === from || r.to === from) : triples;
+    const pool = scoped.length ? scoped : triples;
+    const ends = dedupeSorted(pool.map((r) => `(:${r.from})-[:${type}]->(:${r.to})`));
+    const shown = ends.slice(0, 4).join("\n") + (ends.length > 4 ? `
+\u2026 and ${ends.length - 4} more` : "");
+    const shared = new Set(pool.map((r) => r.description?.trim() ?? ""));
+    const description = shared.size === 1 ? [...shared][0] : "";
+    return [shown, description].filter(Boolean).join("\n");
+  }
+  function tokenDoc(schema, word, lineBefore, cypher) {
+    if (!schema || !word) return null;
+    const aliases = aliasMap(cypher);
+    const name = word.includes(":") ? word.slice(word.lastIndexOf(":") + 1) : word;
+    if (/\[[^\]]*$/.test(lineBefore) && schema.relationships.some((r) => r.type === name)) {
+      const left = edgeContext(lineBefore + word, aliases);
+      const after = cypher.slice(cypher.indexOf(lineBefore + word) + (lineBefore + word).length);
+      const right = after.match(/^[^\]]*\]\s*-?>?\s*\(\s*(\w*)\s*(?::\s*(\w+))?/);
+      const rightLabel = right ? right[2] ?? aliases[right[1] ?? ""] ?? null : null;
+      const leftLabel = left?.label ?? null;
+      const [from, to] = left?.direction === "in" ? [rightLabel, leftLabel] : [leftLabel, rightLabel];
+      return { title: `:${name}`, text: relationshipDoc(schema, name, from, to) };
+    }
+    const resolved = schema.labels.some((l) => l.label === name) ? name : aliases[name];
+    const label = schema.labels.find((l) => l.label === resolved);
+    if (label) return { title: label.label, text: labelDoc(schema, label.label), label };
+    const owner = lineBefore.match(/(\w+)\.$/);
+    const ownerLabel = owner ? aliases[owner[1] ?? ""] : void 0;
+    const property = ownerLabel ? propertyDetails(schema, ownerLabel).find((p) => p.name === word) : void 0;
+    if (property && ownerLabel) {
+      const text = propertyDoc(property);
+      return text ? { title: `${ownerLabel}.${property.name}`, text } : null;
+    }
+    return null;
   }
 
   // src/vc/params.ts

@@ -211,31 +211,70 @@ var EmbabelStudioKit = (() => {
     if ((m = before.match(/[([]\s*\w*:(\w*)$/)) && before.lastIndexOf("(") > before.lastIndexOf("[")) {
       const stem = m[1] ?? "";
       const context = vc.nodeContext(before, vc.aliasMap(aliasSource));
-      const labels = context ? vc.connectedLabels(schema, context.label, context.type, context.direction) : vc.anchorLabels(schema);
-      return { list: labels.filter((l) => l.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+      const labels = (context ? vc.connectedLabels(schema, context.label, context.type, context.direction) : vc.anchorLabels(schema)).filter(starts(stem));
+      const items = labels.map((l) => labelItem(vc, schema, l));
+      if (!context && stem) items.push(...anchoredItems(vc, schema, before, stem));
+      return { list: labels, stemLength: stem.length, items };
     }
     if (m = before.match(/\[\s*\w*:(\w*)$/)) {
       const stem = m[1] ?? "";
       const context = vc.edgeContext(before, vc.aliasMap(aliasSource));
-      const rels = vc.relationshipTypesFor(schema, context?.label, context?.direction);
-      return { list: rels.filter((r) => r.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+      const rels = vc.relationshipTypesFor(schema, context?.label, context?.direction).filter(starts(stem));
+      const items = rels.map((r) => ({ label: r, text: r, doc: vc.relationshipDoc?.(schema, r, context?.label) || void 0 }));
+      return { list: rels, stemLength: stem.length, items };
     }
     const mapContext = vc.propertyMapContext(before, vc.aliasMap(aliasSource));
     if (mapContext) {
       const stem = before.match(/(\w*)$/)?.[1] ?? "";
-      const props = mapContext.label ? vc.propertiesOf(schema, mapContext.label).filter((p) => !mapContext.used.includes(p)) : [];
-      return { list: props.filter((p) => p.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+      const props = mapContext.label ? vc.propertiesOf(schema, mapContext.label).filter((p) => !mapContext.used.includes(p)).filter(starts(stem)) : [];
+      return { list: props, stemLength: stem.length, items: propertyItems(vc, schema, mapContext.label, props) };
     }
     if (m = before.match(/(\w+)\.(\w*)$/)) {
       const alias = m[1] ?? "";
       const stem = m[2] ?? "";
       const label = vc.aliasMap(aliasSource)[alias];
       if (label) {
-        const props = vc.propertiesOf(schema, label);
-        return { list: props.filter((p) => p.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+        const props = vc.propertiesOf(schema, label).filter(starts(stem));
+        return { list: props, stemLength: stem.length, items: propertyItems(vc, schema, label, props) };
       }
     }
     return null;
+  }
+  function labelItem(vc, schema, label) {
+    return { label, text: label, doc: vc.labelDoc?.(schema, label) || void 0 };
+  }
+  function propertyItems(vc, schema, label, names) {
+    const details = label && vc.propertyDetails ? vc.propertyDetails(schema, label) : [];
+    return names.map((name) => {
+      const property = details.find((p) => p.name === name);
+      const type = property?.type && property.type !== "any" ? property.type : void 0;
+      const described = property?.description?.trim() ?? "";
+      const doc = described && described.toLowerCase() !== name.toLowerCase() ? described : void 0;
+      return { label: name, text: name, detail: type, doc };
+    });
+  }
+  function anchoredItems(vc, schema, before, stem) {
+    if (!vc.labelDoors || !vc.anchoredPattern || !vc.labelNames) return [];
+    const typed = before.match(/\(\s*(\w*)\s*:\w*$/);
+    if (!typed) return [];
+    const variable = typed[1] ?? "";
+    const replaceLength = before.length - before.lastIndexOf("(") - 1;
+    const opens = new Set(vc.anchorLabels(schema));
+    return vc.labelNames(schema).filter((l) => !opens.has(l) && starts(stem)(l)).flatMap(
+      (label) => vc.labelDoors(schema, label).slice(0, 3).map((door) => {
+        const pattern = vc.anchoredPattern(door, label, variable);
+        return {
+          label: `${label} via ${door.anchor}`,
+          text: pattern.slice(1, -1),
+          detail: "anchored",
+          doc: vc.labelDoc?.(schema, label) || void 0,
+          replaceLength
+        };
+      })
+    );
+  }
+  function starts(stem) {
+    return (name) => name.toLowerCase().startsWith(stem.toLowerCase());
   }
   function createCypherHint(CodeMirror, vc, options) {
     return (editor) => {
@@ -245,6 +284,17 @@ var EmbabelStudioKit = (() => {
       const found = (list, from) => ({
         list: [...list].sort((a, b) => a.localeCompare(b)),
         from: CodeMirror.Pos(cursor.line, from),
+        to: CodeMirror.Pos(cursor.line, cursor.ch)
+      });
+      const foundItems = (items, stemLength) => ({
+        list: [...items].sort((a, b) => a.label.localeCompare(b.label)).map((item) => !item.detail && !item.doc && item.replaceLength === void 0 && item.text === item.label ? item.text : {
+          text: item.text,
+          displayText: item.label,
+          className: "kit-hint",
+          ...item.replaceLength !== void 0 ? { from: CodeMirror.Pos(cursor.line, cursor.ch - item.replaceLength) } : {},
+          render: (element) => renderItem(element, item)
+        }),
+        from: CodeMirror.Pos(cursor.line, cursor.ch - stemLength),
         to: CodeMirror.Pos(cursor.line, cursor.ch)
       });
       const schema = options.schema();
@@ -258,7 +308,9 @@ var EmbabelStudioKit = (() => {
         return found(vc.AI_KEYS.filter((k) => k.startsWith(stem)), cursor.ch - stem.length);
       }
       const fragment = cypherFragmentCompletions(vc, schema, before, editor.getValue());
-      if (fragment) return found(fragment.list, cursor.ch - fragment.stemLength);
+      if (fragment) {
+        return fragment.items ? foundItems(fragment.items, fragment.stemLength) : found(fragment.list, cursor.ch - fragment.stemLength);
+      }
       if (m = before.match(/(\w+)$/)) {
         const stem = m[1] ?? "";
         const labels = (schema?.labels ?? []).map((l) => l.label);
@@ -267,6 +319,18 @@ var EmbabelStudioKit = (() => {
       }
       return null;
     };
+  }
+  function renderItem(element, item) {
+    const doc = element.ownerDocument;
+    const span = (className, text) => {
+      const node = doc.createElement("span");
+      node.className = className;
+      node.textContent = text;
+      return node;
+    };
+    element.append(span("kit-hint-name", item.label));
+    if (item.detail) element.append(span("kit-hint-detail", item.detail));
+    if (item.doc) element.append(span("kit-hint-doc", item.doc));
   }
   var CYPHER_KEYWORDS = [
     "MATCH",

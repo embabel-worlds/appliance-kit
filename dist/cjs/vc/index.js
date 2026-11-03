@@ -8,7 +8,7 @@
  * understanding of what the engine offers.
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.planLine = exports.pipelineText = exports.completeQuery = exports.PEEK_LIMIT = exports.referencedScopeNames = exports.scopeReference = exports.scopeLabel = exports.SCOPE_NAME = exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
+exports.planLine = exports.pipelineText = exports.completeQuery = exports.PEEK_LIMIT = exports.referencedScopeNames = exports.scopeReference = exports.scopeLabel = exports.SCOPE_NAME = exports.isFailure = exports.isTerminal = exports.describeVcEvent = exports.rowsToCsv = exports.rowsToMarkdown = exports.rowColumns = exports.RESERVED_PARAMS = exports.declaredParams = exports.tokenDoc = exports.relationshipDoc = exports.propertyDescription = exports.propertyDoc = exports.labelDoc = exports.anchoredPattern = exports.labelDoors = exports.USER_ANCHOR = exports.propertyMapContext = exports.nodeContext = exports.edgeContext = exports.connectedLabels = exports.relationshipTypesFor = exports.relationshipTypes = exports.anchorLabels = exports.labelNames = exports.propertyDetails = exports.propertiesOf = exports.aliasMap = exports.TIPS = exports.compose = exports.esc = exports.AI_KEYS = exports.VIA_VALUES = exports.TARGETS = void 0;
 var targets_ts_1 = require("./targets.js");
 Object.defineProperty(exports, "TARGETS", { enumerable: true, get: function () { return targets_ts_1.TARGETS; } });
 Object.defineProperty(exports, "VIA_VALUES", { enumerable: true, get: function () { return targets_ts_1.VIA_VALUES; } });
@@ -20,6 +20,7 @@ Object.defineProperty(exports, "TIPS", { enumerable: true, get: function () { re
 var schema_ts_1 = require("./schema.js");
 Object.defineProperty(exports, "aliasMap", { enumerable: true, get: function () { return schema_ts_1.aliasMap; } });
 Object.defineProperty(exports, "propertiesOf", { enumerable: true, get: function () { return schema_ts_1.propertiesOf; } });
+Object.defineProperty(exports, "propertyDetails", { enumerable: true, get: function () { return schema_ts_1.propertyDetails; } });
 Object.defineProperty(exports, "labelNames", { enumerable: true, get: function () { return schema_ts_1.labelNames; } });
 Object.defineProperty(exports, "anchorLabels", { enumerable: true, get: function () { return schema_ts_1.anchorLabels; } });
 Object.defineProperty(exports, "relationshipTypes", { enumerable: true, get: function () { return schema_ts_1.relationshipTypes; } });
@@ -28,6 +29,14 @@ Object.defineProperty(exports, "connectedLabels", { enumerable: true, get: funct
 Object.defineProperty(exports, "edgeContext", { enumerable: true, get: function () { return schema_ts_1.edgeContext; } });
 Object.defineProperty(exports, "nodeContext", { enumerable: true, get: function () { return schema_ts_1.nodeContext; } });
 Object.defineProperty(exports, "propertyMapContext", { enumerable: true, get: function () { return schema_ts_1.propertyMapContext; } });
+Object.defineProperty(exports, "USER_ANCHOR", { enumerable: true, get: function () { return schema_ts_1.USER_ANCHOR; } });
+Object.defineProperty(exports, "labelDoors", { enumerable: true, get: function () { return schema_ts_1.labelDoors; } });
+Object.defineProperty(exports, "anchoredPattern", { enumerable: true, get: function () { return schema_ts_1.anchoredPattern; } });
+Object.defineProperty(exports, "labelDoc", { enumerable: true, get: function () { return schema_ts_1.labelDoc; } });
+Object.defineProperty(exports, "propertyDoc", { enumerable: true, get: function () { return schema_ts_1.propertyDoc; } });
+Object.defineProperty(exports, "propertyDescription", { enumerable: true, get: function () { return schema_ts_1.propertyDescription; } });
+Object.defineProperty(exports, "relationshipDoc", { enumerable: true, get: function () { return schema_ts_1.relationshipDoc; } });
+Object.defineProperty(exports, "tokenDoc", { enumerable: true, get: function () { return schema_ts_1.tokenDoc; } });
 var params_ts_1 = require("./params.js");
 Object.defineProperty(exports, "declaredParams", { enumerable: true, get: function () { return params_ts_1.declaredParams; } });
 Object.defineProperty(exports, "RESERVED_PARAMS", { enumerable: true, get: function () { return params_ts_1.RESERVED_PARAMS; } });

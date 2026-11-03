@@ -328,6 +328,21 @@
 
 li.CodeMirror-hint-active { background: var(--signal); color: var(--on-signal); }
 
+/* A documented completion (the kit's `kit-hint` rows): the name, a dim tag — a property's type, or
+   `anchored` for a pattern offered in place of a reach-only label — and what it means. The meaning
+   is clipped to one line while scanning and shown whole on the active row, which is where a person
+   deciding between two names is looking. */
+
+.CodeMirror-hint.kit-hint { max-width: 520px; }
+.CodeMirror-hint.kit-hint .kit-hint-detail { margin-left: 8px; color: var(--mid); font-size: 11px; }
+.CodeMirror-hint.kit-hint .kit-hint-doc {
+  display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-family: var(--sans); font-size: 11px; color: var(--mid); margin-top: 1px;
+}
+li.CodeMirror-hint-active.kit-hint .kit-hint-detail,
+li.CodeMirror-hint-active.kit-hint .kit-hint-doc { color: inherit; opacity: 0.85; }
+li.CodeMirror-hint-active.kit-hint .kit-hint-doc { white-space: pre-wrap; }
+
 /* A failing line, painted where tsc said it was — the server rebases away its wrapper, so the
    violation's coordinates are the author's own. */
 

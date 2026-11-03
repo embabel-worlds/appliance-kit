@@ -22,26 +22,33 @@ export function cypherFragmentCompletions(vc, schema, before, aliasSource) {
     if ((m = before.match(/[([]\s*\w*:(\w*)$/)) && before.lastIndexOf('(') > before.lastIndexOf('[')) {
         const stem = m[1] ?? '';
         const context = vc.nodeContext(before, vc.aliasMap(aliasSource));
-        const labels = context
+        const labels = (context
             ? vc.connectedLabels(schema, context.label, context.type, context.direction)
-            : vc.anchorLabels(schema);
-        return { list: labels.filter((l) => l.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+            : vc.anchorLabels(schema)).filter(starts(stem));
+        const items = labels.map((l) => labelItem(vc, schema, l));
+        // A reach-only label typed where a pattern OPENS is refused bare, so it is offered as the
+        // pattern that reaches it — once a person has begun to name it, so the list is not every
+        // anchored form in the world.
+        if (!context && stem)
+            items.push(...anchoredItems(vc, schema, before, stem));
+        return { list: labels, stemLength: stem.length, items };
     }
     // [r:REL… → the edges the schema has seen at the node on the left.
     if ((m = before.match(/\[\s*\w*:(\w*)$/))) {
         const stem = m[1] ?? '';
         const context = vc.edgeContext(before, vc.aliasMap(aliasSource));
-        const rels = vc.relationshipTypesFor(schema, context?.label, context?.direction);
-        return { list: rels.filter((r) => r.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+        const rels = vc.relationshipTypesFor(schema, context?.label, context?.direction).filter(starts(stem));
+        const items = rels.map((r) => ({ label: r, text: r, doc: vc.relationshipDoc?.(schema, r, context?.label) || undefined }));
+        return { list: rels, stemLength: stem.length, items };
     }
     // (c:Concept {na… → the label's own property KEYS, minus what the map binds.
     const mapContext = vc.propertyMapContext(before, vc.aliasMap(aliasSource));
     if (mapContext) {
         const stem = before.match(/(\w*)$/)?.[1] ?? '';
         const props = mapContext.label
-            ? vc.propertiesOf(schema, mapContext.label).filter((p) => !mapContext.used.includes(p))
+            ? vc.propertiesOf(schema, mapContext.label).filter((p) => !mapContext.used.includes(p)).filter(starts(stem))
             : [];
-        return { list: props.filter((p) => p.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+        return { list: props, stemLength: stem.length, items: propertyItems(vc, schema, mapContext.label, props) };
     }
     // alias.prop… → that alias's label's properties.
     if ((m = before.match(/(\w+)\.(\w*)$/))) {
@@ -49,11 +56,56 @@ export function cypherFragmentCompletions(vc, schema, before, aliasSource) {
         const stem = m[2] ?? '';
         const label = vc.aliasMap(aliasSource)[alias];
         if (label) {
-            const props = vc.propertiesOf(schema, label);
-            return { list: props.filter((p) => p.toLowerCase().startsWith(stem.toLowerCase())), stemLength: stem.length };
+            const props = vc.propertiesOf(schema, label).filter(starts(stem));
+            return { list: props, stemLength: stem.length, items: propertyItems(vc, schema, label, props) };
         }
     }
     return null;
+}
+function labelItem(vc, schema, label) {
+    return { label, text: label, doc: vc.labelDoc?.(schema, label) || undefined };
+}
+function propertyItems(vc, schema, label, names) {
+    const details = label && vc.propertyDetails ? vc.propertyDetails(schema, label) : [];
+    return names.map((name) => {
+        const property = details.find((p) => p.name === name);
+        const type = property?.type && property.type !== 'any' ? property.type : undefined;
+        const described = property?.description?.trim() ?? '';
+        // An older appliance described an undocumented property by its own name; that says nothing.
+        const doc = described && described.toLowerCase() !== name.toLowerCase() ? described : undefined;
+        return { label: name, text: name, detail: type, doc };
+    });
+}
+/*
+ * `(r:ConfigR` at the head of a pattern: ConfigRun cannot open it, so offer what can —
+ * `(me:AssistantUser)-[:HAS_CONFIG]->(r:ConfigRun` — replacing the `r:ConfigR` typed so far, with the
+ * person's own variable kept. One item per door, the user anchor's first.
+ */
+function anchoredItems(vc, schema, before, stem) {
+    if (!vc.labelDoors || !vc.anchoredPattern || !vc.labelNames)
+        return [];
+    const typed = before.match(/\(\s*(\w*)\s*:\w*$/);
+    if (!typed)
+        return [];
+    const variable = typed[1] ?? '';
+    const replaceLength = before.length - before.lastIndexOf('(') - 1;
+    const opens = new Set(vc.anchorLabels(schema));
+    return vc.labelNames(schema)
+        .filter((l) => !opens.has(l) && starts(stem)(l))
+        .flatMap((label) => vc.labelDoors(schema, label).slice(0, 3).map((door) => {
+        // The pattern without its closing paren: the cursor lands where a property map or `)` goes next.
+        const pattern = vc.anchoredPattern(door, label, variable);
+        return {
+            label: `${label} via ${door.anchor}`,
+            text: pattern.slice(1, -1),
+            detail: 'anchored',
+            doc: vc.labelDoc?.(schema, label) || undefined,
+            replaceLength,
+        };
+    }));
+}
+function starts(stem) {
+    return (name) => name.toLowerCase().startsWith(stem.toLowerCase());
 }
 /**
  * The full editor hint for a Cypher editor, ready for
@@ -71,6 +123,20 @@ export function createCypherHint(CodeMirror, vc, options) {
             from: CodeMirror.Pos(cursor.line, from),
             to: CodeMirror.Pos(cursor.line, cursor.ch),
         });
+        // CodeMirror's show-hint takes objects as readily as strings: `text` is inserted, `displayText`
+        // listed, a per-item `from` widens what is replaced, and `render` draws the row. A name the
+        // schema says nothing more about stays the plain string it always was.
+        const foundItems = (items, stemLength) => ({
+            list: [...items].sort((a, b) => a.label.localeCompare(b.label)).map((item) => !item.detail && !item.doc && item.replaceLength === undefined && item.text === item.label ? item.text : {
+                text: item.text,
+                displayText: item.label,
+                className: 'kit-hint',
+                ...(item.replaceLength !== undefined ? { from: CodeMirror.Pos(cursor.line, cursor.ch - item.replaceLength) } : {}),
+                render: (element) => renderItem(element, item),
+            }),
+            from: CodeMirror.Pos(cursor.line, cursor.ch - stemLength),
+            to: CodeMirror.Pos(cursor.line, cursor.ch),
+        });
         const schema = options.schema();
         let m;
         // via:'… and ai:{ … are the ENGINE's vocabulary, ahead of pattern branches
@@ -84,8 +150,9 @@ export function createCypherHint(CodeMirror, vc, options) {
             return found(vc.AI_KEYS.filter((k) => k.startsWith(stem)), cursor.ch - stem.length);
         }
         const fragment = cypherFragmentCompletions(vc, schema, before, editor.getValue());
-        if (fragment)
-            return found(fragment.list, cursor.ch - fragment.stemLength);
+        if (fragment) {
+            return fragment.items ? foundItems(fragment.items, fragment.stemLength) : found(fragment.list, cursor.ch - fragment.stemLength);
+        }
         // bare word → keywords and labels
         if ((m = before.match(/(\w+)$/))) {
             const stem = m[1] ?? '';
@@ -95,6 +162,26 @@ export function createCypherHint(CodeMirror, vc, options) {
         }
         return null;
     };
+}
+/*
+ * One row: the name, a dim tag (a property's type; `anchored` for a pattern), and the documentation.
+ * The documentation is in the row so it travels with the completion; the stylesheet shows it in full
+ * on the ACTIVE row and clips it elsewhere, so scanning stays a list of names. Text only — every word
+ * here came from a schema a realm wrote, and none of it is markup.
+ */
+function renderItem(element, item) {
+    const doc = element.ownerDocument;
+    const span = (className, text) => {
+        const node = doc.createElement('span');
+        node.className = className;
+        node.textContent = text;
+        return node;
+    };
+    element.append(span('kit-hint-name', item.label));
+    if (item.detail)
+        element.append(span('kit-hint-detail', item.detail));
+    if (item.doc)
+        element.append(span('kit-hint-doc', item.doc));
 }
 /** The bare-word vocabulary both studios teach. Shared so one keystroke completes the same way
  *  in Me and in the console; `ai.relevant/score/classify` are here because per-row judgment is
