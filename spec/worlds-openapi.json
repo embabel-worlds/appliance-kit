@@ -7287,6 +7287,11 @@
             },
             "description" : "Declared parameters for the cypher, as a view declares them. Each `$name` is substituted from `args` merged over its default, exactly as when a saved view runs.",
             "type" : "object"
+          },
+          "surface" : {
+            "description" : "Where the statement was written, recorded in the query log: `studio` for a query written in Query Studio's editor. Omitted, it is logged as `query`. Any other value is a 400.",
+            "enum" : [ "studio" ],
+            "type" : "string"
           }
         },
         "required" : [ "cypher" ],
@@ -9967,6 +9972,82 @@
           }
         },
         "required" : [ "fallbacks", "priority" ],
+        "type" : "object"
+      },
+      "QueryExampleView" : {
+        "description" : "One starter query",
+        "properties" : {
+          "cypher" : {
+            "description" : "The query, to put in the editor and run exactly as written",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "One line: what running it demonstrates",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "Unique within this world: the file it came from, then the id the file gave it",
+            "type" : "string"
+          },
+          "kind" : {
+            "description" : "`ai` when the query asks a model to read, judge or label as it runs, so running it costs model calls; `plain` for Cypher over what the world holds",
+            "enum" : [ "ai", "plain" ],
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "The realm that shipped it; absent for default-world's and the world's own",
+            "type" : "string"
+          },
+          "title" : {
+            "description" : "The card's heading",
+            "type" : "string"
+          }
+        },
+        "required" : [ "cypher", "description", "id", "kind", "title" ],
+        "type" : "object"
+      },
+      "QueryExamplesDismissRequest" : {
+        "description" : "Whether to stop offering the examples",
+        "properties" : {
+          "dismissed" : {
+            "description" : "true to stop offering the examples unasked; false to offer them again",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "dismissed" ],
+        "type" : "object"
+      },
+      "QueryExamplesResponse" : {
+        "description" : "Query Studio's starter queries, and whether to offer them to the signed-in person",
+        "properties" : {
+          "examples" : {
+            "description" : "Every example this world offers, in the order its files declare them: default-world's, the world's own, then each installed realm's",
+            "items" : {
+              "$ref" : "#/components/schemas/QueryExampleView"
+            },
+            "type" : "array"
+          },
+          "hiddenBecause" : {
+            "description" : "Why they are not offered: DISMISSED, SAVED_VIEW (the person has saved a view of their own) or EXPERIENCED (they have written `threshold` queries of their own in Query Studio); absent while they are offered",
+            "enum" : [ "DISMISSED", "SAVED_VIEW", "EXPERIENCED" ],
+            "type" : "string"
+          },
+          "show" : {
+            "description" : "Whether to show the examples over an empty editor without being asked",
+            "type" : "boolean"
+          },
+          "studioQueries" : {
+            "description" : "Distinct queries of their own the person has written in Query Studio, as far as the query log still holds; 0 when the verdict did not need counting",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "threshold" : {
+            "description" : "How many distinct queries of their own retire the examples",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "examples", "show", "studioQueries", "threshold" ],
         "type" : "object"
       },
       "QuietHoursConfig" : {
@@ -15266,7 +15347,7 @@
               }
             }
           },
-          "description" : "The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400",
+          "description" : "The Cypher to run, in `cypher`, scoped to the acting user. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400). `captureAs` also keeps the result set as that named scope and is synchronous-only: sent with `background=true` or `waitSeconds` it is a 400. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples",
           "required" : true
         },
         "responses" : {
@@ -23137,6 +23218,63 @@
         "tags" : [ "Graph facts" ]
       }
     },
+    "/api/v1/kg/studio/examples" : {
+      "get" : {
+        "description" : "The examples this world ships — default-world's, the world's own and each installed realm's — and whether to show them over an empty editor. `show` is false once the person has dismissed them, saved a view of their own, or written `threshold` distinct queries of their own in Query Studio; `hiddenBecause` says which. Every example is returned either way, for a client that shows them on request.",
+        "operationId" : "queryExamples",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueryExamplesResponse"
+                }
+              }
+            },
+            "description" : "The examples and the verdict on offering them"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "Query Studio's starter queries, and whether to offer them",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
+    "/api/v1/kg/studio/examples/dismissed" : {
+      "put" : {
+        "description" : "Recorded once for the person, in their world, so another browser or another day does not bring the examples back. `dismissed: false` forgets the dismissal, and a reached query count with it; a saved view still hides them. Answers the examples and the new verdict.",
+        "operationId" : "dismissQueryExamples",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/QueryExamplesDismissRequest"
+              }
+            }
+          },
+          "description" : "`dismissed: true` to stop offering the examples unasked; `false` to offer them again",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/QueryExamplesResponse"
+                }
+              }
+            },
+            "description" : "The examples and the verdict after the change"
+          },
+          "401" : {
+            "description" : "Not authenticated"
+          }
+        },
+        "summary" : "Stop offering the examples to this person, or offer them again",
+        "tags" : [ "Virtual Cypher (user)" ]
+      }
+    },
     "/api/v1/kg/studio/execute" : {
       "post" : {
         "operationId" : "studioExecute",
@@ -23148,7 +23286,7 @@
               }
             }
           },
-          "description" : "The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`",
+          "description" : "The Cypher to run, in `cypher`, scope-rewritten to the caller and run synchronously. With `params`, each `$name` is first substituted from `args` merged over its default (a bad argument or declaration is a 400); with `captureAs`, the result set is also kept as that named scope, listed by `GET /kg/studio/scopes`. `surface: studio` records the statement in the query log as one written in Query Studio, which is what counts toward retiring its starter examples",
           "required" : true
         },
         "responses" : {
@@ -29233,7 +29371,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41729"
+    "url" : "http://localhost:42603"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
