@@ -4613,6 +4613,11 @@
             "description" : "Id of the start node: one of the set's nodes, or an existing node in this world. Nothing is created when no node has it",
             "type" : "string"
           },
+          "properties" : {
+            "additionalProperties" : { },
+            "description" : "The relationship's own property values, by key; a key starting with `_` is refused. Exported with the edge and written back by a load, so a set carries what its joins say, not only that they exist; a shape-only export keeps the keys and blanks the values as it does a node's",
+            "type" : "object"
+          },
           "to" : {
             "description" : "Id of the end node: one of the set's nodes, or an existing node in this world. Nothing is created when no node has it",
             "type" : "string"
@@ -4622,7 +4627,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "from", "to", "type" ],
+        "required" : [ "from", "properties", "to", "type" ],
         "type" : "object"
       },
       "EmailAccount" : {
@@ -26557,7 +26562,7 @@
               }
             }
           },
-          "description" : "The sample set to write. `name` (required) tags every node so the set can be removed by it; `realm` (required, non-blank) is not checked against what is installed; `nodes` (at least one) each carry a plain-identifier `label`, an `id` unique within the set, an optional `displayName` and `properties` with no leading-underscore keys; `edges` join nodes by `from`/`type`/`to` id, with at least one end in this set. Nodes are merged on label, id and the user's scope, so a second load does not duplicate. `matched` and `truncated` from an export are accepted and ignored. Any problem refuses the whole set with 400 before anything is written",
+          "description" : "The sample set to write. `name` (required) tags every node so the set can be removed by it; `realm` (required, non-blank) is not checked against what is installed; `nodes` (at least one) each carry a plain-identifier `label`, an `id` unique within the set, an optional `displayName` and `properties` with no leading-underscore keys; `edges` join nodes by `from`/`type`/`to` id, with at least one end in this set, and carry their own `properties` under the same key rule. Nodes are merged on label, id and the user's scope, so a second load does not duplicate. `matched` and `truncated` from an export are accepted and ignored. Any problem refuses the whole set with 400 before anything is written",
           "required" : true
         },
         "responses" : {
@@ -29228,7 +29233,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:33107"
+    "url" : "http://localhost:41729"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
