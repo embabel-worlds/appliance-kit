@@ -323,6 +323,41 @@
         "required" : [ "jobs", "runsPerJob" ],
         "type" : "object"
       },
+      "ActivityView" : {
+        "description" : "Metadata about one approved source's journal: retained offsets, recent receipts and each approved consumer's progress; never a payload. Answered by GET /channels/sources/{realmName}/{sourceName}/activity",
+        "properties" : {
+          "consumers" : {
+            "description" : "Every approved consumer reading the source, from any realm installation, with its progress",
+            "items" : {
+              "$ref" : "#/components/schemas/ConsumerActivity"
+            },
+            "type" : "array"
+          },
+          "endOffset" : {
+            "description" : "Upper bound of the retained range, inclusive: the highest offset in the source's journal",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "receipts" : {
+            "description" : "Recent appends to the source, newest first",
+            "items" : {
+              "$ref" : "#/components/schemas/ReceiptActivity"
+            },
+            "type" : "array"
+          },
+          "retainedAfterOffset" : {
+            "description" : "Lower bound of the retained range, exclusive: records at offsets above this one, up to and including endOffset, are retained",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/SourceView",
+            "description" : "The source as its list entry shows it"
+          }
+        },
+        "required" : [ "consumers", "endOffset", "receipts", "retainedAfterOffset", "source" ],
+        "type" : "object"
+      },
       "AddApiRequest" : {
         "description" : "An API to save to the world",
         "properties" : {
@@ -1412,6 +1447,33 @@
         "required" : [ "revision", "subjects" ],
         "type" : "object"
       },
+      "ApprovalView" : {
+        "description" : "A captured realm's declared watches and their approvals, as GET /realms/{realmName}/watch-approvals and the grant and revoke routes answer, with the installation and revision the next change must name back",
+        "properties" : {
+          "digest" : {
+            "description" : "Digest of the realm content this installation admitted",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The realm installation the watches belong to; a grant or revoke must send it back",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "The installation's revision, after the change on a grant or revoke; the next grant or revoke must send it back as expectedRevision",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "watches" : {
+            "description" : "Every watch the admitted realm declares, each with whether it is approved",
+            "items" : {
+              "$ref" : "#/components/schemas/WatchView"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "digest", "installationId", "revision", "watches" ],
+        "type" : "object"
+      },
       "ArtifactContent" : {
         "description" : "An artifact's content, as stored",
         "properties" : {
@@ -1694,6 +1756,45 @@
           }
         },
         "required" : [ "filters", "sources", "unresolvedCitations" ],
+        "type" : "object"
+      },
+      "AssistantView" : {
+        "description" : "Whether a captured realm consumer may answer through the owner's assistant, and which sender threads it answers; returned by the /channels/consumers/{realmName}/{consumerName}/assistant routes",
+        "properties" : {
+          "consumerName" : {
+            "description" : "Name of the consumer, as the realm declares it",
+            "type" : "string"
+          },
+          "declared" : {
+            "description" : "Whether the realm declared the consumer with assistant: true; only such a consumer can be granted",
+            "type" : "boolean"
+          },
+          "granted" : {
+            "description" : "Whether the owner has granted the consumer leave to answer through the assistant",
+            "type" : "boolean"
+          },
+          "installationId" : {
+            "description" : "The live installation of that realm this was read from; send it back as installationId on a change",
+            "type" : "string"
+          },
+          "paired" : {
+            "description" : "The sender threads paired with the consumer, which it answers, sorted; empty when none, or when not granted",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "realmName" : {
+            "description" : "Name of the realm the consumer belongs to",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "That installation's revision; send it back as expectedRevision on a change. Pairing and unpairing do not move it",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "consumerName", "declared", "granted", "installationId", "paired", "realmName", "revision" ],
         "type" : "object"
       },
       "Attachment" : {
@@ -2392,6 +2493,50 @@
         "required" : [ "revision", "subject", "value" ],
         "type" : "object"
       },
+      "ChannelStateView" : {
+        "description" : "One channel a captured realm declares, as its owner sees it in the channel list: its transport, where it stands, and what it is waiting on",
+        "properties" : {
+          "channel" : {
+            "description" : "Name of the channel: its declaration file's stem",
+            "type" : "string"
+          },
+          "missingCredentials" : {
+            "description" : "Credentials the channel needs that no wallet item is bound to. Filled only when blocked; otherwise empty",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "reason" : {
+            "description" : "Why a stopped channel stopped, in the host's words: revoked, rotation, owner or error. Null in any other state",
+            "type" : "string"
+          },
+          "state" : {
+            "description" : "running (connected or connecting), ready (may connect, not started), stopped (see reason) or blocked (see the three lists)",
+            "type" : "string"
+          },
+          "transport" : {
+            "description" : "Declared transport: websocket, long-poll or webhook",
+            "type" : "string"
+          },
+          "ungrantedSources" : {
+            "description" : "Event sources the channel publishes into that the owner has not approved. Filled only when blocked; otherwise empty",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "unreadableCredentials" : {
+            "description" : "Bound credentials whose wallet item holds no usable secret, so the channel cannot use them; any one blocks the channel. Not checked for a channel the owner stopped",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "channel", "missingCredentials", "state", "transport", "ungrantedSources", "unreadableCredentials" ],
+        "type" : "object"
+      },
       "ChannelsResponse" : {
         "description" : "The audience channels this world offers and the ones the acting user has joined. Answered by `GET /audience/channels` and, after the change, by `PUT /audience/channels`.",
         "properties" : {
@@ -2411,6 +2556,33 @@
           }
         },
         "required" : [ "joined", "offered" ],
+        "type" : "object"
+      },
+      "ChannelsView" : {
+        "description" : "A captured realm's channels, as GET /channels/captured/{realmName} and the start and stop calls answer, with the installation and revision the next change must name back",
+        "properties" : {
+          "channels" : {
+            "description" : "Every channel the installation declares, each with its state",
+            "items" : {
+              "$ref" : "#/components/schemas/ChannelStateView"
+            },
+            "type" : "array"
+          },
+          "installationId" : {
+            "description" : "The realm installation these channels belong to; a start or stop must send it back",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the captured realm",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "The installation's current revision; a start, stop or handshake decision must send it back as expectedRevision, and is refused as a conflict when it has moved",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "channels", "installationId", "realmName", "revision" ],
         "type" : "object"
       },
       "ChatCompletion" : {
@@ -3241,6 +3413,102 @@
         "required" : [ "entries" ],
         "type" : "object"
       },
+      "ConsumerActivity" : {
+        "description" : "One approved consumer of a source and how far it has read",
+        "properties" : {
+          "installationId" : {
+            "description" : "The live installation of that realm",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Name of the consumer, as its realm declares it",
+            "type" : "string"
+          },
+          "progress" : {
+            "$ref" : "#/components/schemas/JournalConsumerActivity",
+            "description" : "The consumer's position in the source's journal"
+          },
+          "realmName" : {
+            "description" : "Name of the realm that declares the consumer",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "That installation's revision",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "triggerMode" : {
+            "description" : "Mode of the trigger that names this consumer and source, lowercase: observe or apply; null when no trigger names it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "installationId", "name", "progress", "realmName", "revision" ],
+        "type" : "object"
+      },
+      "ConsumerSource" : {
+        "description" : "The source an approved channel consumer reads: a host channel or a realm's event source, possibly the consumer's own realm",
+        "properties" : {
+          "id" : {
+            "description" : "For host, the host channel's source id; for realm, the installation id of the realm that produces the source",
+            "type" : "string"
+          },
+          "kind" : {
+            "description" : "One of host (a host channel) or realm (a realm's event source)",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the realm that produces the source; null for a host channel",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "For host, the host channel approval's revision; for realm, the event source grant's revision, which moves independently of the installation's revision",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sourceName" : {
+            "description" : "Name of the event source within that realm; null for a host channel",
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "kind", "revision" ],
+        "type" : "object"
+      },
+      "ConsumerView" : {
+        "description" : "One channel consumer a captured realm declares, and the source the owner approved it to read; answered by the /channels/consumers/{realmName} list, grant and revoke routes",
+        "properties" : {
+          "handler" : {
+            "description" : "Name of the realm handler the consumer runs",
+            "type" : "string"
+          },
+          "handlerApproved" : {
+            "description" : "Whether that handler is approved on the installation; a consumer cannot be approved until it is",
+            "type" : "boolean"
+          },
+          "installationId" : {
+            "description" : "The live installation of that realm this was read from; send it back as installationId on a change",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Name of the consumer, as the realm declares it",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the realm that declares the consumer",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "That installation's revision; send it back as expectedRevision on a change",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "source" : {
+            "$ref" : "#/components/schemas/ConsumerSource",
+            "description" : "The source the consumer is approved to read; null while it is not approved"
+          }
+        },
+        "required" : [ "handler", "handlerApproved", "installationId", "name", "realmName", "revision" ],
+        "type" : "object"
+      },
       "Context" : {
         "allOf" : [ {
           "$ref" : "#/components/schemas/SensorEvent"
@@ -3583,6 +3851,62 @@
         "required" : [ "name" ],
         "type" : "object"
       },
+      "CredentialCandidatesView" : {
+        "description" : "The owner's wallet keys a bind would accept for one declared credential; answered by GET .../{credentialId}/candidates",
+        "properties" : {
+          "credentialId" : {
+            "description" : "Id of the declared credential the keys fit",
+            "type" : "string"
+          },
+          "installation" : {
+            "$ref" : "#/components/schemas/InstallationView",
+            "description" : "The installation this was read from"
+          },
+          "keys" : {
+            "description" : "Names of the wallet items that fit, sorted; never a secret. Empty when none fit, and always empty for an oauth2 credential",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "credentialId", "installation", "keys" ],
+        "type" : "object"
+      },
+      "CredentialView" : {
+        "description" : "One credential a captured realm declares, and whether a wallet item is bound to it; never carries a secret. Answered by the /channels/credentials/{realmName} list, bind and revoke routes",
+        "properties" : {
+          "bound" : {
+            "description" : "Whether a wallet item is bound to the credential",
+            "type" : "boolean"
+          },
+          "declared" : {
+            "$ref" : "#/components/schemas/RealmCredentialDeclaration",
+            "description" : "The credential exactly as the realm declares it: id, kind, description, provider, docs, scopes, scheme"
+          },
+          "droppedApprovals" : {
+            "description" : "API operation keys that sent the previously bound secret and are no longer approved, because the secret bound now differs; sorted. Filled only on the credential a bind just changed, otherwise empty",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "installation" : {
+            "$ref" : "#/components/schemas/InstallationView",
+            "description" : "The installation this was read from"
+          },
+          "readable" : {
+            "description" : "Whether the bound item holds a secret the host can send for this owner. False when nothing is bound, the item was deleted or is the wrong type, or the wallet has not been loaded since a restart",
+            "type" : "boolean"
+          },
+          "walletKey" : {
+            "description" : "Name of the bound wallet item, never its value; null when nothing is bound",
+            "type" : "string"
+          }
+        },
+        "required" : [ "bound", "declared", "droppedApprovals", "installation", "readable" ],
+        "type" : "object"
+      },
       "CronJobConfig" : {
         "description" : "A scheduled job in the user's world that runs a world action on a cron schedule. GET /cron lists the active ones; POST /cron takes one to create or replace.",
         "properties" : {
@@ -3738,6 +4062,18 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "Decision" : {
+        "description" : "How an owner's accept or reject of a realm write proposal ended, as POST /realms/{realm}/proposals/{proposalId}/decision answers it, a refused or failed request included",
+        "properties" : {
+          "outcome" : {
+            "description" : "APPLIED (accepted and written, 200), REJECTED (taken out of the mailbox, 200), REFUSED (bad request, or the proposal no longer applies, 400), CONFLICT (no longer pending, or decided concurrently, 409), or UNKNOWN (503: the write may or may not have landed)",
+            "enum" : [ "APPLIED", "REJECTED", "REFUSED", "CONFLICT", "UNKNOWN" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "outcome" ],
         "type" : "object"
       },
       "DecisionRequest" : {
@@ -6035,6 +6371,34 @@
         "required" : [ "durationMs", "ok", "valid", "violations" ],
         "type" : "object"
       },
+      "HandshakeView" : {
+        "description" : "Where one channel's pre-connect handshake approval stands after POST .../handshake/grant or .../handshake/revoke on /channels/captured/{realmName}/{channelName}",
+        "properties" : {
+          "approved" : {
+            "description" : "True when the handshake is now approved to run its declared operation under the channel's own credential; false when the approval was revoked",
+            "type" : "boolean"
+          },
+          "channel" : {
+            "description" : "Name of the channel, as the realm declares it",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The realm installation the approval was recorded on",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the captured realm the channel belongs to",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "The installation's revision after the change: what the next start, stop or handshake decision must send back as expectedRevision",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "approved", "channel", "installationId", "realmName", "revision" ],
+        "type" : "object"
+      },
       "HeadlessRefusal" : {
         "description" : "A request-level refusal from the headless surface. Carries only the reason; an execution that ran and failed answers 200 with the outcome in its envelope instead",
         "properties" : {
@@ -6384,6 +6748,29 @@
         "required" : [ "embeddings", "message", "status" ],
         "type" : "object"
       },
+      "IngressView" : {
+        "description" : "Where one declared webhook channel takes deliveries; answered by POST /channels/credentials/{realmName}/ingress",
+        "properties" : {
+          "channel" : {
+            "description" : "Name of the webhook channel the realm declares",
+            "type" : "string"
+          },
+          "installation" : {
+            "$ref" : "#/components/schemas/InstallationView",
+            "description" : "The installation this was read from"
+          },
+          "secret" : {
+            "description" : "The delivery secret, returned only by the call that minted the endpoint; null on every later call, since only its hash is kept",
+            "type" : "string"
+          },
+          "url" : {
+            "description" : "The address to paste into the provider. Absolute when the host is configured with its public origin (assistant.channels.ingress-base-url), otherwise site-relative",
+            "type" : "string"
+          }
+        },
+        "required" : [ "channel", "installation", "url" ],
+        "type" : "object"
+      },
       "InstallRequest" : {
         "description" : "What the installer reviewed, sent to POST /learn/{id}/install. The body is optional: with revision and acknowledgedWarnings both absent the realm still installs, and its receipt records it as unacknowledged",
         "properties" : {
@@ -6428,6 +6815,30 @@
         "required" : [ "description", "name", "source" ],
         "type" : "object"
       },
+      "InstallationView" : {
+        "description" : "The realm installation a credential or ingress answer was read from, to be named back by the next change",
+        "properties" : {
+          "digest" : {
+            "description" : "Digest of the realm snapshot the installation admitted, 64 lowercase hex characters",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The live installation's id; send it back as installationId on a change",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the installed realm",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "The installation's revision; send it back as expectedRevision on a change. Every bind or revoke moves it",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "digest", "installationId", "realmName", "revision" ],
+        "type" : "object"
+      },
       "InvokeRequest" : {
         "description" : "The body of POST /lenses/{lensId}/invoke and POST /views/{name}/invoke: arguments and an optional idempotency key. Any other top-level field is refused with 400.",
         "properties" : {
@@ -6456,6 +6867,36 @@
           }
         },
         "required" : [ "channels" ],
+        "type" : "object"
+      },
+      "JournalConsumerActivity" : {
+        "description" : "One consumer's progress through a channel source's journal. Every field but id is null for a consumer that has not adopted a cursor",
+        "properties" : {
+          "acknowledgedThroughOffset" : {
+            "description" : "Journal offset the consumer has checkpointed through: every record at or below it is acknowledged. A new cursor starts at the retained horizon, or at the end. Null when it has not adopted a cursor",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "Consumer's id in the journal",
+            "type" : "string"
+          },
+          "lag" : {
+            "description" : "Number of offsets between the consumer's checkpoint and the journal's end offset: how far behind it is. Null when it has not adopted a cursor",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastAcknowledgedAt" : {
+            "description" : "When the consumer last acknowledged an offer; null before its first acknowledgement",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "pending" : {
+            "$ref" : "#/components/schemas/PendingActivity",
+            "description" : "Records offered to the consumer and not yet checkpointed through; null when no offer is outstanding"
+          }
+        },
+        "required" : [ "id" ],
         "type" : "object"
       },
       "JsonNode" : {
@@ -9472,6 +9913,26 @@
           "type" : "object"
         } ]
       },
+      "PairingCode" : {
+        "description" : "A single-use pairing code minted by POST .../assistant/pairing and shown only in this response; a sender sends 'pair <code>' on the channel to be answered",
+        "properties" : {
+          "code" : {
+            "description" : "The code itself; minting again stops it working",
+            "type" : "string"
+          },
+          "consumerName" : {
+            "description" : "Name of the consumer the code pairs a sender with",
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "description" : "When the code stops working, ten minutes after minting, as an ISO-8601 instant",
+            "format" : "date-time",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "consumerName", "expiresAt" ],
+        "type" : "object"
+      },
       "PasswordOAuthFlow" : {
         "properties" : {
           "refreshUrl" : {
@@ -9487,6 +9948,28 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "PendingActivity" : {
+        "description" : "The records a consumer has been offered and has not yet checkpointed through. The offer comes back unchanged until it does",
+        "properties" : {
+          "firstOffset" : {
+            "description" : "Journal offset of the offer's first record",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "itemCount" : {
+            "description" : "Number of records in the offer",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "lastOffset" : {
+            "description" : "Journal offset of the offer's last record",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "firstOffset", "itemCount", "lastOffset" ],
         "type" : "object"
       },
       "PlanAnswer" : {
@@ -10069,6 +10552,44 @@
         "required" : [ "enabled", "end", "start" ],
         "type" : "object"
       },
+      "RealmCredentialDeclaration" : {
+        "description" : "One credential a captured realm declares in its credentials.yml: what kind of secret, who issues it and what it is for. Never the secret, nor where it lives. Carried as `declared` on a credential view",
+        "properties" : {
+          "description" : {
+            "description" : "What the realm says the credential is for, verbatim",
+            "type" : "string"
+          },
+          "docs" : {
+            "description" : "An https link to the provider's own instructions for getting one; null when none is given",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "The credential's id within its realm, the {credentialId} the bind and revoke routes take. Lower-case kebab, or an environment variable's name kept from a migrated token-env",
+            "type" : "string"
+          },
+          "kind" : {
+            "description" : "The kind of secret: api-key, basic, bearer, oauth2 or public-key",
+            "type" : "string"
+          },
+          "provider" : {
+            "description" : "Who issues the credential, e.g. a provider's name; null when the realm does not say",
+            "type" : "string"
+          },
+          "scheme" : {
+            "description" : "The word a bearer token is sent after in the Authorization header, when it is not `Bearer`. Only a bearer credential may declare one; null means `Bearer`",
+            "type" : "string"
+          },
+          "scopes" : {
+            "description" : "The OAuth scopes the grant must carry. Non-empty for oauth2, and empty for every other kind",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "description", "id", "kind", "scopes" ],
+        "type" : "object"
+      },
       "RealmDirectoryBrowse" : {
         "description" : "Every realm the directory knows, grouped by the account or organisation that publishes it",
         "properties" : {
@@ -10231,9 +10752,262 @@
         "required" : [ "bufferSize", "captureEnabled", "entries", "filteredOut" ],
         "type" : "object"
       },
+      "RealmMonitor" : {
+        "description" : "The signed-in owner's realm monitor, answered by GET /realm-monitor: the host's Wasm runtime and every live captured realm in their world",
+        "properties" : {
+          "at" : {
+            "description" : "When this reading was taken, ISO-8601 UTC to the second",
+            "type" : "string"
+          },
+          "realms" : {
+            "description" : "Each live (not revoked) captured realm installation in the owner's world, sorted by realm name, including any with no channels or sources",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmMonitorRealm"
+            },
+            "type" : "array"
+          },
+          "runtime" : {
+            "$ref" : "#/components/schemas/RealmMonitorRuntime",
+            "description" : "The host-wide Wasm runtime, shared by every realm on this server"
+          }
+        },
+        "required" : [ "at", "realms", "runtime" ],
+        "type" : "object"
+      },
+      "RealmMonitorChannel" : {
+        "description" : "One channel a realm declares, and how much it has delivered since the app started",
+        "properties" : {
+          "frames" : {
+            "description" : "Frames handed to the handler since the app started",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastFrameAt" : {
+            "description" : "When the channel last handed a frame to its handler, ISO-8601 UTC to the second. Null when it has not since the app started",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The channel's name, the stem of its declaration file",
+            "type" : "string"
+          },
+          "state" : {
+            "description" : "One of \"running\", \"ready\" (could start, is not running), \"stopped\" or \"blocked\" (a grant, a credential or a readable secret is missing)",
+            "type" : "string"
+          },
+          "transport" : {
+            "description" : "The transport the channel declares, such as a websocket, a long-poll or a webhook",
+            "type" : "string"
+          }
+        },
+        "required" : [ "frames", "name", "state", "transport" ],
+        "type" : "object"
+      },
+      "RealmMonitorConsumer" : {
+        "description" : "One approved consumer of a source and how far it has read",
+        "properties" : {
+          "acknowledgedThroughOffset" : {
+            "description" : "The journal offset the consumer has checkpointed through. Null when it has never started reading",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lag" : {
+            "description" : "Records between the checkpoint and the end of the journal, endOffset minus acknowledgedThroughOffset. Null when it has never started reading",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastAcknowledgedAt" : {
+            "description" : "When the consumer last checkpointed, ISO-8601 UTC to the second. Null when it has not since the app started",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The consumer's name within its realm",
+            "type" : "string"
+          },
+          "pendingItems" : {
+            "description" : "Items offered to the consumer and not yet acknowledged; 0 when nothing is on offer. Null when it has never started reading",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "realm" : {
+            "description" : "The realm the consumer belongs to, which need not be the realm that declares the source",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "realm" ],
+        "type" : "object"
+      },
+      "RealmMonitorRealm" : {
+        "description" : "One live captured realm installation as the monitor shows it",
+        "properties" : {
+          "channels" : {
+            "description" : "Each channel the realm declares. Empty when it declares none, or when its channels could not be read just now",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmMonitorChannel"
+            },
+            "type" : "array"
+          },
+          "digest" : {
+            "description" : "The digest of the realm content this installation admitted, 64 lowercase hex characters",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The installation's id, a UUID. A realm admitted again after being revoked gets a new one",
+            "type" : "string"
+          },
+          "realm" : {
+            "description" : "The realm's name",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "The installation's admission revision, which rises by one with every change to its admission: grants approved, an upgrade, a revocation",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sources" : {
+            "description" : "Each event source the realm declares, sorted by name, approved or not",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmMonitorSource"
+            },
+            "type" : "array"
+          },
+          "wasm" : {
+            "$ref" : "#/components/schemas/RealmMonitorWasm",
+            "description" : "The realm's Wasm module figures since the app started"
+          }
+        },
+        "required" : [ "channels", "digest", "installationId", "realm", "revision", "sources", "wasm" ],
+        "type" : "object"
+      },
+      "RealmMonitorRuntime" : {
+        "description" : "The host side of the monitor: where captured realms run and where their channel journal is kept",
+        "properties" : {
+          "activeDispatches" : {
+            "description" : "Dispatches holding a runtime slot right now, across every world on this server. Null when the gauge is not registered",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "backend" : {
+            "description" : "What captured realm handlers run on. Always \"wasm\"",
+            "type" : "string"
+          },
+          "capturedModules" : {
+            "description" : "How many of the listed realms have a Wasm module whose size is known",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "containersPerRealm" : {
+            "description" : "Containers each realm needs. Always 0: captured realms run inside the app's own process",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "journalStore" : {
+            "description" : "The channel journal's storage backend: \"file\" or \"neo4j\"",
+            "type" : "string"
+          },
+          "runtimeCached" : {
+            "description" : "Parsed modules held in the host's runtime cache right now, across every world on this server. Null when the gauge is not registered",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "backend", "capturedModules", "containersPerRealm", "journalStore" ],
+        "type" : "object"
+      },
+      "RealmMonitorSource" : {
+        "description" : "One event source a realm declares, with its journal position and the consumers reading it",
+        "properties" : {
+          "appendedSinceStart" : {
+            "description" : "Items appended since the app started, counting every item of every batch",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "approved" : {
+            "description" : "Whether the owner has approved this source. Only an approved source has a journal, so the offsets are null when false",
+            "type" : "boolean"
+          },
+          "consumers" : {
+            "description" : "The approved consumers reading this source, from any realm in the owner's world. Empty when unapproved or unreadable",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmMonitorConsumer"
+            },
+            "type" : "array"
+          },
+          "endOffset" : {
+            "description" : "Offset of the newest record in the source's journal; the retained records are those after retainedAfterOffset up to and including this. Null when unapproved or unreadable just now",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastAppendedAt" : {
+            "description" : "When a batch last landed in the journal, ISO-8601 UTC to the second. Null when none has since the app started",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The source's name as the realm declares it",
+            "type" : "string"
+          },
+          "retainedAfterOffset" : {
+            "description" : "Offset below which compaction has dropped records: the oldest retained record is the one after it. Null when unapproved or unreadable just now",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "appendedSinceStart", "approved", "consumers", "name" ],
+        "type" : "object"
+      },
+      "RealmMonitorWasm" : {
+        "description" : "One realm's Wasm figures since the app started. Every figure but moduleBytes is null when the realm's name cannot be used as a telemetry tag",
+        "properties" : {
+          "avgDispatchMs" : {
+            "description" : "Mean dispatch time in milliseconds, to one decimal place. Null until there has been a dispatch",
+            "format" : "double",
+            "type" : "number"
+          },
+          "coldStarts" : {
+            "description" : "Dispatches that found the module missing from the runtime cache and had to load it first",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "dispatches" : {
+            "description" : "Handler dispatches into the module since the app started, successful or not",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "failures" : {
+            "description" : "Of those dispatches, how many ended in any outcome other than success",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "hostCalls" : {
+            "description" : "Calls the module made back into the host, such as gateway or graph calls, since the app started",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "maxDispatchMs" : {
+            "description" : "Longest dispatch in milliseconds, to one decimal place, over the meters' recent window. Null once that window passes with no dispatch",
+            "format" : "double",
+            "type" : "number"
+          },
+          "moduleBytes" : {
+            "description" : "Size of the realm's compiled Wasm module in bytes. Null until it is known",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "peakMemoryBytes" : {
+            "description" : "Highest guest memory use in bytes over the meters' recent window. Null once that window passes quietly",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "type" : "object"
+      },
       "RealmNeedsConfirmation" : {
         "description" : "Not a failure: the realm is experimental and asks the owner to confirm. Retrying with `confirmed: true` installs it",
         "properties" : {
+          "code" : {
+            "description" : "Always `REALM_CONFIRMATION_REQUIRED`, which tells this answer apart from the other 409s",
+            "enum" : [ "REALM_CONFIRMATION_REQUIRED" ],
+            "type" : "string"
+          },
           "message" : {
             "description" : "What the realm says the owner is confirming",
             "type" : "string"
@@ -10248,7 +11022,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "message", "name", "status" ],
+        "required" : [ "code", "message", "name", "status" ],
         "type" : "object"
       },
       "RealmProblemResponse" : {
@@ -10293,22 +11067,6 @@
         "required" : [ "message", "severity", "source" ],
         "type" : "object"
       },
-      "RealmRefusal" : {
-        "description" : "A refusal from the realms surface: the word `error` and the reason",
-        "properties" : {
-          "message" : {
-            "description" : "Why the request was refused, written to be shown. A failed install or update carries the underlying failure's message",
-            "type" : "string"
-          },
-          "status" : {
-            "description" : "Always `error`",
-            "enum" : [ "error" ],
-            "type" : "string"
-          }
-        },
-        "required" : [ "message", "status" ],
-        "type" : "object"
-      },
       "RealmRemoved" : {
         "description" : "The realm was removed",
         "properties" : {
@@ -10333,6 +11091,33 @@
           }
         },
         "required" : [ "admission", "name", "status" ],
+        "type" : "object"
+      },
+      "RealmResourceApprovalView" : {
+        "description" : "A captured realm's resource approvals: the graph read and each view alias it declares. Answered by listing them and by each grant or revoke",
+        "properties" : {
+          "digest" : {
+            "description" : "The digest of the realm content this installation admitted, 64 lowercase hex characters",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The live installation's id, a UUID. A grant or revoke names it back",
+            "type" : "string"
+          },
+          "resources" : {
+            "description" : "Every resource the installation could be granted, the graph read first and then each declared view alias",
+            "items" : {
+              "$ref" : "#/components/schemas/ResourceView"
+            },
+            "type" : "array"
+          },
+          "revision" : {
+            "description" : "The installation's admission revision after this read or change. A grant or revoke names it back as expectedRevision, and is refused if the installation has moved on",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "digest", "installationId", "resources", "revision" ],
         "type" : "object"
       },
       "RealmRuntimeSnapshot" : {
@@ -10541,6 +11326,32 @@
         "required" : [ "at", "decision", "entityKeys", "hash", "id", "inputHash", "ownerId", "previousHash", "reason", "rule", "seq", "verb", "work" ],
         "type" : "object"
       },
+      "ReceiptActivity" : {
+        "description" : "One recent append to a channel source: the receipt it was given and the offsets its items landed at. Listed newest first, at most 20, by GET /channels/sources/{realmName}/{sourceName}/activity",
+        "properties" : {
+          "firstOffset" : {
+            "description" : "Lowest journal offset the batch's items landed at; null when the batch carried no items",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "id" : {
+            "description" : "Receipt id the append was answered with",
+            "type" : "string"
+          },
+          "itemCount" : {
+            "description" : "Number of items the batch appended",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "lastOffset" : {
+            "description" : "Highest journal offset the batch's items landed at; null when the batch carried no items",
+            "format" : "int64",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "id", "itemCount" ],
+        "type" : "object"
+      },
       "RememberFactRequest" : {
         "description" : "One already-formed fact to store verbatim in the caller's memory as an ACTIVE proposition, by POST /memory/remember",
         "properties" : {
@@ -10614,6 +11425,54 @@
           }
         },
         "required" : [ "local", "name" ],
+        "type" : "object"
+      },
+      "ResourceView" : {
+        "description" : "One thing a captured realm may be granted to read, and whether the owner has granted it",
+        "properties" : {
+          "approved" : {
+            "description" : "Whether the installation holds this grant now",
+            "type" : "boolean"
+          },
+          "description" : {
+            "description" : "The sentence the owner is shown for this resource, saying what granting it lets the realm read",
+            "type" : "string"
+          },
+          "resource" : {
+            "description" : "The resource's name, as the grant and revoke paths take it: \"cypher_query\" for the graph read, or \"view:\" followed by a declared alias for a named view",
+            "type" : "string"
+          }
+        },
+        "required" : [ "approved", "description", "resource" ],
+        "type" : "object"
+      },
+      "Result" : {
+        "description" : "What one owner-requested check of an approved Realm watch did. Answered by POST /realms/{realm}/watches/{watch}/check-now.",
+        "properties" : {
+          "delivered" : {
+            "description" : "Notifications the host accepted in this run; they stay counted when later work fails or is refused",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "judged" : {
+            "description" : "New items this run put in front of the judge, not counting items too big to judge",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "outcome" : {
+            "description" : "BASELINED (a first run: it recorded what the lens shows and delivered nothing), DELIVERED (at least one approved item was delivered), NOTHING_NEW, FAILED (the run stopped short; see problem), REFUSED (no such approved watch, the owner's authority did not hold, or the run failed unexpectedly) or ALREADY_RUNNING (another run of this watch was in progress, so this one did nothing)",
+            "type" : "string"
+          },
+          "problem" : {
+            "description" : "Why the run stopped short, such as LENS_FAILED, JUDGE_UNAVAILABLE or DELIVERY_FAILED; ITEM_TOO_BIG beside DELIVERED or NOTHING_NEW means one or more items were skipped as too big to judge. Null when nothing went wrong",
+            "type" : "string"
+          },
+          "watch" : {
+            "description" : "Name of the watch that was checked; empty when the realm or watch name in the path is not a valid name",
+            "type" : "string"
+          }
+        },
+        "required" : [ "delivered", "judged", "outcome", "watch" ],
         "type" : "object"
       },
       "RetireRequest" : {
@@ -11523,6 +12382,47 @@
           }
         },
         "required" : [ "error" ],
+        "type" : "object"
+      },
+      "SourceView" : {
+        "description" : "One event source a captured realm declares, and whether the owner approved it; answered by the /channels/sources/{realmName} list, grant and revoke routes",
+        "properties" : {
+          "digest" : {
+            "description" : "Digest of the realm snapshot the installation admitted, 64 lowercase hex characters",
+            "type" : "string"
+          },
+          "installationId" : {
+            "description" : "The live installation of that realm this was read from; send it back as installationId on a change",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Name of the source: the stem of its sources/<name>.yml file",
+            "type" : "string"
+          },
+          "realmName" : {
+            "description" : "Name of the realm that declares the source",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "That installation's revision; send it back as expectedRevision on a change",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "sourceRevision" : {
+            "description" : "Revision of the source's approval, which moves independently of the installation's revision and is what a consumer grant names as sourceRevision; null while the source is not approved",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "stream" : {
+            "description" : "Journal stream the source's events are appended to; the same as name",
+            "type" : "string"
+          },
+          "type" : {
+            "description" : "Event type, the source name qualified by its realm: <realmName>.<name>",
+            "type" : "string"
+          }
+        },
+        "required" : [ "digest", "installationId", "name", "realmName", "revision", "stream", "type" ],
         "type" : "object"
       },
       "SourceWire" : {
@@ -12553,6 +13453,42 @@
         "required" : [ "intact", "receipts" ],
         "type" : "object"
       },
+      "View" : {
+        "description" : "One built-in channel's approval in the signed-in owner's world, and whether it is running; holds no wallet key and no secret. Answered by GET /channels and the /channels/{name} adopt, upgrade, start, stop and revoke routes",
+        "properties" : {
+          "autoStart" : {
+            "description" : "Whether the channel starts by itself when the owner's world activates",
+            "type" : "boolean"
+          },
+          "lifecycle" : {
+            "description" : "Runtime state, lowercase: running or stopped, or unavailable when nothing on this host can run a host channel",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "Name of the channel, as named in the route path",
+            "type" : "string"
+          },
+          "provider" : {
+            "description" : "Messaging provider, lowercase: discord, slack or telegram",
+            "type" : "string"
+          },
+          "revision" : {
+            "description" : "This approval's revision; send it back as expectedRevision on start, stop, upgrade or revoke",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "revoked" : {
+            "description" : "Whether the approval has been revoked; a revoked channel can still be stopped",
+            "type" : "boolean"
+          },
+          "sourceId" : {
+            "description" : "Id of this approval; send it back as sourceId on start, stop, upgrade or revoke",
+            "type" : "string"
+          }
+        },
+        "required" : [ "autoStart", "lifecycle", "name", "provider", "revision", "revoked", "sourceId" ],
+        "type" : "object"
+      },
       "ViewDebugInfo" : {
         "description" : "A saved view visible to the acting user — world or realm tier — with its definition and, for a materialised view, its cache state. The items of `GET /views`.",
         "properties" : {
@@ -12750,6 +13686,29 @@
           }
         },
         "required" : [ "effects" ],
+        "type" : "object"
+      },
+      "WatchView" : {
+        "description" : "One watch a captured realm declares: the lens it re-reads, its cron schedule, and whether the owner has approved it",
+        "properties" : {
+          "approved" : {
+            "description" : "True when the owner has approved this watch, so its schedule runs; approving it grants nothing on the lens or its handler",
+            "type" : "boolean"
+          },
+          "lens" : {
+            "description" : "Id of the realm's own lens the watch re-reads",
+            "type" : "string"
+          },
+          "schedule" : {
+            "description" : "Cron expression it re-reads the lens on, already checked against the host's minimum interval",
+            "type" : "string"
+          },
+          "watch" : {
+            "description" : "The watch's name, as the grant and revoke routes take it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "approved", "lens", "schedule", "watch" ],
         "type" : "object"
       },
       "WebFetchConfig" : {
@@ -13938,7 +14897,7 @@
     "/api/v1/activity" : {
       "get" : {
         "description" : "Running first, then recently settled, newest first. Settled work is kept briefly because \"did that work?\" is asked immediately after the thing finishes — dropping it on completion would make a fast success look like one that never ran.",
-        "operationId" : "activity",
+        "operationId" : "activity_1",
         "responses" : {
           "200" : {
             "content" : {
@@ -14365,7 +15324,7 @@
     },
     "/api/v1/admin/handlers/list" : {
       "post" : {
-        "operationId" : "list_6",
+        "operationId" : "list_7",
         "responses" : {
           "200" : {
             "content" : {
@@ -15097,7 +16056,7 @@
     },
     "/api/v1/admin/kg/decorate" : {
       "get" : {
-        "operationId" : "list_10",
+        "operationId" : "list_21",
         "responses" : {
           "200" : {
             "content" : {
@@ -15402,7 +16361,7 @@
     },
     "/api/v1/admin/kg/fills" : {
       "get" : {
-        "operationId" : "list_5",
+        "operationId" : "list_6",
         "parameters" : [ {
           "description" : "Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
@@ -15441,7 +16400,7 @@
         "tags" : [ "KG Fills" ]
       },
       "post" : {
-        "operationId" : "start",
+        "operationId" : "start_2",
         "parameters" : [ {
           "description" : "Username to act as; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
@@ -16280,7 +17239,7 @@
     },
     "/api/v1/admin/kg/scopes" : {
       "get" : {
-        "operationId" : "list_9",
+        "operationId" : "list_20",
         "parameters" : [ {
           "description" : "Username whose scopes to act on, honoured only when the request has no authenticated principal (dev-mode calls); an authenticated caller always acts on its own scopes. 401 when neither resolves to a user",
           "in" : "query",
@@ -17149,7 +18108,7 @@
     },
     "/api/v1/admin/realms/observability/logs" : {
       "get" : {
-        "description" : "Guest log lines from the same 200-event ring buffer [LogController] serves. That buffer is shared across this whole process. A realm that last logged more than 200 events ago has aged out of it entirely. Attribution is best-effort: a line from a code path that never set the realm on the MDC comes back with realm null rather than a guess. Capture itself depends on assistant.infrastructure.features.diagnostics. When that is off nothing is recorded at all, and captureEnabled says so rather than leaving an empty list to be misread as a quiet realm.",
+        "description" : "Guest log, stdout and stderr lines from the newest runs the Shinar host recorded, already redacted by the host. A line is attributed to the realm whose program ran; a run no loaded realm's program matches comes back with realm null rather than a guess. captureEnabled is false when this process has no Shinar host to read runs from, so an empty list is not misread as a quiet realm.",
         "operationId" : "logs",
         "parameters" : [ {
           "description" : "Restrict to one realm's entries. Omit for every realm.",
@@ -17160,7 +18119,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "How many lines, newest last. Clamped to the buffer's own size.",
+          "description" : "How many lines, newest last. Clamped to the tail's own size.",
           "in" : "query",
           "name" : "limit",
           "required" : false,
@@ -19353,7 +20312,7 @@
     },
     "/api/v1/auth/oauth2/authorize/{provider}" : {
       "get" : {
-        "description" : "Redirects to the provider's consent screen when a client app is configured. Without one, an HTML caller is redirected to the chat view to be prompted for credentials, and any other caller gets 409 with a remedy.",
+        "description" : "Redirects to the provider's consent screen when a client app is configured. Without one, an HTML caller is redirected to the console's Keys and connections screen to enter one, and any other caller gets 409 with a remedy.",
         "operationId" : "authorize",
         "parameters" : [ {
           "description" : "The provider key, as `name` in `GET /auth/oauth2/providers` — an `apis.yml` entry's `oauth2.provider`, so one key covers every entry grouped under it (e.g. `google-workspace`); a key no oauth2 entry in this world declares is a 404",
@@ -19364,7 +20323,7 @@
             "type" : "string"
           }
         }, {
-          "description" : "The caller's `Accept` header, sent by the browser or client; it matters only when no client app is configured, where one listing `text/html` is redirected to the chat view and any other caller gets the 409",
+          "description" : "The caller's `Accept` header, sent by the browser or client; it matters only when no client app is configured, where one listing `text/html` is redirected to the console's Keys and connections screen and any other caller gets the 409",
           "in" : "header",
           "name" : "Accept",
           "required" : false,
@@ -19374,7 +20333,7 @@
         } ],
         "responses" : {
           "302" : {
-            "description" : "Redirect to the provider consent screen, or to the chat view when no client app is configured and the caller accepts HTML"
+            "description" : "Redirect to the provider consent screen, or to the console's Keys and connections screen when no client app is configured and the caller accepts HTML"
           },
           "404" : {
             "content" : {
@@ -19442,7 +20401,7 @@
             "description" : "HTML page reporting a provider-side failure or a failed token exchange"
           },
           "302" : {
-            "description" : "Authorized: back to the chat view, which reads ?authorized=<provider>"
+            "description" : "Authorized: back to the console's connections, with ?authorized=<provider>"
           },
           "400" : {
             "content" : {
@@ -19654,6 +20613,1240 @@
         },
         "summary" : "Calendar events across all connected accounts in a time window",
         "tags" : [ "Calendar" ]
+      }
+    },
+    "/api/v1/channel-ingress/captured/{installationId}/{channel}" : {
+      "post" : {
+        "description" : "Verified by the channel's declared signature. Answers the provider's endpoint check itself; otherwise returns 202 with the count of events published, or 500 when the channel's handler failed and the request should be sent again. Rate-limited requests return 429; oversized frames return 413.",
+        "operationId" : "receive_2",
+        "parameters" : [ {
+          "description" : "The installation the channel belongs to, from the minted address",
+          "in" : "path",
+          "name" : "installationId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The approved webhook channel's name, from the minted address",
+          "in" : "path",
+          "name" : "channel",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Receive a provider's request for an approved captured webhook channel",
+        "tags" : [ "Realm channel ingress" ]
+      }
+    },
+    "/api/v1/channel-ingress/delegated/{id}/events" : {
+      "post" : {
+        "description" : "Accepts eventId, streamId, occurredAt and payload. The host derives source and attribution; exact retries return the durable receipt.",
+        "operationId" : "receive_1",
+        "parameters" : [ {
+          "description" : "Id of the delegation the bearer token was issued under (a lowercase UUID, as the owner got it at issue); another shape, or a token that is not this delegation's current one, is refused with 403",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The durable receipt: receiptId, offset and replayed"
+          }
+        },
+        "summary" : "Append one event using only a scoped source bearer token",
+        "tags" : [ "Realm source delegation" ]
+      }
+    },
+    "/api/v1/channels" : {
+      "get" : {
+        "description" : "Approval and runtime state. No credential is included.",
+        "operationId" : "list_15",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/View"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List host channel approvals",
+        "tags" : [ "Host channels" ]
+      }
+    },
+    "/api/v1/channels/captured/{realmName}" : {
+      "get" : {
+        "description" : "Each declared channel: running, ready, stopped with the host's reason, or blocked with what it waits on.",
+        "operationId" : "list_19",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChannelsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a Realm's channels",
+        "tags" : [ "Realm channels" ]
+      }
+    },
+    "/api/v1/channels/captured/{realmName}/{channelName}/handshake/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Approves the declared operation under the channel's own credential.",
+        "operationId" : "grantHandshake",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Channel the realm declares, by the name the channel list gives; same text rules as the realm name. 404 when undeclared, 400 when the channel declares no handshake or no dial credential, or its handshake operation is undeclared, outside the egress policy, or its credential is unbound; 409 when its handshake is already approved",
+          "in" : "path",
+          "name" : "channelName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HandshakeView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve a channel's handshake",
+        "tags" : [ "Realm channels" ]
+      }
+    },
+    "/api/v1/channels/captured/{realmName}/{channelName}/handshake/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision.",
+        "operationId" : "revokeHandshake",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Channel the realm declares, by the name the channel list gives; same text rules as the realm name. 404 when undeclared, 400 when the channel declares no handshake or no dial credential, or its handshake operation is undeclared, outside the egress policy, or its credential is unbound; 409 when its handshake is not approved",
+          "in" : "path",
+          "name" : "channelName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HandshakeView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke a channel's handshake",
+        "tags" : [ "Realm channels" ]
+      }
+    },
+    "/api/v1/channels/captured/{realmName}/{channelName}/start" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Connects when the readiness gate allows, and clears an owner stop.",
+        "operationId" : "start_1",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation, 409 when that installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Channel the realm declares, by the name the channel list gives; same text rules as the realm name. 404 when undeclared",
+          "in" : "path",
+          "name" : "channelName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChannelsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Start one channel",
+        "tags" : [ "Realm channels" ]
+      }
+    },
+    "/api/v1/channels/captured/{realmName}/{channelName}/stop" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. The channel stays closed until the owner starts it again.",
+        "operationId" : "stop_1",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation, 409 when that installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Channel the realm declares, by the name the channel list gives; same text rules as the realm name. 404 when undeclared",
+          "in" : "path",
+          "name" : "channelName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ChannelsView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Stop one channel",
+        "tags" : [ "Realm channels" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}" : {
+      "get" : {
+        "description" : "The consumers the admitted capture declares and what each reads.",
+        "operationId" : "list_18",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConsumerView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a Realm's declared consumers",
+        "tags" : [ "Realm channel consumers" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/assistant" : {
+      "get" : {
+        "description" : "Whether the realm declared it, whether the owner granted it, and the paired sender threads.",
+        "operationId" : "view_1",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a consumer the realm declares; same text rules as the realm name. 404 when the installation declares none by that name",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssistantView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Show a consumer's assistant grant",
+        "tags" : [ "Realm channel assistant" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/assistant/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Only a consumer declared with assistant: true.",
+        "operationId" : "grant_7",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a consumer the realm declares; same text rules as the realm name, declared with `assistant: true` (400 otherwise). 404 when undeclared, 409 when it already has the assistant grant",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssistantView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Let a consumer answer through the assistant",
+        "tags" : [ "Realm channel assistant" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/assistant/pairing" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. A single-use code that works for ten minutes, shown once. The sender sends 'pair <code>' on the channel. Minting again stops the last code working.",
+        "operationId" : "pairing",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Consumer the pairing code is for; same text rules as the realm name. 409 when it has no assistant grant, which includes a name the realm does not declare",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PairingCode"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Mint a pairing code",
+        "tags" : [ "Realm channel assistant" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/assistant/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. The consumer keeps running, and its paired senders are dropped.",
+        "operationId" : "revoke_11",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a consumer the realm declares; same text rules as the realm name. 404 when undeclared, 409 when it has no assistant grant",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssistantView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Stop a consumer answering through the assistant",
+        "tags" : [ "Realm channel assistant" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/assistant/unpair" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, thread.",
+        "operationId" : "unpair",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Consumer that stops answering the body's `thread`; same text rules as the realm name. 409 when it has no assistant grant or that thread is not paired with it",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/AssistantView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Stop answering one sender",
+        "tags" : [ "Realm channel assistant" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, sourceKind, sourceRevision. sourceKind host adds channelName and sourceId; sourceKind realm adds sourceRealm, sourceInstallationId and sourceName. A field from the other kind is refused.",
+        "operationId" : "grant_6",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Consumer the realm declares that is to read the source the body names, replacing any source it read before; same text rules as the realm name. 400 when undeclared, when the source kind does not fit its declaration, or when its handler cannot be approved",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConsumerView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve a channel consumer",
+        "tags" : [ "Realm channel consumers" ]
+      }
+    },
+    "/api/v1/channels/consumers/{realmName}/{consumerName}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Delivery to the consumer stops.",
+        "operationId" : "revoke_10",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Consumer whose source approval is removed; same text rules as the realm name. 409 when it has none",
+          "in" : "path",
+          "name" : "consumerName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/ConsumerView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke a channel consumer",
+        "tags" : [ "Realm channel consumers" ]
+      }
+    },
+    "/api/v1/channels/credentials/{realmName}" : {
+      "get" : {
+        "description" : "What the realm asks for, and which are bound. Never a secret.",
+        "operationId" : "list_17",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CredentialView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List declared credentials",
+        "tags" : [ "Realm channel credentials" ]
+      }
+    },
+    "/api/v1/channels/credentials/{realmName}/ingress" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. The url of each webhook channel, with a new secret returned exactly once. Later calls give the url and a null secret: only the hash is kept.",
+        "operationId" : "ingress",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`. Every webhook channel this realm declares gets an endpoint",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/IngressView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Mint webhook ingress endpoints",
+        "tags" : [ "Realm channel credentials" ]
+      }
+    },
+    "/api/v1/channels/credentials/{realmName}/{credentialId}/bind" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, and exactly one of walletKey or value. A pasted value is filed in the wallet and never returned, logged or recorded in the grant.",
+        "operationId" : "bind",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Id of a credential the realm declares, as `declared.id` in the credential list; same text rules as the realm name. Whatever it was bound to is replaced. 404 when the installation declares no such credential, 501 for an `oauth2` credential",
+          "in" : "path",
+          "name" : "credentialId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CredentialView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Bind a secret to a declared credential",
+        "tags" : [ "Realm channel credentials" ]
+      }
+    },
+    "/api/v1/channels/credentials/{realmName}/{credentialId}/candidates" : {
+      "get" : {
+        "description" : "The names of the owner's wallet keys a bind would accept for this credential, sorted. Never a secret.",
+        "operationId" : "candidates",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Id of a credential the realm declares, as `declared.id` in the credential list; same text rules as the realm name. 404 when the installation declares no such credential",
+          "in" : "path",
+          "name" : "credentialId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/CredentialCandidatesView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List wallet keys that fit a credential",
+        "tags" : [ "Realm channel credentials" ]
+      }
+    },
+    "/api/v1/channels/credentials/{realmName}/{credentialId}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. A secret the host filed for it leaves the wallet too.",
+        "operationId" : "revoke_9",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Id of a credential the realm declares, as `declared.id` in the credential list; same text rules as the realm name. 404 when the installation declares no such credential, 409 when nothing is bound to it",
+          "in" : "path",
+          "name" : "credentialId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/CredentialView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Unbind a declared credential",
+        "tags" : [ "Realm channel credentials" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}" : {
+      "get" : {
+        "description" : "The sources the admitted capture declares and which are approved.",
+        "operationId" : "list_16",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SourceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a Realm's declared sources",
+        "tags" : [ "Realm channel sources" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/activity" : {
+      "get" : {
+        "description" : "Retained receipts and each approved consumer's progress. Metadata only: no payloads, nothing delivered.",
+        "operationId" : "activity",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Source the realm declares, by the `name` the source list gives; same text rules as the realm name. A source that is undeclared or not approved is answered with a 503, not a 404",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ActivityView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Read a source's activity",
+        "tags" : [ "Realm channel sources" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/delegations" : {
+      "get" : {
+        "operationId" : "list_5",
+        "parameters" : [ {
+          "description" : "Name of a realm installed, and not revoked, in the signed-in owner's world; 403 otherwise",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a source the realm declares and the owner has approved; 403 when the realm declares no source of this name or its approval no longer holds",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The source's delegations"
+          }
+        },
+        "summary" : "List source delegations without token secrets or verifiers",
+        "tags" : [ "Realm source delegation" ]
+      },
+      "post" : {
+        "description" : "The token is returned once. Supply installationId, sourceRevision, label, expiresInSeconds and maxEvents.",
+        "operationId" : "issue",
+        "parameters" : [ {
+          "description" : "Name of a realm installed, and not revoked, in the signed-in owner's world; 403 otherwise",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a source the realm declares and the owner has approved; 403 when the realm declares no source of this name or its approval no longer holds",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The new delegation and its token"
+          }
+        },
+        "summary" : "Issue an expiring append-only token for an exact approved source",
+        "tags" : [ "Realm source delegation" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/delegations/{id}/revoke" : {
+      "post" : {
+        "operationId" : "revoke_8",
+        "parameters" : [ {
+          "description" : "Name of a realm installed, and not revoked, in the signed-in owner's world; 403 otherwise",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a source the realm declares and the owner has approved; 403 when the realm declares no source of this name or its approval no longer holds",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Delegation id (a UUID), as `id` in the issue or list response",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The revoked delegation"
+          }
+        },
+        "summary" : "Revoke a source token at its expected generation",
+        "tags" : [ "Realm source delegation" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/delegations/{id}/rotate" : {
+      "post" : {
+        "operationId" : "rotate",
+        "parameters" : [ {
+          "description" : "Name of a realm installed, and not revoked, in the signed-in owner's world; 403 otherwise",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a source the realm declares and the owner has approved; 403 when the realm declares no source of this name or its approval no longer holds",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Delegation id (a UUID), as `id` in the issue or list response",
+          "in" : "path",
+          "name" : "id",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The delegation and its new token"
+          }
+        },
+        "summary" : "Replace a source token while keeping its identity, expiry, quota and retry receipts",
+        "tags" : [ "Realm source delegation" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/events" : {
+      "post" : {
+        "description" : "Requires authenticated owner, installationId, sourceRevision and event. Returns a durable receipt; exact event retries replay it.",
+        "operationId" : "receive",
+        "parameters" : [ {
+          "description" : "Name of a captured realm installed, and not revoked, in the signed-in owner's world; 400 otherwise, so the answer says nothing about realms the owner cannot append to. 409 when its live installation is not the body's `installationId`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a source the realm declares and the owner has approved; 400 when it is undeclared or its approval no longer holds. 409 when its revision is not the body's `sourceRevision`",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The durable receipt: receiptId, offset and replayed"
+          }
+        },
+        "summary" : "Append an event to an approved captured source",
+        "tags" : [ "Realm channel sources" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision.",
+        "operationId" : "grant_5",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Declared source to approve; same text rules as the realm name. 400 when the admitted capture does not declare it, 409 when it is already approved",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SourceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve a captured source",
+        "tags" : [ "Realm channel sources" ]
+      }
+    },
+    "/api/v1/channels/sources/{realmName}/{sourceName}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Publishing and delivery on the source stop.",
+        "operationId" : "revoke_7",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Approved source to revoke; same text rules as the realm name. 400 when the admitted capture does not declare it, 409 when it is not approved",
+          "in" : "path",
+          "name" : "sourceName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "items" : {
+                    "$ref" : "#/components/schemas/SourceView"
+                  },
+                  "type" : "array"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke a captured source",
+        "tags" : [ "Realm channel sources" ]
+      }
+    },
+    "/api/v1/channels/{name}/adopt" : {
+      "post" : {
+        "description" : "JSON fields: provider, autoStart, botCredential, expectedRevision, and appCredential for Slack. Credentials are wallet keys.",
+        "operationId" : "adopt_1",
+        "parameters" : [ {
+          "description" : "Name the channel's approval is filed under and later routes address it by; a lower-case letter followed by up to 63 lower-case letters, digits or `-` (400 otherwise). A name never seen takes `expectedRevision` 0, a revoked one the revision of its revoked record",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve a host channel",
+        "tags" : [ "Host channels" ]
+      }
+    },
+    "/api/v1/channels/{name}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: sourceId, expectedRevision. The channel is stopped.",
+        "operationId" : "revoke_6",
+        "parameters" : [ {
+          "description" : "Name of the live host channel to revoke; a lower-case letter followed by up to 63 lower-case letters, digits or `-` (400 otherwise). 409 when no live approval of that name matches the body's `sourceId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke a host channel",
+        "tags" : [ "Host channels" ]
+      }
+    },
+    "/api/v1/channels/{name}/start" : {
+      "post" : {
+        "description" : "JSON fields: sourceId, expectedRevision.",
+        "operationId" : "start",
+        "parameters" : [ {
+          "description" : "Name of the approved host channel to start; a lower-case letter followed by up to 63 lower-case letters, digits or `-` (400 otherwise). 409 when no live approval of that name matches the body's `sourceId` and `expectedRevision`, 503 when the channel runtime is unavailable or does not start",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Start an approved host channel",
+        "tags" : [ "Host channels" ]
+      }
+    },
+    "/api/v1/channels/{name}/stop" : {
+      "post" : {
+        "description" : "JSON fields: sourceId, expectedRevision.",
+        "operationId" : "stop",
+        "parameters" : [ {
+          "description" : "Name of the host channel to stop, revoked or not; a lower-case letter followed by up to 63 lower-case letters, digits or `-` (400 otherwise). 409 when no approval of that name matches the body's `sourceId` and `expectedRevision`, 503 when the channel runtime is unavailable or does not stop",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Stop a host channel",
+        "tags" : [ "Host channels" ]
+      }
+    },
+    "/api/v1/channels/{name}/upgrade" : {
+      "post" : {
+        "description" : "JSON fields: sourceId, expectedRevision, provider, autoStart, botCredential, and appCredential for Slack. The running channel is stopped.",
+        "operationId" : "upgrade_1",
+        "parameters" : [ {
+          "description" : "Name of the live host channel whose approval is replaced, as the list gives it; a lower-case letter followed by up to 63 lower-case letters, digits or `-` (400 otherwise). 409 when no live approval of that name matches the body's `sourceId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/View"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Replace a host channel approval",
+        "tags" : [ "Host channels" ]
       }
     },
     "/api/v1/chat" : {
@@ -22766,7 +24959,7 @@
     "/api/v1/handlers" : {
       "get" : {
         "description" : "Includes handlers that are installed but not adopted — the state that is otherwise invisible, and the usual reason a realm appears to do nothing.",
-        "operationId" : "list_8",
+        "operationId" : "list_13",
         "responses" : {
           "200" : {
             "content" : {
@@ -22785,6 +24978,433 @@
         },
         "summary" : "List the handlers in your world and whether each is switched on",
         "tags" : [ "Handlers" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/admission/adopt" : {
+      "post" : {
+        "description" : "JSON fields: previewDigest, expectedRevision, handlers.",
+        "operationId" : "adopt",
+        "parameters" : [ {
+          "description" : "Name of the Realm to adopt",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The installation as it now stands"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm name or the body failed validation"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The installation has moved since the revision sent"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The capture will not read, or does not offer what was ticked"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm approval is temporarily unavailable"
+          }
+        },
+        "summary" : "Adopt a previewed Realm installation",
+        "tags" : [ "Realm approval" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/admission/preview" : {
+      "post" : {
+        "description" : "The request body must be an empty JSON object.",
+        "operationId" : "preview",
+        "parameters" : [ {
+          "description" : "Name of the loaded Realm to preview",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "What the Realm declares and what is installed today"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm name or the body failed validation"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "No single loaded Realm answers to that name"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The capture will not read as this Realm"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm approval is temporarily unavailable"
+          }
+        },
+        "summary" : "Preview a Realm for owner approval",
+        "tags" : [ "Realm approval" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/admission/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision.",
+        "operationId" : "revoke_5",
+        "parameters" : [ {
+          "description" : "Name of the Realm to revoke",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "204" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "Revoked"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm name or the body failed validation"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The installation has moved since the revision sent"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm approval is temporarily unavailable"
+          }
+        },
+        "summary" : "Revoke an adopted Realm installation",
+        "tags" : [ "Realm approval" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/admission/upgrade" : {
+      "post" : {
+        "description" : "JSON fields: previewDigest, installationId, expectedRevision, handlers.",
+        "operationId" : "upgrade",
+        "parameters" : [ {
+          "description" : "Name of the Realm to upgrade",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The installation as it now stands"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm name or the body failed validation"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The installation has moved since the revision sent"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The capture will not read, or does not offer what was ticked"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm approval is temporarily unavailable"
+          }
+        },
+        "summary" : "Upgrade an adopted Realm installation",
+        "tags" : [ "Realm approval" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/api-approvals" : {
+      "get" : {
+        "description" : "Never shows a credential value.",
+        "operationId" : "list_14",
+        "parameters" : [ {
+          "description" : "Name of the admitted Realm",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The operations and whether each is approved"
+          }
+        },
+        "summary" : "List a Realm's API operations and their approvals",
+        "tags" : [ "Realm API approvals" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/api-approvals/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, and operation when the path does not name one. A key holding a slash goes in the body: an encoded slash never reaches a route.",
+        "operationId" : "grant_3",
+        "parameters" : [ {
+          "description" : "Name of the admitted Realm",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The approvals as they now stand"
+          }
+        },
+        "summary" : "Approve a Realm API operation",
+        "tags" : [ "Realm API approvals" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/api-approvals/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, and operation when the path does not name one. A key holding a slash goes in the body: an encoded slash never reaches a route.",
+        "operationId" : "revoke_4",
+        "parameters" : [ {
+          "description" : "Name of the admitted Realm",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The approvals as they now stand"
+          }
+        },
+        "summary" : "Revoke a Realm API operation's approval",
+        "tags" : [ "Realm API approvals" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/api-approvals/{operation}/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, and operation when the path does not name one. A key holding a slash goes in the body: an encoded slash never reaches a route.",
+        "operationId" : "grant_4",
+        "parameters" : [ {
+          "description" : "Name of the admitted Realm",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The operation's key or call name, when the body does not name it",
+          "in" : "path",
+          "name" : "operation",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The approvals as they now stand"
+          }
+        },
+        "summary" : "Approve a Realm API operation",
+        "tags" : [ "Realm API approvals" ]
+      }
+    },
+    "/api/v1/handlers/realms/{realmName}/api-approvals/{operation}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision, and operation when the path does not name one. A key holding a slash goes in the body: an encoded slash never reaches a route.",
+        "operationId" : "revoke_3",
+        "parameters" : [ {
+          "description" : "Name of the admitted Realm",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The operation's key or call name, when the body does not name it",
+          "in" : "path",
+          "name" : "operation",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "The approvals as they now stand"
+          }
+        },
+        "summary" : "Revoke a Realm API operation's approval",
+        "tags" : [ "Realm API approvals" ]
       }
     },
     "/api/v1/handlers/set-enabled" : {
@@ -26089,6 +28709,182 @@
         "tags" : [ "Profile" ]
       }
     },
+    "/api/v1/realm-browser/sessions/{session}/invoke" : {
+      "post" : {
+        "operationId" : "invoke",
+        "parameters" : [ {
+          "description" : "Id of an open browser session, the UUID a realm app page is given when it opens, belonging to the signed-in user; a session lasts 15 minutes from opening and allows at most 256 calls. An unknown, expired, foreign or no-longer-approved session answers 403, as does a `handler` the app does not declare",
+          "in" : "path",
+          "name" : "session",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Invoke an approved captured handler through an owner-bound browser session",
+        "tags" : [ "Realm browser apps" ]
+      }
+    },
+    "/api/v1/realm-browser/sessions/{session}/renew" : {
+      "post" : {
+        "operationId" : "renew",
+        "parameters" : [ {
+          "description" : "Id of the unexpired browser session the page holds, opened by the signed-in user; it is exchanged for a new session id at the realm's current revision that keeps the old expiry. Answers 403 when the installation or capture has changed or the app is no longer approved",
+          "in" : "path",
+          "name" : "session",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Swap a browser session an approval made stale for one at the realm's current revision",
+        "tags" : [ "Realm browser apps" ]
+      }
+    },
+    "/api/v1/realm-browser/{realm}/approvals" : {
+      "get" : {
+        "operationId" : "list_12",
+        "parameters" : [ {
+          "description" : "Name of an admitted, unrevoked realm in the signed-in owner's own world; its captured browser apps are listed with whether each is approved. A realm that is not admitted answers 403",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List captured browser apps and their owner approvals",
+        "tags" : [ "Realm browser apps" ]
+      }
+    },
+    "/api/v1/realm-browser/{realm}/approvals/{name}/grant" : {
+      "post" : {
+        "operationId" : "grant_2",
+        "parameters" : [ {
+          "description" : "Name of the admitted realm whose app is approved; the body's `installationId` and `expectedRevision` (a positive integer) must name its current installation, or the change answers 409",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Exact name of one of the realm's captured browser apps, as the approvals list returns it; an unknown name answers 403, and an app already approved 409",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve an exact captured browser app at the expected authority revision",
+        "tags" : [ "Realm browser apps" ]
+      }
+    },
+    "/api/v1/realm-browser/{realm}/approvals/{name}/revoke" : {
+      "post" : {
+        "operationId" : "revoke_2",
+        "parameters" : [ {
+          "description" : "Name of the admitted realm whose app approval is withdrawn; the body's `installationId` and `expectedRevision` (a positive integer) must name its current installation, or the change answers 409",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Exact name of one of the realm's captured browser apps, as the approvals list returns it; an unknown name answers 403, and an app not currently approved 409",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "type" : "object"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke an exact captured browser app at the expected authority revision",
+        "tags" : [ "Realm browser apps" ]
+      }
+    },
+    "/api/v1/realm-monitor" : {
+      "get" : {
+        "description" : "Journal offsets, consumer lag, channel activity and Wasm figures for every live captured Realm in your world. Unknown numbers are null. Reading it delivers nothing and runs no handler.",
+        "operationId" : "read_2",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RealmMonitor"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Monitor captured Realms",
+        "tags" : [ "Realm monitor" ]
+      }
+    },
     "/api/v1/realms" : {
       "get" : {
         "description" : "Returns all realms installed in the world — the shipped Realms view's rows, filtered to installed, so this listing and a `MATCH (r:Realm)` query can never disagree.",
@@ -26123,7 +28919,7 @@
         "tags" : [ "Realms" ]
       },
       "post" : {
-        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. With realm admission on, installing also approves the realm's handlers and browser apps; `admission` in the response says whether it did: admitted, unchanged, not-admitted, declarative (no WASM program, so it loads from its directory) or off.",
+        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. Installing also approves the realm's handlers and browser apps; `admission` reports the resulting state: admitted when an approval is in force, or not-admitted.",
         "operationId" : "addRealm",
         "requestBody" : {
           "content" : {
@@ -26154,35 +28950,65 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "Neither repo nor path was given, or the path is not a mounted realm directory"
+            "description" : "Neither repo nor path was given, or the path is not a mounted realm directory (`code` validation_failed)"
           },
           "409" : {
             "content" : {
               "*/*" : {
                 "schema" : {
                   "oneOf" : [ {
-                    "$ref" : "#/components/schemas/RealmRefusal"
+                    "$ref" : "#/components/schemas/ApiError"
                   }, {
                     "$ref" : "#/components/schemas/RealmNeedsConfirmation"
                   } ]
                 }
               }
             },
-            "description" : "Realm already exists, or the realm is experimental and needs `confirmed: true`; `status` says which"
+            "description" : "Realm already installed (`code` REALM_ALREADY_INSTALLED), or the realm is experimental and needs `confirmed: true` (`code` REALM_CONFIRMATION_REQUIRED)"
           },
-          "500" : {
+          "422" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "Install failed"
+            "description" : "Realm definition or build refused"
+          },
+          "502" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Repository fetch failed"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm operation unavailable"
+          },
+          "507" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm storage could not be written"
           }
         },
         "summary" : "Install a realm",
@@ -26223,6 +29049,26 @@
               }
             },
             "description" : "World rebuilt; response lists the realms now loaded"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm operation unavailable"
+          },
+          "507" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm storage could not be written"
           }
         },
         "summary" : "Refresh the world's realms",
@@ -26271,7 +29117,7 @@
     },
     "/api/v1/realms/{name}" : {
       "delete" : {
-        "description" : "Removes an installed realm from the world, with the reference nodes it seeded and the documents its sources ingested unless `keepData` is set; `data` in the response counts them. With realm admission on, removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed), failed or off.",
+        "description" : "Removes an installed realm from the world, with the reference nodes it seeded and the documents its sources ingested unless `keepData` is set; `data` in the response counts them. Removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed) or failed.",
         "operationId" : "removeRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -26306,21 +29152,41 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "Nothing installed answers to that name; the message lists what is installed"
+            "description" : "Nothing installed answers to that name (`code` REALM_NOT_FOUND)"
           },
           "409" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "The realm is served from the appliance's shared realms directory, which no one world owns; a realm a template, org or default-world manifest supplies is removed from this world"
+            "description" : "The realm is served from the appliance's shared realms directory, which no one world owns; a realm a template, org or default-world manifest supplies is removed from this world (`code` REALM_CONFLICT)"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm operation unavailable"
+          },
+          "507" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm storage could not be written"
           }
         },
         "summary" : "Remove a realm",
@@ -26400,7 +29266,7 @@
     },
     "/api/v1/realms/{name}/update" : {
       "post" : {
-        "description" : "Pulls the latest changes for a realm backed by a git checkout. A realm loaded from a local path reference has no checkout to pull; it reports as already live.",
+        "description" : "Installs the latest Git-backed realm as a new digest in this world. Local path references report as already live.",
         "operationId" : "updateRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -26429,25 +29295,357 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "Realm not found"
+            "description" : "No installed realm has that name (`code` REALM_NOT_FOUND)"
           },
-          "500" : {
+          "422" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/RealmRefusal"
+                  "$ref" : "#/components/schemas/ApiError"
                 }
               }
             },
-            "description" : "Update failed"
+            "description" : "Update refused; the previous install remains selected"
+          },
+          "502" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Repository fetch failed"
+          },
+          "503" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm operation unavailable"
+          },
+          "507" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Realm storage could not be written"
           }
         },
         "summary" : "Update a realm",
         "tags" : [ "Realms" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/resource-approvals" : {
+      "get" : {
+        "description" : "The graph read and each declared view alias, and whether each is approved.",
+        "operationId" : "list_11",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 404 when it has no live installation",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RealmResourceApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a Realm's resource approvals",
+        "tags" : [ "Realm resource approvals" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/resource-approvals/{resource}/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision.",
+        "operationId" : "grant_1",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Resource to approve: `cypher_query` for the graph read, or `view:<alias>` for a view alias the realm declares, as the approval list gives them. 400 for anything else, 409 when it is already approved",
+          "in" : "path",
+          "name" : "resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RealmResourceApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve one resource",
+        "tags" : [ "Realm resource approvals" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/resource-approvals/{resource}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. The next query that needs it is refused.",
+        "operationId" : "revoke_1",
+        "parameters" : [ {
+          "description" : "Name of the captured realm installed in the signed-in owner's world; non-blank, at most 256 UTF-8 bytes, no control characters and not all `*` (400 otherwise). 409 when its live installation is not the one named by the body's `installationId` and `expectedRevision`",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Resource to revoke: `cypher_query` for the graph read, or `view:<alias>` for a view alias the realm declares, as the approval list gives them. 400 for anything else, 409 when it is not approved",
+          "in" : "path",
+          "name" : "resource",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RealmResourceApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke one resource",
+        "tags" : [ "Realm resource approvals" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/watch-approvals" : {
+      "get" : {
+        "description" : "Each watch the admitted capture declares and whether it is approved.",
+        "operationId" : "list_10",
+        "parameters" : [ {
+          "description" : "Name of a realm with a live admitted installation in the signed-in owner's world: non-blank, at most 256 UTF-8 bytes, no control characters and not all asterisks, or 400",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List a Realm's declared watches",
+        "tags" : [ "Realm watch approvals" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/watch-approvals/{watch}/grant" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision.",
+        "operationId" : "grant",
+        "parameters" : [ {
+          "description" : "Name of the admitted realm whose watch is approved; the body's `installationId` and `expectedRevision` must name its current installation, or the change answers 409",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a watch the realm's admitted capture declares, as the list route returns it; an undeclared name answers 400, and one already approved 409",
+          "in" : "path",
+          "name" : "watch",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Approve one declared watch",
+        "tags" : [ "Realm watch approvals" ]
+      }
+    },
+    "/api/v1/realms/{realmName}/watch-approvals/{watch}/revoke" : {
+      "post" : {
+        "description" : "JSON fields: installationId, expectedRevision. Its schedule stops.",
+        "operationId" : "revoke",
+        "parameters" : [ {
+          "description" : "Name of the admitted realm whose watch approval is withdrawn; the body's `installationId` and `expectedRevision` must name its current installation, or the change answers 409",
+          "in" : "path",
+          "name" : "realmName",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of a watch the realm's admitted capture declares, as the list route returns it; an undeclared name answers 400, and one not currently approved 409",
+          "in" : "path",
+          "name" : "watch",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApprovalView"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Revoke one declared watch",
+        "tags" : [ "Realm watch approvals" ]
+      }
+    },
+    "/api/v1/realms/{realm}/proposals" : {
+      "get" : {
+        "operationId" : "list_9",
+        "parameters" : [ {
+          "description" : "Name of an admitted realm in the signed-in owner's own world; only that realm's proposals still pending are listed. The route takes no query string, and any refusal answers 400 with outcome `REFUSED`",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : { },
+            "description" : "OK"
+          }
+        },
+        "summary" : "List the current owner's pending realm proposals",
+        "tags" : [ "Realm proposals" ]
+      }
+    },
+    "/api/v1/realms/{realm}/proposals/{proposalId}/decision" : {
+      "post" : {
+        "description" : "Current owner authority is required. UNKNOWN is not proof that no effect occurred.",
+        "operationId" : "decide",
+        "parameters" : [ {
+          "description" : "Name of the admitted realm the proposal came from, in the signed-in owner's own world",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Id of a pending proposal, as the list route returns it: a canonical lower-case UUID. Any other form answers 400 `REFUSED`; one that is not pending under this realm, or was claimed by another decision first, answers 409 `CONFLICT`",
+          "in" : "path",
+          "name" : "proposalId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Decision"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Accept or reject a retained proposal",
+        "tags" : [ "Realm proposals" ]
+      }
+    },
+    "/api/v1/realms/{realm}/watches/{watch}/check-now" : {
+      "post" : {
+        "description" : "Runs as the signed-in owner and takes no body or query. DELIVERED means the host accepted the notification.",
+        "operationId" : "checkNow",
+        "parameters" : [ {
+          "description" : "Name of the captured realm in the signed-in owner's world that declares the watch",
+          "in" : "path",
+          "name" : "realm",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "Name of one of that realm's approved watches, which runs once now, as the owner, outside its schedule",
+          "in" : "path",
+          "name" : "watch",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/Result"
+                }
+              }
+            },
+            "description" : "OK"
+          }
+        },
+        "summary" : "Check an approved watch now",
+        "tags" : [ "Realm watches" ]
       }
     },
     "/api/v1/receipts/verify" : {
@@ -27341,7 +30539,7 @@
     "/api/v1/tours" : {
       "get" : {
         "description" : "Shipped, realm-contributed and user-saved alike. `presentation` is whatever the tour's YAML declared, carried through untouched — the client owns that vocabulary.",
-        "operationId" : "list_7",
+        "operationId" : "list_8",
         "parameters" : [ {
           "description" : "Username to act as, whose world holds the tours; when it resolves to a user it is used in preference to the authenticated principal. Omitted or blank, the authenticated principal acts; 401 when neither resolves",
           "in" : "query",
@@ -29279,6 +32477,16 @@
               }
             },
             "description" : "World not found"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/WorldManagementRefusal"
+                }
+              }
+            },
+            "description" : "World state could not be fully deleted"
           }
         },
         "summary" : "Delete world",
@@ -29371,7 +32579,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39095"
+    "url" : "http://localhost:42383"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -29392,8 +32600,17 @@
     "description" : "Channels this world's content declares, and the ones you have joined",
     "name" : "Audience"
   }, {
+    "description" : "Approve, start, stop and revoke the built-in channels.",
+    "name" : "Host channels"
+  }, {
     "description" : "Resolve cited source links to their external home",
     "name" : "Sources"
+  }, {
+    "description" : "Where a provider's frames arrive on a realm's captured channel, verified against the channel's own credential before anything parses them",
+    "name" : "Realm channel ingress"
+  }, {
+    "description" : "The sources a captured realm declares: approving or revoking them, and appending events to the ones approved",
+    "name" : "Realm channel sources"
   }, {
     "description" : "The appliance's architectural principles, as coding agents receive them",
     "name" : "Principles"
@@ -29422,8 +32639,20 @@
     "description" : "Signing in to the appliance, and the OAuth2 handshake that connects external APIs to it",
     "name" : "Auth"
   }, {
+    "description" : "Owner checks of approved captured Realm watches",
+    "name" : "Realm watches"
+  }, {
+    "description" : "Delegated write access to a realm source: the owner issues, rotates and revokes tokens, and a token holder outside the host appends events with one",
+    "name" : "Realm source delegation"
+  }, {
     "description" : "Browser voice sessions",
     "name" : "Voice"
+  }, {
+    "description" : "Preview, adopt, upgrade, and revoke captured Realm installations.",
+    "name" : "Realm approval"
+  }, {
+    "description" : "Approve or revoke which source a captured Realm consumer reads.",
+    "name" : "Realm channel consumers"
   }, {
     "description" : "Manage world realms",
     "name" : "Realms"
@@ -29436,6 +32665,9 @@
   }, {
     "description" : "Read the platform's goal and agent catalogue",
     "name" : "Agent platform"
+  }, {
+    "description" : "Approve or revoke the API operations a captured Realm declares.",
+    "name" : "Realm API approvals"
   }, {
     "description" : "The signed-in user's calendar: the accounts they have connected, and the events those accounts carry",
     "name" : "Calendar"
@@ -29454,6 +32686,9 @@
   }, {
     "description" : "Inspect and manage world resources: skills, APIs, MCP servers, documents, tools, and personalities",
     "name" : "World"
+  }, {
+    "description" : "Start, stop and approve the channels a captured Realm declares.",
+    "name" : "Realm channels"
   }, {
     "description" : "Serve world images",
     "name" : "Images"
@@ -29478,6 +32713,9 @@
   }, {
     "description" : "An agent's own credentials, and retiring it",
     "name" : "Agent accounts"
+  }, {
+    "description" : "Authenticated owner decisions on retained private write proposals",
+    "name" : "Realm proposals"
   }, {
     "description" : "Tells a fresh client how to log in and who (if anyone) is signed in",
     "name" : "Bootstrap"
@@ -29542,14 +32780,23 @@
     "description" : "Installed agent skills for the authenticated user",
     "name" : "Skills"
   }, {
+    "description" : "Let a captured Realm consumer answer paired senders through the assistant.",
+    "name" : "Realm channel assistant"
+  }, {
     "description" : "Invoke named lenses and views headlessly; identity from the authenticated principal.",
     "name" : "Headless Invocation"
+  }, {
+    "description" : "Approve or revoke a captured Realm's graph read and each view alias it declares.",
+    "name" : "Realm resource approvals"
   }, {
     "description" : "Admin: run persisted virtual-join enrichment on demand",
     "name" : "Enrichment"
   }, {
     "description" : "Learn a connected source as a realm: detect, curate, probe, promote",
     "name" : "Learning"
+  }, {
+    "description" : "See each captured Realm's journal offsets, channel activity and Wasm footprint.",
+    "name" : "Realm monitor"
   }, {
     "description" : "Receive and process webhook events from external systems",
     "name" : "Webhooks"
@@ -29563,11 +32810,17 @@
     "description" : "Fictional records, marked and removable",
     "name" : "Sample data"
   }, {
+    "description" : "Bind the credentials a captured Realm declares to wallet items.",
+    "name" : "Realm channel credentials"
+  }, {
     "description" : "What this server is built from",
     "name" : "About"
   }, {
     "description" : "Work the appliance is doing",
     "name" : "Activity"
+  }, {
+    "description" : "Approve or revoke one declared watch of a captured Realm.",
+    "name" : "Realm watch approvals"
   }, {
     "description" : "Admin: start, watch and cancel slow resumable materializations of expensive queries",
     "name" : "KG Fills"
@@ -29577,6 +32830,9 @@
   }, {
     "description" : "The signed-in user's context layer: their named memory contexts, and the browser observations pushed into it",
     "name" : "Context"
+  }, {
+    "description" : "Owner approval and captured handler access for isolated Realm apps",
+    "name" : "Realm browser apps"
   }, {
     "description" : "Admin: write annotations onto graph nodes via a dry-run, frozen plan, apply/undo cycle",
     "name" : "KG Annotations"
