@@ -5055,6 +5055,11 @@
             },
             "type" : "array"
           },
+          "folderRole" : {
+            "description" : "Role of the folder holding the message (inbox, sent, drafts, deleted, junk, archive), read by the connector from the provider's own folder identity, never from a folder's display name; null when unknown",
+            "enum" : [ "INBOX", "SENT", "DRAFTS", "DELETED", "JUNK", "ARCHIVE" ],
+            "type" : "string"
+          },
           "from" : {
             "description" : "The sender as one display string, `Name <address>` or a bare address; empty when unknown",
             "type" : "string"
@@ -32579,7 +32584,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41451"
+    "url" : "http://localhost:43587"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
