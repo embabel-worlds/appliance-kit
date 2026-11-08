@@ -11,6 +11,8 @@
 body {
   color: var(--ink);
   font-family: var(--sans);
+  /* Phosphor bloom, for a theme that wants its ink to glow. `none` otherwise. */
+  text-shadow: var(--ink-glow);
   line-height: 1.5;
   min-height: 100vh;
   position: relative;
@@ -40,6 +42,9 @@ body::before {
     radial-gradient(1300px 860px at 55% 95%, color-mix(in srgb, var(--signal) 20%, transparent), transparent 62%);
   animation: embabel-aurora 40s ease-in-out infinite alternate;
   filter: saturate(1.1);
+  /* A theme may dim the aurora or put it out; the layer stays, so an app's
+     own backdrop at -1 keeps its place in the stack either way. */
+  opacity: var(--aurora-strength);
 }
 
 @keyframes embabel-aurora {
@@ -52,6 +57,29 @@ body::before {
    still aurora, not a missing one — the colour is doing work of its own. */
 @media (prefers-reduced-motion: reduce) {
   body::before { animation: none; }
+}
+
+/* The screen itself: hairline scanlines over everything, for a theme that is a
+   terminal rather than a page. Off by default — `--scanline-strength` is 0 —
+   and drawn on `html` rather than `body` because both doors already use
+   `body::after` for their own sky, the console for star grain. Above the
+   content so it reads as glass, with no pointer events so it is never in the
+   way; the browser's top layer (dialogs, popovers) still paints over it, which
+   is right — a modal is not part of the screen. Black at a fixed strength
+   rather than the paper's colour, because scanlines are shadow, and shadow on
+   a light theme is still dark. */
+html::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 2147483647;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    color-mix(in srgb, #000000 28%, transparent) 0 1px,
+    transparent 1px 3px
+  );
+  opacity: var(--scanline-strength);
 }
 
 /* The layer an app may draw its own moving background into. */

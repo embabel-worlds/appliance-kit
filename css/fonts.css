@@ -1,0 +1,24 @@
+/*
+ * The faces the package carries, so a theme can name one and have it arrive.
+ *
+ * A theme is a `:root` block served by the appliance and can set
+ * `--sb-font-sans` and `--sb-font-mono`, but it can only name what the
+ * machine already has: Me's renderer answers to `default-src 'self'`, and a
+ * stylesheet cannot reach a font host from there. So the faces a theme may
+ * want ship with the kit and are bundled into each consumer like any other
+ * import — esbuild and Vite both copy the files these rules point at. An
+ * `@font-face` is a declaration, not a download: nothing here is fetched until
+ * a theme's stack names the family, so the default look pays nothing.
+ *
+ * IBM Plex Mono, Latin subset, in the three weights the kit sets (400 body,
+ * 500 captions, 600 headings) and the one italic markdown uses. It is OFL
+ * licensed, and it is the face of a 1970s corporate terminal, which is what the
+ * first theme to need a bundled face is drawn as. Latin only: the extended and
+ * non-Latin subsets would multiply the files carried by every consumer for
+ * text these consoles almost never set; a glyph outside the subset falls to
+ * the next face in the theme's own stack.
+ */
+@import '@fontsource/ibm-plex-mono/latin-400.css';
+@import '@fontsource/ibm-plex-mono/latin-400-italic.css';
+@import '@fontsource/ibm-plex-mono/latin-500.css';
+@import '@fontsource/ibm-plex-mono/latin-600.css';

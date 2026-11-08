@@ -1,13 +1,16 @@
 /* Everything, in the order it must cascade.
  *
- * palette -> tokens -> ground -> base -> components -> markdown. Later files rely on the
- * custom properties the first two define, and components deliberately refine
- * bare-element rules from base.
+ * fonts -> palette -> tokens -> ground -> base -> components -> markdown. Later
+ * files rely on the custom properties palette and tokens define, and components
+ * deliberately refine bare-element rules from base. Fonts come first only
+ * because an @font-face costs nothing until a face is named, so there is no
+ * reason to make a theme wait for one.
  *
  * Importing a subset is supported and expected: a surface embedded in someone
  * else's page wants `tokens` + `base` + `components` and NOT `ground`, which
  * repaints the whole viewport.
  */
+@import './fonts.css';
 @import './palette.css';
 @import './tokens.css';
 @import './ground.css';

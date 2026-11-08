@@ -70,9 +70,27 @@
   --sb-unlit: #364153;
 
   /* Typefaces are not part of the palette contract and no bundled theme sets
-     them. A theme may; these are the defaults. */
+     them. A theme may; these are the defaults. `fonts.css` declares the faces
+     the package carries, so a theme can name one of those and have it arrive. */
   --sb-font-sans: system-ui, -apple-system, 'Segoe UI', sans-serif;
   --sb-font-mono: ui-monospace, 'SF Mono', SFMono-Regular, Menlo, Consolas, monospace;
+
+  /* ── The ground and the decoration, as theme concerns ─────────────────────
+     A palette recolours the aurora and the graph paper but could not turn
+     them off, so every theme was Embabel's sky in a different light. These are
+     the knobs for the parts of the look that are not colour: how strong the
+     ruling is, whether the aurora shows, whether a screen texture lies over
+     the page, whether ink blooms, and how saturated decorative colour — tiles,
+     avatars, category pills — may be. The lamps and the signal are exempt from
+     `--sb-chroma`: a lamp that cannot be red is not a lamp.
+
+     The defaults are today's look exactly, so a theme that says nothing
+     changes nothing. */
+  --sb-grid: 3%;
+  --sb-aurora: 1;
+  --sb-scanlines: 0;
+  --sb-glow: none;
+  --sb-chroma: 1;
 }
 
 /*

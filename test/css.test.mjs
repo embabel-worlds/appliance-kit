@@ -136,9 +136,30 @@ describe('the shared visual language', () => {
     const imports = [...all['index.css'].matchAll(/@import\s+'\.\/([^']+)'/g)].map((m) => m[1])
     assert.deepEqual(
       imports,
-      ['palette.css', 'tokens.css', 'ground.css', 'base.css', 'components.css', 'markdown.css'],
+      ['fonts.css', 'palette.css', 'tokens.css', 'ground.css', 'base.css', 'components.css', 'markdown.css'],
       'components refine base, and everything needs tokens first',
     )
+  })
+
+  /*
+   * The knobs a theme turns that are not colours. Each has a default in
+   * palette.css that reproduces the look before the knob existed, so a theme
+   * that predates it — all seven the appliance ships — is unchanged.
+   */
+  it('gives every ground and decoration knob a default that is today\'s look', () => {
+    const defaults = { '--sb-grid': '3%', '--sb-aurora': '1', '--sb-scanlines': '0', '--sb-glow': 'none', '--sb-chroma': '1' }
+    for (const [name, value] of Object.entries(defaults)) {
+      const declaration = declarations['palette.css'].match(new RegExp(`^\\s*${name}\\s*:\\s*([^;]+);`, 'm'))
+      assert.ok(declaration, `${name} has no default in palette.css`)
+      assert.equal(declaration[1].trim(), value, `${name} defaults to something other than the look it replaced`)
+    }
+  })
+
+  it('declares faces only in fonts.css, and names no font host', () => {
+    for (const file of files) {
+      if (file !== 'fonts.css') assert.doesNotMatch(declarations[file], /@font-face/, `${file} declares a face; fonts.css owns them`)
+      assert.doesNotMatch(declarations[file], /url\(\s*['"]?https?:/, `${file} reaches a host for a resource; Me's renderer cannot`)
+    }
   })
 
   it('has balanced braces in every file', () => {
