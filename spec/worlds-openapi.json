@@ -390,7 +390,7 @@
             "type" : "boolean"
           },
           "path" : {
-            "description" : "Absolute path, inside the appliance container, of a mounted realm directory with a realm.yml, such as /realms/realm-esg. Loaded in place, never cloned or copied; the directory's name becomes the realm's. Takes precedence over repo",
+            "description" : "Absolute path, inside the appliance container, of a mounted realm directory with a realm.ts or a realm.yml, such as /realms/realm-esg. Loaded in place, never cloned or copied; the directory's name becomes the realm's. Takes precedence over repo",
             "type" : "string"
           },
           "ref" : {
@@ -14338,7 +14338,7 @@
         "type" : "object"
       },
       "WorldRealmSummary" : {
-        "description" : "One installed realm, as its realm.yml describes it",
+        "description" : "One installed realm, as its realm.ts describes it, or its realm.yml for a realm without one",
         "properties" : {
           "author" : {
             "description" : "Who wrote it; empty when it declares nobody",
@@ -29200,10 +29200,10 @@
     },
     "/api/v1/realms/{name}/icon" : {
       "get" : {
-        "description" : "The image the realm declares as `icon` in realm.yml. 404 when the realm has none, names one that is missing, or names one outside its own directory.",
+        "description" : "The image the realm declares as `icon` in its realm.ts, or in realm.yml for a realm without one. 404 when the realm has none, names one that is missing, or names one outside its own directory.",
         "operationId" : "icon",
         "parameters" : [ {
-          "description" : "Name of an installed realm, as its realm.yml gives it and GET /api/v1/realms lists it; 404 when no loaded realm has that name",
+          "description" : "Name of an installed realm, as its realm.ts or realm.yml gives it and GET /api/v1/realms lists it; 404 when no loaded realm has that name",
           "in" : "path",
           "name" : "name",
           "required" : true,
@@ -32584,7 +32584,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43587"
+    "url" : "http://localhost:35673"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
