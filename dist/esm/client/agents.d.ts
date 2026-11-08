@@ -74,6 +74,17 @@ export interface Agent {
     budget?: AgentBudget | null;
     /** Its priority and model fallbacks; null or absent is business priority with none. */
     qos?: AgentQos | null;
+    /**
+     * The one thing in the graph it speaks for, when it is a thing's voice: a label the world
+     * declares and the value of that type's identity property. Null for an agent that speaks only
+     * for itself; absent from older servers.
+     */
+    speaksFor?: AgentSpeaksFor | null;
+}
+/** What an agent speaks for: the node of `label` whose identity property holds `key`. */
+export interface AgentSpeaksFor {
+    label: string;
+    key: string;
 }
 export type AgentPriority = 'interactive' | 'business' | 'background';
 export interface AgentQos {
