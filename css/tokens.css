@@ -79,7 +79,7 @@
   --field-bg: var(--sb-bg-light);
 
   /* The graph-paper ruling, and the ink of a code background. */
-  --grid-line: color-mix(in srgb, var(--ink) 3%, transparent);
+  --grid-line: color-mix(in srgb, var(--ink) var(--sb-grid), transparent);
   --code-bg: color-mix(in srgb, var(--ink) 7%, transparent);
 
   /* The mono caption: uppercase, letterspaced. Section headings, meta, status. */
@@ -88,6 +88,13 @@
 
   --radius: 3px;
   --radius-panel: 4px;
+
+  /* The ground's texture and the decoration's saturation, named for what they
+     do so a component never reads a theme knob directly. */
+  --aurora-strength: var(--sb-aurora);
+  --scanline-strength: var(--sb-scanlines);
+  --ink-glow: var(--sb-glow);
+  --decoration-chroma: var(--sb-chroma);
 
   color-scheme: dark;
 }
