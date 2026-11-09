@@ -25314,7 +25314,7 @@
                 }
               }
             },
-            "description" : "The capture will not read, or does not offer what was ticked"
+            "description" : "The capture will not read, or does not offer what was ticked; when one of the Realm's own files is the cause, detail carries its reason (SYMLINK, NOT_REGULAR, HARD_LINK, DUPLICATE_NAME, TOO_LARGE) and the file's path relative to the Realm root"
           },
           "503" : {
             "content" : {
@@ -25383,7 +25383,7 @@
                 }
               }
             },
-            "description" : "The capture will not read as this Realm"
+            "description" : "The capture will not read as this Realm; when one of the Realm's own files is the cause, detail carries its reason (SYMLINK, NOT_REGULAR, HARD_LINK, DUPLICATE_NAME, TOO_LARGE) and the file's path relative to the Realm root"
           },
           "503" : {
             "content" : {
@@ -25511,7 +25511,7 @@
                 }
               }
             },
-            "description" : "The capture will not read, or does not offer what was ticked"
+            "description" : "The capture will not read, or does not offer what was ticked; when one of the Realm's own files is the cause, detail carries its reason (SYMLINK, NOT_REGULAR, HARD_LINK, DUPLICATE_NAME, TOO_LARGE) and the file's path relative to the Realm root"
           },
           "503" : {
             "content" : {
@@ -32911,7 +32911,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:46479"
+    "url" : "http://localhost:36399"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
