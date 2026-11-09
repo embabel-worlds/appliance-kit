@@ -1404,8 +1404,7 @@
             "type" : "string"
           },
           "detail" : {
-            "description" : "Extra context where there is some, such as the fields a body may carry; null otherwise",
-            "type" : "string"
+            "description" : "Extra context where there is some: a sentence, such as the fields a body may carry, or an object of machine fields in the server's own words, such as api_approval_unapprovable's reason (the declaration reader's code, MALFORMED) and field (where it points, [0].headers[1]); never the caller's or a Realm's text; null otherwise"
           },
           "message" : {
             "description" : "A plain-language explanation, written to be shown. Never carries an exception message",
@@ -25552,6 +25551,16 @@
               }
             },
             "description" : "The operations and whether each is approved"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
           }
         },
         "summary" : "List a Realm's API operations and their approvals",
@@ -25581,6 +25590,16 @@
               }
             },
             "description" : "The approvals as they now stand"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
           }
         },
         "summary" : "Approve a Realm API operation",
@@ -25610,6 +25629,16 @@
               }
             },
             "description" : "The approvals as they now stand"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
           }
         },
         "summary" : "Revoke a Realm API operation's approval",
@@ -25647,6 +25676,16 @@
               }
             },
             "description" : "The approvals as they now stand"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
           }
         },
         "summary" : "Approve a Realm API operation",
@@ -25684,6 +25723,16 @@
               }
             },
             "description" : "The approvals as they now stand"
+          },
+          "422" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
           }
         },
         "summary" : "Revoke a Realm API operation's approval",
@@ -32862,7 +32911,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:45029"
+    "url" : "http://localhost:37037"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
