@@ -1474,6 +1474,119 @@
         "required" : [ "digest", "installationId", "revision", "watches" ],
         "type" : "object"
       },
+      "ArtifactAppChange" : {
+        "description" : "One change to one app, as the trail records it",
+        "properties" : {
+          "app" : {
+            "description" : "The app's page, e.g. dashboard.html",
+            "type" : "string"
+          },
+          "at" : {
+            "description" : "When it happened, ISO-8601",
+            "type" : "string"
+          },
+          "commit" : {
+            "description" : "The world-repository commit holding the app after this change, which a restore names. Null where the world keeps no git history or nothing on disk changed",
+            "type" : "string"
+          },
+          "id" : {
+            "description" : "The change's id",
+            "type" : "string"
+          },
+          "kind" : {
+            "description" : "SAVE, COPY, BUILD, WRITE, DELETE, RESTORE, or KEEP — the version a change replaced, kept because it had never been committed",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "What the change says it was, e.g. `Save dashboard.html`",
+            "type" : "string"
+          }
+        },
+        "required" : [ "app", "at", "id", "kind", "message" ],
+        "type" : "object"
+      },
+      "ArtifactAppHistory" : {
+        "description" : "An app's versions, newest first",
+        "properties" : {
+          "name" : {
+            "description" : "The app's name",
+            "type" : "string"
+          },
+          "uncommitted" : {
+            "description" : "True when the app on disk differs from its newest version — edited by hand, or written before history began. The next write keeps it first",
+            "type" : "boolean"
+          },
+          "versions" : {
+            "description" : "Newest first, at most fifty. Empty for an app never written since history began",
+            "items" : {
+              "$ref" : "#/components/schemas/ArtifactAppVersion"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "name", "uncommitted", "versions" ],
+        "type" : "object"
+      },
+      "ArtifactAppRestored" : {
+        "description" : "Confirmation that an app was put back as it was at an earlier version",
+        "properties" : {
+          "commit" : {
+            "description" : "The new commit recording the restore. Null when the files were restored but git could not record it",
+            "type" : "string"
+          },
+          "from" : {
+            "description" : "The commit whose files were restored",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The app's name",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `restored`",
+            "type" : "string"
+          }
+        },
+        "required" : [ "from", "name", "status" ],
+        "type" : "object"
+      },
+      "ArtifactAppTrail" : {
+        "description" : "What happened to this world's apps, newest first",
+        "properties" : {
+          "changes" : {
+            "description" : "Newest first, at most the limit asked for",
+            "items" : {
+              "$ref" : "#/components/schemas/ArtifactAppChange"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "changes" ],
+        "type" : "object"
+      },
+      "ArtifactAppVersion" : {
+        "description" : "One earlier version of an app: a commit in the world's git repository that changed its files",
+        "properties" : {
+          "at" : {
+            "description" : "When the commit was made, ISO-8601",
+            "type" : "string"
+          },
+          "commit" : {
+            "description" : "The commit's full id, which a restore names",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "The commit's message: what wrote the app — a save, a copy, a chat build, a restore",
+            "type" : "string"
+          },
+          "present" : {
+            "description" : "False where this commit deleted the app; such a version cannot be restored",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "at", "commit", "message", "present" ],
+        "type" : "object"
+      },
       "ArtifactContent" : {
         "description" : "An artifact's content, as stored",
         "properties" : {
@@ -20048,6 +20161,171 @@
         "tags" : [ "Artifacts" ]
       }
     },
+    "/api/v1/artifacts/app/trail" : {
+      "get" : {
+        "description" : "The app trail, newest first: every save, copy, chat build, write, delete and restore, each with the commit holding its result. The same rows the config catalog serves as ConfigAppChange.",
+        "operationId" : "appTrail",
+        "parameters" : [ {
+          "description" : "Only this app's changes, by its page's file name, e.g. `dashboard.html`. Every app's when omitted",
+          "in" : "query",
+          "name" : "app",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "At most this many changes, 1 to 500",
+          "in" : "query",
+          "name" : "limit",
+          "required" : false,
+          "schema" : {
+            "default" : 100,
+            "format" : "int32",
+            "type" : "integer"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactAppTrail"
+                }
+              }
+            },
+            "description" : "The changes"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "Not an app name, or a limit out of range"
+          }
+        },
+        "summary" : "List what happened to this world's apps",
+        "tags" : [ "Artifacts" ]
+      }
+    },
+    "/api/v1/artifacts/app/{name}/history" : {
+      "get" : {
+        "description" : "The commits in the world's git repository that changed one of the workspace app's files, newest first. Every save, copy, chat build, write, delete and restore of an app is committed there.",
+        "operationId" : "appHistory",
+        "parameters" : [ {
+          "description" : "The app's file name in the workspace, e.g. `dashboard.html`",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactAppHistory"
+                }
+              }
+            },
+            "description" : "The app's versions"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "Not an app name"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "This world keeps no history: it is not a git repository, or git could not read it"
+          }
+        },
+        "summary" : "List an app's versions",
+        "tags" : [ "Artifacts" ]
+      }
+    },
+    "/api/v1/artifacts/app/{name}/history/{commit}/restore" : {
+      "post" : {
+        "description" : "Puts the workspace app's files back as they were at that commit and commits the result, so the restore is itself a version. The app as it stood is kept first. The save gates do not run: the content is a version this world already accepted.",
+        "operationId" : "restoreApp",
+        "parameters" : [ {
+          "description" : "The app's file name in the workspace, e.g. `dashboard.html`",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        }, {
+          "description" : "The commit to restore, as its history lists it: 7 to 40 lower-case hex digits",
+          "in" : "path",
+          "name" : "commit",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactAppRestored"
+                }
+              }
+            },
+            "description" : "Restored"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "Not an app name"
+          },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "No such version, or the app did not exist at it"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ArtifactError"
+                }
+              }
+            },
+            "description" : "This world keeps no history"
+          }
+        },
+        "summary" : "Restore an app to an earlier version",
+        "tags" : [ "Artifacts" ]
+      }
+    },
     "/api/v1/artifacts/serve/**" : {
       "get" : {
         "description" : "Serves a raw file from the app artifact directories — scoped (serve/{scope}/{path}, where the path may include subfolders) or by flat-name precedence (serve/{name}) — with a content type derived from its extension (html, css, js, json, svg; anything else is octet-stream).",
@@ -32584,7 +32862,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41441"
+    "url" : "http://localhost:39419"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
