@@ -1404,7 +1404,7 @@
             "type" : "string"
           },
           "detail" : {
-            "description" : "Extra context where there is some: a sentence, such as the fields a body may carry, or an object of machine fields in the server's own words, such as api_approval_unapprovable's reason (the declaration reader's code, MALFORMED) and field (where it points, [0].headers[1]); never the caller's or a Realm's text; null otherwise"
+            "description" : "Extra context where there is some: a sentence, such as the fields a body may carry, or an object of machine fields in the server's own words, such as api_approval_unapprovable's reason (the declaration reader's code, MALFORMED or FIELD_INVALID), field (where it points, [0].headers[1] or apis/spec.json#/paths/~1things/post) and rule (the sentence the reader states for it), or a refused Realm capture's reason (SYMLINK, TOO_LARGE, ...) and file (the path relative to the Realm root); never the caller's or a Realm's text; null otherwise"
           },
           "message" : {
             "description" : "A plain-language explanation, written to be shown. Never carries an exception message",
@@ -25560,7 +25560,7 @@
                 }
               }
             },
-            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows them, the field it points at and the rule it states"
           }
         },
         "summary" : "List a Realm's API operations and their approvals",
@@ -25599,7 +25599,7 @@
                 }
               }
             },
-            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows them, the field it points at and the rule it states"
           }
         },
         "summary" : "Approve a Realm API operation",
@@ -25638,7 +25638,7 @@
                 }
               }
             },
-            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows them, the field it points at and the rule it states"
           }
         },
         "summary" : "Revoke a Realm API operation's approval",
@@ -25685,7 +25685,7 @@
                 }
               }
             },
-            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows them, the field it points at and the rule it states"
           }
         },
         "summary" : "Approve a Realm API operation",
@@ -25732,7 +25732,7 @@
                 }
               }
             },
-            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows one, the field it points at"
+            "description" : "The Realm's API declaration or credential cannot be approved; detail carries the declaration reader's code as reason and, where it knows them, the field it points at and the rule it states"
           }
         },
         "summary" : "Revoke a Realm API operation's approval",
@@ -32911,7 +32911,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36399"
+    "url" : "http://localhost:39147"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
