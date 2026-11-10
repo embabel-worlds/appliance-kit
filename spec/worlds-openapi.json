@@ -5153,7 +5153,7 @@
             "type" : "array"
           },
           "autoSubmitted" : {
-            "description" : "True when the headers mark the message machine-generated, such as an auto-reply or bulk mail. Always false for Microsoft accounts, whose headers are not read",
+            "description" : "True when the headers mark the message machine-generated, such as an auto-reply, a delivery report or bulk mail",
             "type" : "boolean"
           },
           "body" : {
@@ -5186,6 +5186,10 @@
               "type" : "string"
             },
             "type" : "array"
+          },
+          "machineMail" : {
+            "description" : "Name of the first standard header marking the message automatic (auto-submitted, x-autoreply, return-path, multipart/report for a delivery or read report), declared bulk (precedence, list-unsubscribe-post) or routed through a list (precedence, list-unsubscribe, list-id); null when no header does or the provider gave none",
+            "type" : "string"
           },
           "messageId" : {
             "description" : "The provider's id for this message; empty when the provider gave none",
@@ -32911,7 +32915,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34639"
+    "url" : "http://localhost:44467"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
