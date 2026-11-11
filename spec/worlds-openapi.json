@@ -7021,6 +7021,82 @@
         "type" : "object"
       },
       "JsonNode" : {
+        "properties" : {
+          "array" : {
+            "type" : "boolean"
+          },
+          "bigDecimal" : {
+            "type" : "boolean"
+          },
+          "bigInteger" : {
+            "type" : "boolean"
+          },
+          "binary" : {
+            "type" : "boolean"
+          },
+          "boolean" : {
+            "type" : "boolean"
+          },
+          "container" : {
+            "type" : "boolean"
+          },
+          "double" : {
+            "type" : "boolean"
+          },
+          "embeddedValue" : {
+            "type" : "boolean"
+          },
+          "empty" : {
+            "type" : "boolean"
+          },
+          "float" : {
+            "type" : "boolean"
+          },
+          "floatingPointNumber" : {
+            "type" : "boolean"
+          },
+          "int" : {
+            "type" : "boolean"
+          },
+          "integralNumber" : {
+            "type" : "boolean"
+          },
+          "long" : {
+            "type" : "boolean"
+          },
+          "missingNode" : {
+            "type" : "boolean"
+          },
+          "nodeType" : {
+            "enum" : [ "ARRAY", "BINARY", "BOOLEAN", "MISSING", "NULL", "NUMBER", "OBJECT", "POJO", "STRING" ],
+            "type" : "string"
+          },
+          "null" : {
+            "type" : "boolean"
+          },
+          "number" : {
+            "type" : "boolean"
+          },
+          "object" : {
+            "type" : "boolean"
+          },
+          "pojo" : {
+            "type" : "boolean"
+          },
+          "short" : {
+            "type" : "boolean"
+          },
+          "string" : {
+            "type" : "boolean"
+          },
+          "textual" : {
+            "deprecated" : true,
+            "type" : "boolean"
+          },
+          "valueNode" : {
+            "type" : "boolean"
+          }
+        },
         "type" : "object"
       },
       "JsonRpcError" : {
@@ -10559,6 +10635,185 @@
         "required" : [ "id", "source", "summary" ],
         "type" : "object"
       },
+      "PublicChoice" : {
+        "description" : "A question a parked background run puts to its owner: what it would cost, and the answers it takes",
+        "properties" : {
+          "answer" : {
+            "description" : "Where the answer goes: POST {\"choice\": \"<an option's value>\"}; only the run's owner may answer",
+            "type" : "string"
+          },
+          "expiresAt" : {
+            "description" : "Epoch milliseconds after which the question lapses unanswered and nothing runs",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "options" : {
+            "description" : "The answers the question takes",
+            "items" : {
+              "$ref" : "#/components/schemas/PublicChoiceOption"
+            },
+            "type" : "array"
+          },
+          "question" : {
+            "description" : "What the run would cost and the question put to its owner, e.g. the calls it would make to a named source",
+            "type" : "string"
+          }
+        },
+        "required" : [ "answer", "options", "question" ],
+        "type" : "object"
+      },
+      "PublicChoiceOption" : {
+        "description" : "One answer a background run's question takes",
+        "properties" : {
+          "label" : {
+            "description" : "What to show for this answer",
+            "type" : "string"
+          },
+          "value" : {
+            "description" : "The value to post as the answer",
+            "type" : "string"
+          }
+        },
+        "required" : [ "label", "value" ],
+        "type" : "object"
+      },
+      "PublicError" : {
+        "description" : "Why an execution failed or was refused, in a stable code and a message written to be shown; never a raw engine error",
+        "properties" : {
+          "code" : {
+            "description" : "A stable, machine-readable code, e.g. FAN_OUT_OVER_BUDGET, FETCH_CAPPED, VIEW_QUERY_INVALID, CANCELLED",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "What happened and what would change it, safe to show; names no query, index or internal label",
+            "type" : "string"
+          },
+          "reason" : {
+            "description" : "Why a lookup that read records answered none, where a caller may act on it: FETCHED_NOT_MATCHED or UNPUSHED_FILTER; null otherwise",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ],
+        "type" : "object"
+      },
+      "PublicExecutionResult" : {
+        "description" : "The result of invoking a named lens or view: its status and outcome, the data, and stable warning and error codes, never the query or script behind it",
+        "properties" : {
+          "choice" : {
+            "$ref" : "#/components/schemas/PublicChoice",
+            "description" : "Only on a WAITING_INPUT envelope from a background run: the quote its owner must answer before it runs"
+          },
+          "columnSources" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Each result column and the plain expression that computed it, where that can be stated without exposing the query",
+            "type" : "object"
+          },
+          "contractVersion" : {
+            "description" : "This envelope's contract version, so a consumer can pin the shape",
+            "type" : "string"
+          },
+          "data" : {
+            "$ref" : "#/components/schemas/JsonNode",
+            "description" : "The result as nested JSON; null when there is no data (see outcome)"
+          },
+          "dataContract" : {
+            "$ref" : "#/components/schemas/DataContractEvaluation",
+            "description" : "For a view bound to an ODCS data contract, the verdict its result was checked to"
+          },
+          "error" : {
+            "$ref" : "#/components/schemas/PublicError",
+            "description" : "Present only on a failed or refused outcome: a stable code and a message written to be shown"
+          },
+          "executionId" : {
+            "description" : "Server-minted id of this execution; for a background run, the run id to poll, answer or stop it by",
+            "type" : "string"
+          },
+          "metrics" : {
+            "$ref" : "#/components/schemas/PublicMetrics",
+            "description" : "Coarse execution metrics: duration and call counts, never the calls themselves"
+          },
+          "operationId" : {
+            "description" : "The lens id or view name that was invoked",
+            "type" : "string"
+          },
+          "outcome" : {
+            "description" : "Why the result is what it is: OK, EMPTY, PARTIAL, SOURCE_UNAVAILABLE, TOO_BROAD, TOO_EXPENSIVE, NOT_PERMITTED, UNTRUSTED_DATA, FAILED, or PENDING while a run has not settled",
+            "enum" : [ "OK", "EMPTY", "PARTIAL", "SOURCE_UNAVAILABLE", "TOO_BROAD", "TOO_EXPENSIVE", "NOT_PERMITTED", "UNTRUSTED_DATA", "FAILED", "PENDING" ],
+            "type" : "string"
+          },
+          "outputType" : {
+            "description" : "The declared output type of data (`rows`, or a lens's kind); null when there is no data",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Lifecycle status: SUCCEEDED or FAILED for a synchronous call; RUNNING, WAITING_INPUT or CANCELLED only on the background surface",
+            "enum" : [ "SUCCEEDED", "FAILED", "RUNNING", "WAITING_INPUT", "CANCELLED" ],
+            "type" : "string"
+          },
+          "warnings" : {
+            "description" : "Machine-readable warnings with stable codes; non-empty means the rows are not the whole story",
+            "items" : {
+              "$ref" : "#/components/schemas/PublicWarning"
+            },
+            "type" : "array"
+          }
+        },
+        "required" : [ "contractVersion", "executionId", "metrics", "operationId", "outcome", "status", "warnings" ],
+        "type" : "object"
+      },
+      "PublicMetrics" : {
+        "description" : "Coarse execution metrics safe to expose: duration and call counts, never the calls",
+        "properties" : {
+          "cacheHit" : {
+            "description" : "Whether the answer was served from cache, when known",
+            "type" : "boolean"
+          },
+          "derivationMs" : {
+            "description" : "Milliseconds spent pricing and evaluating those rule sets, when any ran",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "derivedFacts" : {
+            "description" : "Facts DERIVE rule sets concluded for this answer, when any ran",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "durationMs" : {
+            "description" : "Wall-clock milliseconds the execution took",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "externalCalls" : {
+            "description" : "Calls made to external data sources, as a count",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "semanticCalls" : {
+            "description" : "Relevance searches made for a semantic anchor, as a count",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "durationMs", "externalCalls", "semanticCalls" ],
+        "type" : "object"
+      },
+      "PublicWarning" : {
+        "description" : "A warning about a result: a stable code and a message that names no producer, index, label or query",
+        "properties" : {
+          "code" : {
+            "description" : "A stable, machine-readable warning code, e.g. PARTIAL",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "What the warning means for these rows, safe to show",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ],
+        "type" : "object"
+      },
       "QosSpec" : {
         "description" : "An agent's quality of service: the priority its work is paced at, and the models it falls back to when one of its own fails mid-check",
         "properties" : {
@@ -13700,6 +13955,17 @@
             "type" : "string"
           }
         },
+        "type" : "object"
+      },
+      "ViewRunAnswer" : {
+        "description" : "The answer to a background view run's question: one of the values its `choice.options` lists",
+        "properties" : {
+          "choice" : {
+            "description" : "The chosen option's value, e.g. `background`, `proceed`, `narrow` or `cancel`",
+            "type" : "string"
+          }
+        },
+        "required" : [ "choice" ],
         "type" : "object"
       },
       "VoiceOptionView" : {
@@ -31140,9 +31406,231 @@
         "tags" : [ "Surface" ]
       }
     },
+    "/api/v1/views/runs/{runId}" : {
+      "get" : {
+        "description" : "Where a view run started with `background=true` stands, as the envelope a synchronous invoke returns: WAITING_INPUT with the quote in `choice` while it waits for its owner's answer, RUNNING while it runs, and the view's own result once it settles.",
+        "operationId" : "viewRun",
+        "parameters" : [ {
+          "description" : "The run id: the executionId of the envelope the background invoke returned",
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicExecutionResult"
+                }
+              }
+            },
+            "description" : "The run's envelope"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
+                }
+              }
+            },
+            "description" : "No background view run of this id belongs to the caller; another user's run answers the same"
+          }
+        },
+        "summary" : "Poll a background view run",
+        "tags" : [ "Headless Invocation" ]
+      }
+    },
+    "/api/v1/views/runs/{runId}/answer" : {
+      "post" : {
+        "description" : "The owner's answer to the quote a WAITING_INPUT run carries. `proceed` or `background` runs it, allowed to spend what was quoted; `narrow` or `cancel` settles it CANCELLED with nothing fetched. Answers with the run's envelope after the answer.",
+        "operationId" : "answerViewRun",
+        "parameters" : [ {
+          "description" : "The run id: the executionId of the WAITING_INPUT envelope",
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/ViewRunAnswer"
+              }
+            }
+          },
+          "description" : "The chosen option's value under `choice`",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicExecutionResult"
+                }
+              }
+            },
+            "description" : "The run's envelope after the answer"
+          },
+          "400" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "The choice is not one the question takes; the refusal names those it does. A body that will not parse answers an ApiError"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
+                }
+              }
+            },
+            "description" : "No background view run of this id belongs to the caller; another user's run answers the same"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicExecutionResult"
+                }
+              }
+            },
+            "description" : "The run is not waiting for an answer: it already ran, was answered, or its question lapsed. The body is its envelope"
+          }
+        },
+        "summary" : "Answer a background view run's question",
+        "tags" : [ "Headless Invocation" ]
+      }
+    },
+    "/api/v1/views/runs/{runId}/kill" : {
+      "post" : {
+        "description" : "A run still waiting for its answer is cancelled with nothing fetched; a running one stops at its next boundary and keeps what it had fetched. Answers with the run's envelope.",
+        "operationId" : "killViewRun",
+        "parameters" : [ {
+          "description" : "The run to stop",
+          "in" : "path",
+          "name" : "runId",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/PublicExecutionResult"
+                }
+              }
+            },
+            "description" : "The run's envelope after the stop"
+          },
+          "401" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/HeadlessRefusal"
+                  }, {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/DispatchedError"
+                  } ]
+                }
+              },
+              "text/plain" : {
+                "schema" : {
+                  "type" : "string"
+                }
+              }
+            },
+            "description" : "Not authenticated. The filter chain answers an ApiError; a principal that resolves to no user answers the refusal"
+          },
+          "404" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/HeadlessRefusal"
+                }
+              }
+            },
+            "description" : "No background view run of this id belongs to the caller; another user's run answers the same"
+          }
+        },
+        "summary" : "Stop a background view run",
+        "tags" : [ "Headless Invocation" ]
+      }
+    },
     "/api/v1/views/{name}/invoke" : {
       "post" : {
-        "description" : "Run an authored Virtual-Cypher view by name and return a redacted, typed result envelope. The runnable query is never exposed.",
+        "description" : "Run an authored Virtual-Cypher view by name and return a redacted, typed result envelope. The runnable query is never exposed. `background=true` starts it as a background run instead and returns at once: WAITING_INPUT with the quote under `choice` when it costs more than one request may spend inline, which runs only once its owner answers, otherwise RUNNING. Either way the envelope's executionId is the run: poll GET /views/runs/{runId}, answer POST /views/runs/{runId}/answer, stop POST /views/runs/{runId}/kill. Without it the call is synchronous, as it always was.",
         "operationId" : "invokeView",
         "parameters" : [ {
           "description" : "The authored view name",
@@ -31151,6 +31639,15 @@
           "required" : true,
           "schema" : {
             "type" : "string"
+          }
+        }, {
+          "description" : "Run it in the background and return its envelope at once; an over-budget run waits, quoted, for its owner's answer",
+          "in" : "query",
+          "name" : "background",
+          "required" : false,
+          "schema" : {
+            "default" : false,
+            "type" : "boolean"
           }
         } ],
         "requestBody" : {
@@ -32915,7 +33412,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:33455"
+    "url" : "http://localhost:37349"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
