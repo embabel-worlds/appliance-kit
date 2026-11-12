@@ -22433,7 +22433,7 @@
                 }
               }
             },
-            "description" : "Message accepted"
+            "description" : "Message accepted. messageId is the ID the message is stored under; replies to it carry it as inReplyTo in GET /history."
           },
           "409" : {
             "content" : {
@@ -22702,7 +22702,7 @@
     },
     "/api/v1/chat/history" : {
       "get" : {
-        "description" : "Returns the full conversation history for the current session.",
+        "description" : "Returns the full conversation history for the current session. Each reply is listed under the message it answers. Items carry messageId and, for a reply, inReplyTo.",
         "operationId" : "history",
         "responses" : {
           "200" : {
@@ -22772,7 +22772,7 @@
                 }
               }
             },
-            "description" : "Image accepted"
+            "description" : "Image accepted. messageId is the ID the message is stored under; replies to it carry it as inReplyTo in GET /history."
           },
           "400" : {
             "content" : {
@@ -33417,7 +33417,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42861"
+    "url" : "http://localhost:40631"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
