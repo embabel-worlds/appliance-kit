@@ -1784,6 +1784,11 @@
             "description" : "False to skip composing an answer and return sources only, from a deterministic search with no language-model call. Defaults to true.",
             "type" : "boolean"
           },
+          "answerStyle" : {
+            "description" : "How the answer is phrased. PROSE (the default) answers in sentences that quote the operative phrase; SHORT answers with the value alone — a name, date, number or short phrase — for callers that use the answer as data rather than show it. Retrieval and sources are the same either way.",
+            "enum" : [ "PROSE", "SHORT" ],
+            "type" : "string"
+          },
           "history" : {
             "description" : "Prior turns, oldest first, each a `Q:` line followed by an `A:` line, so a follow-up needs no session. Only the last 6 are used, and only when an answer is composed.",
             "items" : {
@@ -1827,7 +1832,7 @@
             "description" : "Bounds the search by one of the document's dates. Absent means no date bound."
           }
         },
-        "required" : [ "answer", "history", "question" ],
+        "required" : [ "answer", "answerStyle", "history", "question" ],
         "type" : "object"
       },
       "AskResponse" : {
@@ -10689,7 +10694,7 @@
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why a lookup that read records answered none, where a caller may act on it: FETCHED_NOT_MATCHED or UNPUSHED_FILTER; null otherwise",
+            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP); null otherwise",
             "type" : "string"
           }
         },
@@ -33412,7 +33417,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:43017"
+    "url" : "http://localhost:37425"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
