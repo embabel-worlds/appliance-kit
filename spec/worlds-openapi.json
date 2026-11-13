@@ -14405,6 +14405,13 @@
             },
             "type" : "array"
           },
+          "folders" : {
+            "additionalProperties" : {
+              "type" : "string"
+            },
+            "description" : "Directories granted to this world by name: a lower-case name to an absolute path. Files producers walk each under its name; invalid entries are ignored. Human-only: no API write changes it",
+            "type" : "object"
+          },
           "lensLlm" : {
             "$ref" : "#/components/schemas/LlmConfig",
             "description" : "Model that turns a natural-language question into Cypher (kg-ask); null inherits assistant.lens.llm"
@@ -14463,7 +14470,7 @@
             "description" : "What a surface opens the first time each person arrives in this world; null leaves it to the client, which opens next steps"
           }
         },
-        "required" : [ "activePersonality", "filesTrustedRoots", "llmRoles", "version" ],
+        "required" : [ "activePersonality", "filesTrustedRoots", "folders", "llmRoles", "version" ],
         "type" : "object"
       },
       "WorldDeleted" : {
@@ -33425,7 +33432,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34121"
+    "url" : "http://localhost:34499"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
