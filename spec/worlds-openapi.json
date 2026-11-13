@@ -730,6 +730,10 @@
             "description" : "Identifier of the request, `req_` followed by a UUID; the {id} in /requests/{id}",
             "type" : "string"
           },
+          "keyCarried" : {
+            "description" : "True when the approved call was sent carrying the request id as its Idempotency-Key; only such an UNKNOWN request is sent again to reconcile",
+            "type" : "boolean"
+          },
           "ownerId" : {
             "description" : "User id of the person in whose world the request was raised, and who decides it",
             "type" : "string"
@@ -752,7 +756,11 @@
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why it was rejected, as the rejecter wrote it; null unless status is REJECTED",
+            "description" : "Why it was rejected, as the rejecter wrote it, or how a person who resolved an UNKNOWN request checked it; null otherwise",
+            "type" : "string"
+          },
+          "resolvedBy" : {
+            "description" : "Username of the person who resolved an UNKNOWN request after checking whether it happened; null unless resolved",
             "type" : "string"
           },
           "result" : {
@@ -776,8 +784,8 @@
             "type" : "boolean"
           },
           "status" : {
-            "description" : "PENDING until decided; then APPROVED (the verb succeeded), FAILED (approved, but the verb answered an error), REJECTED, or EXPIRED (nobody answered before expiresAt)",
-            "enum" : [ "PENDING", "APPROVED", "FAILED", "REJECTED", "EXPIRED" ],
+            "description" : "PENDING until decided; then APPROVED (the verb succeeded), FAILED (approved, but it did not happen: refused before it was sent, or answered with a 4xx), UNKNOWN (approved and sent, but no answer says whether it happened; never sent again unless it carried its Idempotency-Key, and a person may resolve it as APPROVED or FAILED after checking), REJECTED, or EXPIRED (nobody answered before expiresAt)",
+            "enum" : [ "PENDING", "APPROVED", "FAILED", "UNKNOWN", "REJECTED", "EXPIRED" ],
             "type" : "string"
           },
           "untrusted" : {
@@ -792,7 +800,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "ownerId", "raisedAt", "routine", "secondPersonAsked", "selfApproved", "status", "untrusted", "verb" ],
+        "required" : [ "args", "detail", "evidence", "expiresAt", "id", "keyCarried", "ownerId", "raisedAt", "routine", "secondPersonAsked", "selfApproved", "status", "untrusted", "verb" ],
         "type" : "object"
       },
       "AgentRun" : {
@@ -4197,11 +4205,11 @@
         "description" : "The owner's decision on an agent's request, the body of `POST /requests/{id}/decision`.",
         "properties" : {
           "decision" : {
-            "description" : "`approve` or `reject`, case-insensitive. Approving calls the request's verb as the caller.",
+            "description" : "`approve` or `reject`, case-insensitive. Approving calls the request's verb as the caller. For an UNKNOWN request, `committed` or `not_sent` resolves it after you checked whether it happened; nothing is sent.",
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why the request is rejected, recorded on it and in the run ledger. Required, and not blank, for `reject`; ignored for `approve`.",
+            "description" : "Why the request is rejected, recorded on it and in the run ledger, or how you checked an UNKNOWN one. Required, and not blank, for `reject`, `committed` and `not_sent`; ignored for `approve`.",
             "type" : "string"
           }
         },
@@ -4217,7 +4225,7 @@
           },
           "request" : {
             "$ref" : "#/components/schemas/AgentRequest",
-            "description" : "The request after the decision — APPROVED, REJECTED, or FAILED when the approved verb call failed. Null when the decision was refused."
+            "description" : "The request after the decision — APPROVED, REJECTED, FAILED when the approved verb call did not happen, or UNKNOWN when it was sent and no answer said whether it happened. Null when the decision was refused."
           }
         },
         "type" : "object"
@@ -10694,7 +10702,7 @@
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP); null otherwise",
+            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP), or UNBOUNDED when nothing bounded a source it reads; null otherwise",
             "type" : "string"
           }
         },
@@ -30406,7 +30414,7 @@
               }
             }
           },
-          "description" : "The decision on a pending request: `decision` is `approve` or `reject`, case-insensitive, and anything else is a 409. Approving runs the request's verb as the caller and ignores `reason`; rejecting requires a non-blank `reason`, which is recorded on the request and in the run ledger",
+          "description" : "The decision on a pending request: `decision` is `approve` or `reject`, case-insensitive, and anything else is a 409. Approving runs the request's verb as the caller and ignores `reason`; rejecting requires a non-blank `reason`, which is recorded on the request and in the run ledger. An UNKNOWN request (sent, outcome unknown) is resolved with `committed` or `not_sent` and a non-blank `reason` saying how it was checked; nothing is sent",
           "required" : true
         },
         "responses" : {
@@ -33417,7 +33425,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41715"
+    "url" : "http://localhost:34121"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
