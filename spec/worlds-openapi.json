@@ -13163,7 +13163,7 @@
             "type" : "string"
           },
           "name" : {
-            "description" : "File name to save the text under in the world's `data/documents` directory, overwriting a file of that name; also the title when the text yields none",
+            "description" : "File name to save the text under in the world's `data/documents` directory, overwriting a file of that name; also the title when the text yields none. One name, not a path: no `/` or `\\`, not `.` or `..`",
             "type" : "string"
           },
           "tags" : {
@@ -25107,6 +25107,16 @@
             },
             "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
           },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentRefusal"
+                }
+              }
+            },
+            "description" : "Refused before anything was written: `name` must be one file name — no `/` or `\\`, not `.` or `..`, not blank, no control characters, at most 255 characters. status is `refused`; message says which"
+          },
           "409" : {
             "content" : {
               "*/*" : {
@@ -33452,7 +33462,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42259"
+    "url" : "http://localhost:43837"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
