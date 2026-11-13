@@ -4840,14 +4840,14 @@
         "type" : "object"
       },
       "DocumentRefusal" : {
-        "description" : "An ingest that failed: the word `error` and the reason",
+        "description" : "An ingest that did not happen: `error` and the reason the fetch or conversion failed, or `refused` and why the URL may not be read",
         "properties" : {
           "message" : {
             "description" : "What failed — the fetch or the conversion — in the failure's own words",
             "type" : "string"
           },
           "status" : {
-            "description" : "Always `error`",
+            "description" : "`error` when the fetch or conversion failed; `refused` when the URL may not be read at all, and nothing was",
             "example" : "error",
             "type" : "string"
           }
@@ -24880,6 +24880,16 @@
             },
             "description" : "Accepted; the job, queued"
           },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentRefusal"
+                }
+              }
+            },
+            "description" : "Refused before anything was read: only http, https and file URLs are ingested, and a file only from the world's data folder, its named folders or a shared folder under /local. status is `refused`; message says which"
+          },
           "409" : {
             "content" : {
               "*/*" : {
@@ -25214,6 +25224,16 @@
               }
             },
             "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
+          },
+          "400" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DocumentRefusal"
+                }
+              }
+            },
+            "description" : "Refused before anything was read: only http, https and file URLs are ingested, and a file only from the world's data folder, its named folders or a shared folder under /local. status is `refused`; message says which"
           },
           "409" : {
             "content" : {
@@ -33432,7 +33452,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:44559"
+    "url" : "http://localhost:42259"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
