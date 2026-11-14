@@ -13542,6 +13542,52 @@
         "required" : [ "declaredId", "deletable", "id", "presentation", "steps", "userSaved" ],
         "type" : "object"
       },
+      "TrailsConfig" : {
+        "description" : "This world's override for trail recording. Part of GET /config; GET /config/trails answers the resolved value",
+        "properties" : {
+          "enabled" : {
+            "description" : "Whether the engine records what this world's queries touched; null inherits the deployment default (off unless the operator turned it on)",
+            "type" : "boolean"
+          }
+        },
+        "type" : "object"
+      },
+      "TrailsSettingsRequest" : {
+        "description" : "This world's trail recording setting",
+        "properties" : {
+          "enabled" : {
+            "description" : "Turn recording on or off for this world, overriding the deployment default",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "enabled" ],
+        "type" : "object"
+      },
+      "TrailsSettingsView" : {
+        "description" : "Trail recording for this world, resolved: the world's own setting where it has one, else the deployment default",
+        "properties" : {
+          "enabled" : {
+            "description" : "Whether the engine records what this world's queries touched",
+            "type" : "boolean"
+          },
+          "idleMinutes" : {
+            "description" : "How long a trail may idle before the next step opens a new one, in minutes; deployment-wide",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "maxSteps" : {
+            "description" : "The most steps one trail holds; deployment-wide",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "own" : {
+            "description" : "Whether the value is this world's own (true) or inherited from the deployment (false)",
+            "type" : "boolean"
+          }
+        },
+        "required" : [ "enabled", "idleMinutes", "maxSteps", "own" ],
+        "type" : "object"
+      },
       "TransitionRule" : {
         "description" : "A named domain transition: matched when one field of an updated item changes in the stated way. Every condition given must hold, and at least one must be given",
         "properties" : {
@@ -14455,6 +14501,10 @@
           "toolRouterLlm" : {
             "$ref" : "#/components/schemas/LlmConfig",
             "description" : "Stored setting for tool routing, chat_cheap role by default; nothing reads it at runtime"
+          },
+          "trails" : {
+            "$ref" : "#/components/schemas/TrailsConfig",
+            "description" : "Trail recording override; null inherits the deployment default"
           },
           "version" : {
             "description" : "World format version the file was last written at; currently 2. Older versions are migrated at load",
@@ -23925,6 +23975,55 @@
           }
         },
         "summary" : "Get storage configuration",
+        "tags" : [ "Config" ]
+      }
+    },
+    "/api/v1/config/trails" : {
+      "get" : {
+        "description" : "Whether the engine records what this world's queries touched, resolved against the deployment default, with the deployment-wide idle window and step cap.",
+        "operationId" : "getTrailsSettings",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/TrailsSettingsView"
+                }
+              }
+            },
+            "description" : "Effective trail settings"
+          }
+        },
+        "summary" : "Get trail recording settings",
+        "tags" : [ "Config" ]
+      },
+      "put" : {
+        "description" : "Turns trail recording on or off for this world, replacing the stored setting. Takes effect on the next completed run.",
+        "operationId" : "updateTrailsSettings",
+        "requestBody" : {
+          "content" : {
+            "application/json" : {
+              "schema" : {
+                "$ref" : "#/components/schemas/TrailsSettingsRequest"
+              }
+            }
+          },
+          "description" : "`enabled`: whether the engine records this world's trails. Stored as this world's own setting; the deployment default no longer applies to it",
+          "required" : true
+        },
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ConfigUpdated"
+                }
+              }
+            },
+            "description" : "Trail settings updated"
+          }
+        },
+        "summary" : "Update trail recording",
         "tags" : [ "Config" ]
       }
     },
@@ -33462,7 +33561,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:32815"
+    "url" : "http://localhost:39387"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
