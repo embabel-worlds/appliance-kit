@@ -2212,6 +2212,46 @@
         "required" : [ "address", "answers", "database", "mode", "tls", "url" ],
         "type" : "object"
       },
+      "BootStatus" : {
+        "description" : "What the server is doing while it starts: its boot phase, when each phase was reached, and the worlds built since. Counts and timestamps only; a null is unknown or not yet, never zero",
+        "properties" : {
+          "elapsedSeconds" : {
+            "description" : "Seconds since startedAt, on this answer's clock",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "listeningAt" : {
+            "description" : "When the port began listening, or null while it has not",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "phase" : {
+            "description" : "starting (nothing answers on the port yet), listening (the port is open, the application is still starting) or ready",
+            "enum" : [ "starting", "listening", "ready" ],
+            "type" : "string"
+          },
+          "ready" : {
+            "description" : "True once the phase is ready",
+            "type" : "boolean"
+          },
+          "readyAt" : {
+            "description" : "When the application finished starting, or null while it has not",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "startedAt" : {
+            "description" : "When the JVM started",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "worlds" : {
+            "$ref" : "#/components/schemas/WorldsBootStatus",
+            "description" : "Worlds built in this process since start, as totals"
+          }
+        },
+        "required" : [ "elapsedSeconds", "phase", "ready", "startedAt", "worlds" ],
+        "type" : "object"
+      },
       "BootstrapCapabilities" : {
         "description" : "Feature flags reported by the bootstrap call",
         "properties" : {
@@ -7402,7 +7442,7 @@
               },
               "type" : "array"
             },
-            "description" : "Each named group -> the words that named it, tier first: name:, label:, weak: or keyword:.",
+            "description" : "Each named group -> the words that named it, tier first: name:, label:, vocabulary:, weak:, keyword: or companion:.",
             "type" : "object"
           },
           "resolvedBy" : {
@@ -14982,6 +15022,38 @@
         },
         "required" : [ "action", "description", "events", "hasAutoRegister", "name", "source" ],
         "type" : "object"
+      },
+      "WorldsBootStatus" : {
+        "description" : "Worlds built in this process since it started, as totals; nothing here names a user, a realm or a path",
+        "properties" : {
+          "lastLoadSeconds" : {
+            "description" : "How long the most recent build took, to the nearest second; null if none has, or it was not measured",
+            "format" : "int64",
+            "type" : "integer"
+          },
+          "lastLoadedAt" : {
+            "description" : "When the most recent build finished, or null if none has",
+            "format" : "date-time",
+            "type" : "string"
+          },
+          "loaded" : {
+            "description" : "Worlds built since start, rebuilds included: each is a build",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "realmsLoaded" : {
+            "description" : "Realms loaded across every build since start",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "rebuilt" : {
+            "description" : "Of those, how many were deliberate rebuilds of a world already loaded",
+            "format" : "int32",
+            "type" : "integer"
+          }
+        },
+        "required" : [ "loaded", "realmsLoaded", "rebuilt" ],
+        "type" : "object"
       }
     },
     "securitySchemes" : {
@@ -18625,7 +18697,7 @@
     "/api/v1/admin/system" : {
       "get" : {
         "description" : "Heap after the last collection against its ceiling, the container's memory limit, the ingest budget in use and how many ingests wait for it, and whether docling answers and has failed recently, and how many stored chunks have no embedding. A null value is unknown, never zero.",
-        "operationId" : "status_4",
+        "operationId" : "status_5",
         "responses" : {
           "200" : {
             "content" : {
@@ -21135,6 +21207,26 @@
         },
         "summary" : "List OAuth2 providers in this world and their status",
         "tags" : [ "Auth" ]
+      }
+    },
+    "/api/v1/boot" : {
+      "get" : {
+        "description" : "phase is starting, listening or ready, and ready says the same as a boolean. startedAt is when the JVM started, elapsedSeconds how long ago that was, listeningAt and readyAt when the port opened and the application finished starting. worlds counts the worlds built in this process since start (rebuilds included, and counted again under rebuilt), the realms they loaded in total, when the last one finished and how long it took. No user, realm, path or setting is named: counts and timestamps only, since this is answered without signing in. A null is unknown or not yet, never zero.",
+        "operationId" : "status_4",
+        "responses" : {
+          "200" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/BootStatus"
+                }
+              }
+            },
+            "description" : "The server's boot phase and what it has built so far"
+          }
+        },
+        "summary" : "The boot phase, with the clock",
+        "tags" : [ "Boot" ]
       }
     },
     "/api/v1/bootstrap" : {
@@ -33561,7 +33653,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42557"
+    "url" : "http://localhost:42631"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
@@ -33740,6 +33832,9 @@
   }, {
     "description" : "Manage user notifications",
     "name" : "Notifications"
+  }, {
+    "description" : "What the server is doing while it starts: the boot phase, its timestamps, and how many worlds it has built since — counts only, answered without signing in",
+    "name" : "Boot"
   }, {
     "description" : "List and delete the user's persisted chat sessions",
     "name" : "Chat sessions"
