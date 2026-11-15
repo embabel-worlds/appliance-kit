@@ -8352,7 +8352,7 @@
             "type" : "string"
           },
           "refreshed" : {
-            "description" : "False for a regular or unknown view — nothing was recomputed.",
+            "description" : "True when a fresh cache was taken. False for a regular or unknown view, and for a run that failed or came back short: its result was not kept, and the cache from before stays.",
             "type" : "boolean"
           }
         },
@@ -18268,7 +18268,7 @@
                 }
               }
             },
-            "description" : "Whether anything was recomputed"
+            "description" : "Whether a fresh cache was taken and kept"
           },
           "401" : {
             "content" : {
@@ -27267,7 +27267,7 @@
                 }
               }
             },
-            "description" : "Whether anything was recomputed"
+            "description" : "Whether a fresh cache was taken and kept"
           },
           "401" : {
             "content" : {
@@ -33561,7 +33561,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37237"
+    "url" : "http://localhost:42557"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
