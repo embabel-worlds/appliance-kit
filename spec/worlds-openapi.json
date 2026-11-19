@@ -14534,6 +14534,13 @@
             "description" : "Docker image for this world's code-mode sandbox; null uses the appliance's sandbox image (ghcr.io/embabel/assistant-sandbox:latest unless the operator set assistant.sandbox-image)",
             "type" : "string"
           },
+          "sharedRealms" : {
+            "description" : "Names of installed realms whose data is the same for every member of this world. Their records are cached once and stored summaries of them are shared. Human-only: no API write changes it. Empty by default",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
           "timeouts" : {
             "$ref" : "#/components/schemas/TimeoutsConfig",
             "description" : "Execution-timeout overrides; null inherits every deployment default"
@@ -14560,7 +14567,7 @@
             "description" : "What a surface opens the first time each person arrives in this world; null leaves it to the client, which opens next steps"
           }
         },
-        "required" : [ "activePersonality", "filesTrustedRoots", "folders", "llmRoles", "version" ],
+        "required" : [ "activePersonality", "filesTrustedRoots", "folders", "llmRoles", "sharedRealms", "version" ],
         "type" : "object"
       },
       "WorldDeleted" : {
@@ -33653,7 +33660,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:41547"
+    "url" : "http://localhost:46869"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
