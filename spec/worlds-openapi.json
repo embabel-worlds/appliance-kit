@@ -386,11 +386,15 @@
         "description" : "Where to install a realm from, the body of POST /realms: a git repository to clone, or a realm directory already mounted into the appliance",
         "properties" : {
           "confirmed" : {
-            "description" : "Set true only once the user has confirmed installing an experimental realm, after a 409 with status needs-confirmation. Ignored for a path install",
+            "description" : "Set true only once the owner has confirmed installing an experimental realm, after a 409 needs-confirmation with no `plan`. It never confirms a plan: a plan is confirmed with `planId`. Ignored for a path install",
             "type" : "boolean"
           },
           "path" : {
             "description" : "Absolute path, inside the appliance container, of a mounted realm directory with a realm.ts or a realm.yml, such as /realms/realm-esg. Loaded in place, never cloned or copied; the directory's name becomes the realm's. Takes precedence over repo",
+            "type" : "string"
+          },
+          "planId" : {
+            "description" : "The `planId` of the 409 needs-confirmation plan the owner confirmed. The host plans again and installs only when the new plan has this id; otherwise it answers 409 with the new plan, whose `message` starts `The plan changed since it was shown.`. Without it, an install that needs a plan is answered with the plan",
             "type" : "string"
           },
           "ref" : {
@@ -400,6 +404,11 @@
           "repo" : {
             "description" : "The repository to clone: owner/repo for GitHub, or a full clone URL. Required unless path is given, and ignored when it is",
             "type" : "string"
+          },
+          "switchToCheckout" : {
+            "default" : "false",
+            "description" : "With path, set true to switch the active reference of that name in this world's own manifest to the mounted checkout. Confirm a returned plan by repeating the same request with its planId",
+            "type" : "boolean"
           }
         },
         "required" : [ "confirmed" ],
@@ -4380,6 +4389,10 @@
       "DirectoryEntry" : {
         "description" : "An installable skill, API, MCP server or realm found in a registered directory. GET /directory answers a list of these; POST /directory/install takes one back as its body.",
         "properties" : {
+          "confirmed" : {
+            "description" : "For a REALM entry, set true only once the owner has confirmed what a 409 needs-confirmation with no `plan` said: that the realm's author calls it experimental. It never confirms a plan; `planId` does. Ignored for every other type.",
+            "type" : "boolean"
+          },
           "description" : {
             "description" : "One-line summary from the directory source; never empty, a source without one gets a generic label",
             "type" : "string"
@@ -4391,6 +4404,10 @@
           },
           "name" : {
             "description" : "Display name; the install records the item under it and the installed filter matches on it (for a GitHub realm, the repo name without its realm- prefix)",
+            "type" : "string"
+          },
+          "planId" : {
+            "description" : "For a REALM entry, the `planId` of the 409 needs-confirmation plan the owner confirmed. The plan is made again and carried out only when it has this id; otherwise the answer is the new plan. Ignored for every other type.",
             "type" : "string"
           },
           "source" : {
@@ -4407,7 +4424,7 @@
             "type" : "string"
           }
         },
-        "required" : [ "description", "metadata", "name", "source", "type" ],
+        "required" : [ "confirmed", "description", "metadata", "name", "source", "type" ],
         "type" : "object"
       },
       "DirectoryInstallRefusal" : {
@@ -4423,6 +4440,34 @@
           }
         },
         "required" : [ "message", "status" ],
+        "type" : "object"
+      },
+      "DirectoryInstalled" : {
+        "description" : "A directory entry was installed",
+        "properties" : {
+          "admission" : {
+            "description" : "For a REALM: `admitted` when an approval is in force, `not-admitted` when it could not be approved. Absent for other types",
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "For an MCP_SERVER: what the installer reported. Absent for other types",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The entry's name, as it was sent",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `installed`",
+            "enum" : [ "installed" ],
+            "type" : "string"
+          },
+          "type" : {
+            "description" : "The entry's type, as it was sent",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status", "type" ],
         "type" : "object"
       },
       "DirectoryRefreshResponse" : {
@@ -11126,6 +11171,133 @@
         "required" : [ "inertApis", "installableRealms", "structuralGaps" ],
         "type" : "object"
       },
+      "RealmInstalled" : {
+        "description" : "A realm was installed. A path install answers `path` where a repository install answers `repo`",
+        "properties" : {
+          "admission" : {
+            "description" : "`admitted` when an approval is in force for the installed realm, `not-admitted` when it could not be approved",
+            "enum" : [ "admitted", "not-admitted" ],
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's declared name, which every other realm route is keyed by",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "The mounted directory loaded in place; absent for a repository install",
+            "type" : "string"
+          },
+          "reference" : {
+            "description" : "The name the install is saved under, usually the repository's or directory's name",
+            "type" : "string"
+          },
+          "repo" : {
+            "description" : "The repository cloned; absent for a path install",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `installed`",
+            "enum" : [ "installed" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "admission", "name", "reference", "status" ],
+        "type" : "object"
+      },
+      "RealmListed" : {
+        "description" : "An installed realm as the Realms view lists it, with whether the world holds it back. A held-back realm stays installed and listed but offers nothing until the realms it requires are installed at versions it accepts",
+        "properties" : {
+          "author" : {
+            "description" : "Who the realm says published it; empty when unstated",
+            "type" : "string"
+          },
+          "category" : {
+            "description" : "The id of the category it says it belongs to; empty when it names none on the list",
+            "type" : "string"
+          },
+          "categoryIcon" : {
+            "description" : "The category's icon name; empty when it has none",
+            "type" : "string"
+          },
+          "categoryLabel" : {
+            "description" : "The category's name for people; empty when `category` is",
+            "type" : "string"
+          },
+          "description" : {
+            "description" : "What the realm says it is for; empty when it says nothing",
+            "type" : "string"
+          },
+          "heldBack" : {
+            "description" : "True while the world holds the realm back because a realm it requires is missing, held back, or at a version it does not accept",
+            "type" : "boolean"
+          },
+          "heldBackCode" : {
+            "description" : "The problem code that holds it back, such as `REALM_REQUIREMENT_MISSING`; absent when it is not held back",
+            "type" : "string"
+          },
+          "heldBackReason" : {
+            "description" : "The sentence of that problem, the same one the realm's problems carry; absent when it is not held back",
+            "type" : "string"
+          },
+          "iconUrl" : {
+            "description" : "Where to fetch the realm's icon; empty when it has none",
+            "type" : "string"
+          },
+          "installed" : {
+            "description" : "Always true here: only installed realms are listed",
+            "type" : "boolean"
+          },
+          "latestVersion" : {
+            "description" : "The directory's version when it knows this realm; empty otherwise",
+            "type" : "string"
+          },
+          "maturity" : {
+            "description" : "`experimental`, `beta`, `stable` or `deprecated`; empty when unstated",
+            "type" : "string"
+          },
+          "missingSources" : {
+            "description" : "Datasources it names that the world does not declare",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "description" : "The realm's name, which every other realm route is keyed by",
+            "type" : "string"
+          },
+          "problems" : {
+            "description" : "How many problems were found loading it; GET /realms/{name}/problems lists them",
+            "format" : "int32",
+            "type" : "integer"
+          },
+          "provider" : {
+            "description" : "The account the directory says hosts it; empty when the directory does not know it",
+            "type" : "string"
+          },
+          "source" : {
+            "description" : "Where the directory says to install it from; empty when it does not know it",
+            "type" : "string"
+          },
+          "tags" : {
+            "description" : "Free-text keywords from the realm",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "url" : {
+            "description" : "A page to read about it; empty when there is none",
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version installed",
+            "type" : "string"
+          }
+        },
+        "required" : [ "author", "category", "categoryIcon", "categoryLabel", "description", "heldBack", "iconUrl", "installed", "latestVersion", "maturity", "missingSources", "name", "problems", "provider", "source", "tags", "url", "version" ],
+        "type" : "object"
+      },
       "RealmLogEntry" : {
         "description" : "One log line a realm's guest code wrote during a dispatch",
         "properties" : {
@@ -11430,19 +11602,35 @@
         "type" : "object"
       },
       "RealmNeedsConfirmation" : {
-        "description" : "Not a failure: the realm is experimental and asks the owner to confirm. Retrying with `confirmed: true` installs it",
+        "description" : "Not a failure: the owner is asked to confirm before anything changes, because installing the realm also installs or updates other realms, or removing or updating it holds back installed realms that require it (`plan` and `planId` are present), or because the realm's author calls it experimental (no `plan`). A plan is confirmed by repeating the request with its `planId`; the host plans again, keeps no record of plans it showed, and carries the plan out only when the new plan has the same id. An experimental realm with no plan is confirmed with `confirmed: true`, which never confirms a plan",
         "properties" : {
           "code" : {
             "description" : "Always `REALM_CONFIRMATION_REQUIRED`, which tells this answer apart from the other 409s",
             "enum" : [ "REALM_CONFIRMATION_REQUIRED" ],
             "type" : "string"
           },
+          "heldBackNotListed" : {
+            "description" : "Present only when a removal or an update holds back more than 64 realms: how many more it holds back than `plan` lists. The message counts them too",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "message" : {
-            "description" : "What the realm says the owner is confirming",
+            "description" : "What the owner is confirming: the realm's own warning, or the whole plan in plain sentences, such as `Installing sales-pipeline 1.4.0 also installs crm-core 2.4.1, which sales-pipeline requires ([2.0.0,3.0.0)).` A plan asked about again because it changed since it was shown starts `The plan changed since it was shown.`",
             "type" : "string"
           },
           "name" : {
-            "description" : "The realm that asked",
+            "description" : "The realm the owner asked to change",
+            "type" : "string"
+          },
+          "plan" : {
+            "description" : "Present only with a plan: every step in the order it is carried out. For an install, the realms it installs or updates first and the requested realm last; for a removal or an update, the realm's `remove` or `update` step first, then a `hold-back` step for each realm it holds back. Absent for an experimental-realm confirmation",
+            "items" : {
+              "$ref" : "#/components/schemas/RealmPlanStep"
+            },
+            "type" : "array"
+          },
+          "planId" : {
+            "description" : "Present with `plan`: an opaque id of this plan, a digest over every step's name, version, commit and action, such as `sha256:5d1c...`. The same plan always has the same id. Send it back as `planId` to confirm",
             "type" : "string"
           },
           "status" : {
@@ -11452,6 +11640,46 @@
           }
         },
         "required" : [ "code", "message", "name", "status" ],
+        "type" : "object"
+      },
+      "RealmPlanStep" : {
+        "description" : "One step of a plan: a realm the install adds or updates, the requested realm itself, or an installed realm the change holds back",
+        "properties" : {
+          "action" : {
+            "description" : "`install` when it is not installed, `update` when an installed version is replaced, `remove` when it is taken out, `hold-back` when it stays installed but is held back by the change",
+            "enum" : [ "install", "update", "remove", "hold-back" ],
+            "type" : "string"
+          },
+          "installed" : {
+            "description" : "The version installed now. Absent for `install`",
+            "type" : "string"
+          },
+          "name" : {
+            "description" : "The realm's declared name; a name that is not a plain identifier is shown as a marker",
+            "type" : "string"
+          },
+          "repository" : {
+            "description" : "The repository it comes from, with any credential, query or fragment removed. Absent for a realm from a local folder and for `hold-back`",
+            "type" : "string"
+          },
+          "requiredBy" : {
+            "description" : "The realms whose requirements bring this step in, in name order. Absent for the realm asked for and for `hold-back`",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "stability" : {
+            "description" : "`experimental` when the realm's author calls this version experimental, `stable` otherwise",
+            "enum" : [ "stable", "experimental" ],
+            "type" : "string"
+          },
+          "version" : {
+            "description" : "The version it will be at after the step, installed from the tag `v<version>` when it comes from a repository. For `remove`, the version being removed; for `hold-back`, its installed version",
+            "type" : "string"
+          }
+        },
+        "required" : [ "action", "name", "stability", "version" ],
         "type" : "object"
       },
       "RealmProblemResponse" : {
@@ -11522,6 +11750,22 @@
         "required" : [ "admission", "name", "status" ],
         "type" : "object"
       },
+      "RealmRequirementsUnmet" : {
+        "description" : "A requirement of the realm cannot be met, so nothing was installed, moved or written",
+        "properties" : {
+          "code" : {
+            "description" : "Always `REALM_REQUIREMENTS_UNMET`",
+            "enum" : [ "REALM_REQUIREMENTS_UNMET" ],
+            "type" : "string"
+          },
+          "message" : {
+            "description" : "One sentence for each problem, in a stable order, each saying what to do",
+            "type" : "string"
+          }
+        },
+        "required" : [ "code", "message" ],
+        "type" : "object"
+      },
       "RealmResourceApprovalView" : {
         "description" : "A captured realm's resource approvals: the graph read and each view alias it declares. Answered by listing them and by each grant or revoke",
         "properties" : {
@@ -11569,19 +11813,32 @@
         "type" : "object"
       },
       "RealmUpdateResult" : {
-        "description" : "What updating one realm did. A failed row carries `message` in place of `summary`",
+        "description" : "What updating one realm did. A failed row, or one that needs confirming, carries `message` in place of `summary`",
         "properties" : {
+          "code" : {
+            "description" : "Why the realm did not update, such as `REALM_CONFIRMATION_REQUIRED` or `REALM_REQUIREMENTS_UNMET`. Absent after a pull",
+            "type" : "string"
+          },
+          "httpStatus" : {
+            "description" : "The status the realm's own update route answers this with. Absent after a pull",
+            "format" : "int32",
+            "type" : "integer"
+          },
           "message" : {
-            "description" : "Why the pull failed. Present only on a failure",
+            "description" : "Why the pull failed, or the plan in sentences when it needs confirming. Absent after a pull",
             "type" : "string"
           },
           "name" : {
             "description" : "The realm's name",
             "type" : "string"
           },
+          "planId" : {
+            "description" : "Present with `needs-confirmation`: the plan's id, which `POST /realms/{name}/update?planId=` confirms",
+            "type" : "string"
+          },
           "status" : {
-            "description" : "`updated` after a pull, `local` for a realm loaded in place, `error` when the pull failed",
-            "enum" : [ "updated", "local", "error" ],
+            "description" : "`updated` after a pull, `local` for a realm loaded in place, `error` when the pull failed, `needs-confirmation` when updating it would hold back realms that require it, which a batch never confirms",
+            "enum" : [ "updated", "local", "error", "needs-confirmation" ],
             "type" : "string"
           },
           "summary" : {
@@ -11649,6 +11906,26 @@
           }
         },
         "required" : [ "results" ],
+        "type" : "object"
+      },
+      "RealmUpdated" : {
+        "description" : "The realm was updated, or it loads in place and had nothing to fetch",
+        "properties" : {
+          "name" : {
+            "description" : "The realm updated",
+            "type" : "string"
+          },
+          "status" : {
+            "description" : "Always `updated`",
+            "enum" : [ "updated" ],
+            "type" : "string"
+          },
+          "summary" : {
+            "description" : "What the update installed, or that a local realm is already live",
+            "type" : "string"
+          }
+        },
+        "required" : [ "name", "status", "summary" ],
         "type" : "object"
       },
       "RealmsRefreshed" : {
@@ -24600,10 +24877,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/DirectoryInstalled"
                 }
               }
             },
@@ -24618,6 +24892,20 @@
               }
             },
             "description" : "Unsupported type or missing source"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/RealmRequirementsUnmet"
+                  }, {
+                    "$ref" : "#/components/schemas/RealmNeedsConfirmation"
+                  } ]
+                }
+              }
+            },
+            "description" : "A REALM entry needs the owner's go-ahead, or cannot be installed. With `code` REALM_CONFIRMATION_REQUIRED and `status` needs-confirmation, either installing it also installs or updates the realms it requires, which `plan` lists and `message` says in sentences, or its author calls it experimental, which `message` says with no `plan`; nothing was installed or changed. Once the owner agrees, repeat the request with the answer's `planId` in the entry for a plan, or `confirmed: true` for an experimental realm with no plan. The plan is made again, and a `planId` that is not the new plan's id is answered with the new plan, whose `message` starts `The plan changed since it was shown.`; `confirmed: true` never confirms a plan. With `code` REALM_REQUIREMENTS_UNMET, a requirement of the realm cannot be met and `message` names each problem and what to do"
           }
         },
         "summary" : "Install a directory entry",
@@ -27640,6 +27928,16 @@
               }
             },
             "description" : "Not a source this user connected"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LearningError"
+                }
+              }
+            },
+            "description" : "Installed realms require the source's provisional realm, so removing it would hold them back; nothing was changed, and `error` names them and says to remove them first"
           }
         },
         "summary" : "Disconnect a source: its connection, stored secret and provisional realm, with the nodes that realm seeded",
@@ -27763,6 +28061,16 @@
               }
             },
             "description" : "No provisional realm is installed for this source"
+          },
+          "409" : {
+            "content" : {
+              "application/json" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/LearningError"
+                }
+              }
+            },
+            "description" : "Installed realms require the source's provisional realm, so removing it would hold them back; nothing was changed, and `error` names them and says to remove them first"
           }
         },
         "summary" : "Uninstall a source's provisional realm, with the nodes it seeded. The connection stays",
@@ -29737,7 +30045,7 @@
     },
     "/api/v1/realms" : {
       "get" : {
-        "description" : "Returns all realms installed in the world — the shipped Realms view's rows, filtered to installed, so this listing and a `MATCH (r:Realm)` query can never disagree.",
+        "description" : "Returns all realms installed in the world — the shipped Realms view's rows, filtered to installed, so this listing and a `MATCH (r:Realm)` query can never disagree. Each row also says whether the world holds the realm back for an unmet requirement, and why.",
         "operationId" : "listRealms",
         "responses" : {
           "200" : {
@@ -29745,8 +30053,7 @@
               "*/*" : {
                 "schema" : {
                   "items" : {
-                    "additionalProperties" : { },
-                    "type" : "object"
+                    "$ref" : "#/components/schemas/RealmListed"
                   },
                   "type" : "array"
                 }
@@ -29769,7 +30076,7 @@
         "tags" : [ "Realms" ]
       },
       "post" : {
-        "description" : "Installs a realm by cloning a git repository into the world. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. Installing also approves the realm's handlers and browser apps; `admission` reports the resulting state: admitted when an approval is in force, or not-admitted.",
+        "description" : "Installs a realm from a git repository or a mounted checkout. Use owner/repo shorthand for GitHub repos, or a full URL. Optionally specify a branch or commit SHA via the ref field. When the realm requires other realms by version range, the plan to add or update them is answered first as 409 needs-confirmation with a `planId`, and nothing is installed or changed until the request is repeated with that `planId`; to make that plan, the repositories involved are read for their tags and metadata first. Installing also approves the realm's handlers and browser apps; `admission` reports the resulting state: admitted when an approval is in force, or not-admitted.",
         "operationId" : "addRealm",
         "requestBody" : {
           "content" : {
@@ -29779,7 +30086,7 @@
               }
             }
           },
-          "description" : "Where the realm comes from: either `repo`, an `owner/repo` GitHub shorthand or a git URL (`https://`, `git@`, `file://`), cloned into the world under the repository's name, with an optional `ref` branch or commit to check out; or `path`, a realm directory already mounted into the appliance, loaded in place under its directory name with nothing cloned or copied. `path` wins when both are given, and `ref` and `confirmed` are ignored with it. On a `repo` install, `confirmed: true` is the user's explicit go-ahead for an experimental realm, which is otherwise refused with 409 `needs-confirmation`",
+          "description" : "Where the realm comes from: either `repo`, an `owner/repo` GitHub shorthand or a git URL (`https://`, `git@`, `file://`), cloned into the world under the repository's name, with an optional `ref` branch or commit to check out; or `path`, a mounted realm directory loaded in place under its directory name. With `path`, `switchToCheckout: true` switches this world's active reference of that name to the checkout. `path` takes precedence over `repo` and ignores `ref` and `confirmed`. When the operation adds, updates or holds back other realms, repeat the same request with the `planId` from its 409 plan response to confirm. On a `repo` install, `confirmed: true` is the owner's go-ahead for an experimental realm with no plan",
           "required" : true
         },
         "responses" : {
@@ -29787,10 +30094,7 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmInstalled"
                 }
               }
             },
@@ -29806,6 +30110,16 @@
             },
             "description" : "Neither repo nor path was given, or the path is not a mounted realm directory (`code` validation_failed)"
           },
+          "404" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/ApiError"
+                }
+              }
+            },
+            "description" : "Checkout switch requires an active reference in this world's own manifest (`code` REALM_NOT_FOUND)"
+          },
           "409" : {
             "content" : {
               "*/*" : {
@@ -29814,11 +30128,13 @@
                     "$ref" : "#/components/schemas/ApiError"
                   }, {
                     "$ref" : "#/components/schemas/RealmNeedsConfirmation"
+                  }, {
+                    "$ref" : "#/components/schemas/RealmRequirementsUnmet"
                   } ]
                 }
               }
             },
-            "description" : "Realm already installed (`code` REALM_ALREADY_INSTALLED), or the realm is experimental and needs `confirmed: true` (`code` REALM_CONFIRMATION_REQUIRED)"
+            "description" : "Realm already installed (`code` REALM_ALREADY_INSTALLED); or the owner is asked to confirm (`code` REALM_CONFIRMATION_REQUIRED) and nothing was installed or changed: installing the realm also installs or updates the realms it requires, which `plan` lists and `message` says in sentences, confirmed by repeating the request with `planId`, or the realm is experimental and installs on its own, confirmed with `confirmed: true`; or a requirement of the realm cannot be met and nothing was changed (`code` REALM_REQUIREMENTS_UNMET, `message` names each problem and what to do)"
           },
           "422" : {
             "content" : {
@@ -29967,7 +30283,7 @@
     },
     "/api/v1/realms/{name}" : {
       "delete" : {
-        "description" : "Removes an installed realm from the world, with the reference nodes it seeded and the documents its sources ingested unless `keepData` is set; `data` in the response counts them. Removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed) or failed.",
+        "description" : "Removes an installed realm from the world, with the reference nodes it seeded and the documents its sources ingested unless `keepData` is set; `data` in the response counts them. Removing also withdraws the realm's approval, so installing it again approves the version installed then. `admission` in the response says what happened to it: revoked, none, kept (another copy is still installed) or failed. Removing a realm other installed realms require is answered first as 409 needs-confirmation with the realms it would hold back and a `planId`, and is carried out when the request is repeated with that `planId`.",
         "operationId" : "removeRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -29985,6 +30301,14 @@
           "schema" : {
             "default" : false,
             "type" : "boolean"
+          }
+        }, {
+          "description" : "The `planId` of the 409 needs-confirmation plan the owner confirmed. The host plans the change again and carries it out only when the new plan has this id; otherwise it answers 409 with the new plan, whose `message` starts `The plan changed since it was shown.`. Without it, a change that holds back realms requiring this one is answered with the plan",
+          "in" : "query",
+          "name" : "planId",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
           }
         } ],
         "responses" : {
@@ -30012,11 +30336,15 @@
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "$ref" : "#/components/schemas/ApiError"
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/ApiError"
+                  }, {
+                    "$ref" : "#/components/schemas/RealmNeedsConfirmation"
+                  } ]
                 }
               }
             },
-            "description" : "The realm is served from the appliance's shared realms directory, which no one world owns; a realm a template, org or default-world manifest supplies is removed from this world (`code` REALM_CONFLICT)"
+            "description" : "The realm is served from the appliance's shared realms directory, which no one world owns; a realm a template, org or default-world manifest supplies is removed from this world (`code` REALM_CONFLICT); or installed realms require it, so removing it would hold them back, and the owner is asked to confirm that plan and nothing was changed (`code` REALM_CONFIRMATION_REQUIRED, with `plan` and `planId`; repeat the request with `planId` to confirm)"
           },
           "503" : {
             "content" : {
@@ -30040,6 +30368,49 @@
           }
         },
         "summary" : "Remove a realm",
+        "tags" : [ "Realms" ]
+      },
+      "get" : {
+        "description" : "The realm's row from the same Realms view the listing reads, with the same held-back fields.",
+        "operationId" : "realm",
+        "parameters" : [ {
+          "description" : "Realm name",
+          "in" : "path",
+          "name" : "name",
+          "required" : true,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
+        "responses" : {
+          "200" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/RealmListed"
+                }
+              }
+            },
+            "description" : "The realm"
+          },
+          "404" : {
+            "content" : {
+              "text/html" : { }
+            },
+            "description" : "No installed realm has that name. Raised as a status, so it answers the not-found page"
+          },
+          "500" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "$ref" : "#/components/schemas/DispatchedError"
+                }
+              }
+            },
+            "description" : "The Realms view is unavailable, or the engine read failed"
+          }
+        },
+        "summary" : "Describe one installed realm",
         "tags" : [ "Realms" ]
       }
     },
@@ -30116,7 +30487,7 @@
     },
     "/api/v1/realms/{name}/update" : {
       "post" : {
-        "description" : "Installs the latest Git-backed realm as a new digest in this world. Local path references report as already live.",
+        "description" : "Installs the latest Git-backed realm as a new digest in this world. Local path references report as already live. An update that would hold back realms requiring this one, or whose new version needs other realms installed or moved, is answered first as 409 needs-confirmation with the plan and a `planId`, and is carried out when the request is repeated with that `planId`.",
         "operationId" : "updateRealm",
         "parameters" : [ {
           "description" : "Realm name",
@@ -30126,16 +30497,21 @@
           "schema" : {
             "type" : "string"
           }
+        }, {
+          "description" : "The `planId` of the 409 needs-confirmation plan the owner confirmed. The host plans the change again and carries it out only when the new plan has this id; otherwise it answers 409 with the new plan, whose `message` starts `The plan changed since it was shown.`. Without it, a change that holds back realms requiring this one is answered with the plan",
+          "in" : "query",
+          "name" : "planId",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
         } ],
         "responses" : {
           "200" : {
             "content" : {
               "*/*" : {
                 "schema" : {
-                  "additionalProperties" : {
-                    "type" : "string"
-                  },
-                  "type" : "object"
+                  "$ref" : "#/components/schemas/RealmUpdated"
                 }
               }
             },
@@ -30150,6 +30526,20 @@
               }
             },
             "description" : "No installed realm has that name (`code` REALM_NOT_FOUND)"
+          },
+          "409" : {
+            "content" : {
+              "*/*" : {
+                "schema" : {
+                  "oneOf" : [ {
+                    "$ref" : "#/components/schemas/RealmNeedsConfirmation"
+                  }, {
+                    "$ref" : "#/components/schemas/RealmRequirementsUnmet"
+                  } ]
+                }
+              }
+            },
+            "description" : "The new version is outside the range of realms that require this one, or needs other realms installed or moved, so the owner is asked to confirm the plan and nothing was fetched or changed (`code` REALM_CONFIRMATION_REQUIRED, with `plan` and `planId`; repeat the request with `planId` to confirm); or a requirement of the new version cannot be met (`code` REALM_REQUIREMENTS_UNMET)"
           },
           "422" : {
             "content" : {
@@ -33660,7 +34050,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34845"
+    "url" : "http://localhost:41917"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
