@@ -8710,8 +8710,20 @@
             "description" : "True when the realm's type declares this property as an ALTERNATE KEY: it identifies the same record as the identity does, in the vocabulary the source's own readers use. A policy's `policy_identifier` is its identity; its `policy_number` is what a view shows and what a client will try to join on. Both name the same policy. Unlike the identity, an alternate key is not the dedupe key and is not required on write, so a type may declare several. Defaults false.",
             "type" : "boolean"
           },
+          "currency" : {
+            "description" : "The ONE currency every value of this property is in, an ISO 4217 code such as `GBP`, when the declaration fixes it. Null when it does not, or when the currency varies by row — see `currencyProperty`.",
+            "type" : "string"
+          },
+          "currencyProperty" : {
+            "description" : "The property, on the same node, that holds each row's currency code. Values in different currencies must never be summed together: group by this property first. Null when the currency is fixed or undeclared.",
+            "type" : "string"
+          },
           "description" : {
             "description" : "The property's DECLARED description, verbatim from the realm's registry — for an editor to show on hover. Null where the declaration documents nothing.",
+            "type" : "string"
+          },
+          "format" : {
+            "description" : "The textual shape the value takes, as the declaration states it — `yyyy-MM-dd`, `E.164`. Null where the declaration states none.",
             "type" : "string"
           },
           "identity" : {
@@ -8728,6 +8740,10 @@
           },
           "type" : {
             "description" : "Type tag: string, long, double, boolean, datetime, list<string>, any, … — inferred from sampled values, or, where no value has been sampled, the type the property's declaration states. `any` means neither says.",
+            "type" : "string"
+          },
+          "unit" : {
+            "description" : "What one unit of the value is, as the realm's declaration states it — `cents`, `kWh`, `seconds`. Null where the declaration states none.",
             "type" : "string"
           }
         },
@@ -34050,7 +34066,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:33685"
+    "url" : "http://localhost:36411"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
