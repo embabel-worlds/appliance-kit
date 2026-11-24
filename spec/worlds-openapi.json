@@ -30160,7 +30160,7 @@
                 }
               }
             },
-            "description" : "Realm definition or build refused"
+            "description" : "Realm definition or build refused (`code` REALM_INSTALL_REFUSED); nothing stays installed. When the realm loaded and was refused for what it holds, such as a view reading a label no installed realm declares, `message` says why and `detail` carries the same `reason` and its `problems`, each as GET /realms/{name}/problems lists one"
           },
           "502" : {
             "content" : {
@@ -34066,7 +34066,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:38743"
+    "url" : "http://localhost:46051"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
