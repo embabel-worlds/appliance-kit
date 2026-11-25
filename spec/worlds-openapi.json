@@ -1861,7 +1861,7 @@
           },
           "filters" : {
             "additionalProperties" : { },
-            "description" : "What constrained the search, echoed back: `dateField`, `from`, `to`, `tag` and `uri` when given, and `topK`; then the effort behind it: `documents` (also as `retrieved`), `chunks` and `searches`. On a 400 or 404, only `error`, with the reason.",
+            "description" : "What constrained the search, echoed back: `dateField`, `from`, `to`, `tag` and `uri` when given, and `topK`; then the effort behind it: `documents` (also as `retrieved`), `chunks` and `searches`, `route` (CHAINED or DIRECT) when a routing strategy chose how to search, and `chain` when it did (each step's `lookup` and the `answer` its results gave, null when they gave none). On a 400 or 404, only `error`, with the reason.",
             "type" : "object"
           },
           "model" : {
@@ -10866,6 +10866,13 @@
             "enum" : [ "SUCCEEDED", "FAILED", "RUNNING", "WAITING_INPUT", "CANCELLED" ],
             "type" : "string"
           },
+          "unavailableSources" : {
+            "description" : "The data sources this execution could not read, each with its producer, operation and how it failed; absent when every source answered",
+            "items" : {
+              "$ref" : "#/components/schemas/PublicUnavailableSource"
+            },
+            "type" : "array"
+          },
           "warnings" : {
             "description" : "Machine-readable warnings with stable codes; non-empty means the rows are not the whole story",
             "items" : {
@@ -10913,8 +10920,27 @@
         "required" : [ "durationMs", "externalCalls", "semanticCalls" ],
         "type" : "object"
       },
+      "PublicUnavailableSource" : {
+        "description" : "A data source an execution could not read: the producer, the operation it was asked, and how it failed",
+        "properties" : {
+          "failure" : {
+            "description" : "How it failed: `HTTP <status>` where the source answered with one; otherwise TIMEOUT, GATEWAY, CONNECTION, RATE_LIMITED, CONFLICT, PERMANENT, AUTH_EXPIRED, UNREADABLE_ANSWER, ARGUMENT_REFUSED or FILTER_REFUSED",
+            "type" : "string"
+          },
+          "operation" : {
+            "description" : "The operation the producer was asked",
+            "type" : "string"
+          },
+          "producer" : {
+            "description" : "The producer, as its realm declares it",
+            "type" : "string"
+          }
+        },
+        "required" : [ "failure", "operation", "producer" ],
+        "type" : "object"
+      },
       "PublicWarning" : {
-        "description" : "A warning about a result: a stable code and a message that names no producer, index, label or query",
+        "description" : "A warning about a result: a stable code and a message that names no index, label or query",
         "properties" : {
           "code" : {
             "description" : "A stable, machine-readable warning code, e.g. PARTIAL",
@@ -34066,7 +34092,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40753"
+    "url" : "http://localhost:46587"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
