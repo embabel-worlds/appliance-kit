@@ -25643,7 +25643,7 @@
                 }
               }
             },
-            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded, or the vector index is at another width than the embedding model: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search, and message says which and how to repair it"
           },
           "400" : {
             "content" : {
@@ -25730,7 +25730,7 @@
                 }
               }
             },
-            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded, or the vector index is at another width than the embedding model: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search, and message says which and how to repair it"
           },
           "409" : {
             "content" : {
@@ -25771,7 +25771,7 @@
                 }
               }
             },
-            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search"
+            "description" : "Document ingested. status is `ingested`, or `ingested_incomplete` when some chunks could not be embedded, or the vector index is at another width than the embedding model: the document is kept and text-searchable, chunksWithoutEmbeddings of chunks miss semantic search, and message says which and how to repair it"
           },
           "400" : {
             "content" : {
@@ -34102,7 +34102,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37477"
+    "url" : "http://localhost:39265"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
