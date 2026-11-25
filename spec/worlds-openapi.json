@@ -7487,7 +7487,7 @@
               },
               "type" : "array"
             },
-            "description" : "Each named group -> the words that named it, tier first: name:, label:, vocabulary:, weak:, keyword: or companion:.",
+            "description" : "Each named group -> the words that named it, tier first: name:, label:, vocabulary:, shared:, weak:, keyword: or companion:.",
             "type" : "object"
           },
           "resolvedBy" : {
@@ -10799,11 +10799,11 @@
             "type" : "string"
           },
           "message" : {
-            "description" : "What happened and what would change it, safe to show; names no query, index or internal label",
+            "description" : "What happened and what would change it, safe to show; names no rewritten query, index or internal label. On VIEW_QUERY_INVALID refused by the engine's own schema check, it ends with that check's words, as kg_query reports them",
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP), or UNBOUNDED when nothing bounded a source it reads; null otherwise",
+            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP), or UNBOUNDED when nothing bounded a source it reads; on a VIEW_QUERY_INVALID the schema check refused, UNKNOWN_LABEL, UNKNOWN_RELATIONSHIP or UNKNOWN_PROPERTY; null otherwise",
             "type" : "string"
           }
         },
@@ -34066,7 +34066,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:32959"
+    "url" : "http://localhost:42793"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
