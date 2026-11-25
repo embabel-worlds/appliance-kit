@@ -8371,7 +8371,7 @@
             "type" : "string"
           },
           "reason" : {
-            "description" : "Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, FETCHED_NOT_MATCHED, PARTIAL_NOT_MATCHED, UNPUSHED_FILTER, DISCONNECTED or INTERNAL_ERROR. May accompany rows when a source failed, a read was refused, or a filter was not applied; absent on a clean answer, including a genuine zero.",
+            "description" : "Typed outcome when this was not a clean answer — UNBOUNDED, NOT_IN_GRAPH, MISSING_ATTRIBUTE, FETCHED_NOT_MATCHED, PARTIAL_NOT_MATCHED, UNPUSHED_FILTER, DISCONNECTED or INTERNAL_ERROR. May accompany rows when a source failed, a read was refused, or a filter was not applied; absent on a clean answer, including a genuine zero — every read complete and nothing matched, however many records were fetched. FETCHED_NOT_MATCHED only when the engine showed the records it read could not match (a filter no stored value can meet, a source that did not answer).",
             "type" : "string"
           },
           "rowCount" : {
@@ -10803,7 +10803,7 @@
             "type" : "string"
           },
           "reason" : {
-            "description" : "Why a lookup that read records answered none, where a caller may act on it (FETCHED_NOT_MATCHED or UNPUSHED_FILTER); on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP), or UNBOUNDED when nothing bounded a source it reads; on a VIEW_QUERY_INVALID the schema check refused, UNKNOWN_LABEL, UNKNOWN_RELATIONSHIP or UNKNOWN_PROPERTY; null otherwise",
+            "description" : "Why a lookup that read records answered none, where a caller may act on it: FETCHED_NOT_MATCHED (the engine showed the query could not match what it read; records read in full and matched by none is an EMPTY outcome, not this) or UNPUSHED_FILTER; on a TOO_BROAD stopped at a fixed budget, which budget (MATCH_WORK, HELD_ROWS, STATEMENT_TIME, EXPRESSION_COST, STATEMENT_SHAPE, FETCHED_RECORDS, DERIVED_PAIRS, DERIVATION_ROUNDS, GRAPH_HEAP), or UNBOUNDED when nothing bounded a source it reads; on a VIEW_QUERY_INVALID the schema check refused, UNKNOWN_LABEL, UNKNOWN_RELATIONSHIP or UNKNOWN_PROPERTY; null otherwise",
             "type" : "string"
           }
         },
@@ -34066,7 +34066,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:42793"
+    "url" : "http://localhost:35853"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
