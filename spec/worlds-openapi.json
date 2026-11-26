@@ -1794,6 +1794,33 @@
         "required" : [ "name", "size", "status", "type" ],
         "type" : "object"
       },
+      "AskEntity" : {
+        "description" : "A world-graph entity the answer concerns, with what it is to the answer.",
+        "properties" : {
+          "id" : {
+            "description" : "The entity's id in the world graph.",
+            "type" : "string"
+          },
+          "labels" : {
+            "description" : "The entity's labels, such as Person or Organization.",
+            "items" : {
+              "type" : "string"
+            },
+            "type" : "array"
+          },
+          "name" : {
+            "description" : "The entity's name.",
+            "type" : "string"
+          },
+          "role" : {
+            "description" : "ANSWER when the answer names it, SUBJECT when the question does, MENTIONED otherwise.",
+            "enum" : [ "ANSWER", "SUBJECT", "MENTIONED" ],
+            "type" : "string"
+          }
+        },
+        "required" : [ "id", "labels", "name", "role" ],
+        "type" : "object"
+      },
       "AskRequest" : {
         "description" : "Body of `POST /documents/ask`: a question for the caller's own documents, and what narrows the search.",
         "properties" : {
@@ -1805,6 +1832,10 @@
             "description" : "How the answer is phrased. PROSE (the default) answers in sentences that quote the operative phrase; SHORT answers with the value alone — a name, date, number or short phrase — for callers that use the answer as data rather than show it; EXACT answers with exactly the thing asked for — the year and not the event, one answer and never a list, nothing the question did not ask for — for callers that compare the answer with something; VERDICT settles a yes-or-no question as `verdict` (YES, NO, UNSURE or NOT_FOUND) with one sentence on what settles it as `answer`. Retrieval and sources are the same either way.",
             "enum" : [ "PROSE", "SHORT", "EXACT", "VERDICT" ],
             "type" : "string"
+          },
+          "entities" : {
+            "description" : "True to have `entities` list the world-graph entities the answer concerns, taken from the cited documents' own links: the one the answer names, the ones the question names, and the rest.",
+            "type" : "boolean"
           },
           "history" : {
             "description" : "Prior turns, oldest first, each a `Q:` line followed by an `A:` line, so a follow-up needs no session. Only the last 6 are used, and only when an answer is composed.",
@@ -1849,7 +1880,7 @@
             "description" : "Bounds the search by one of the document's dates. Absent means no date bound."
           }
         },
-        "required" : [ "answer", "answerStyle", "history", "question" ],
+        "required" : [ "answer", "answerStyle", "entities", "history", "question" ],
         "type" : "object"
       },
       "AskResponse" : {
@@ -1858,6 +1889,13 @@
           "answer" : {
             "description" : "The composed answer alone, without the passages the model quoted before it. Null when `answer` was false, when nothing was retrieved, and on a 400 or 404.",
             "type" : "string"
+          },
+          "entities" : {
+            "description" : "When the request asked for entities: the world-graph entities the cited documents are linked to, each with its role (ANSWER, SUBJECT or MENTIONED). Null when they were not asked for.",
+            "items" : {
+              "$ref" : "#/components/schemas/AskEntity"
+            },
+            "type" : "array"
           },
           "filters" : {
             "additionalProperties" : { },
@@ -34107,7 +34145,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:40121"
+    "url" : "http://localhost:45925"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
