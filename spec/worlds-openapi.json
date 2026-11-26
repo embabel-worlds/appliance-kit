@@ -10515,9 +10515,14 @@
         "description" : "The engine's quote for a compiled plan, made by reading the graph only: no source is fetched and no model is asked.",
         "properties" : {
           "apiCalls" : {
-            "description" : "The estimated calls to outside APIs. Null when the statement could not be quoted.",
+            "description" : "The calls to outside APIs the run will make: every page of every walk, a whole book nobody has sized at its walk's page ceiling. Null when the statement could not be quoted.",
             "format" : "int32",
             "type" : "integer"
+          },
+          "apiCallsAre" : {
+            "description" : "How to read `apiCalls`: `figure` (priced from sizes the sources said), `ceiling` (an upper bound — some book is priced at its page ceiling, or a fan-out at its cap) or `unknown` (a later hop or walk whose calls only the first fetch can count, so `apiCalls` is what is known and the rest is not bounded). Null when not quoted.",
+            "enum" : [ "figure", "ceiling", "unknown" ],
+            "type" : "string"
           },
           "goalModelCalls" : {
             "description" : "Asked as a `question`: the model calls made writing the goal — usually one, more when a goal was refused and written again. Zero for a goal the caller wrote, and for a goal reused from an explain of the same question and inputs moments before.",
@@ -11839,8 +11844,8 @@
         "description" : "A requirement of the realm cannot be met, so nothing was installed, moved or written",
         "properties" : {
           "code" : {
-            "description" : "Always `REALM_REQUIREMENTS_UNMET`",
-            "enum" : [ "REALM_REQUIREMENTS_UNMET" ],
+            "description" : "`REALM_HOST_UNSATISFIED` when the running host is outside the realm's `requiresHost`, otherwise `REALM_REQUIREMENTS_UNMET`",
+            "enum" : [ "REALM_REQUIREMENTS_UNMET", "REALM_HOST_UNSATISFIED" ],
             "type" : "string"
           },
           "message" : {
@@ -34145,7 +34150,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:38087"
+    "url" : "http://localhost:33109"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
