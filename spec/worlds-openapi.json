@@ -1802,8 +1802,8 @@
             "type" : "boolean"
           },
           "answerStyle" : {
-            "description" : "How the answer is phrased. PROSE (the default) answers in sentences that quote the operative phrase; SHORT answers with the value alone — a name, date, number or short phrase — for callers that use the answer as data rather than show it. Retrieval and sources are the same either way.",
-            "enum" : [ "PROSE", "SHORT" ],
+            "description" : "How the answer is phrased. PROSE (the default) answers in sentences that quote the operative phrase; SHORT answers with the value alone — a name, date, number or short phrase — for callers that use the answer as data rather than show it; EXACT answers with exactly the thing asked for — the year and not the event, one answer and never a list, nothing the question did not ask for — for callers that compare the answer with something; VERDICT settles a yes-or-no question as `verdict` (YES, NO, UNSURE or NOT_FOUND) with one sentence on what settles it as `answer`. Retrieval and sources are the same either way.",
+            "enum" : [ "PROSE", "SHORT", "EXACT", "VERDICT" ],
             "type" : "string"
           },
           "history" : {
@@ -1869,7 +1869,7 @@
             "type" : "string"
           },
           "note" : {
-            "description" : "Why there is no answer, set only when the model was asked to answer and returned no text. Null otherwise, including when nothing matched.",
+            "description" : "Why there is no answer, set only when the model was asked to answer and returned no text, or a VERDICT ask's verdict could not be read. Null otherwise, including when nothing matched.",
             "type" : "string"
           },
           "raw" : {
@@ -1887,6 +1887,11 @@
             "description" : "Citation markers removed because they named no retrieved document. Currently always 0: sources are taken from the retrieval the server observed, not from markers in the answer.",
             "format" : "int32",
             "type" : "integer"
+          },
+          "verdict" : {
+            "description" : "The VERDICT style's settlement of a yes-or-no question: YES or NO when a passage states it, UNSURE when the passages bear on it without settling it, NOT_FOUND when nothing retrieved addresses it. Null for every other style, and when the model stated no verdict that could be read (see note).",
+            "enum" : [ "YES", "NO", "UNSURE", "NOT_FOUND" ],
+            "type" : "string"
           }
         },
         "required" : [ "filters", "sources", "unresolvedCitations" ],
@@ -34102,7 +34107,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:37065"
+    "url" : "http://localhost:40121"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
