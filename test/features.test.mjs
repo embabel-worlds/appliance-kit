@@ -298,6 +298,55 @@ describe('the public browser feature entry point', () => {
     assert.deepEqual(calls.execute, [['RETURN 1', {}]])
   })
 
+  /*
+   * A preflight that cannot reach a verdict is not a "no". Run stays live and the pill says why,
+   * so a session that lapsed or an appliance without /validate does not leave a dead button.
+   */
+  const runButton = (container) => [...container.querySelectorAll('button')].find((b) => b.textContent.startsWith('Run ('))
+  const pill = (container) => container.querySelector('.studio-pane-query .panel-head .status')
+
+  it('runs a clicked example when the preflight answers 401, and says it could not validate', async () => {
+    const { props, calls } = studioWithExamples()
+    props.services.kg.validate = async () => ({ ok: false, kind: 'unauthorized', message: 'Session expired', status: 401 })
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    await act(async () => rendered.container.querySelector('.query-example').click())
+    await flush()
+    assert.deepEqual(calls.execute, [['RETURN 1 AS read', { surface: 'studio' }]], 'the engine is asked directly')
+    assert.match(pill(rendered.container).textContent, /couldn't validate.*HTTP 401/)
+  })
+
+  it('keeps Run live across edits once the appliance has no preflight', async () => {
+    const { props, calls } = studioWithExamples()
+    props.services.kg.validate = async (cypher) => {
+      calls.validate.push(cypher)
+      return { ok: false, kind: 'unsupported', message: 'Not Found', status: 404 }
+    }
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    await act(async () => rendered.container.querySelector('.query-example').click())
+    await flush()
+    assert.equal(calls.execute.length, 1)
+    const cm = rendered.container.querySelector('.CodeMirror').CodeMirror
+    await act(async () => cm.setValue('RETURN 2 AS two'))
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 800)) })
+    assert.equal(calls.validate.length, 1, 'an absent endpoint is not asked again')
+    assert.equal(runButton(rendered.container).disabled, false)
+    assert.notEqual(pill(rendered.container).textContent.trim(), '', 'never a blank pill')
+    await act(async () => runButton(rendered.container).click())
+    await flush()
+    assert.deepEqual(calls.execute.at(-1), ['RETURN 2 AS two', { surface: 'studio' }])
+  })
+
+  it('still holds Run on a schema-violation verdict', async () => {
+    const { props, calls } = studioWithExamples()
+    props.services.kg.validate = async () => ok({ ok: false, violations: ['Pioneer has no property nmae'] })
+    const rendered = await render(h(features.QueryStudioSurface, props))
+    await act(async () => rendered.container.querySelector('.query-example').click())
+    await flush()
+    assert.deepEqual(calls.execute, [])
+    assert.equal(runButton(rendered.container).disabled, true)
+    assert.match(rendered.container.querySelector('.verdict').textContent, /no property nmae/)
+  })
+
   it('lands the starter query for a person past the examples, and still offers them on request', async () => {
     const { props } = studioWithExamples({ show: false })
     const rendered = await render(h(features.QueryStudioSurface, props))

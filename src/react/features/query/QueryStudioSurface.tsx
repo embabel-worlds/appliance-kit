@@ -34,7 +34,7 @@ import {
   type KgView,
   type KgViewParamSpec,
 } from '../../../client/kg.ts'
-import { isOk } from '../../../client/outcome.ts'
+import { type Failure, failure, isOk } from '../../../client/outcome.ts'
 import {
   type GraphSchema,
   completeQuery,
@@ -56,6 +56,7 @@ import { CopyButton, RowTable, Status, StudioPanel, failureMessage, isAbsent } f
 import { SessionPane } from './SessionPane.tsx'
 import { QueryExampleCards } from './QueryExamples.tsx'
 import { ResultGraph } from './ResultGraph.tsx'
+import { type Verdict, runGate, verdictOf } from './runGate.ts'
 import { QueryRuntimeProvider, useQueryRuntime } from './runtime.tsx'
 
 /*
@@ -87,6 +88,10 @@ type ResultView = 'table' | 'graph' | 'raw' | 'stats' | 'trace'
 type Pane = 'query' | 'results' | 'session'
 
 const HISTORY_MAX = 20
+/* How long Run waits on the preflight before going without it. Long enough for a cold appliance to
+ * answer, short enough that a hung request reads as "couldn't validate" rather than as a broken
+ * button. */
+const VALIDATE_PATIENCE_MS = 15_000
 
 /**
  * THE RUN TO KILL, WHEN THE TRACE NEVER NAMED ONE.
@@ -130,9 +135,15 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   const reportCypher = useRef(onCypherChange)
   reportCypher.current = onCypherChange
   const [schema, setSchema] = useState<KgSchema | null>(null)
-  const [validity, setValidity] = useState<{ tone: 'ok' | 'error' | null; text: string; violations: string[] }>(
-    { tone: null, text: '', violations: [] },
-  )
+  /* The latest preflight verdict, as state for the pill and as a ref for `run`, which must read
+   * the verdict as of the keystroke rather than as of its last render. See runGate.ts for what
+   * each verdict lets Run do. */
+  const [verdict, setVerdictState] = useState<Verdict>({ state: 'none' })
+  const verdictRef = useRef<Verdict>(verdict)
+  const setVerdict = useCallback((next: Verdict): void => {
+    verdictRef.current = next
+    setVerdictState(next)
+  }, [])
   /*
    * WHETHER THE VIOLATIONS ARE ON SCREEN, which is not the same question as whether the query is
    * valid.
@@ -205,7 +216,6 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   // keystroke about a feature this server simply does not have helps nobody.
   const validateSupported = useRef(true)
   const validateTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const validatedCypher = useRef<string | null>(null)
   const active = useRef(true)
   const schemaGeneration = useRef(0)
   const validationGeneration = useRef(0)
@@ -244,7 +254,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     validationGeneration.current += 1
     runGeneration.current += 1
     validateSupported.current = true
-    validatedCypher.current = null
+    setVerdict({ state: 'none' })
     setSchema(null)
     void loadSchema()
     const onFocus = (): void => void loadSchema()
@@ -324,38 +334,35 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   const validateNow = useCallback(async (): Promise<void> => {
     // Validate what RUN will execute — the completed form — or the pill contradicts the Run button.
     const { cypher } = completeQuery(handle.getText())
-    if (!cypher) {
-      validatedCypher.current = null
-      return setValidity({ tone: null, text: '', violations: [] })
-    }
+    if (!cypher) return setVerdict({ state: 'none' })
     const generation = ++validationGeneration.current
-    const outcome = await services.kg.validate(cypher)
+    /* A preflight that never answers must not hold Run for ever. Most transports time out on their
+     * own, but the host supplies the transport, so the studio sets its own bound too — and an
+     * answer that late is one nobody is still waiting for. */
+    let patience: ReturnType<typeof setTimeout> | undefined
+    const outcome = await Promise.race([
+      services.kg.validate(cypher),
+      new Promise<Failure>((resolve) => {
+        patience = setTimeout(
+          () => resolve(failure('unreachable', `no answer within ${VALIDATE_PATIENCE_MS / 1000}s`)),
+          VALIDATE_PATIENCE_MS,
+        )
+      }),
+    ]).finally(() => clearTimeout(patience))
     if (!active.current || generation !== validationGeneration.current || completeQuery(handle.getText()).cypher !== cypher) return
-    if (!isOk(outcome)) {
-      if (isAbsent(outcome)) validateSupported.current = false
-      validatedCypher.current = null
-      return setValidity({ tone: null, text: '', violations: [] })
-    }
-    // `ok` IS the verdict on this endpoint — it means "this cypher passes the preflight", not
-    // "the request worked". The handlers surface next door splits those into two booleans; this
-    // one does not, and reading it as a transport result would call every rejected query valid.
-    const { ok: valid, violations = [] } = outcome.value
-    validatedCypher.current = valid ? cypher : null
-    setValidity(valid
-      ? { tone: 'ok', text: '✓ schema-valid', violations: [] }
-      : { tone: 'error', text: `${violations.length} schema problem(s)`, violations })
-  }, [handle, services])
+    if (!isOk(outcome) && isAbsent(outcome)) validateSupported.current = false
+    setVerdict(verdictOf(cypher, outcome))
+  }, [handle, services, setVerdict])
 
   const scheduleValidation = useCallback((): void => {
     if (!validateSupported.current) return
     if (validateTimer.current) clearTimeout(validateTimer.current)
     validationGeneration.current += 1
-    validatedCypher.current = null
-    setValidity((v) => ({ ...v, tone: null, text: '…' }))
+    setVerdict({ state: 'pending' })
     // Anything painted about the OLD text is wrong now.
     setShowViolations(false)
     validateTimer.current = setTimeout((): void => void validateNow(), 700)
-  }, [validateNow])
+  }, [setVerdict, validateNow])
   editRef.current = () => {
     reportCypher.current?.(handle.getText())
     setEditorEmpty(!handle.getText().trim())
@@ -367,7 +374,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     // A RETURN-less MATCH runs with its RETURN implied — same rule as the Session tab, so
     // `MATCH (c:Chunk)` is runnable everywhere. The editor's text is not rewritten.
     const { cypher, note: impliedNote } = completeQuery(handle.getText())
-    if (!cypher || validatedCypher.current !== cypher) return
+    if (!runGate(verdictRef.current, cypher, false).enabled) return
     const generation = ++runGeneration.current
     setRunning(true)
     setStopping(false)
@@ -524,7 +531,6 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   }, [progress.runId])
 
   const land = useCallback((cypher: string) => {
-    validatedCypher.current = null
     setEditorEmpty(!cypher.trim())
     handle.setText(cypher)
     reportCypher.current?.(cypher)
@@ -583,7 +589,7 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
     if (validateTimer.current) clearTimeout(validateTimer.current)
     await validateNow()
     if (!active.current) return
-    if (validatedCypher.current === completeQuery(handle.getText()).cypher) await run()
+    if (runGate(verdictRef.current, completeQuery(handle.getText()).cypher, false).enabled) await run()
     else setShowViolations(true)
   }, [handle, land, run, validateNow])
 
@@ -669,6 +675,8 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
   const graph = useMemo(() => rowGraph(rows), [rows])
   const views: ResultView[] = graph.nodes.length > 0 ? ['table', 'graph', 'raw', 'stats', 'trace'] : ['table', 'raw', 'stats', 'trace']
 
+  const gate = runGate(verdict, completeQuery(handle.getText()).cypher, running)
+
   return (
     <div className="kit-feature kit-feature-query studio">
       {/* Me's distribution, panel for panel: the rail is what FEEDS a query — controls, saved
@@ -721,13 +729,13 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
         </details>
         <StudioPanel
           title="Query"
-          aside={validity.violations.length > 0 && !showViolations
+          aside={gate.violations.length > 0 && !showViolations
             ? (
               <button className="status error as-link" onClick={() => setShowViolations(true)}>
-                {validity.text} — show
+                {gate.text} — show
               </button>
             )
-            : <Status tone={validity.tone}>{validity.text}</Status>}
+            : <Status tone={gate.tone}>{gate.text}</Status>}
         >
           {examples && examplesShown && (
             <QueryExampleCards
@@ -751,16 +759,15 @@ function QueryStudioBody({ handedOver, initialCypher, handoffRevision, onCypherC
             </div>
             <div className="editor-host" ref={editorRef} />
           </div>
-          {showViolations && validity.violations.length > 0 && (
+          {showViolations && gate.violations.length > 0 && (
             <div className="verdict">
-              {validity.violations.map((v, i) => <div className="violation" key={i}>{v}</div>)}
+              {gate.violations.map((v, i) => <div className="violation" key={i}>{v}</div>)}
             </div>
           )}
           <div className="row studio-actions">
             <button
               className="btn primary"
-              disabled={running || validity.tone !== 'ok'
-                || validatedCypher.current !== completeQuery(handle.getText()).cypher}
+              disabled={!gate.enabled}
               onClick={() => void run()}
               title="Run query (Ctrl+Enter or ⌘+Enter)"
             >
