@@ -4852,10 +4852,10 @@
         "type" : "object"
       },
       "DocumentListing" : {
-        "description" : "The current world context's ingested documents",
+        "description" : "The current world context's ingested documents: uploads, fetched pages, pasted text and what realms' `documents` sources landed",
         "properties" : {
           "documents" : {
-            "description" : "The documents, in the order they were tracked",
+            "description" : "The documents, in the order they were tracked; only those carrying the `tag` asked for, when one was",
             "items" : {
               "$ref" : "#/components/schemas/DocumentListingEntry"
             },
@@ -4893,6 +4893,14 @@
           },
           "modifiedAt" : {
             "description" : "When the SOURCE last changed, ISO-8601, where the ingest captured it. Null also means it was ingested before source dates were captured — itself a reason to re-read it",
+            "type" : "string"
+          },
+          "sourceKind" : {
+            "description" : "How the document entered: `upload`, `url`, or the kind a realm's `documents` source declared (its name by default). Null for a document ingested before provenance was stamped",
+            "type" : "string"
+          },
+          "sourceModifiedAt" : {
+            "description" : "The source's own version of an external document — its last-modified time or a content hash — as the ingest recorded it. Null for uploads and pasted text",
             "type" : "string"
           },
           "tags" : {
@@ -25225,8 +25233,17 @@
         "tags" : [ "Documents" ]
       },
       "get" : {
-        "description" : "Returns the current world context's ingested documents with metadata, plus the total chunk count.",
+        "description" : "Returns the current world context's ingested documents with metadata, plus the total chunk count: what was uploaded, fetched by URL or pasted as text, and what a realm's `documents` sources landed, which carry the realm's `sourceKind` and the source's own version under `sourceModifiedAt`. `tag` keeps only the documents carrying that tag; `totalChunks` counts the whole world regardless.",
         "operationId" : "listDocuments_1",
+        "parameters" : [ {
+          "description" : "Keep only documents carrying this tag, exactly as `tags` lists it. Omitted or blank lists every document",
+          "in" : "query",
+          "name" : "tag",
+          "required" : false,
+          "schema" : {
+            "type" : "string"
+          }
+        } ],
         "responses" : {
           "200" : {
             "content" : {
@@ -34150,7 +34167,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:39583"
+    "url" : "http://localhost:36371"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
