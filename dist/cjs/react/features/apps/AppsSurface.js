@@ -54,10 +54,11 @@ function validatedAppUrl(a) {
 }
 /** Scope+name — the unique identity now that filenames may repeat across scopes. */
 const appKey = (a) => `${a.scope ?? ''}/${a.name}`;
-const title = (a) => a.name.replace(/\.html?$/i, '');
+/* The author's title where the server carries one; the file stem otherwise, as before it did. */
+const title = (a) => a.title?.trim() || a.name.replace(/\.html?$/i, '');
 /** What the pin store needs to draw this app from any tab, without a listing of its own. */
 const asPin = (a) => ({
-    key: appKey(a), name: a.name, scope: a.scope ?? null, url: appUrl(a),
+    key: appKey(a), name: a.name, title: a.title ?? null, scope: a.scope ?? null, url: appUrl(a),
     iconUrl: a.iconUrl ?? null, description: a.description ?? null,
 });
 /* Where the framed app is on the page, so a chip can put the reader in front of it. A
@@ -105,7 +106,7 @@ function PinRail({ services, host }) {
             /* Belt and braces with `migrate`, deliberately. One malformed pin used to blank the
                entire console, so the rail does not assume its input was cleaned — the cost is a
                `??` and the alternative is a whole-app crash from a value on somebody's disk. */
-            const label = (p.name ?? p.key).replace(/\.html?$/i, '');
+            const label = p.title?.trim() || (p.name ?? p.key).replace(/\.html?$/i, '');
             const on = here === p.key;
             const gone = p.missing === true;
             /* A CHIP IS A TOGGLE. The app it names is either in front of you or it is not, and the
@@ -266,7 +267,7 @@ function AppsSurface({ services, host }) {
     }, [shown, pinnedKeys]);
     /* A search that only matched inside closed drawers would look like no results. */
     const searching = meaning !== null || query.trim().length > 0;
-    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-apps apps", children: [(0, jsx_runtime_1.jsx)("div", { ref: (el) => { frameEl = el; }, children: open && ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: open.name.replace(/\.html?$/i, ''), aside: (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => {
+    return ((0, jsx_runtime_1.jsxs)("div", { className: "kit-feature kit-feature-apps apps", children: [(0, jsx_runtime_1.jsx)("div", { ref: (el) => { frameEl = el; }, children: open && ((0, jsx_runtime_1.jsx)(chrome_tsx_1.StudioPanel, { title: title(open), aside: (0, jsx_runtime_1.jsx)("button", { className: "btn ghost tiny", onClick: () => {
                             const url = validatedAppUrl(open);
                             if (url)
                                 host.openInNewTab(url);
