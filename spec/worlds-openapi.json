@@ -41,6 +41,10 @@
           "sql" : {
             "$ref" : "#/components/schemas/SqlAbout",
             "description" : "The SQL door, when it is on and listening; absent otherwise"
+          },
+          "world" : {
+            "$ref" : "#/components/schemas/WorldAbout",
+            "description" : "Where this person's world lives, and the folder every world and the graph live under; absent when nobody is signed in"
           }
         },
         "required" : [ "components" ],
@@ -14810,6 +14814,21 @@
           }
         },
         "required" : [ "open" ],
+        "type" : "object"
+      },
+      "WorldAbout" : {
+        "description" : "Where the signed-in person's world lives on the server's machine, and the data folder under it.",
+        "properties" : {
+          "home" : {
+            "description" : "The data folder every world, the graph and the wallet live under, on the server's machine",
+            "type" : "string"
+          },
+          "path" : {
+            "description" : "The signed-in person's current world, as a path on the server's machine",
+            "type" : "string"
+          }
+        },
+        "required" : [ "home", "path" ],
         "type" : "object"
       },
       "WorldChanged" : {
@@ -34171,7 +34190,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:36383"
+    "url" : "http://localhost:38945"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
