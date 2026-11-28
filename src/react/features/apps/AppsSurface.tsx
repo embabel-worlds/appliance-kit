@@ -50,11 +50,12 @@ export function validatedAppUrl(a: AppArtifact): string | null {
 /** Scope+name — the unique identity now that filenames may repeat across scopes. */
 const appKey = (a: AppArtifact) => `${a.scope ?? ''}/${a.name}`
 
-const title = (a: AppArtifact) => a.name.replace(/\.html?$/i, '')
+/* The author's title where the server carries one; the file stem otherwise, as before it did. */
+const title = (a: AppArtifact) => a.title?.trim() || a.name.replace(/\.html?$/i, '')
 
 /** What the pin store needs to draw this app from any tab, without a listing of its own. */
 const asPin = (a: AppArtifact): AppPin => ({
-  key: appKey(a), name: a.name, scope: a.scope ?? null, url: appUrl(a),
+  key: appKey(a), name: a.name, title: a.title ?? null, scope: a.scope ?? null, url: appUrl(a),
   iconUrl: a.iconUrl ?? null, description: a.description ?? null,
 })
 
@@ -104,7 +105,7 @@ export function PinRail({ services, host }: PinRailProps) {
         /* Belt and braces with `migrate`, deliberately. One malformed pin used to blank the
            entire console, so the rail does not assume its input was cleaned — the cost is a
            `??` and the alternative is a whole-app crash from a value on somebody's disk. */
-        const label = (p.name ?? p.key).replace(/\.html?$/i, '')
+        const label = p.title?.trim() || (p.name ?? p.key).replace(/\.html?$/i, '')
         const on = here === p.key
         const gone = p.missing === true
         /* A CHIP IS A TOGGLE. The app it names is either in front of you or it is not, and the
@@ -319,7 +320,7 @@ export function AppsSurface({ services, host }: AppsSurfaceProps) {
             find under a list you have finished with. */}
         {open && (
           <StudioPanel
-            title={open.name.replace(/\.html?$/i, '')}
+            title={title(open)}
             aside={
               <button className="btn ghost tiny" onClick={() => {
                 const url = validatedAppUrl(open)

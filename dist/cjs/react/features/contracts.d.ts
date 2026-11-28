@@ -21,6 +21,8 @@ export interface FeatureState<T> {
 }
 export interface AppArtifact {
     name: string;
+    /** What the app calls itself — its manifest's title, else its page title. Absent from an older server, or an app that names itself nowhere: then the file name is shown. */
+    title?: string | null;
     description?: string | null;
     sizeBytes?: number;
     lastModified?: string | null;
@@ -32,6 +34,7 @@ export interface AppArtifact {
 export interface AppPin {
     key: string;
     name: string;
+    title?: string | null;
     scope: string | null;
     url: string;
     missing?: boolean;
