@@ -1713,6 +1713,10 @@
             "format" : "int64",
             "type" : "integer"
           },
+          "title" : {
+            "description" : "What an app is called, as its author wrote it: its manifest's title, else its <title>. Null for non-apps and for an app that names itself nowhere; a client then shows the file name",
+            "type" : "string"
+          },
           "type" : {
             "description" : "The ArtifactType name, upper case",
             "type" : "string"
@@ -34167,7 +34171,7 @@
   } ],
   "servers" : [ {
     "description" : "Generated server url",
-    "url" : "http://localhost:34215"
+    "url" : "http://localhost:36383"
   } ],
   "tags" : [ {
     "description" : "Durable alert-diff subscriptions over saved Lenses",
